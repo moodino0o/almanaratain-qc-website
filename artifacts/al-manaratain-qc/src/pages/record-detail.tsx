@@ -8,7 +8,7 @@ import { CheckCircle2, AlertTriangle, XCircle, ArrowLeft, Printer, Trash2, Edit2
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListRecordsQueryKey, getGetDashboardQueryKey, getGetRecordQueryKey } from "@workspace/api-client-react";
-import { Fragment, useState } from "react";
+import { useState } from "react";
 
 function calculatedWaterAbsorption(values: Record<string, unknown>) {
   const dryWeight = Number(values.dryWeight);
@@ -82,6 +82,39 @@ function formatAverageStrength(value: number | null) {
   return Number.isInteger(value) ? String(value) : value.toFixed(2);
 }
 
+function CubeAgeAveragesTable({ rows }: { rows: unknown[] }) {
+  const ages = [...new Set(
+    rows
+      .map(cubeRowAge)
+      .filter((age): age is number => age !== null),
+  )].sort((left, right) => left - right);
+
+  if (!ages.length) return null;
+
+  return (
+    <div className="flex justify-center overflow-x-auto border-t bg-muted/10 p-4">
+      <table className="w-full max-w-md text-xs">
+        <thead className="bg-muted/30">
+          <tr className="border-b">
+            <th className="p-2 text-center">Test Age</th>
+            <th className="p-2 text-center">Average Strength (N/mm²)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {ages.map((age) => (
+            <tr key={age} className="border-b last:border-b-0">
+              <td className="p-2 text-center font-semibold">{age} days</td>
+              <td className="p-2 text-center font-bold">
+                {formatAverageStrength(averageStrengthForAge(rows, age))}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function DetailSummaryTable({ entries }: { entries: ReadonlyArray<readonly [string, unknown]> }) {
   return (
     <div className="overflow-x-auto">
@@ -153,39 +186,24 @@ function TestRowsTable({
             const values = typeof row === "object" && row !== null
               ? row as Record<string, unknown>
               : {};
-            const age = cubeRowAge(row);
-            const nextAge = index < displayRows.length - 1 ? cubeRowAge(displayRows[index + 1]) : null;
-            const isLastRowForAge = age !== null && age !== nextAge;
             return (
-              <Fragment key={index}>
-                <tr className="border-b">
-                  <td className="p-2 font-semibold">
-                    {sortByAge ? index + 1 : displayValue(values.rowNo, String(index + 1))}
-                  </td>
-                  <td className="p-2">{displayValue(values.testAge ?? values.sampleAge)}</td>
-                  <td className="p-2">{displayValue(values.length)}</td>
-                  <td className="p-2">{displayValue(values.width)}</td>
-                  <td className="p-2">{displayValue(values.height)}</td>
-                  <td className="p-2">{displayValue(values.dryWeight)}</td>
-                  <td className="p-2">{displayValue(values.wetWeight)}</td>
-                  {includeAbsorption && <td className="p-2">{calculatedWaterAbsorption(values)}</td>}
-                  <td className="p-2">{displayValue(values.load)}</td>
-                  <td className="p-2">{displayValue(values.loadedFaceArea)}</td>
-                  <td className="p-2 font-semibold">
-                    {displayValue(values.calculatedStrength ?? values.strength ?? values.compressiveStrength)}
-                  </td>
-                </tr>
-                {sortByAge && isLastRowForAge && (
-                  <tr className="border-b bg-muted/20">
-                    <td className="p-2 text-right font-semibold text-muted-foreground" colSpan={includeAbsorption ? 10 : 9}>
-                      Average Strength ({age} days)
-                    </td>
-                    <td className="p-2 font-bold">
-                      {formatAverageStrength(averageStrengthForAge(displayRows, age))}
-                    </td>
-                  </tr>
-                )}
-              </Fragment>
+              <tr key={index} className="border-b last:border-b-0">
+                <td className="p-2 font-semibold">
+                  {sortByAge ? index + 1 : displayValue(values.rowNo, String(index + 1))}
+                </td>
+                <td className="p-2">{displayValue(values.testAge ?? values.sampleAge)}</td>
+                <td className="p-2">{displayValue(values.length)}</td>
+                <td className="p-2">{displayValue(values.width)}</td>
+                <td className="p-2">{displayValue(values.height)}</td>
+                <td className="p-2">{displayValue(values.dryWeight)}</td>
+                <td className="p-2">{displayValue(values.wetWeight)}</td>
+                {includeAbsorption && <td className="p-2">{calculatedWaterAbsorption(values)}</td>}
+                <td className="p-2">{displayValue(values.load)}</td>
+                <td className="p-2">{displayValue(values.loadedFaceArea)}</td>
+                <td className="p-2 font-semibold">
+                  {displayValue(values.calculatedStrength ?? values.strength ?? values.compressiveStrength)}
+                </td>
+              </tr>
             );
           })}
         </tbody>
@@ -492,7 +510,12 @@ export default function RecordDetail() {
             </CardHeader>
             <CardContent className="p-0">
               {specimenRows.length > 0
-                 ? <TestRowsTable rows={specimenRows} includeAbsorption sortByAge />
+                ? (
+                  <>
+                    <TestRowsTable rows={specimenRows} includeAbsorption sortByAge />
+                    <CubeAgeAveragesTable rows={specimenRows} />
+                  </>
+                )
                 : <p className="p-6 text-center text-muted-foreground">No specimen measurements recorded.</p>}
             </CardContent>
           </Card>

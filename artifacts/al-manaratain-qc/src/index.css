@@ -362,6 +362,15 @@
   font-size: 8px;
 }
 
+.report-average-block {
+  margin: 4mm auto 0;
+  width: 55%;
+}
+
+.report-average-table td {
+  font-weight: 700;
+}
+
 .report-specimen-block {
   margin-top: 4mm;
 }

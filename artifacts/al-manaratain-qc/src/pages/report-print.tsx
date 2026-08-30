@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "wouter";
 import {
   useGetReport,
@@ -169,6 +169,42 @@ function averageStrengthForAge(rows: unknown[], age: number) {
     .filter((strength): strength is number => strength !== null);
   if (!strengths.length) return null;
   return strengths.reduce((total, strength) => total + strength, 0) / strengths.length;
+}
+
+function ReadyMixAverageStrengthTable({ rows }: { rows: unknown[] }) {
+  const ages = [...new Set(
+    rows
+      .map(cubeRowAge)
+      .filter((age): age is number => age !== null),
+  )].sort((left, right) => left - right);
+
+  if (!ages.length) return null;
+
+  return (
+    <div className="report-average-block">
+      <p className="report-centered-title">Average Strength by Cube Age:</p>
+      <table className="report-table report-average-table">
+        <thead>
+          <tr>
+            <th>Test Age</th>
+            <th>Average Strength (N/mm2)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {ages.map((age) => (
+            <tr key={age}>
+              <td>{age} days</td>
+              <td>
+                {averageStrengthForAge(rows, age) === null
+                  ? "-"
+                  : `${formatNumber(averageStrengthForAge(rows, age) ?? 0, 2)} N/mm2`}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 function SpecimenRowsTable({
@@ -601,11 +637,6 @@ function ReadyMixReport({
                 typeof row === "object" && row !== null
                   ? (row as Record<string, unknown>)
                   : {};
-              const age = cubeRowAge(row);
-              const nextAge = index < orderedTestRows.length - 1
-                ? cubeRowAge(orderedTestRows[index + 1])
-                : null;
-              const isLastRowForAge = age !== null && age !== nextAge;
               const displayValues: ValueMap = {
                 ...values,
                 testAge:
@@ -627,34 +658,23 @@ function ReadyMixReport({
                   detailValue(details, ["strength", "compressiveStrength"], ""),
               };
               return (
-                <Fragment key={index}>
-                  <tr>
-                    <td>{index + 1}</td>
-                    <td>{textValue(displayValues.testAge)}</td>
-                    <td>{textValue(displayValues.length)}</td>
-                    <td>{textValue(displayValues.width)}</td>
-                    <td>{textValue(displayValues.height)}</td>
-                    <td>{textValue(displayValues.dryWeight)}</td>
-                    <td>{textValue(displayValues.wetWeight)}</td>
-                    <td>{calculatedWaterAbsorption(displayValues)}</td>
-                    <td>{textValue(displayValues.load)}</td>
-                    <td>{textValue(displayValues.strength)}</td>
-                  </tr>
-                  {isLastRowForAge && (
-                    <tr className="report-average-row">
-                      <td colSpan={9}>Average Strength ({age} days)</td>
-                      <td>
-                        {averageStrengthForAge(orderedTestRows, age) === null
-                          ? "-"
-                          : `${formatNumber(averageStrengthForAge(orderedTestRows, age) ?? 0, 2)} N/mm2`}
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
+                <tr key={index}>
+                  <td>{index + 1}</td>
+                  <td>{textValue(displayValues.testAge)}</td>
+                  <td>{textValue(displayValues.length)}</td>
+                  <td>{textValue(displayValues.width)}</td>
+                  <td>{textValue(displayValues.height)}</td>
+                  <td>{textValue(displayValues.dryWeight)}</td>
+                  <td>{textValue(displayValues.wetWeight)}</td>
+                  <td>{calculatedWaterAbsorption(displayValues)}</td>
+                  <td>{textValue(displayValues.load)}</td>
+                  <td>{textValue(displayValues.strength)}</td>
+                </tr>
               );
             })}
           </tbody>
         </table>
+        <ReadyMixAverageStrengthTable rows={orderedTestRows} />
       </section>
       <ReadyMixComplianceBlock
         record={record}
