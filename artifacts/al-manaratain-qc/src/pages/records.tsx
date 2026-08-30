@@ -73,7 +73,7 @@ export default function Records() {
           </div>
         </CardHeader>
         <CardContent className="flex-1 overflow-auto p-0">
-          <Table>
+          <Table className="min-w-[760px]">
             <TableHeader className="sticky top-0 bg-card z-10 shadow-sm">
               <TableRow>
                 <TableHead className="w-[120px]">Record No.</TableHead>

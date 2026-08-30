@@ -19,9 +19,9 @@ export function Layout({ children }: LayoutProps) {
   ];
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-screen min-w-0 overflow-hidden bg-background">
       {/* Sidebar */}
-      <aside className="w-64 border-r border-border bg-sidebar flex-shrink-0 flex flex-col print-hide">
+      <aside className="hidden w-64 flex-shrink-0 flex-col border-r border-border bg-sidebar print-hide md:flex">
         <div className="h-16 flex items-center px-6 border-b border-border">
           <Link href="/">
             <img 
@@ -72,22 +72,44 @@ export function Layout({ children }: LayoutProps) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden relative">
-        <div className="h-16 border-b border-border bg-card flex items-center justify-between px-8 shrink-0 print-hide">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
+      <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="flex min-h-16 shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-4 py-3 sm:px-8 print-hide">
+          <div className="flex min-w-0 items-center gap-2 text-sm font-medium text-muted-foreground">
              <Beaker className="w-4 h-4" />
-             Al Manaratain Quality Control System
+             <span className="truncate">Al Manaratain Quality Control System</span>
           </div>
-          <div className="flex items-center gap-4">
-             <div className="text-xs text-muted-foreground flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-4">
+             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                <span className="w-2 h-2 rounded-full bg-success"></span>
-               System Operational
+               <span className="hidden sm:inline">System Operational</span>
              </div>
           </div>
         </div>
+
+        <nav className="flex shrink-0 gap-1 overflow-x-auto border-b border-border bg-card px-2 py-2 print-hide md:hidden">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex min-w-[68px] shrink-0 flex-col items-center gap-1 rounded-md px-2 py-2 text-[11px] font-medium",
+                  isActive
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                    : "text-sidebar-foreground hover:bg-muted",
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
         
-        <div className="flex-1 overflow-y-auto p-8 print-container">
-          <div className="max-w-6xl mx-auto print-container h-full">
+        <div className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 print-container">
+          <div className="mx-auto h-full w-full max-w-6xl min-w-0 print-container">
             {children}
           </div>
         </div>

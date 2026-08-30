@@ -135,8 +135,8 @@ export default function Home() {
               Latest tests submitted to the quality control register.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Table>
+          <CardContent className="overflow-x-auto">
+            <Table className="min-w-[640px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Reference / Record No.</TableHead>
