@@ -590,10 +590,9 @@ paths:
             description: Sample date in YYYY-MM-DD format
         - name: mixDesign
           in: query
-          required: true
+          required: false
           schema:
             type: string
-            minLength: 1
         - name: referenceType
           in: query
           required: true
@@ -1215,12 +1214,35 @@ components:
           type: ["number", "null"]
         strengthUnit:
           type: string
+    DailyReadyMixMixSummary:
+      type: object
+      required:
+        - mixDesign
+        - recordCount
+        - averageStrength
+        - minimumStrength
+        - maximumStrength
+        - strengthUnit
+      properties:
+        mixDesign:
+          type: string
+        recordCount:
+          type: number
+        averageStrength:
+          type: ["number", "null"]
+        minimumStrength:
+          type: ["number", "null"]
+        maximumStrength:
+          type: ["number", "null"]
+        strengthUnit:
+          type: string
     DailyReadyMixResults:
       type: object
       required:
         - sampleDate
         - mixDesign
         - referenceType
+        - mixes
         - records
         - averageStrength
         - minimumStrength
@@ -1231,9 +1253,13 @@ components:
           type: string
           format: date
         mixDesign:
-          type: string
+          type: ["string", "null"]
         referenceType:
           $ref: "#/components/schemas/DailyReadyMixReferenceType"
+        mixes:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailyReadyMixMixSummary"
         records:
           type: array
           items:

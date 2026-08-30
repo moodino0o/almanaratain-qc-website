@@ -12,9 +12,6 @@ export type GetDailyReadyMixResultsParams = {
  * Sample date in YYYY-MM-DD format
  */
 sampleDate: string;
-/**
- * @minLength 1
- */
-mixDesign: string;
+mixDesign?: string;
 referenceType: DailyReadyMixReferenceType;
 };

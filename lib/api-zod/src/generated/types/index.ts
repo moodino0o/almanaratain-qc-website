@@ -16,6 +16,7 @@ export * from './authorizationSessionHeaderParameter';
 export * from './authUser';
 export * from './authUserEnvelope';
 export * from './beginBrowserLoginParams';
+export * from './dailyReadyMixMixSummary';
 export * from './dailyReadyMixReferenceType';
 export * from './dailyReadyMixResult';
 export * from './dailyReadyMixResults';

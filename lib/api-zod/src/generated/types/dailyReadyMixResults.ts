@@ -5,13 +5,16 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { DailyReadyMixMixSummary } from './dailyReadyMixMixSummary';
 import type { DailyReadyMixReferenceType } from './dailyReadyMixReferenceType';
 import type { DailyReadyMixResult } from './dailyReadyMixResult';
 
 export interface DailyReadyMixResults {
   sampleDate: Date;
-  mixDesign: string;
+  /** @nullable */
+  mixDesign: string | null;
   referenceType: DailyReadyMixReferenceType;
+  mixes: DailyReadyMixMixSummary[];
   records: DailyReadyMixResult[];
   /** @nullable */
   averageStrength: number | null;

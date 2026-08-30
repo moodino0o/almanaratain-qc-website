@@ -309,10 +309,24 @@ export interface DailyReadyMixResult {
   strengthUnit: string;
 }
 
+export interface DailyReadyMixMixSummary {
+  mixDesign: string;
+  recordCount: number;
+  /** @nullable */
+  averageStrength: number | null;
+  /** @nullable */
+  minimumStrength: number | null;
+  /** @nullable */
+  maximumStrength: number | null;
+  strengthUnit: string;
+}
+
 export interface DailyReadyMixResults {
   sampleDate: string;
-  mixDesign: string;
+  /** @nullable */
+  mixDesign: string | null;
   referenceType: DailyReadyMixReferenceType;
+  mixes: DailyReadyMixMixSummary[];
   records: DailyReadyMixResult[];
   /** @nullable */
   averageStrength: number | null;
@@ -481,10 +495,7 @@ export type GetDailyReadyMixResultsParams = {
  * Sample date in YYYY-MM-DD format
  */
 sampleDate: string;
-/**
- * @minLength 1
- */
-mixDesign: string;
+mixDesign?: string;
 referenceType: DailyReadyMixReferenceType;
 };
 

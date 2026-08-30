@@ -874,13 +874,13 @@ router.get("/daily-ready-mix-results", async (req, res): Promise<void> => {
     .orderBy(asc(qcRecordsTable.location), asc(qcRecordsTable.id));
 
   const prefix = referenceType === "site" ? "S" : "H";
-  const normalizedMixDesign = mixDesign.trim().toLocaleLowerCase();
+  const normalizedMixDesign = mixDesign?.trim().toLocaleLowerCase();
   const matchingRecords = rows.flatMap((row) => {
     const reference = referenceNumber(row.details);
     const design = readyMixDesign(row.details, row.material);
     if (
       !reference.toLocaleUpperCase().startsWith(prefix) ||
-      design.toLocaleLowerCase() !== normalizedMixDesign
+      (normalizedMixDesign && design.toLocaleLowerCase() !== normalizedMixDesign)
     ) {
       return [];
     }
@@ -904,6 +904,28 @@ router.get("/daily-ready-mix-results", async (req, res): Promise<void> => {
       strengthUnit: "N/mm²",
     }];
   });
+  const mixSummaryMap = new Map<string, { recordCount: number; strengths: number[] }>();
+  for (const record of matchingRecords) {
+    const current = mixSummaryMap.get(record.mixDesign) ?? { recordCount: 0, strengths: [] };
+    current.recordCount += 1;
+    if (record.averageStrength !== null) current.strengths.push(record.averageStrength);
+    mixSummaryMap.set(record.mixDesign, current);
+  }
+  const mixes = [...mixSummaryMap.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([design, summary]) => {
+      const strengths = summary.strengths;
+      return {
+        mixDesign: design,
+        recordCount: summary.recordCount,
+        averageStrength: strengths.length
+          ? strengths.reduce((sum, value) => sum + value, 0) / strengths.length
+          : null,
+        minimumStrength: strengths.length ? Math.min(...strengths) : null,
+        maximumStrength: strengths.length ? Math.max(...strengths) : null,
+        strengthUnit: "N/mm²",
+      };
+    });
   const numericStrengths = matchingRecords
     .map((record) => record.averageStrength)
     .filter((value): value is number => value !== null);
@@ -916,8 +938,9 @@ router.get("/daily-ready-mix-results", async (req, res): Promise<void> => {
   res.json(
     GetDailyReadyMixResultsResponse.parse({
       sampleDate,
-      mixDesign: mixDesign.trim(),
+      mixDesign: mixDesign?.trim() || null,
       referenceType,
+      mixes,
       records: matchingRecords,
       averageStrength: summaryAverage,
       minimumStrength: summaryMinimum,

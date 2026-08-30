@@ -49,6 +49,13 @@ export default function Reports() {
   const [draftMixDesign, setDraftMixDesign] = useState("");
   const [draftReferenceType, setDraftReferenceType] = useState<ReferenceType>("site");
   const [filters, setFilters] = useState<GetDailyReadyMixResultsParams | null>(null);
+  const queryParams = filters ?? {
+    sampleDate: today(),
+    referenceType: DailyReadyMixReferenceType.site,
+  };
+  const selectedMixDesign = filters?.mixDesign?.trim() ?? "";
+  const hasFilters = filters !== null;
+  const showMixSummaries = hasFilters && !selectedMixDesign;
 
   const { data: lookups, isLoading: lookupsLoading } = useGetLookups();
   const { data: readyMixRecords } = useListRecords({
@@ -56,11 +63,11 @@ export default function Reports() {
     limit: 100,
   });
   const { data: results, isLoading: resultsLoading, isError } = useGetDailyReadyMixResults(
-    filters ?? { sampleDate: today(), mixDesign: "", referenceType: DailyReadyMixReferenceType.site },
+    queryParams,
     {
       query: {
         enabled: filters !== null,
-        queryKey: getGetDailyReadyMixResultsQueryKey(filters ?? { sampleDate: today(), mixDesign: "", referenceType: DailyReadyMixReferenceType.site }),
+        queryKey: getGetDailyReadyMixResultsQueryKey(queryParams),
       },
     },
   );
@@ -78,23 +85,25 @@ export default function Reports() {
 
   const openFilters = () => {
     setDraftDate(filters?.sampleDate ?? today());
-    setDraftMixDesign(filters?.mixDesign ?? mixDesigns[0] ?? "");
+    setDraftMixDesign(filters?.mixDesign ?? "");
     setDraftReferenceType(filters?.referenceType ?? DailyReadyMixReferenceType.site);
     setIsFilterOpen(true);
   };
 
   const applyFilters = () => {
-    if (!draftDate || !draftMixDesign.trim()) return;
+    if (!draftDate) return;
     setFilters({
       sampleDate: draftDate,
-      mixDesign: draftMixDesign.trim(),
+      ...(draftMixDesign.trim() ? { mixDesign: draftMixDesign.trim() } : {}),
       referenceType: draftReferenceType,
     });
     setIsFilterOpen(false);
   };
 
   const referenceLabel = filters?.referenceType === DailyReadyMixReferenceType.plant ? "Plant" : "Site";
-  const hasFilters = filters !== null;
+  const hasResultRows = showMixSummaries
+    ? Boolean(results?.mixes.length)
+    : Boolean(results?.records.length);
 
   return (
     <div className="flex h-full flex-col gap-6">
@@ -125,9 +134,14 @@ export default function Reports() {
               <CardTitle className="text-lg">Selected daily results</CardTitle>
               <CardDescription>
                 {hasFilters
-                  ? `${formatDate(filters.sampleDate)} · ${filters.mixDesign} · ${referenceLabel} references start with ${referenceLabel === "Site" ? "S" : "H"}`
-                  : "Choose a date, mix design, and reference category to view the results."}
+                  ? `${formatDate(filters.sampleDate)} · ${selectedMixDesign || "All mix designs"} · ${referenceLabel} references`
+                  : "Choose a date, an optional mix design, and a reference category to view the results."}
               </CardDescription>
+              {hasFilters && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  S = Site · H = Plant
+                </p>
+              )}
             </div>
             {hasFilters && (
               <Button variant="outline" size="sm" onClick={openFilters}>
@@ -143,9 +157,9 @@ export default function Reports() {
               <CalendarDays className="mb-4 h-10 w-10 text-primary/60" />
               <h2 className="text-lg font-semibold">Start with a daily result search</h2>
               <p className="mt-2 max-w-md text-sm text-muted-foreground">
-                Use the filter popup to specify the sample date, mix design, and whether the reference number belongs to a Site or Plant.
+                Use the filter popup to specify the sample date and whether the reference number belongs to a Site or Plant. Leave mix design blank to see all mixes for that day.
               </p>
-              <Button className="mt-5" onClick={openFilters}>Choose date and mix design</Button>
+              <Button className="mt-5" onClick={openFilters}>Choose date and mix</Button>
             </div>
           ) : resultsLoading ? (
             <div className="flex min-h-[280px] items-center justify-center text-muted-foreground">
@@ -156,13 +170,43 @@ export default function Reports() {
               <p className="font-semibold">The daily results could not be loaded.</p>
               <p className="mt-1 text-sm">Please try the selection again.</p>
             </div>
-          ) : !results?.records.length ? (
+          ) : !hasResultRows ? (
             <div className="flex min-h-[280px] flex-col items-center justify-center text-center">
               <Search className="mb-3 h-10 w-10 text-muted-foreground/40" />
               <p className="font-semibold">No matching Ready Mix results</p>
               <p className="mt-1 max-w-lg text-sm text-muted-foreground">
-                No records matched this date, mix design, and {referenceLabel} reference prefix. Check that the reference number starts with {referenceLabel === "Site" ? "S" : "H"} and that a strength was recorded.
+                {showMixSummaries
+                  ? `No Ready Mix records matched this date and ${referenceLabel} reference prefix.`
+                  : `No records matched this date, mix design, and ${referenceLabel} reference prefix.`}{" "}
+                Check that the reference number starts with {referenceLabel === "Site" ? "S" : "H"} and that a strength was recorded.
               </p>
+            </div>
+          ) : showMixSummaries ? (
+            <div className="overflow-x-auto rounded-md border">
+              <Table className="min-w-[680px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Mix Design</TableHead>
+                    <TableHead className="text-right">Records</TableHead>
+                    <TableHead className="text-right">Average Strength</TableHead>
+                    <TableHead className="text-right">Minimum Strength</TableHead>
+                    <TableHead className="text-right">Maximum Strength</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {results.mixes.map((mix) => (
+                    <TableRow key={mix.mixDesign}>
+                      <TableCell className="font-semibold text-primary">{mix.mixDesign}</TableCell>
+                      <TableCell className="text-right">{mix.recordCount}</TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {formatStrength(mix.averageStrength, mix.strengthUnit)}
+                      </TableCell>
+                      <TableCell className="text-right">{formatStrength(mix.minimumStrength, mix.strengthUnit)}</TableCell>
+                      <TableCell className="text-right">{formatStrength(mix.maximumStrength, mix.strengthUnit)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           ) : (
             <div className="overflow-x-auto rounded-md border">
@@ -214,7 +258,7 @@ export default function Reports() {
           <DialogHeader>
             <DialogTitle>Choose daily Ready Mix results</DialogTitle>
             <DialogDescription>
-              Select the exact day and mix design. Reference numbers beginning with S are Sites; H are Plants.
+              Choose a date and reference category. Leave mix design blank to show all mixes for that day.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-5 py-2">
@@ -233,16 +277,16 @@ export default function Reports() {
                 id="daily-result-mix"
                 value={draftMixDesign}
                 onChange={(event) => setDraftMixDesign(event.target.value)}
-                disabled={lookupsLoading || mixDesigns.length === 0}
+                disabled={lookupsLoading}
                 className="h-10 rounded-md border border-input bg-background px-3 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
               >
-                <option value="">Select a mix design</option>
+                <option value="">All mix designs</option>
                 {mixDesigns.map((mixDesign) => (
                   <option key={mixDesign} value={mixDesign}>{mixDesign}</option>
                 ))}
               </select>
               {!lookupsLoading && mixDesigns.length === 0 && (
-                <p className="text-xs text-destructive">No Ready Mix designs are available yet.</p>
+                <p className="text-xs text-muted-foreground">No saved mix designs are available; all mixes will still be searched.</p>
               )}
             </div>
             <div className="grid gap-2">
@@ -260,7 +304,7 @@ export default function Reports() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsFilterOpen(false)}>Cancel</Button>
-            <Button onClick={applyFilters} disabled={!draftDate || !draftMixDesign.trim()}>
+            <Button onClick={applyFilters} disabled={!draftDate}>
               Show results
             </Button>
           </DialogFooter>
