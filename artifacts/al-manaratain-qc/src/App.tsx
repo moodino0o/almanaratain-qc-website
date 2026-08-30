@@ -19,6 +19,7 @@ import RecordDetail from '@/pages/record-detail';
 import Reports from '@/pages/reports';
 import ReportPrint from '@/pages/report-print';
 import Settings from '@/pages/settings';
+import Archive from '@/pages/archive';
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,7 @@ function Router() {
             <Route path="/records/:id" component={RecordDetail} />
             <Route path="/reports" component={Reports} />
             <Route path="/settings" component={Settings} />
+            <Route path="/archive" component={Archive} />
             <Route component={NotFound} />
           </Switch>
         </Layout>

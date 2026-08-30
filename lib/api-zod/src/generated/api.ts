@@ -71,7 +71,7 @@ export const GetLookupsResponse = zod.object({
 export const GetCurrentAuthUserResponse = zod.object({
   "user": zod.union([zod.object({
   "id": zod.string(),
-  "email": zod.email().nullable(),
+  "email": zod.string().nullable(),
   "firstName": zod.string().nullable(),
   "lastName": zod.string().nullable(),
   "profileImageUrl": zod.string().nullable()
@@ -118,7 +118,7 @@ export const LogoutBrowserSessionResponse = zod.void()
 export const ExchangeMobileAuthorizationCodeBody = zod.object({
   "code": zod.string().min(1),
   "code_verifier": zod.string().min(1),
-  "redirect_uri": zod.url().min(1),
+  "redirect_uri": zod.string().min(1),
   "state": zod.string().min(1),
   "nonce": zod.string().min(1).optional()
 })
@@ -146,7 +146,7 @@ export const LogoutMobileSessionResponse = zod.object({
 
 export const RequestUploadUrlBody = zod.object({
   "name": zod.string().min(1),
-  "size": zod.int().min(1),
+  "size": zod.number().min(1),
   "contentType": zod.string().min(1)
 })
 
@@ -156,11 +156,11 @@ export const RequestUploadUrlBody = zod.object({
 
 
 export const RequestUploadUrlResponse = zod.object({
-  "uploadURL": zod.url(),
+  "uploadURL": zod.string(),
   "objectPath": zod.string(),
   "metadata": zod.object({
   "name": zod.string().min(1),
-  "size": zod.int().min(1),
+  "size": zod.number().min(1),
   "contentType": zod.string().min(1)
 })
 })
@@ -226,7 +226,7 @@ export const CreateArchiveDocumentBody = zod.object({
   "originalName": zod.string().min(1),
   "objectPath": zod.string().min(1),
   "mimeType": zod.string().min(1),
-  "size": zod.int().min(1),
+  "size": zod.number().min(1),
   "category": zod.string().min(1),
   "subcategory": zod.string().min(1),
   "description": zod.string().default(createArchiveDocumentBodyDescriptionDefault)
@@ -270,11 +270,17 @@ export const GetArchiveDocumentContentParams = zod.object({
   "id": zod.coerce.number()
 })
 
-export const GetArchiveDocumentContentQueryParams = zod.object({
-  "download": zod.coerce.boolean().optional()
+export const GetArchiveDocumentContentResponse = zod.unknown()
+
+
+/**
+ * @summary Download an archived document
+ */
+export const DownloadArchiveDocumentParams = zod.object({
+  "id": zod.coerce.number()
 })
 
-export const GetArchiveDocumentContentResponse = zod.unknown()
+export const DownloadArchiveDocumentResponse = zod.unknown()
 
 
 /**

@@ -17,7 +17,6 @@ export * from './authUserEnvelope';
 export * from './beginBrowserLoginParams';
 export * from './dashboard';
 export * from './errorEnvelope';
-export * from './getArchiveDocumentContentParams';
 export * from './healthStatus';
 export * from './limitParamParameter';
 export * from './listRecordsParams';

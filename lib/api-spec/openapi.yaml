@@ -240,14 +240,28 @@ paths:
       summary: Review or download an archived document
       parameters:
         - $ref: "#/components/parameters/RecordIdParam"
-        - name: download
-          in: query
-          required: false
-          schema:
-            type: boolean
       responses:
         "200":
           description: Original document content
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Authentication required
+        "404":
+          description: Document not found
+  /archive/documents/{id}/download:
+    get:
+      tags: [Archive]
+      operationId: downloadArchiveDocument
+      summary: Download an archived document
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "200":
+          description: Original document download
           content:
             "*/*":
               schema:
@@ -799,7 +813,6 @@ components:
           type: string
         email:
           type: ["string", "null"]
-          format: email
         firstName:
           type: ["string", "null"]
         lastName:
@@ -827,7 +840,6 @@ components:
         redirect_uri:
           type: string
           minLength: 1
-          format: uri
         state:
           type: string
           minLength: 1
@@ -855,7 +867,7 @@ components:
           type: string
           minLength: 1
         size:
-          type: integer
+          type: number
           minimum: 1
         contentType:
           type: string
@@ -866,7 +878,6 @@ components:
       properties:
         uploadURL:
           type: string
-          format: uri
         objectPath:
           type: string
         metadata:
@@ -920,7 +931,7 @@ components:
           type: string
           minLength: 1
         size:
-          type: integer
+          type: number
           minimum: 1
         category:
           type: string

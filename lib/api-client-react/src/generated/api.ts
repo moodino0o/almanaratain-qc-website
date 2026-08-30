@@ -26,7 +26,6 @@ import type {
   AuthUserEnvelope,
   BeginBrowserLoginParams,
   Dashboard,
-  GetArchiveDocumentContentParams,
   HealthStatus,
   ListRecordsParams,
   LogoutBrowserSessionParams,
@@ -1144,29 +1143,20 @@ export function useGetArchiveDocument<TData = Awaited<ReturnType<typeof getArchi
 
 
 
-export const getGetArchiveDocumentContentUrl = (id: number,
-    params?: GetArchiveDocumentContentParams,) => {
-  const normalizedParams = new URLSearchParams();
+export const getGetArchiveDocumentContentUrl = (id: number,) => {
 
-  Object.entries(params || {}).forEach(([key, value]) => {
 
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
 
-  const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/api/archive/documents/${id}/content?${stringifiedParams}` : `/api/archive/documents/${id}/content`
+  return `/api/archive/documents/${id}/content`
 }
 
 /**
  * @summary Review or download an archived document
  */
-export const getArchiveDocumentContent = async (id: number,
-    params?: GetArchiveDocumentContentParams, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+export const getArchiveDocumentContent = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
 
-  return customFetch<Blob>(getGetArchiveDocumentContentUrl(id,params),
+  return customFetch<Blob>(getGetArchiveDocumentContentUrl(id),
   {
     ...options,
     method: 'GET'
@@ -1179,25 +1169,23 @@ export const getArchiveDocumentContent = async (id: number,
 
 
 
-export const getGetArchiveDocumentContentQueryKey = (id: number,
-    params?: GetArchiveDocumentContentParams,) => {
+export const getGetArchiveDocumentContentQueryKey = (id: number,) => {
     return [
-    `/api/archive/documents/${id}/content`, ...(params ? [params] : [])
+    `/api/archive/documents/${id}/content`
     ] as const;
     }
 
 
-export const getGetArchiveDocumentContentQueryOptions = <TData = Awaited<ReturnType<typeof getArchiveDocumentContent>>, TError = ErrorType<void>>(id: number,
-    params?: GetArchiveDocumentContentParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getArchiveDocumentContent>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetArchiveDocumentContentQueryOptions = <TData = Awaited<ReturnType<typeof getArchiveDocumentContent>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getArchiveDocumentContent>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetArchiveDocumentContentQueryKey(id,params);
+  const queryKey =  queryOptions?.queryKey ?? getGetArchiveDocumentContentQueryKey(id);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getArchiveDocumentContent>>> = ({ signal }) => getArchiveDocumentContent(id,params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getArchiveDocumentContent>>> = ({ signal }) => getArchiveDocumentContent(id, { signal, ...requestOptions });
 
 
 
@@ -1215,12 +1203,88 @@ export type GetArchiveDocumentContentQueryError = ErrorType<void>
  */
 
 export function useGetArchiveDocumentContent<TData = Awaited<ReturnType<typeof getArchiveDocumentContent>>, TError = ErrorType<void>>(
- id: number,
-    params?: GetArchiveDocumentContentParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getArchiveDocumentContent>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getArchiveDocumentContent>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetArchiveDocumentContentQueryOptions(id,params,options)
+  const queryOptions = getGetArchiveDocumentContentQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getDownloadArchiveDocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/archive/documents/${id}/download`
+}
+
+/**
+ * @summary Download an archived document
+ */
+export const downloadArchiveDocument = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getDownloadArchiveDocumentUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDownloadArchiveDocumentQueryKey = (id: number,) => {
+    return [
+    `/api/archive/documents/${id}/download`
+    ] as const;
+    }
+
+
+export const getDownloadArchiveDocumentQueryOptions = <TData = Awaited<ReturnType<typeof downloadArchiveDocument>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadArchiveDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDownloadArchiveDocumentQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadArchiveDocument>>> = ({ signal }) => downloadArchiveDocument(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof downloadArchiveDocument>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type DownloadArchiveDocumentQueryResult = NonNullable<Awaited<ReturnType<typeof downloadArchiveDocument>>>
+export type DownloadArchiveDocumentQueryError = ErrorType<void>
+
+
+/**
+ * @summary Download an archived document
+ */
+
+export function useDownloadArchiveDocument<TData = Awaited<ReturnType<typeof downloadArchiveDocument>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadArchiveDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getDownloadArchiveDocumentQueryOptions(id,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

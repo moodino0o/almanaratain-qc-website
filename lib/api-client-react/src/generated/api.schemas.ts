@@ -274,10 +274,6 @@ export type LogoutBrowserSessionParams = {
 returnTo?: string;
 };
 
-export type GetArchiveDocumentContentParams = {
-download?: boolean;
-};
-
 export type ListRecordsParams = {
 testType?: TestTypeParamParameter;
 search?: SearchParamParameter;
