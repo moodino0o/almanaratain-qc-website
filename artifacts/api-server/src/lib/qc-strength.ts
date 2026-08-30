@@ -236,6 +236,7 @@ export function evaluateSieveRecord(
         ? rounded((passingAmount / sampleWeight) * 100)
         : null;
     const {
+      amountReturned: _existingAmountReturned,
       passingAmount: _existingPassingAmount,
       passingPercentage: _existingPassingPercentage,
       ...sourceValues

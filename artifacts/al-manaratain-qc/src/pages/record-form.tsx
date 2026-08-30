@@ -444,7 +444,7 @@ export default function RecordForm() {
           sieveSizeReferenceItemId: row.sieveSizeReferenceItemId ??
             sieveSizeReferenceItems.find((item) => item.value === row.sieveSize)?.id ??
             null,
-          amountReturned: row.amountReturned,
+           ...(row.amountReturned.trim() ? { amountReturned: row.amountReturned } : {}),
           passingAmount: calculated.passingAmount || row.passingAmount,
           passingPercentage: calculated.passingPercentage || row.passingPercentage,
         };
@@ -808,7 +808,7 @@ export default function RecordForm() {
                           {usesSieveRows ? (
                             <>
                               <th className="px-3 py-3 text-left font-semibold">Standard</th>
-                               <th className="px-3 py-3 text-left font-semibold">Amount Returned (g)</th>
+                               <th className="px-3 py-3 text-left font-semibold">Amount Returned (g) <span className="font-normal text-muted-foreground">(optional)</span></th>
                                <th className="px-3 py-3 text-left font-semibold">Amount Passing (g)</th>
                               <th className="px-3 py-3 text-left font-semibold">% Passing</th>
                             </>
@@ -872,7 +872,8 @@ export default function RecordForm() {
                                           : candidate
                                       )));
                                     }}
-                                     placeholder="g"
+                                     placeholder="Optional"
+                                     aria-required="false"
                                     aria-label={`Amount returned for row ${rowIndex + 1}`}
                                   />
                                 </td>

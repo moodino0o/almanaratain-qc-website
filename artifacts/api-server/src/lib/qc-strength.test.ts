@@ -126,6 +126,7 @@ test("keeps the result in Review when returned amount is missing", () => {
 
   assert.equal(result.status, "Review");
   assert.equal(criterion(result).measuredValue, null);
+  assert.equal("amountReturned" in result.details.sieveRows[0], false);
   assert.equal("passingAmount" in result.details.sieveRows[0], false);
   assert.equal("passingPercentage" in result.details.sieveRows[0], false);
 });

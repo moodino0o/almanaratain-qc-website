@@ -16,6 +16,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
+import { filterTypeaheadOptions } from "./typeahead-options";
 
 export interface TypeaheadInputProps {
   value: string;
@@ -51,21 +52,10 @@ export function TypeaheadInput({
     }
   };
 
-  const filteredOptions = React.useMemo(() => {
-    if (!inputValue) return options;
-    const lowerInput = inputValue.toLowerCase();
-    return options
-      .filter((opt) => opt.toLowerCase().includes(lowerInput))
-      .sort((a, b) => {
-        const aLower = a.toLowerCase();
-        const bLower = b.toLowerCase();
-        const aStarts = aLower.startsWith(lowerInput);
-        const bStarts = bLower.startsWith(lowerInput);
-        if (aStarts && !bStarts) return -1;
-        if (!aStarts && bStarts) return 1;
-        return aLower.localeCompare(bLower);
-      });
-  }, [options, inputValue]);
+  const filteredOptions = React.useMemo(
+    () => filterTypeaheadOptions(options, inputValue),
+    [options, inputValue],
+  );
 
   return (
     <div className={cn("relative w-full", className)}>
@@ -76,6 +66,8 @@ export function TypeaheadInput({
             onChange={handleInputChange}
             placeholder={placeholder}
             onFocus={() => setOpen(true)}
+            aria-autocomplete="list"
+            aria-expanded={open}
             className="pr-10"
           />
           <PopoverTrigger asChild>
@@ -105,9 +97,7 @@ export function TypeaheadInput({
                     <CommandItem
                       key={option}
                       value={option}
-                      onSelect={(currentValue) => {
-                        // currentValue is lowercased by default in cmdk unless we prevent it, 
-                        // but we disabled filtering. However to be safe we use the original option string.
+                      onSelect={() => {
                         setInputValue(option);
                         onChange(option);
                         setOpen(false);
