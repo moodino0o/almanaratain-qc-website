@@ -25,6 +25,29 @@ function displayValue(value: unknown, fallback = "—") {
   return value === undefined || value === null || value === "" ? fallback : String(value);
 }
 
+function sortCubeRowsByAge(rows: unknown[]) {
+  return rows
+    .map((row, index) => {
+      const values = typeof row === "object" && row !== null
+        ? row as Record<string, unknown>
+        : {};
+      const rawAge = values.testAge ?? values.sampleAge ?? values.cubeAge ?? values.age;
+      const age = rawAge === undefined || rawAge === null || rawAge === ""
+        ? null
+        : Number.parseFloat(String(rawAge).replace(/,/g, ""));
+      return { row, index, age: Number.isFinite(age) ? age : null };
+    })
+    .sort((left, right) => {
+      if (left.age === null && right.age !== null) return 1;
+      if (left.age !== null && right.age === null) return -1;
+      if (left.age !== null && right.age !== null && left.age !== right.age) {
+        return left.age - right.age;
+      }
+      return left.index - right.index;
+    })
+    .map(({ row }) => row);
+}
+
 function DetailSummaryTable({ entries }: { entries: ReadonlyArray<readonly [string, unknown]> }) {
   return (
     <div className="overflow-x-auto">
@@ -63,7 +86,16 @@ function MeasurementTable({
   );
 }
 
-function TestRowsTable({ rows, includeAbsorption }: { rows: unknown[]; includeAbsorption: boolean }) {
+function TestRowsTable({
+  rows,
+  includeAbsorption,
+  sortByAge = false,
+}: {
+  rows: unknown[];
+  includeAbsorption: boolean;
+  sortByAge?: boolean;
+}) {
+  const displayRows = sortByAge ? sortCubeRowsByAge(rows) : rows;
   return (
     <div className="overflow-x-auto">
       <table className={`w-full ${includeAbsorption ? "min-w-[1040px]" : "min-w-[900px]"} text-xs`}>
@@ -83,13 +115,15 @@ function TestRowsTable({ rows, includeAbsorption }: { rows: unknown[]; includeAb
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, index) => {
+          {displayRows.map((row, index) => {
             const values = typeof row === "object" && row !== null
               ? row as Record<string, unknown>
               : {};
             return (
               <tr key={index} className="border-b last:border-b-0">
-                <td className="p-2 font-semibold">{displayValue(values.rowNo, String(index + 1))}</td>
+                <td className="p-2 font-semibold">
+                  {sortByAge ? index + 1 : displayValue(values.rowNo, String(index + 1))}
+                </td>
                 <td className="p-2">{displayValue(values.testAge ?? values.sampleAge)}</td>
                 <td className="p-2">{displayValue(values.length)}</td>
                 <td className="p-2">{displayValue(values.width)}</td>
@@ -409,7 +443,7 @@ export default function RecordDetail() {
             </CardHeader>
             <CardContent className="p-0">
               {specimenRows.length > 0
-                ? <TestRowsTable rows={specimenRows} includeAbsorption />
+                 ? <TestRowsTable rows={specimenRows} includeAbsorption sortByAge />
                 : <p className="p-6 text-center text-muted-foreground">No specimen measurements recorded.</p>}
             </CardContent>
           </Card>

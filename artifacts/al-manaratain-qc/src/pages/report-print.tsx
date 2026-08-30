@@ -122,6 +122,29 @@ function hasSpecimenMeasurements(rows: unknown[]) {
   });
 }
 
+function sortCubeRowsByAge(rows: unknown[]) {
+  return rows
+    .map((row, index) => {
+      const values = typeof row === "object" && row !== null
+        ? row as Record<string, unknown>
+        : {};
+      const rawAge = values.testAge ?? values.sampleAge ?? values.cubeAge ?? values.age;
+      const age = rawAge === undefined || rawAge === null || rawAge === ""
+        ? null
+        : Number.parseFloat(String(rawAge).replace(/,/g, ""));
+      return { row, index, age: Number.isFinite(age) ? age : null };
+    })
+    .sort((left, right) => {
+      if (left.age === null && right.age !== null) return 1;
+      if (left.age !== null && right.age === null) return -1;
+      if (left.age !== null && right.age !== null && left.age !== right.age) {
+        return left.age - right.age;
+      }
+      return left.index - right.index;
+    })
+    .map(({ row }) => row);
+}
+
 function SpecimenRowsTable({
   rows,
   ageLabel,
@@ -502,6 +525,7 @@ function ReadyMixReport({
           waterAbsorption: detailValue(details, ["waterAbsorption", "absorption"]),
         },
       ];
+  const orderedTestRows = sortCubeRowsByAge(testRows);
 
   return (
     <>
@@ -547,7 +571,7 @@ function ReadyMixReport({
             </tr>
           </thead>
           <tbody>
-            {testRows.map((row, index) => {
+            {orderedTestRows.map((row, index) => {
               const values =
                 typeof row === "object" && row !== null
                   ? (row as Record<string, unknown>)
