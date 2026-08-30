@@ -72,7 +72,7 @@ const toFormRow = (row: unknown, id: number): TestRow => {
     sampleAge: numericInputValue(values.sampleAge),
     testAge: numericInputValue(values.testAge),
     load: numericInputValue(values.load),
-    strength: "",
+    strength: numericInputValue(values.strength ?? values.calculatedStrength ?? values.compressiveStrength),
     waterAbsorption: numericInputValue(values.waterAbsorption),
     sieveSize: stringValue(values.sieveSize),
     sieveSizeReferenceItemId: numericInputValue(values.sieveSizeReferenceItemId)
@@ -295,7 +295,7 @@ export default function RecordForm() {
               row,
             ]),
       );
-      const nextRows = applicableSieveStandards.map((standard, index) => {
+      const nextRows: TestRow[] = applicableSieveStandards.map((standard) => {
         const savedRow = rowsBySize.get(standard.sieveSizeReferenceItemId);
         return savedRow
           ? { ...savedRow, sieveSize: standard.sieveSize, sieveSizeReferenceItemId: standard.sieveSizeReferenceItemId }
@@ -305,6 +305,23 @@ export default function RecordForm() {
               sieveSizeReferenceItemId: standard.sieveSizeReferenceItemId,
             };
       });
+      if (!contextChanged) {
+        const matchedStandardSizes = new Set(nextRows.map((row) => row.sieveSizeReferenceItemId));
+        previousRows.forEach((row) => {
+          const sizeId = row.sieveSizeReferenceItemId ??
+            sieveSizeReferenceItems.find((item) => item.value === row.sieveSize)?.id ??
+            null;
+          const hasSavedValue = Boolean(
+            row.sieveSize ||
+            row.amountReturned ||
+            row.passingAmount ||
+            row.passingPercentage,
+          );
+          if (hasSavedValue && (!sizeId || !matchedStandardSizes.has(sizeId))) {
+            nextRows.push(row);
+          }
+        });
+      }
       return nextRows.length ? nextRows : [createEmptyRow(nextRowId.current++)];
     });
   }, [
@@ -500,7 +517,14 @@ export default function RecordForm() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <form
+        onSubmit={handleSubmit}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && event.target instanceof HTMLInputElement) {
+            event.preventDefault();
+          }
+        }}
+      >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card className="md:col-span-2 border-t-4 border-t-primary">
             <CardHeader>
@@ -646,7 +670,7 @@ export default function RecordForm() {
             </CardHeader>
             <CardContent className="pt-6">
               {testType === TestType.Ready_Mix && (
-                <div className="mb-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div className="mb-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                   <div className="space-y-2">
                     <Label>Slump (mm)</Label>
                     <Input
@@ -663,6 +687,15 @@ export default function RecordForm() {
                       value={String(details.temperature ?? "")}
                       onChange={event => handleDetailChange("temperature", event.target.value)}
                       placeholder="Enter temperature"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Air Content (%)</Label>
+                    <Input
+                      type="number"
+                      value={String(details.airContent ?? "")}
+                      onChange={event => handleDetailChange("airContent", event.target.value)}
+                      placeholder="Enter air content"
                     />
                   </div>
                 </div>
@@ -756,6 +789,9 @@ export default function RecordForm() {
                               <th className="px-3 py-3 text-left font-semibold">Height (mm)</th>
                               <th className="px-3 py-3 text-left font-semibold">Dry Weight</th>
                               <th className="px-3 py-3 text-left font-semibold">Wet Weight</th>
+                               {testType === TestType.Ready_Mix && (
+                                 <th className="px-3 py-3 text-left font-semibold">Water Absorption</th>
+                               )}
                             </>
                           )}
                            {(testType === TestType.Ready_Mix || testType === TestType.Blocks) && (
@@ -850,6 +886,19 @@ export default function RecordForm() {
                                 />
                               </td>
                             ))}
+                             {testType === TestType.Ready_Mix && (
+                               <td className="px-2 py-2">
+                                 <Input
+                                   type="text"
+                                   inputMode="decimal"
+                                   value={row.waterAbsorption}
+                                   onChange={event => updateTestRow(rowIndex, "waterAbsorption", event.target.value)}
+                                   onKeyDown={event => handleTestRowKeyDown(event, rowIndex)}
+                                   placeholder="%"
+                                   aria-label={`Water absorption for row ${rowIndex + 1}`}
+                                 />
+                               </td>
+                             )}
                             </>
                             )}
                              {(testType === TestType.Ready_Mix || testType === TestType.Blocks) && (

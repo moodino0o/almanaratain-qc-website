@@ -139,7 +139,7 @@ function StandardEditor({
   );
 
   return (
-    <Card className="border-primary/30 bg-primary/[0.03]">
+    <Card className="border-amber-500/40 bg-amber-50/70 text-foreground dark:bg-amber-950/20">
       <CardHeader>
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -673,10 +673,10 @@ export default function Standards() {
         />
       )}
 
-      <Card className="border-t-4 border-t-primary">
+      <Card className="border-t-4 border-t-amber-500">
         <CardHeader>
           <div className="flex items-start gap-3">
-            <div className="rounded-md bg-primary/10 p-2 text-primary"><FileCheck2 className="h-5 w-5" /></div>
+            <div className="rounded-md bg-amber-500/10 p-2 text-amber-700"><FileCheck2 className="h-5 w-5" /></div>
             <div>
               <CardTitle>Compressive-strength standards</CardTitle>
               <CardDescription>
