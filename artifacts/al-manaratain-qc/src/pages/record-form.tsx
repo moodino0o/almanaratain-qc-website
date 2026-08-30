@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListRecordsQueryKey, getGetDashboardQueryKey, getGetRecordQueryKey } from "@workspace/api-client-react";
-import { Save, ArrowLeft, Copy, Loader2 } from "lucide-react";
+import { Save, ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
 import { TypeaheadInput } from "@/components/ui/typeahead-input";
@@ -103,13 +103,6 @@ export default function RecordForm() {
   const { id } = useParams();
   const recordId = id ? Number(id) : 0;
   const isEditing = Number.isInteger(recordId) && recordId > 0;
-  const duplicateSourceId = Number(
-    typeof window === "undefined"
-      ? 0
-      : new URLSearchParams(window.location.search).get("duplicateFrom"),
-  );
-  const isDuplicating = !isEditing && Number.isInteger(duplicateSourceId) && duplicateSourceId > 0;
-  const sourceRecordId = isEditing ? recordId : isDuplicating ? duplicateSourceId : 0;
   const queryClient = useQueryClient();
   
   const { data: lookups, isLoading: lookupsLoading } = useGetLookups();
@@ -118,10 +111,10 @@ export default function RecordForm() {
     data: existingRecord,
     isLoading: recordLoading,
     isError: recordError,
-  } = useGetRecord(sourceRecordId, {
+  } = useGetRecord(recordId, {
     query: {
-      queryKey: getGetRecordQueryKey(sourceRecordId),
-      enabled: isEditing || isDuplicating,
+      queryKey: getGetRecordQueryKey(recordId),
+      enabled: isEditing,
     },
   });
   const { data: strengthStandards } = useListStrengthStandards();
@@ -149,7 +142,7 @@ export default function RecordForm() {
   const sieveContextKeyRef = useRef("");
 
   useEffect(() => {
-    if ((!isEditing && !isDuplicating) || !existingRecord || initializedRecordId.current === sourceRecordId) return;
+    if (!isEditing || !existingRecord || initializedRecordId.current === recordId) return;
 
     const savedDetails =
       typeof existingRecord.details === "object" && existingRecord.details !== null
@@ -199,8 +192,8 @@ export default function RecordForm() {
     );
     sieveContextKeyRef.current = `${existingRecord.testType}|${String(savedDetails.materialReferenceItemId ?? existingRecord.material)}`;
     nextRowId.current = Math.max(savedRows.length + 1, 2);
-    initializedRecordId.current = sourceRecordId;
-  }, [existingRecord, isDuplicating, isEditing, sourceRecordId]);
+    initializedRecordId.current = recordId;
+  }, [existingRecord, isEditing, recordId]);
 
   const handleDetailChange = (key: string, value: string) => {
     setDetails(prev => ({ ...prev, [key]: value }));
@@ -562,11 +555,11 @@ export default function RecordForm() {
     });
   };
 
-  if (lookupsLoading || ((isEditing || isDuplicating) && recordLoading)) {
+  if (lookupsLoading || (isEditing && recordLoading)) {
     return <div className="p-8 text-center text-muted-foreground">Loading form data...</div>;
   }
 
-  if ((isEditing || isDuplicating) && (recordError || !existingRecord)) {
+  if (isEditing && (recordError || !existingRecord)) {
     return <div className="p-8 text-center text-destructive">Failed to load the record for editing.</div>;
   }
 
@@ -1076,26 +1069,12 @@ export default function RecordForm() {
                   ? "Ready Mix and Blocks statuses are calculated from the configured standard and specimen measurements."
                   : "New records are created in 'Review' status pending supervisor approval."}
               </p>
-              <div className="flex flex-wrap justify-end gap-2">
-                {isEditing && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setLocation(`/records/new?duplicateFrom=${recordId}`)}
-                    disabled={createRecord.isPending || updateRecord.isPending}
-                    size="lg"
-                  >
-                    <Copy className="w-4 h-4 mr-2" />
-                    Duplicate as New
-                  </Button>
-                )}
-                <Button type="submit" disabled={createRecord.isPending || updateRecord.isPending} size="lg">
-                  {createRecord.isPending || updateRecord.isPending
-                    ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    : <Save className="w-4 h-4 mr-2" />}
-                  {isEditing ? "Update Record" : "Save Record"}
-                </Button>
-              </div>
+              <Button type="submit" disabled={createRecord.isPending || updateRecord.isPending} size="lg">
+                {createRecord.isPending || updateRecord.isPending
+                  ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  : <Save className="w-4 h-4 mr-2" />}
+                {isEditing ? "Update Record" : "Save Record"}
+              </Button>
             </CardFooter>
           </Card>
         </div>

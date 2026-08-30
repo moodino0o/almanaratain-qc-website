@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   DailyReadyMixReferenceType,
+  RecordStatus,
   TestType,
   getGetDashboardQueryKey,
   getGetDailyReadyMixResultsQueryKey,
@@ -9,12 +10,14 @@ import {
   getListRecordsQueryKey,
   useGetDailyReadyMixResults,
   useGetLookups,
+  useCreateRecord,
   useListRecords,
   useUpdateRecord,
 } from "@workspace/api-client-react";
 import type {
   GetDailyReadyMixResultsParams,
   QcRecord,
+  QcRecordInput,
   QcRecordUpdate,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -31,7 +34,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CalendarDays, ClipboardList, Filter, Loader2, PlusCircle, Save, Search, SlidersHorizontal } from "lucide-react";
+import { CalendarDays, ClipboardList, Copy, Filter, Loader2, PlusCircle, Save, Search, SlidersHorizontal } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -125,6 +128,8 @@ export default function Reports() {
   const [cubeAge, setCubeAge] = useState("28");
   const [resultEntries, setResultEntries] = useState<ReadyMixResultEntry[]>([]);
   const [isSavingResults, setIsSavingResults] = useState(false);
+  const [duplicatingRecordId, setDuplicatingRecordId] = useState<number | null>(null);
+  const createRecord = useCreateRecord();
   const updateRecord = useUpdateRecord();
   const queryParams = filters ?? {
     sampleDate: today(),
@@ -228,6 +233,51 @@ export default function Reports() {
     )));
   };
 
+  const validateResultEntry = (entry: ReadyMixResultEntry, age: number) => {
+    for (const [rowIndex, row] of entry.rows.entries()) {
+      const dimensions = [row.length, row.width, row.height].map(numberValue);
+      const dryWeight = numberValue(row.dryWeight);
+      const wetWeight = numberValue(row.wetWeight);
+      const load = numberValue(row.load);
+      if (
+        dimensions.some((value) => value === null || value <= 0) ||
+        dryWeight === null ||
+        dryWeight < 0 ||
+        wetWeight === null ||
+        wetWeight < 0 ||
+        load === null ||
+        load < 0
+      ) {
+        toast.error(`Complete all measurements for ${referenceNumber(entry.record)}, row ${rowIndex + 1}.`);
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const saveResultEntry = async (entry: ReadyMixResultEntry, age: number) => {
+    const details = entry.record.details as Record<string, unknown>;
+    const existingRows = Array.isArray(details.testRows) ? details.testRows : [];
+    const retainedRows = existingRows.filter((row) => rowAge(row) !== age);
+    const newRows = entry.rows.map((row, index) => ({
+      rowNo: retainedRows.length + index + 1,
+      testAge: age,
+      length: numberValue(row.length) ?? 100,
+      width: numberValue(row.width) ?? 100,
+      height: numberValue(row.height) ?? 100,
+      dryWeight: numberValue(row.dryWeight),
+      wetWeight: numberValue(row.wetWeight),
+      load: numberValue(row.load) ?? 0,
+    }));
+    const update: QcRecordUpdate = {
+      details: {
+        ...details,
+        testRows: [...retainedRows, ...newRows],
+      },
+    };
+    return updateRecord.mutateAsync({ id: entry.record.id, data: update });
+  };
+
   const saveResults = async () => {
     const age = numberValue(cubeAge);
     if (age === null || !Number.isInteger(age) || age < 1 || age > 365) {
@@ -235,54 +285,14 @@ export default function Reports() {
       return;
     }
     for (const entry of resultEntries) {
-      for (const [rowIndex, row] of entry.rows.entries()) {
-        const dimensions = [row.length, row.width, row.height].map(numberValue);
-        const dryWeight = numberValue(row.dryWeight);
-        const wetWeight = numberValue(row.wetWeight);
-        const load = numberValue(row.load);
-        if (
-          dimensions.some((value) => value === null || value <= 0) ||
-          dryWeight === null ||
-          dryWeight < 0 ||
-          wetWeight === null ||
-          wetWeight < 0 ||
-          load === null ||
-          load < 0
-        ) {
-          toast.error(`Complete all measurements for ${referenceNumber(entry.record)}, row ${rowIndex + 1}.`);
-          return;
-        }
-      }
+      if (!validateResultEntry(entry, age)) return;
     }
 
     setIsSavingResults(true);
     let savedCount = 0;
     try {
       for (const entry of resultEntries) {
-        const details = entry.record.details as Record<string, unknown>;
-        const existingRows = Array.isArray(details.testRows) ? details.testRows : [];
-        const retainedRows = existingRows.filter((row) => rowAge(row) !== age);
-        const newRows = entry.rows.map((row, index) => {
-          const length = numberValue(row.length) ?? 100;
-          const width = numberValue(row.width) ?? 100;
-          return {
-            rowNo: retainedRows.length + index + 1,
-            testAge: age,
-            length,
-            width,
-            height: numberValue(row.height) ?? 100,
-            dryWeight: numberValue(row.dryWeight),
-            wetWeight: numberValue(row.wetWeight),
-            load: numberValue(row.load) ?? 0,
-          };
-        });
-        const update: QcRecordUpdate = {
-          details: {
-            ...details,
-            testRows: [...retainedRows, ...newRows],
-          },
-        };
-        await updateRecord.mutateAsync({ id: entry.record.id, data: update });
+        await saveResultEntry(entry, age);
         savedCount += 1;
       }
 
@@ -308,6 +318,48 @@ export default function Reports() {
     }
   };
 
+  const duplicateReport = async (entry: ReadyMixResultEntry) => {
+    const age = numberValue(cubeAge);
+    if (age === null || !Number.isInteger(age) || age < 1 || age > 365) {
+      toast.error("Cube age must be a whole number of days between 1 and 365.");
+      return;
+    }
+    if (!validateResultEntry(entry, age)) return;
+
+    setDuplicatingRecordId(entry.record.id);
+    try {
+      const savedRecord = await saveResultEntry(entry, age);
+      const duplicateInput: QcRecordInput = {
+        testType: savedRecord.testType,
+        sampleDate: savedRecord.sampleDate,
+        location: savedRecord.location,
+        material: savedRecord.material,
+        status: RecordStatus.Review,
+        testedBy: savedRecord.testedBy,
+        reviewedBy: null,
+        remarks: savedRecord.remarks ?? null,
+        details: savedRecord.details,
+      };
+      const duplicate = await createRecord.mutateAsync({ data: duplicateInput });
+      const duplicateRows = entry.rows.map((row) => ({ ...row })) as [CubeResultRow, CubeResultRow];
+      setResultEntries((previous) => [...previous, { record: duplicate, rows: duplicateRows }]);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: getListRecordsQueryKey() }),
+        queryClient.invalidateQueries({ queryKey: getGetDashboardQueryKey() }),
+        queryClient.invalidateQueries({ queryKey: ["/api/daily-ready-mix-results"] }),
+        queryClient.invalidateQueries({ queryKey: getGetRecordQueryKey(savedRecord.id) }),
+        queryClient.invalidateQueries({ queryKey: getGetReportQueryKey(savedRecord.id) }),
+        queryClient.invalidateQueries({ queryKey: getGetRecordQueryKey(duplicate.id) }),
+        queryClient.invalidateQueries({ queryKey: getGetReportQueryKey(duplicate.id) }),
+      ]);
+      toast.success(`Saved ${referenceNumber(entry.record)} and duplicated it as ${duplicate.recordNo}.`);
+    } catch {
+      toast.error(`Could not save and duplicate ${referenceNumber(entry.record)}.`);
+    } finally {
+      setDuplicatingRecordId(null);
+    }
+  };
+
   const openFilters = () => {
     setDraftDate(filters?.sampleDate ?? today());
     setDraftMixDesign(filters?.mixDesign ?? "");
@@ -328,6 +380,7 @@ export default function Reports() {
   const referenceLabel = filters?.referenceType === DailyReadyMixReferenceType.plant ? "Plant" : "Site";
   const dailyResults = results ?? {
     mixes: [],
+    locations: [],
     records: [],
     averageStrength: null,
     minimumStrength: null,
@@ -421,72 +474,158 @@ export default function Reports() {
               </p>
             </div>
           ) : showMixSummaries ? (
-            <div className="overflow-x-auto rounded-md border">
-              <Table className="min-w-[680px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Mix Design</TableHead>
-                    <TableHead className="text-right">Records</TableHead>
-                    <TableHead className="text-right">Average Strength</TableHead>
-                    <TableHead className="text-right">Minimum Strength</TableHead>
-                    <TableHead className="text-right">Maximum Strength</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {dailyResults.mixes.map((mix) => (
-                    <TableRow key={mix.mixDesign}>
-                      <TableCell className="font-semibold text-primary">{mix.mixDesign}</TableCell>
-                      <TableCell className="text-right">{mix.recordCount}</TableCell>
-                      <TableCell className="text-right font-semibold">
-                        {formatStrength(mix.averageStrength, mix.strengthUnit)}
-                      </TableCell>
-                      <TableCell className="text-right">{formatStrength(mix.minimumStrength, mix.strengthUnit)}</TableCell>
-                      <TableCell className="text-right">{formatStrength(mix.maximumStrength, mix.strengthUnit)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <div className="space-y-6">
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-foreground">By mix design</h3>
+                <div className="overflow-x-auto rounded-md border">
+                  <Table className="min-w-[900px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead rowSpan={2}>Mix Design</TableHead>
+                        <TableHead rowSpan={2} className="text-right">Reports</TableHead>
+                        <TableHead colSpan={3} className="border-l text-center">7 Days</TableHead>
+                        <TableHead colSpan={3} className="border-l text-center">28 Days</TableHead>
+                      </TableRow>
+                      <TableRow>
+                        {["Average", "Minimum", "Maximum", "Average", "Minimum", "Maximum"].map((label, index) => (
+                          <TableHead key={`${label}-${index}`} className={index === 0 || index === 3 ? "border-l text-right" : "text-right"}>
+                            {label}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {dailyResults.mixes.map((mix) => (
+                        <TableRow key={mix.mixDesign}>
+                          <TableCell className="font-semibold text-primary">{mix.mixDesign}</TableCell>
+                          <TableCell className="text-right">{mix.recordCount}</TableCell>
+                          <TableCell className="border-l text-right font-semibold">{formatStrength(mix.sevenDay.averageStrength, mix.strengthUnit)}</TableCell>
+                          <TableCell className="text-right">{formatStrength(mix.sevenDay.minimumStrength, mix.strengthUnit)}</TableCell>
+                          <TableCell className="text-right">{formatStrength(mix.sevenDay.maximumStrength, mix.strengthUnit)}</TableCell>
+                          <TableCell className="border-l text-right font-semibold">{formatStrength(mix.twentyEightDay.averageStrength, mix.strengthUnit)}</TableCell>
+                          <TableCell className="text-right">{formatStrength(mix.twentyEightDay.minimumStrength, mix.strengthUnit)}</TableCell>
+                          <TableCell className="text-right">{formatStrength(mix.twentyEightDay.maximumStrength, mix.strengthUnit)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-foreground">By location</h3>
+                <div className="overflow-x-auto rounded-md border">
+                  <Table className="min-w-[820px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead rowSpan={2}>Location</TableHead>
+                        <TableHead rowSpan={2} className="text-right">Reports</TableHead>
+                        <TableHead colSpan={3} className="border-l text-center">7 Days</TableHead>
+                        <TableHead colSpan={3} className="border-l text-center">28 Days</TableHead>
+                      </TableRow>
+                      <TableRow>
+                        {["Average", "Minimum", "Maximum", "Average", "Minimum", "Maximum"].map((label, index) => (
+                          <TableHead key={`${label}-${index}`} className={index === 0 || index === 3 ? "border-l text-right" : "text-right"}>
+                            {label}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {dailyResults.locations.map((location) => (
+                        <TableRow key={location.location}>
+                          <TableCell className="font-semibold">{location.location}</TableCell>
+                          <TableCell className="text-right">{location.recordCount}</TableCell>
+                          <TableCell className="border-l text-right font-semibold">{formatStrength(location.sevenDay.averageStrength, location.strengthUnit)}</TableCell>
+                          <TableCell className="text-right">{formatStrength(location.sevenDay.minimumStrength, location.strengthUnit)}</TableCell>
+                          <TableCell className="text-right">{formatStrength(location.sevenDay.maximumStrength, location.strengthUnit)}</TableCell>
+                          <TableCell className="border-l text-right font-semibold">{formatStrength(location.twentyEightDay.averageStrength, location.strengthUnit)}</TableCell>
+                          <TableCell className="text-right">{formatStrength(location.twentyEightDay.minimumStrength, location.strengthUnit)}</TableCell>
+                          <TableCell className="text-right">{formatStrength(location.twentyEightDay.maximumStrength, location.strengthUnit)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-md border">
-              <Table className="min-w-[760px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Record No.</TableHead>
-                    <TableHead>Reference No.</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Mix Design</TableHead>
-                    <TableHead className="text-right">Strength</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {dailyResults.records.map((record) => (
-                    <TableRow key={record.recordId}>
-                      <TableCell className="font-semibold text-primary">{record.recordNo}</TableCell>
-                      <TableCell className="font-medium">{record.referenceNumber}</TableCell>
-                      <TableCell>{record.location}</TableCell>
-                      <TableCell>{record.mixDesign}</TableCell>
-                      <TableCell className="text-right font-semibold">
-                        {formatStrength(record.averageStrength, record.strengthUnit)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-                <TableFooter>
-                  <TableRow>
-                    <TableCell colSpan={4}>Daily minimum</TableCell>
-                    <TableCell className="text-right">{formatStrength(dailyResults.minimumStrength, dailyResults.strengthUnit)}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell colSpan={4}>Daily average</TableCell>
-                    <TableCell className="text-right">{formatStrength(dailyResults.averageStrength, dailyResults.strengthUnit)}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell colSpan={4}>Daily maximum</TableCell>
-                    <TableCell className="text-right">{formatStrength(dailyResults.maximumStrength, dailyResults.strengthUnit)}</TableCell>
-                  </TableRow>
-                </TableFooter>
-              </Table>
+            <div className="space-y-6">
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-foreground">By report</h3>
+                <div className="overflow-x-auto rounded-md border">
+                  <Table className="min-w-[1280px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead rowSpan={2}>Record No.</TableHead>
+                        <TableHead rowSpan={2}>Reference No.</TableHead>
+                        <TableHead rowSpan={2}>Location</TableHead>
+                        <TableHead rowSpan={2}>Mix Design</TableHead>
+                        <TableHead colSpan={3} className="border-l text-center">7 Days</TableHead>
+                        <TableHead colSpan={3} className="border-l text-center">28 Days</TableHead>
+                      </TableRow>
+                      <TableRow>
+                        {["Average", "Minimum", "Maximum", "Average", "Minimum", "Maximum"].map((label, index) => (
+                          <TableHead key={`${label}-${index}`} className={index === 0 || index === 3 ? "border-l text-right" : "text-right"}>
+                            {label}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {dailyResults.records.map((record) => (
+                        <TableRow key={record.recordId}>
+                          <TableCell className="font-semibold text-primary">{record.recordNo}</TableCell>
+                          <TableCell className="font-medium">{record.referenceNumber}</TableCell>
+                          <TableCell>{record.location}</TableCell>
+                          <TableCell>{record.mixDesign}</TableCell>
+                          <TableCell className="border-l text-right font-semibold">{formatStrength(record.sevenDay.averageStrength, record.strengthUnit)}</TableCell>
+                          <TableCell className="text-right">{formatStrength(record.sevenDay.minimumStrength, record.strengthUnit)}</TableCell>
+                          <TableCell className="text-right">{formatStrength(record.sevenDay.maximumStrength, record.strengthUnit)}</TableCell>
+                          <TableCell className="border-l text-right font-semibold">{formatStrength(record.twentyEightDay.averageStrength, record.strengthUnit)}</TableCell>
+                          <TableCell className="text-right">{formatStrength(record.twentyEightDay.minimumStrength, record.strengthUnit)}</TableCell>
+                          <TableCell className="text-right">{formatStrength(record.twentyEightDay.maximumStrength, record.strengthUnit)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-foreground">By location</h3>
+                <div className="overflow-x-auto rounded-md border">
+                  <Table className="min-w-[820px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead rowSpan={2}>Location</TableHead>
+                        <TableHead rowSpan={2} className="text-right">Reports</TableHead>
+                        <TableHead colSpan={3} className="border-l text-center">7 Days</TableHead>
+                        <TableHead colSpan={3} className="border-l text-center">28 Days</TableHead>
+                      </TableRow>
+                      <TableRow>
+                        {["Average", "Minimum", "Maximum", "Average", "Minimum", "Maximum"].map((label, index) => (
+                          <TableHead key={`${label}-${index}`} className={index === 0 || index === 3 ? "border-l text-right" : "text-right"}>
+                            {label}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {dailyResults.locations.map((location) => (
+                        <TableRow key={location.location}>
+                          <TableCell className="font-semibold">{location.location}</TableCell>
+                          <TableCell className="text-right">{location.recordCount}</TableCell>
+                          <TableCell className="border-l text-right font-semibold">{formatStrength(location.sevenDay.averageStrength, location.strengthUnit)}</TableCell>
+                          <TableCell className="text-right">{formatStrength(location.sevenDay.minimumStrength, location.strengthUnit)}</TableCell>
+                          <TableCell className="text-right">{formatStrength(location.sevenDay.maximumStrength, location.strengthUnit)}</TableCell>
+                          <TableCell className="border-l text-right font-semibold">{formatStrength(location.twentyEightDay.averageStrength, location.strengthUnit)}</TableCell>
+                          <TableCell className="text-right">{formatStrength(location.twentyEightDay.minimumStrength, location.strengthUnit)}</TableCell>
+                          <TableCell className="text-right">{formatStrength(location.twentyEightDay.maximumStrength, location.strengthUnit)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
             </div>
           )}
         </CardContent>
@@ -635,13 +774,32 @@ export default function Reports() {
                 <div className="max-h-[58vh] space-y-4 overflow-y-auto pr-1">
                   {resultEntries.map((entry) => (
                     <Card key={entry.record.id} className="overflow-hidden border">
-                      <CardHeader className="border-b bg-muted/20 px-4 py-3">
-                        <CardTitle className="text-base">
-                          {referenceNumber(entry.record)}
-                        </CardTitle>
-                        <CardDescription>
-                          {entry.record.recordNo} · {entry.record.location} · {entry.record.material}
-                        </CardDescription>
+                        <CardHeader className="border-b bg-muted/20 px-4 py-3">
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <CardTitle className="text-base">
+                                {referenceNumber(entry.record)}
+                              </CardTitle>
+                              <CardDescription>
+                                {entry.record.recordNo} · {entry.record.location} · {entry.record.material}
+                              </CardDescription>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="shrink-0"
+                              onClick={() => duplicateReport(entry)}
+                              disabled={isSavingResults || duplicatingRecordId !== null}
+                            >
+                              {duplicatingRecordId === entry.record.id ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              ) : (
+                                <Copy className="mr-2 h-4 w-4" />
+                              )}
+                              {duplicatingRecordId === entry.record.id ? "Duplicating" : "Duplicate report"}
+                            </Button>
+                          </div>
                       </CardHeader>
                       <CardContent className="overflow-x-auto p-0">
                         <table className="min-w-[980px] w-full text-sm">

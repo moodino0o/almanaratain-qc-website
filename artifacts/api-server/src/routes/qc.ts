@@ -1066,6 +1066,8 @@ router.get("/daily-ready-mix-results", async (req, res): Promise<void> => {
       strengths.length > 0
         ? strengths.reduce((sum, value) => sum + value, 0) / strengths.length
         : null;
+    const sevenDay = summarizeStrengths(readyMixStrengthsForAge(row.details, 7));
+    const twentyEightDay = summarizeStrengths(readyMixStrengthsForAge(row.details, 28));
     return [{
       recordId: row.id,
       recordNo: row.recordNo,
@@ -1078,15 +1080,48 @@ router.get("/daily-ready-mix-results", async (req, res): Promise<void> => {
       averageStrength: recordStrength,
       minimumStrength: recordStrength,
       maximumStrength: recordStrength,
+      sevenDay,
+      twentyEightDay,
       strengthUnit: "N/mm²",
     }];
   });
-  const mixSummaryMap = new Map<string, { recordCount: number; strengths: number[] }>();
+  const mixSummaryMap = new Map<string, {
+    recordCount: number;
+    strengths: number[];
+    sevenDay: number[];
+    twentyEightDay: number[];
+  }>();
+  const locationSummaryMap = new Map<string, {
+    recordCount: number;
+    sevenDay: number[];
+    twentyEightDay: number[];
+  }>();
   for (const record of matchingRecords) {
-    const current = mixSummaryMap.get(record.mixDesign) ?? { recordCount: 0, strengths: [] };
+    const current = mixSummaryMap.get(record.mixDesign) ?? {
+      recordCount: 0,
+      strengths: [],
+      sevenDay: [],
+      twentyEightDay: [],
+    };
     current.recordCount += 1;
     if (record.averageStrength !== null) current.strengths.push(record.averageStrength);
+    if (record.sevenDay.averageStrength !== null) current.sevenDay.push(record.sevenDay.averageStrength);
+    if (record.twentyEightDay.averageStrength !== null) {
+      current.twentyEightDay.push(record.twentyEightDay.averageStrength);
+    }
     mixSummaryMap.set(record.mixDesign, current);
+
+    const location = locationSummaryMap.get(record.location) ?? {
+      recordCount: 0,
+      sevenDay: [],
+      twentyEightDay: [],
+    };
+    location.recordCount += 1;
+    if (record.sevenDay.averageStrength !== null) location.sevenDay.push(record.sevenDay.averageStrength);
+    if (record.twentyEightDay.averageStrength !== null) {
+      location.twentyEightDay.push(record.twentyEightDay.averageStrength);
+    }
+    locationSummaryMap.set(record.location, location);
   }
   const mixes = [...mixSummaryMap.entries()]
     .sort(([left], [right]) => left.localeCompare(right))
@@ -1100,9 +1135,20 @@ router.get("/daily-ready-mix-results", async (req, res): Promise<void> => {
           : null,
         minimumStrength: strengths.length ? Math.min(...strengths) : null,
         maximumStrength: strengths.length ? Math.max(...strengths) : null,
+        sevenDay: summarizeStrengths(summary.sevenDay),
+        twentyEightDay: summarizeStrengths(summary.twentyEightDay),
         strengthUnit: "N/mm²",
       };
     });
+  const locations = [...locationSummaryMap.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([location, summary]) => ({
+      location,
+      recordCount: summary.recordCount,
+      sevenDay: summarizeStrengths(summary.sevenDay),
+      twentyEightDay: summarizeStrengths(summary.twentyEightDay),
+      strengthUnit: "N/mm²",
+    }));
   const numericStrengths = matchingRecords
     .map((record) => record.averageStrength)
     .filter((value): value is number => value !== null);
@@ -1118,6 +1164,7 @@ router.get("/daily-ready-mix-results", async (req, res): Promise<void> => {
       mixDesign: mixDesign?.trim() || null,
       referenceType,
       mixes,
+      locations,
       records: matchingRecords,
       averageStrength: summaryAverage,
       minimumStrength: summaryMinimum,
