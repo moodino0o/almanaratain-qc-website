@@ -87,7 +87,12 @@ router.post("/archive/documents", async (req, res) => {
     await storage.getObjectEntityFile(input.objectPath);
     const [row] = await db
       .insert(archiveDocumentsTable)
-      .values({ ...input, description: input.description ?? "", uploadedBy: req.user!.id })
+      .values({
+        ...input,
+        documentDate: input.documentDate.toISOString().slice(0, 10),
+        description: input.description ?? "",
+        uploadedBy: req.user!.id,
+      })
       .returning();
     res.status(201).json(CreateArchiveDocumentResponse.parse(toDocument(row)));
   } catch (error) {

@@ -215,6 +215,7 @@ export interface ArchiveDocument {
   size: number;
   category: string;
   subcategory: string;
+  documentDate: string;
   description: string;
   uploadedAt: string;
 }
@@ -232,6 +233,7 @@ export interface ArchiveDocumentInput {
   category: string;
   /** @minLength 1 */
   subcategory: string;
+  documentDate: string;
   description?: string;
 }
 

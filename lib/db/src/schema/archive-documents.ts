@@ -4,11 +4,11 @@ import {
   pgTable,
   serial,
   date,
-  sql,
   text,
   timestamp,
   varchar,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { usersTable } from "./auth";
 
 export const archiveDocumentsTable = pgTable(

@@ -19,5 +19,6 @@ export interface ArchiveDocumentInput {
   category: string;
   /** @minLength 1 */
   subcategory: string;
+  documentDate: Date;
   description?: string;
 }

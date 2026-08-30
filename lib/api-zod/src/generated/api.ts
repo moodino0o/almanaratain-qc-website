@@ -193,6 +193,7 @@ export const ListArchiveResponse = zod.object({
   "size": zod.number(),
   "category": zod.string(),
   "subcategory": zod.string(),
+  "documentDate": zod.coerce.date(),
   "description": zod.string(),
   "uploadedAt": zod.coerce.date()
 }))
@@ -205,6 +206,7 @@ export const ListArchiveResponse = zod.object({
   "size": zod.number(),
   "category": zod.string(),
   "subcategory": zod.string(),
+  "documentDate": zod.coerce.date(),
   "description": zod.string(),
   "uploadedAt": zod.coerce.date()
 }))
@@ -229,6 +231,7 @@ export const CreateArchiveDocumentBody = zod.object({
   "size": zod.number().min(1),
   "category": zod.string().min(1),
   "subcategory": zod.string().min(1),
+  "documentDate": zod.coerce.date(),
   "description": zod.string().default(createArchiveDocumentBodyDescriptionDefault)
 })
 
@@ -239,6 +242,7 @@ export const CreateArchiveDocumentResponse = zod.object({
   "size": zod.number(),
   "category": zod.string(),
   "subcategory": zod.string(),
+  "documentDate": zod.coerce.date(),
   "description": zod.string(),
   "uploadedAt": zod.coerce.date()
 })
@@ -258,6 +262,7 @@ export const GetArchiveDocumentResponse = zod.object({
   "size": zod.number(),
   "category": zod.string(),
   "subcategory": zod.string(),
+  "documentDate": zod.coerce.date(),
   "description": zod.string(),
   "uploadedAt": zod.coerce.date()
 })

@@ -13,6 +13,7 @@ export interface ArchiveDocument {
   size: number;
   category: string;
   subcategory: string;
+  documentDate: Date;
   description: string;
   uploadedAt: Date;
 }
