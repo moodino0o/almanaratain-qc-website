@@ -630,6 +630,7 @@ export default function RecordForm() {
         toast.success(`Record ${newRecord.recordNo} has been saved.`);
         queryClient.invalidateQueries({ queryKey: getListRecordsQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetDashboardQueryKey() });
+          queryClient.invalidateQueries({ queryKey: ["/api/daily-ready-mix-results"] });
         setLocation(`/records/${newRecord.id}`);
       },
       onError: () => {
