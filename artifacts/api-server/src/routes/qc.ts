@@ -368,6 +368,39 @@ function readyMixStrengths(details: unknown) {
   return [average];
 }
 
+function readyMixStrengthsForAge(details: unknown, age: 7 | 28) {
+  if (typeof details === "object" && details !== null) {
+    const rows = (details as Record<string, unknown>).testRows;
+    if (Array.isArray(rows)) {
+      const rowStrengths = rows
+        .filter((row) => numericValue(detailsValue(row, ["testAge", "cubeAge", "age"])) === age)
+        .map((row) => detailsValue(row, ["calculatedStrength", "strength", "compressiveStrength"]))
+        .map(numericValue)
+        .filter((value): value is number => value !== null);
+      if (rowStrengths.length) return rowStrengths;
+    }
+  }
+
+  const directStrength = detailsValue(
+    details,
+    age === 7
+      ? ["avg7Days", "average7Days", "sevenDayStrength", "strength7Days"]
+      : ["avg28To29Days", "average28To29Days", "twentyEightDayStrength", "strength28Days", "averageStrength", "compressiveStrength", "strength"],
+  );
+  const directNumber = numericValue(directStrength);
+  return directNumber === null ? [] : [directNumber];
+}
+
+function summarizeStrengths(values: number[]) {
+  return {
+    averageStrength: values.length
+      ? values.reduce((sum, value) => sum + value, 0) / values.length
+      : null,
+    minimumStrength: values.length ? Math.min(...values) : null,
+    maximumStrength: values.length ? Math.max(...values) : null,
+  };
+}
+
 function readyMixDesign(details: unknown, material: string) {
   const value = detailsValue(details, ["designStrength", "mixStrength", "mixType"]);
   return value === undefined ? material : String(value).trim();

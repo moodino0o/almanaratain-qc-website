@@ -291,6 +291,15 @@ export const DailyReadyMixReferenceType = {
   plant: 'plant',
 } as const;
 
+export interface DailyReadyMixStrengthSummary {
+  /** @nullable */
+  averageStrength: number | null;
+  /** @nullable */
+  minimumStrength: number | null;
+  /** @nullable */
+  maximumStrength: number | null;
+}
+
 export interface DailyReadyMixResult {
   recordId: number;
   recordNo: string;
@@ -306,6 +315,8 @@ export interface DailyReadyMixResult {
   minimumStrength: number | null;
   /** @nullable */
   maximumStrength: number | null;
+  sevenDay: DailyReadyMixStrengthSummary;
+  twentyEightDay: DailyReadyMixStrengthSummary;
   strengthUnit: string;
 }
 
@@ -318,6 +329,16 @@ export interface DailyReadyMixMixSummary {
   minimumStrength: number | null;
   /** @nullable */
   maximumStrength: number | null;
+  sevenDay: DailyReadyMixStrengthSummary;
+  twentyEightDay: DailyReadyMixStrengthSummary;
+  strengthUnit: string;
+}
+
+export interface DailyReadyMixLocationSummary {
+  location: string;
+  recordCount: number;
+  sevenDay: DailyReadyMixStrengthSummary;
+  twentyEightDay: DailyReadyMixStrengthSummary;
   strengthUnit: string;
 }
 
@@ -327,6 +348,7 @@ export interface DailyReadyMixResults {
   mixDesign: string | null;
   referenceType: DailyReadyMixReferenceType;
   mixes: DailyReadyMixMixSummary[];
+  locations: DailyReadyMixLocationSummary[];
   records: DailyReadyMixResult[];
   /** @nullable */
   averageStrength: number | null;

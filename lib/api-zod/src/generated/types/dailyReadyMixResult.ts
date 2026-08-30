@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { DailyReadyMixReferenceType } from './dailyReadyMixReferenceType';
+import type { DailyReadyMixStrengthSummary } from './dailyReadyMixStrengthSummary';
 
 export interface DailyReadyMixResult {
   recordId: number;
@@ -22,5 +23,7 @@ export interface DailyReadyMixResult {
   minimumStrength: number | null;
   /** @nullable */
   maximumStrength: number | null;
+  sevenDay: DailyReadyMixStrengthSummary;
+  twentyEightDay: DailyReadyMixStrengthSummary;
   strengthUnit: string;
 }

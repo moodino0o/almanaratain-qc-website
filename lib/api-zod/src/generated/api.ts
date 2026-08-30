@@ -750,6 +750,31 @@ export const GetDailyReadyMixResultsResponse = zod.object({
   "averageStrength": zod.number().nullable(),
   "minimumStrength": zod.number().nullable(),
   "maximumStrength": zod.number().nullable(),
+  "sevenDay": zod.object({
+  "averageStrength": zod.number().nullable(),
+  "minimumStrength": zod.number().nullable(),
+  "maximumStrength": zod.number().nullable()
+}),
+  "twentyEightDay": zod.object({
+  "averageStrength": zod.number().nullable(),
+  "minimumStrength": zod.number().nullable(),
+  "maximumStrength": zod.number().nullable()
+}),
+  "strengthUnit": zod.string()
+})),
+  "locations": zod.array(zod.object({
+  "location": zod.string(),
+  "recordCount": zod.number(),
+  "sevenDay": zod.object({
+  "averageStrength": zod.number().nullable(),
+  "minimumStrength": zod.number().nullable(),
+  "maximumStrength": zod.number().nullable()
+}),
+  "twentyEightDay": zod.object({
+  "averageStrength": zod.number().nullable(),
+  "minimumStrength": zod.number().nullable(),
+  "maximumStrength": zod.number().nullable()
+}),
   "strengthUnit": zod.string()
 })),
   "records": zod.array(zod.object({
@@ -764,6 +789,16 @@ export const GetDailyReadyMixResultsResponse = zod.object({
   "averageStrength": zod.number().nullable(),
   "minimumStrength": zod.number().nullable(),
   "maximumStrength": zod.number().nullable(),
+  "sevenDay": zod.object({
+  "averageStrength": zod.number().nullable(),
+  "minimumStrength": zod.number().nullable(),
+  "maximumStrength": zod.number().nullable()
+}),
+  "twentyEightDay": zod.object({
+  "averageStrength": zod.number().nullable(),
+  "minimumStrength": zod.number().nullable(),
+  "maximumStrength": zod.number().nullable()
+}),
   "strengthUnit": zod.string()
 })),
   "averageStrength": zod.number().nullable(),

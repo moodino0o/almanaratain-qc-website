@@ -610,7 +610,6 @@ function ReadyMixReport({
         <div className="report-measure-grid">
           <ReportField label="Slump (mm)" value={detailValue(details, ["slump", "slumpTest"])} />
           <ReportField label="Temperature (°C)" value={detailValue(details, ["temperature"])} />
-          <ReportField label="Air Content (%)" value={detailValue(details, ["airContent"])} />
         </div>
       </section>
 

@@ -1171,6 +1171,19 @@ components:
     DailyReadyMixReferenceType:
       type: string
       enum: [site, plant]
+    DailyReadyMixStrengthSummary:
+      type: object
+      required:
+        - averageStrength
+        - minimumStrength
+        - maximumStrength
+      properties:
+        averageStrength:
+          type: ["number", "null"]
+        minimumStrength:
+          type: ["number", "null"]
+        maximumStrength:
+          type: ["number", "null"]
     DailyReadyMixResult:
       type: object
       required:
@@ -1185,6 +1198,8 @@ components:
         - averageStrength
         - minimumStrength
         - maximumStrength
+        - sevenDay
+        - twentyEightDay
         - strengthUnit
       properties:
         recordId:
@@ -1212,6 +1227,10 @@ components:
           type: ["number", "null"]
         maximumStrength:
           type: ["number", "null"]
+        sevenDay:
+          $ref: "#/components/schemas/DailyReadyMixStrengthSummary"
+        twentyEightDay:
+          $ref: "#/components/schemas/DailyReadyMixStrengthSummary"
         strengthUnit:
           type: string
     DailyReadyMixMixSummary:
@@ -1222,6 +1241,8 @@ components:
         - averageStrength
         - minimumStrength
         - maximumStrength
+        - sevenDay
+        - twentyEightDay
         - strengthUnit
       properties:
         mixDesign:
@@ -1234,6 +1255,29 @@ components:
           type: ["number", "null"]
         maximumStrength:
           type: ["number", "null"]
+        sevenDay:
+          $ref: "#/components/schemas/DailyReadyMixStrengthSummary"
+        twentyEightDay:
+          $ref: "#/components/schemas/DailyReadyMixStrengthSummary"
+        strengthUnit:
+          type: string
+    DailyReadyMixLocationSummary:
+      type: object
+      required:
+        - location
+        - recordCount
+        - sevenDay
+        - twentyEightDay
+        - strengthUnit
+      properties:
+        location:
+          type: string
+        recordCount:
+          type: number
+        sevenDay:
+          $ref: "#/components/schemas/DailyReadyMixStrengthSummary"
+        twentyEightDay:
+          $ref: "#/components/schemas/DailyReadyMixStrengthSummary"
         strengthUnit:
           type: string
     DailyReadyMixResults:
@@ -1243,6 +1287,7 @@ components:
         - mixDesign
         - referenceType
         - mixes
+        - locations
         - records
         - averageStrength
         - minimumStrength
@@ -1260,6 +1305,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DailyReadyMixMixSummary"
+        locations:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailyReadyMixLocationSummary"
         records:
           type: array
           items:

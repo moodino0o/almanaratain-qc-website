@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { DailyReadyMixLocationSummary } from './dailyReadyMixLocationSummary';
 import type { DailyReadyMixMixSummary } from './dailyReadyMixMixSummary';
 import type { DailyReadyMixReferenceType } from './dailyReadyMixReferenceType';
 import type { DailyReadyMixResult } from './dailyReadyMixResult';
@@ -15,6 +16,7 @@ export interface DailyReadyMixResults {
   mixDesign: string | null;
   referenceType: DailyReadyMixReferenceType;
   mixes: DailyReadyMixMixSummary[];
+  locations: DailyReadyMixLocationSummary[];
   records: DailyReadyMixResult[];
   /** @nullable */
   averageStrength: number | null;

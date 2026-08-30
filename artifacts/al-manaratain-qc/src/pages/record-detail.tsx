@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
-import { CheckCircle2, AlertTriangle, XCircle, ArrowLeft, Printer, Trash2, Edit2, Check, X } from "lucide-react";
+import { CheckCircle2, AlertTriangle, XCircle, ArrowLeft, Printer, Trash2, Edit2, Copy, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListRecordsQueryKey, getGetDashboardQueryKey, getGetRecordQueryKey } from "@workspace/api-client-react";
@@ -470,6 +470,13 @@ export default function RecordDetail() {
             Edit
           </Link>
           <Link
+            href={`/records/new?duplicateFrom=${recordId}`}
+            className="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-4 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            <Copy className="w-4 h-4 mr-2" />
+            Duplicate
+          </Link>
+          <Link
             href={`/reports/${recordId}`}
             className="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-4 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
           >
@@ -500,7 +507,6 @@ export default function RecordDetail() {
             entries={[
               ["Slump (mm)", detailText(recordDetails, "slump")],
               ["Temperature (°C)", detailText(recordDetails, "temperature")],
-              ["Air Content (%)", detailText(recordDetails, "airContent")],
             ]}
           />
           <Card>

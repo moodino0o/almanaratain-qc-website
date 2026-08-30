@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { DailyReadyMixStrengthSummary } from './dailyReadyMixStrengthSummary';
 
 export interface DailyReadyMixMixSummary {
   mixDesign: string;
@@ -15,5 +16,7 @@ export interface DailyReadyMixMixSummary {
   minimumStrength: number | null;
   /** @nullable */
   maximumStrength: number | null;
+  sevenDay: DailyReadyMixStrengthSummary;
+  twentyEightDay: DailyReadyMixStrengthSummary;
   strengthUnit: string;
 }

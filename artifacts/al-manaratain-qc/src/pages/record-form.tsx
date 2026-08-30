@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListRecordsQueryKey, getGetDashboardQueryKey, getGetRecordQueryKey } from "@workspace/api-client-react";
-import { Save, ArrowLeft, Loader2 } from "lucide-react";
+import { Save, ArrowLeft, Copy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
 import { TypeaheadInput } from "@/components/ui/typeahead-input";
@@ -488,6 +488,7 @@ export default function RecordForm() {
     }
 
     if (testType === TestType.Ready_Mix) {
+      delete payloadDetails.airContent;
       payloadDetails.customerName = customerName;
       payloadDetails.customerLocation = customerLocation;
       payloadDetails.referenceNumber = referenceNumber.trim();
@@ -1075,12 +1076,26 @@ export default function RecordForm() {
                   ? "Ready Mix and Blocks statuses are calculated from the configured standard and specimen measurements."
                   : "New records are created in 'Review' status pending supervisor approval."}
               </p>
-               <Button type="submit" disabled={createRecord.isPending || updateRecord.isPending} size="lg">
-                 {createRecord.isPending || updateRecord.isPending
-                   ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                   : <Save className="w-4 h-4 mr-2" />}
-                 {isEditing ? "Update Record" : "Save Record"}
-              </Button>
+              <div className="flex flex-wrap justify-end gap-2">
+                {isEditing && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setLocation(`/records/new?duplicateFrom=${recordId}`)}
+                    disabled={createRecord.isPending || updateRecord.isPending}
+                    size="lg"
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    Duplicate as New
+                  </Button>
+                )}
+                <Button type="submit" disabled={createRecord.isPending || updateRecord.isPending} size="lg">
+                  {createRecord.isPending || updateRecord.isPending
+                    ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    : <Save className="w-4 h-4 mr-2" />}
+                  {isEditing ? "Update Record" : "Save Record"}
+                </Button>
+              </div>
             </CardFooter>
           </Card>
         </div>
