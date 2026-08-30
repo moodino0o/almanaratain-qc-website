@@ -5,6 +5,7 @@ import {
   desc,
   eq,
   asc,
+  inArray,
   ilike,
   or,
   sql,
@@ -107,7 +108,36 @@ const REFERENCE_SEED = [
   {
     key: "mixStrengths",
     label: "Mix Strengths",
-    values: ["20 N OPC", "20 N SRC", "25 N OPC", "30 N SRC", "40 N OPC"],
+    values: [
+      "20 N OPC",
+      "20 N OPC Ice",
+      "20 N SRC",
+      "20 N SRC Ice",
+      "25 N OPC",
+      "25 N OPC Ice",
+      "25 N SRC",
+      "25 N SRC Ice",
+      "30 N OPC",
+      "30 N OPC Ice",
+      "30 N SRC",
+      "30 N SRC Ice",
+      "35 N OPC",
+      "35 N OPC Ice",
+      "35 N SRC",
+      "35 N SRC Ice",
+      "45 N OPC",
+      "45 N OPC Ice",
+      "45 N OPC Fiber",
+      "45 N OPC Fiber Ice",
+      "45 N SRC",
+      "45 N SRC Ice",
+      "45 N SRC Fiber",
+      "45 N SRC Fiber Ice",
+      "50 N OPC",
+      "50 N OPC Ice",
+      "50 N SRC",
+      "50 N SRC Ice",
+    ],
   },
   {
     key: "sieveSizes",
@@ -119,6 +149,71 @@ const REFERENCE_SEED = [
 ] as const;
 
 let referenceSeedPromise: Promise<void> | null = null;
+let strengthSeedPromise: Promise<void> | null = null;
+
+const READY_MIX_DEFAULT_DESIGNS = [
+  "20 N OPC",
+  "20 N OPC Ice",
+  "20 N SRC",
+  "20 N SRC Ice",
+  "25 N OPC",
+  "25 N OPC Ice",
+  "25 N SRC",
+  "25 N SRC Ice",
+  "30 N OPC",
+  "30 N OPC Ice",
+  "30 N SRC",
+  "30 N SRC Ice",
+  "35 N OPC",
+  "35 N OPC Ice",
+  "35 N SRC",
+  "35 N SRC Ice",
+  "45 N OPC",
+  "45 N OPC Ice",
+  "45 N OPC Fiber",
+  "45 N OPC Fiber Ice",
+  "45 N SRC",
+  "45 N SRC Ice",
+  "45 N SRC Fiber",
+  "45 N SRC Fiber Ice",
+  "50 N OPC",
+  "50 N OPC Ice",
+  "50 N SRC",
+  "50 N SRC Ice",
+] as const;
+
+async function ensureDefaultStrengthStandards() {
+  if (!strengthSeedPromise) {
+    strengthSeedPromise = (async () => {
+      const existing = await db
+        .select()
+        .from(qcStrengthStandardsTable)
+        .where(eq(qcStrengthStandardsTable.testType, "Ready Mix"));
+      const existingMaterials = new Set(existing.map((row) => row.material.trim().toLocaleLowerCase()));
+      let insertedDefault = false;
+      for (const material of READY_MIX_DEFAULT_DESIGNS) {
+        if (existingMaterials.has(material.toLocaleLowerCase())) continue;
+        const grade = Number.parseInt(material, 10);
+        await db.insert(qcStrengthStandardsTable).values({
+          testType: "Ready Mix",
+          material,
+          blockType: null,
+          blockSize: null,
+          bsStandard: "BS EN 12390-3:2009",
+          requiredStrength: String(grade),
+          strengthUnit: "N/mm²",
+        });
+        existingMaterials.add(material.toLocaleLowerCase());
+        insertedDefault = true;
+      }
+      if (insertedDefault) await refreshStrengthEvaluations(["Ready Mix"]);
+    })().catch((error) => {
+      strengthSeedPromise = null;
+      throw error;
+    });
+  }
+  await strengthSeedPromise;
+}
 
 async function ensureReferenceData() {
   if (!referenceSeedPromise) {
@@ -194,6 +289,37 @@ const toRecord = (row: typeof qcRecordsTable.$inferSelect) => ({
   ...row,
   createdAt: row.createdAt.toISOString(),
 });
+
+async function refreshStrengthEvaluations(testTypes: string[]) {
+  const uniqueTestTypes = [...new Set(testTypes)];
+  if (!uniqueTestTypes.length) return;
+  const [standards, records] = await Promise.all([
+    db.select().from(qcStrengthStandardsTable),
+    db
+      .select()
+      .from(qcRecordsTable)
+      .where(inArray(qcRecordsTable.testType, uniqueTestTypes)),
+  ]);
+
+  for (const record of records) {
+    const evaluated = evaluateStrengthRecord(
+      {
+        testType: record.testType,
+        material: record.material,
+        details: record.details as Record<string, unknown>,
+      },
+      standards,
+    );
+    if (evaluated.status === undefined) continue;
+    await db
+      .update(qcRecordsTable)
+      .set({
+        status: evaluated.status,
+        details: evaluated.details,
+      })
+      .where(eq(qcRecordsTable.id, record.id));
+  }
+}
 
 function detailsValue(details: unknown, keys: string[]) {
   if (typeof details !== "object" || details === null) return undefined;
@@ -541,6 +667,7 @@ router.delete("/reference-data/items/:id", async (req, res): Promise<void> => {
 });
 
 router.get("/strength-standards", async (_req, res): Promise<void> => {
+  await ensureDefaultStrengthStandards();
   const standards = await db
     .select()
     .from(qcStrengthStandardsTable)
@@ -572,6 +699,7 @@ router.post("/strength-standards", async (req, res): Promise<void> => {
     res.status(500).json({ error: "Unable to create strength standard" });
     return;
   }
+  await refreshStrengthEvaluations([standard.testType]);
   res.status(201).json(CreateStrengthStandardResponse.parse(toStrengthStandard(standard)));
 });
 
@@ -584,6 +712,15 @@ router.patch("/strength-standards/:id", async (req, res): Promise<void> => {
   }
   if (!body.success) {
     res.status(400).json({ error: body.error.message });
+    return;
+  }
+
+  const [existing] = await db
+    .select()
+    .from(qcStrengthStandardsTable)
+    .where(eq(qcStrengthStandardsTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Strength standard not found" });
     return;
   }
 
@@ -610,10 +747,8 @@ router.patch("/strength-standards/:id", async (req, res): Promise<void> => {
     .set(updates)
     .where(eq(qcStrengthStandardsTable.id, params.data.id))
     .returning();
-  if (!standard) {
-    res.status(404).json({ error: "Strength standard not found" });
-    return;
-  }
+  if (!standard) return;
+  await refreshStrengthEvaluations([existing.testType, standard.testType]);
   res.json(UpdateStrengthStandardResponse.parse(toStrengthStandard(standard)));
 });
 
@@ -623,14 +758,20 @@ router.delete("/strength-standards/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
+  const [existing] = await db
+    .select()
+    .from(qcStrengthStandardsTable)
+    .where(eq(qcStrengthStandardsTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Strength standard not found" });
+    return;
+  }
   const [standard] = await db
     .delete(qcStrengthStandardsTable)
     .where(eq(qcStrengthStandardsTable.id, params.data.id))
     .returning();
-  if (!standard) {
-    res.status(404).json({ error: "Strength standard not found" });
-    return;
-  }
+  if (!standard) return;
+  await refreshStrengthEvaluations([existing.testType]);
   res.sendStatus(204);
 });
 

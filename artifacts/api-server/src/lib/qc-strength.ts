@@ -81,11 +81,17 @@ function matchingStandard(
   const blockSize = textValue(record.details.blockSize);
 
   return standards.find((standard) => {
-    if (standard.testType !== record.testType || standard.material !== record.material) {
+    if (
+      standard.testType !== record.testType ||
+      normalizedText(standard.material) !== normalizedText(record.material)
+    ) {
       return false;
     }
     if (record.testType !== "Blocks") return true;
-    return standard.blockType === blockType && standard.blockSize === blockSize;
+    return (
+      normalizedText(standard.blockType) === normalizedText(blockType) &&
+      normalizedText(standard.blockSize) === normalizedText(blockSize)
+    );
   });
 }
 
