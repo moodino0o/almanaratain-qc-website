@@ -12,6 +12,7 @@ import { getListRecordsQueryKey, getGetDashboardQueryKey } from "@workspace/api-
 import { Save, ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
+import { TypeaheadInput } from "@/components/ui/typeahead-input";
 
 type TestRow = {
   id: number;
@@ -53,6 +54,8 @@ export default function RecordForm() {
   const [locationValue, setLocationValue] = useState("");
   const [material, setMaterial] = useState("");
   const [testedBy, setTestedBy] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [customerLocation, setCustomerLocation] = useState("");
   const [remarks, setRemarks] = useState("");
   
   const [details, setDetails] = useState<Record<string, unknown>>({});
@@ -129,6 +132,27 @@ export default function RecordForm() {
     }
   };
 
+  const getMaterialSuggestions = () => {
+    if (!lookups) return [];
+    switch (testType) {
+      case TestType.Ready_Mix:
+      case TestType.RMX_Trial:
+        return lookups.mixStrengths || [];
+      case TestType.Blocks:
+      case TestType.Paving_Blocks:
+        return Array.from(new Set([...(lookups.blockTypes || []), ...(lookups.blockSizes || [])]));
+      case TestType.Sand_Sieve:
+        return lookups.materials.filter((value) => /sand|dust/i.test(value));
+      case TestType.Aggregate_Sieve:
+      case TestType["Flakiness_&_Elongation"]:
+        return lookups.materials.filter((value) => /aggregate/i.test(value));
+      case TestType.Water:
+        return lookups.materials.filter((value) => /water/i.test(value));
+      default:
+        return lookups.materials || [];
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!locationValue || !material || !testedBy) {
@@ -136,29 +160,33 @@ export default function RecordForm() {
       return;
     }
 
-    const payloadDetails = usesTestRows
-      ? {
-          ...details,
-          testRows: testRows.map(({ id: _id, ...row }, index) => ({
-            rowNo: index + 1,
-            ...(testType === TestType.Ready_Mix
-              ? { testAge: row.testAge }
-              : { sampleAge: row.sampleAge }),
-            length: row.length,
-            width: row.width,
-            height: row.height,
-            dryWeight: row.dryWeight,
-            wetWeight: row.wetWeight,
-            ...(testType === TestType.Ready_Mix
-              ? {
-                  load: row.load,
-                  strength: row.strength,
-                  waterAbsorption: row.waterAbsorption,
-                }
-              : { strength: row.strength }),
-          })),
-        }
-      : details;
+    let payloadDetails: Record<string, unknown> = { ...details };
+
+    if (testType === TestType.Ready_Mix) {
+      payloadDetails.customerName = customerName;
+      payloadDetails.customerLocation = customerLocation;
+    }
+
+    if (usesTestRows) {
+      payloadDetails.testRows = testRows.map(({ id: _id, ...row }, index) => ({
+        rowNo: index + 1,
+        ...(testType === TestType.Ready_Mix
+          ? { testAge: row.testAge }
+          : { sampleAge: row.sampleAge }),
+        length: row.length,
+        width: row.width,
+        height: row.height,
+        dryWeight: row.dryWeight,
+        wetWeight: row.wetWeight,
+        ...(testType === TestType.Ready_Mix
+          ? {
+              load: row.load,
+              strength: row.strength,
+              waterAbsorption: row.waterAbsorption,
+            }
+          : { strength: row.strength }),
+      }));
+    }
 
     const payload: QcRecordInput = {
       testType,
@@ -210,12 +238,12 @@ export default function RecordForm() {
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label>Test Type <span className="text-destructive">*</span></Label>
-                   <Select value={testType} onValueChange={(val: TestType) => {
-                     setTestType(val);
-                     setDetails({});
-                     setTestRows([createEmptyRow(1)]);
-                     nextRowId.current = 2;
-                   }}>
+                <Select value={testType} onValueChange={(val: TestType) => {
+                  setTestType(val);
+                  setDetails({});
+                  setTestRows([createEmptyRow(1)]);
+                  nextRowId.current = 2;
+                }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select Test Type" />
                   </SelectTrigger>
@@ -238,49 +266,57 @@ export default function RecordForm() {
               </div>
 
               <div className="space-y-2">
-                <Label>Location / Plant <span className="text-destructive">*</span></Label>
-                <Select value={locationValue} onValueChange={setLocationValue}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Location" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {lookups?.locations.map(loc => (
-                      <SelectItem key={loc} value={loc}>{loc}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Plant / Production Location <span className="text-destructive">*</span></Label>
+                <TypeaheadInput
+                  value={locationValue}
+                  onChange={setLocationValue}
+                  options={lookups?.locations || []}
+                  placeholder="Select or type location..."
+                />
               </div>
 
               <div className="space-y-2">
                 <Label>Material / Product <span className="text-destructive">*</span></Label>
-                <Select value={material} onValueChange={setMaterial}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Material" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {lookups?.materials.map(mat => (
-                      <SelectItem key={mat} value={mat}>{mat}</SelectItem>
-                    ))}
-                    {lookups?.blockTypes.map(mat => (
-                      <SelectItem key={mat} value={mat}>{mat}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <TypeaheadInput
+                  value={material}
+                  onChange={setMaterial}
+                  options={getMaterialSuggestions()}
+                  placeholder="Select or type material..."
+                />
               </div>
 
               <div className="space-y-2">
                 <Label>Tested By (Technician) <span className="text-destructive">*</span></Label>
-                <Select value={testedBy} onValueChange={setTestedBy}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Technician" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {lookups?.employees.map(emp => (
-                      <SelectItem key={emp} value={emp}>{emp}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <TypeaheadInput
+                  value={testedBy}
+                  onChange={setTestedBy}
+                  options={lookups?.employees || []}
+                  placeholder="Select or type technician..."
+                />
               </div>
+
+              {testType === TestType.Ready_Mix && (
+                <>
+                  <div className="space-y-2">
+                    <Label>Ready Mix Customer Name</Label>
+                    <TypeaheadInput
+                      value={customerName}
+                      onChange={setCustomerName}
+                      options={lookups?.customers || []}
+                      placeholder="Select or type customer..."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Customer Location</Label>
+                    <TypeaheadInput
+                      value={customerLocation}
+                      onChange={setCustomerLocation}
+                      options={lookups?.customerLocations || []}
+                      placeholder="Select or type location..."
+                    />
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 

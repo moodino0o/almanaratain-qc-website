@@ -95,26 +95,17 @@ let referenceSeedPromise: Promise<void> | null = null;
 async function ensureReferenceData() {
   if (!referenceSeedPromise) {
     referenceSeedPromise = (async () => {
+      const [total] = await db
+        .select({ value: count() })
+        .from(qcReferenceCategoriesTable);
+      if (Number(total?.value ?? 0) > 0) return;
+
       for (const seed of REFERENCE_SEED) {
-        let [category] = await db
-          .select()
-          .from(qcReferenceCategoriesTable)
-          .where(eq(qcReferenceCategoriesTable.key, seed.key));
-
-        if (!category) {
-          [category] = await db
-            .insert(qcReferenceCategoriesTable)
-            .values({ key: seed.key, label: seed.label })
-            .onConflictDoNothing({ target: qcReferenceCategoriesTable.key })
-            .returning();
-        }
-
-        if (!category) {
-          [category] = await db
-            .select()
-            .from(qcReferenceCategoriesTable)
-            .where(eq(qcReferenceCategoriesTable.key, seed.key));
-        }
+        const [category] = await db
+          .insert(qcReferenceCategoriesTable)
+          .values({ key: seed.key, label: seed.label })
+          .onConflictDoNothing({ target: qcReferenceCategoriesTable.key })
+          .returning();
 
         if (!category) {
           throw new Error(`Unable to initialize reference category: ${seed.key}`);
@@ -276,7 +267,7 @@ router.patch("/reference-data/categories/:id", async (req, res): Promise<void> =
     return;
   }
   const updates = {
-    ...(body.data.key ? { key: body.data.key.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-") } : {}),
+    ...(body.data.key ? { key: body.data.key.trim().replace(/[^a-zA-Z0-9]+/g, "-") } : {}),
     ...(body.data.label ? { label: body.data.label.trim() } : {}),
   };
   try {

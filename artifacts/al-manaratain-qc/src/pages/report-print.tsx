@@ -179,7 +179,11 @@ function ReadyMixReport({ record }: { record: QcRecord }) {
                 record.location,
               )}
             />
-            <ReportField label="Location" value={record.location} />
+            <ReportField
+              label="Customer Location"
+              value={detailValue(details, ["customerLocation"], "-")}
+            />
+            <ReportField label="Plant / Production Location" value={record.location} />
             <ReportField
               label="Mix Type"
               value={detailValue(details, ["mixType"], designStrength)}
