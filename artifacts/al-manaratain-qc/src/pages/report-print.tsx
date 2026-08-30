@@ -340,11 +340,13 @@ function ReadyMixComplianceBlock({
   const status = textValue(evaluation?.status, record.status);
   const statusClass = status.toLocaleLowerCase();
   const standardReference = textValue(
-    evaluation?.bsStandard ?? configuredStandard?.bsStandard,
+    configuredStandard?.bsStandard ?? evaluation?.bsStandard,
     "Not configured",
   );
   const requiredStrength =
-    numericValue(evaluation?.requiredStrength) ?? configuredStandard?.requiredStrength ?? null;
+    configuredStandard?.requiredStrength ?? numericValue(evaluation?.requiredStrength) ?? null;
+  const strengthUnit = configuredStandard?.strengthUnit ??
+    textValue(evaluation?.strengthUnit, "N/mm²");
   const reportedStrength = detailValue(record.details, [
     "avg28To29Days",
     "average28To29Days",
@@ -353,8 +355,11 @@ function ReadyMixComplianceBlock({
     "averageStrength",
     "compressiveStrength",
   ]);
+  const storedReason = textValue(evaluation?.reason, "");
   const reason =
-    textValue(evaluation?.reason, "") ||
+    (configuredStandard && /no matching standard/i.test(storedReason)
+      ? "A matching standard is configured; complete specimen load and dimensions are required to confirm compliance."
+      : storedReason) ||
     (status === "Passed"
       ? "The reported result meets the configured minimum strength."
       : status === "Failed"
@@ -374,7 +379,7 @@ function ReadyMixComplianceBlock({
           <strong>
             {requiredStrength === null
               ? "Not configured"
-              : `${formatNumber(requiredStrength)} ${textValue(evaluation?.strengthUnit, configuredStandard?.strengthUnit ?? "N/mm²")}`}
+              : `${formatNumber(requiredStrength)} ${strengthUnit}`}
           </strong>
         </div>
         <div>
@@ -845,8 +850,16 @@ export default function ReportPrint() {
         matchesText(standard.material, record.material),
     )
     .sort((left, right) => left.id - right.id);
+  const configuredStrengthStandard = strengthStandards
+    .filter(
+      (standard) =>
+        standard.testType === record.testType &&
+        matchesText(standard.material, record.material),
+    )
+    .sort((left, right) => left.id - right.id)[0];
   const configuredStandard =
     strengthEvaluation?.bsStandard ??
+    configuredStrengthStandard?.bsStandard ??
     configuredSieveStandards[0]?.standardReference ??
     null;
 
@@ -890,7 +903,7 @@ export default function ReportPrint() {
         </p>
 
         {record.testType === "Ready Mix" ? (
-          <ReadyMixReport record={record} />
+          <ReadyMixReport record={record} standards={strengthStandards} />
         ) : record.testType === "Blocks" ? (
           <BlocksReport record={record} standards={strengthStandards} />
         ) : record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve" ? (

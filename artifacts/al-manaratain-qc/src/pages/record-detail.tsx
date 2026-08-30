@@ -213,6 +213,27 @@ export default function RecordDetail() {
     ["Sample Date", formatDate(record.sampleDate)],
     ["Material", record.material],
   ] as const;
+  const readyMixContextKeys = new Set(["customerName", "customerLocation", "referenceNumber"]);
+  const readyMixMeasurementOrder = [
+    "slump",
+    "temperature",
+    "airContent",
+    "designStrength",
+    "cubeAge",
+    "load",
+    "compressiveStrength",
+    "testRows",
+    "strengthEvaluation",
+  ];
+  const measuredEntries = Object.entries(record.details)
+    .filter(([key]) => record.testType !== "Ready Mix" || !readyMixContextKeys.has(key))
+    .sort(([left], [right]) => {
+      if (record.testType !== "Ready Mix") return 0;
+      const leftIndex = readyMixMeasurementOrder.indexOf(left);
+      const rightIndex = readyMixMeasurementOrder.indexOf(right);
+      return (leftIndex < 0 ? readyMixMeasurementOrder.length : leftIndex) -
+        (rightIndex < 0 ? readyMixMeasurementOrder.length : rightIndex);
+    });
 
   const handleDelete = () => {
     if (!confirm("Are you sure you want to delete this record? This action cannot be undone.")) return;
@@ -284,12 +305,12 @@ export default function RecordDetail() {
             <CardContent className="p-0">
               <table className="w-full text-sm">
                 <tbody>
-                  {Object.entries(record.details).length === 0 ? (
+                  {measuredEntries.length === 0 ? (
                     <tr>
                       <td className="p-6 text-center text-muted-foreground">No detailed measurements recorded.</td>
                     </tr>
                   ) : (
-                    Object.entries(record.details).map(([key, value], idx) => (
+                    measuredEntries.map(([key, value], idx) => (
                       <tr key={key} className={idx !== 0 ? "border-t" : ""}>
                         <td className="p-4 font-medium text-muted-foreground capitalize bg-muted/10 w-1/3">
                           {key.replace(/([A-Z])/g, ' $1').trim()}
