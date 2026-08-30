@@ -290,15 +290,6 @@ export function evaluateSieveRecord(
     });
   }
 
-  if (
-    rows.some(
-      (row) =>
-        !applicableStandards.some((standard) => rowMatchesStandard(row, standard)),
-    )
-  ) {
-    hasIncompleteMeasurements = true;
-  }
-
   let status: StrengthEvaluationStatus = "Review";
   let reason: string | null = "Complete measurements are required for every configured sieve.";
   if (applicableStandards.length === 0) {

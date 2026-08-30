@@ -74,7 +74,7 @@ test("recomputes amount standards using the same passing mass", () => {
         },
       ],
     }),
-    [standard({ measurementType: "amount", minimum: "62.75", maximum: "62.75", unit: "kg" })],
+    [standard({ measurementType: "amount", minimum: "62.75", maximum: "62.75", unit: "g" })],
   );
 
   assert.equal(result.status, "Passed");
@@ -160,6 +160,32 @@ test("treats both standard limits as inclusive", () => {
   assert.equal(criterion(result).measuredValue, 60);
   assert.equal(criterion(result).withinLimits, true);
   assert.equal(result.status, "Passed");
+});
+
+test("ignores reference-only sieve rows when configured criteria pass", () => {
+  const result = evaluateSieveRecord(
+    record({
+      sieveRows: [
+        {
+          rowNo: 1,
+          sieveSize: "5 mm",
+          sieveSizeReferenceItemId: 20,
+          amountReturned: 40,
+        },
+        {
+          rowNo: 2,
+          sieveSize: "2.36 mm",
+          sieveSizeReferenceItemId: 21,
+          amountReturned: "",
+        },
+      ],
+    }),
+    [standard({ minimum: "60", maximum: "60" })],
+  );
+
+  assert.equal(result.status, "Passed");
+  assert.equal(result.evaluation.criteria.length, 1);
+  assert.equal(result.details.sieveRows.length, 2);
 });
 
 test("keeps unmatched materials in Review", () => {

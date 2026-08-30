@@ -60,6 +60,11 @@ const numericInputValue = (value: unknown) => {
   return match?.[0] ?? "";
 };
 
+const sieveSizeNumber = (value: string) => {
+  const parsed = Number(numericInputValue(value));
+  return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
+};
+
 const toFormRow = (row: unknown, id: number): TestRow => {
   const values = typeof row === "object" && row !== null ? row as Record<string, unknown> : {};
   return {
@@ -186,6 +191,7 @@ export default function RecordForm() {
 
   const usesTestRows = testType === TestType.Ready_Mix || testType === TestType.Blocks;
   const usesSieveRows = testType === TestType.Sand_Sieve || testType === TestType.Aggregate_Sieve;
+  const sieveMassUnit = "g";
 
   const materialReferenceItems = useMemo(
     () => referenceData?.categories.find((category) => category.key === "materials")?.items ?? [],
@@ -279,12 +285,31 @@ export default function RecordForm() {
     ));
   }, [details.materialReferenceItemId, material, sieveStandards, testType, usesSieveRows]);
 
+  const sieveEntryItems = useMemo(() => {
+    const itemsById = new Map<number, { id: number; value: string }>();
+    sieveSizeReferenceItems.forEach((item) => itemsById.set(item.id, item));
+    applicableSieveStandards.forEach((standard) => {
+      if (!itemsById.has(standard.sieveSizeReferenceItemId)) {
+        itemsById.set(standard.sieveSizeReferenceItemId, {
+          id: standard.sieveSizeReferenceItemId,
+          value: standard.sieveSize,
+        });
+      }
+    });
+    return Array.from(itemsById.values()).sort(
+      (a, b) => sieveSizeNumber(b.value) - sieveSizeNumber(a.value),
+    );
+  }, [applicableSieveStandards, sieveSizeReferenceItems]);
+
   const sieveContextKey = `${testType}|${String(details.materialReferenceItemId ?? material.trim())}`;
-  const sieveStandardKey = applicableSieveStandards.map((standard) => standard.id).join(",");
 
   useEffect(() => {
-    if (!usesSieveRows || (isEditing && initializedRecordId.current !== recordId)) return;
-    if (sieveContextKeyRef.current === sieveContextKey && sieveStandardKey === "") return;
+    if (
+      !usesSieveRows ||
+      !material.trim() ||
+      (isEditing && initializedRecordId.current !== recordId)
+    ) return;
+    if (sieveContextKeyRef.current === sieveContextKey && sieveEntryItems.length === 0) return;
     const contextChanged = sieveContextKeyRef.current !== sieveContextKey;
     sieveContextKeyRef.current = sieveContextKey;
     setTestRows((previousRows) => {
@@ -296,14 +321,17 @@ export default function RecordForm() {
               row,
             ]),
       );
-      const nextRows: TestRow[] = applicableSieveStandards.map((standard) => {
-        const savedRow = rowsBySize.get(standard.sieveSizeReferenceItemId);
+      const standardsBySize = new Map(
+        applicableSieveStandards.map((standard) => [standard.sieveSizeReferenceItemId, standard]),
+      );
+      const nextRows: TestRow[] = sieveEntryItems.map((item) => {
+        const savedRow = rowsBySize.get(item.id);
         return savedRow
-          ? { ...savedRow, sieveSize: standard.sieveSize, sieveSizeReferenceItemId: standard.sieveSizeReferenceItemId }
+          ? { ...savedRow, sieveSize: item.value, sieveSizeReferenceItemId: item.id }
           : {
               ...createEmptyRow(nextRowId.current++),
-              sieveSize: standard.sieveSize,
-              sieveSizeReferenceItemId: standard.sieveSizeReferenceItemId,
+              sieveSize: item.value,
+              sieveSizeReferenceItemId: item.id,
             };
       });
       if (!contextChanged) {
@@ -328,10 +356,11 @@ export default function RecordForm() {
   }, [
     applicableSieveStandards,
     isEditing,
+    material,
     recordId,
     sieveContextKey,
+    sieveEntryItems,
     sieveSizeReferenceItems,
-    sieveStandardKey,
     testType,
     usesSieveRows,
   ]);
@@ -711,9 +740,9 @@ export default function RecordForm() {
                   </div>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     {[
-                      ["sampleWeight", "Sample Weight (kg)"],
-                      ["dryWeight", "Dry Weight (kg)"],
-                      ["wetWeight", "Wet Weight (kg)"],
+                           ["sampleWeight", `Sample Weight (${usesSieveRows ? sieveMassUnit : "kg"})`],
+                           ["dryWeight", `Dry Weight (${usesSieveRows ? sieveMassUnit : "kg"})`],
+                           ["wetWeight", `Wet Weight (${usesSieveRows ? sieveMassUnit : "kg"})`],
                     ].map(([key, label]) => (
                       <div key={key} className="space-y-2">
                         <Label>{label}</Label>
@@ -748,14 +777,14 @@ export default function RecordForm() {
                   )}
                   {usesSieveRows && (
                     <div className="rounded-md border border-amber-500/30 bg-amber-500/[0.04] px-4 py-3 text-sm">
-                      {applicableSieveStandards.length ? (
+                       {applicableSieveStandards.length ? (
                         <span>
                           Standard <strong>{Array.from(new Set(applicableSieveStandards.map((standard) => standard.standardReference))).join(", ")}</strong>{" "}
-                          provides <strong>{applicableSieveStandards.length} sieve criteria</strong> for {material}.
+                           provides <strong>{applicableSieveStandards.length} sieve criteria</strong> for {material}. All {sieveEntryItems.length} sieve sizes from Reference Data are available below.
                         </span>
                       ) : (
                         <span className="text-muted-foreground">
-                          No sieve standard is configured for {material || "this material"}. The record will remain in Review.{" "}
+                           No sieve standard is configured for {material || "this material"}. You can still enter retained amounts for all {sieveEntryItems.length} sieve sizes from Reference Data; the record will remain in Review until a standard is configured.{" "}
                           <Link href="/standards" className="font-semibold text-foreground underline underline-offset-2">
                             Configure Standards
                           </Link>{" "}
@@ -764,7 +793,7 @@ export default function RecordForm() {
                       )}
                     </div>
                   )}
-                  {usesSieveRows && !applicableSieveStandards.length ? null : <div className="overflow-x-auto rounded-md border">
+                   {usesSieveRows && !sieveEntryItems.length ? null : <div className="overflow-x-auto rounded-md border">
                     <table className={`w-full ${usesSieveRows ? "min-w-[760px]" : "min-w-[1080px]"} text-sm`}>
                       <thead className="bg-muted/50">
                         <tr className="border-b">
@@ -779,8 +808,8 @@ export default function RecordForm() {
                           {usesSieveRows ? (
                             <>
                               <th className="px-3 py-3 text-left font-semibold">Standard</th>
-                              <th className="px-3 py-3 text-left font-semibold">Amount Returned (kg)</th>
-                              <th className="px-3 py-3 text-left font-semibold">Amount Passing</th>
+                               <th className="px-3 py-3 text-left font-semibold">Amount Returned (g)</th>
+                               <th className="px-3 py-3 text-left font-semibold">Amount Passing (g)</th>
                               <th className="px-3 py-3 text-left font-semibold">% Passing</th>
                             </>
                           ) : (
@@ -843,13 +872,13 @@ export default function RecordForm() {
                                           : candidate
                                       )));
                                     }}
-                                    placeholder="kg"
+                                     placeholder="g"
                                     aria-label={`Amount returned for row ${rowIndex + 1}`}
                                   />
                                 </td>
                                 <td className="px-2 py-2">
                                   <div className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground">
-                                    {row.passingAmount ? `${row.passingAmount} kg` : "—"}
+                                     {row.passingAmount ? `${row.passingAmount} g` : "—"}
                                   </div>
                                 </td>
                                 <td className="px-2 py-2">

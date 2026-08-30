@@ -370,7 +370,7 @@ function SieveEditor({
                     onValueChange={(value: SieveCriterion["measurementType"]) =>
                       updateCriterion(index, {
                         measurementType: value,
-                        unit: value === "percentage" ? "%" : criterion.unit === "%" ? "kg" : criterion.unit,
+                        unit: value === "percentage" ? "%" : criterion.unit === "%" ? "g" : criterion.unit,
                       })
                     }
                   >
@@ -391,7 +391,7 @@ function SieveEditor({
                 </div>
                 <div className="space-y-2">
                   <Label>Unit</Label>
-                  <Input value={criterion.measurementType === "percentage" ? "%" : criterion.unit} disabled={criterion.measurementType === "percentage"} onChange={(event) => updateCriterion(index, { unit: event.target.value })} placeholder="kg" />
+                   <Input value={criterion.measurementType === "percentage" ? "%" : criterion.unit} disabled={criterion.measurementType === "percentage"} onChange={(event) => updateCriterion(index, { unit: event.target.value })} placeholder="g" />
                 </div>
                 <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => removeCriterion(index)} disabled={form.criteria.length === 1} aria-label={`Remove pore size ${index + 1}`}>
                   <Trash2 className="h-4 w-4" />

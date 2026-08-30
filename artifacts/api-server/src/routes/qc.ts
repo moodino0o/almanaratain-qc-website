@@ -641,7 +641,7 @@ router.post("/sieve-standards", async (req, res): Promise<void> => {
         measurementType: body.data.measurementType,
         minimum: body.data.minimum == null ? null : String(body.data.minimum),
         maximum: body.data.maximum == null ? null : String(body.data.maximum),
-        unit: body.data.unit?.trim() || (body.data.measurementType === "percentage" ? "%" : "kg"),
+        unit: body.data.unit?.trim() || (body.data.measurementType === "percentage" ? "%" : "g"),
       })
       .returning();
     if (!standard) {
