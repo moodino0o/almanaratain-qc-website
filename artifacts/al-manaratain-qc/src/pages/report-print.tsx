@@ -1,141 +1,376 @@
 import { useParams, Link } from "wouter";
 import { useGetReport } from "@workspace/api-client-react";
+import type { QcRecord } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
-import { formatDate } from "@/lib/utils";
 import { ArrowLeft, Printer } from "lucide-react";
+
+type DetailMap = QcRecord["details"];
+
+const keyLabel = (key: string) =>
+  key
+    .replace(/([A-Z])/g, " $1")
+    .replace(/[_-]/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+    .trim();
+
+function textValue(value: unknown, fallback = "-") {
+  if (value === null || value === undefined || value === "") return fallback;
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
+function detailValue(details: DetailMap, keys: string[], fallback = "-") {
+  const normalized = new Map(
+    Object.entries(details).map(([key, value]) => [key.toLowerCase(), value]),
+  );
+  for (const key of keys) {
+    const value = normalized.get(key.toLowerCase());
+    if (value !== undefined && value !== null && value !== "") {
+      return textValue(value, fallback);
+    }
+  }
+  return fallback;
+}
+
+function formatReportDate(value: string | undefined | null) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "2-digit",
+    timeZone: "UTC",
+  })
+    .format(date)
+    .replace(/ /g, "-");
+}
+
+function numericStrength(value: string) {
+  const number = Number.parseFloat(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function ReportField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="report-field">
+      <span>{label}:</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return <h3 className="report-section-heading">{children}</h3>;
+}
+
+function ReadyMixReport({ record }: { record: QcRecord }) {
+  const details = record.details;
+  const designStrength = detailValue(
+    details,
+    ["designStrength", "mixStrength", "mixType"],
+    record.material,
+  );
+  const strengthNumber = numericStrength(designStrength);
+  const sevenDayStrength = detailValue(
+    details,
+    ["sevenDayStrength", "strength7Days", "avg3To5Days", "average3To5Days"],
+    strengthNumber ? `${(strengthNumber * 0.7).toFixed(1)} N/mm²` : "-",
+  );
+  const twentyEightDayStrength = detailValue(
+    details,
+    [
+      "twentyEightDayStrength",
+      "strength28Days",
+      "avg28To29Days",
+      "average28To29Days",
+      "compressiveStrength",
+    ],
+    "-",
+  );
+  const compliance = detailValue(
+    details,
+    ["compliance", "complianceStatus"],
+    record.status,
+  );
+  const testRows = Array.isArray(details.testRows)
+    ? details.testRows
+    : [
+        {
+          testingDate: formatReportDate(record.sampleDate),
+          cubeAge: detailValue(details, ["cubeAge", "age"]),
+          density: detailValue(details, ["density", "densityKgM3"]),
+          load: detailValue(details, ["load"]),
+          strength: detailValue(details, ["strength", "compressiveStrength"]),
+          waterAbsorption: detailValue(details, ["waterAbsorption", "absorption"]),
+        },
+      ];
+
+  return (
+    <>
+      <div className="report-two-column">
+        <section>
+          <SectionHeading>Customer and Mix Details</SectionHeading>
+          <div className="report-fields">
+            <ReportField
+              label="Customer Name"
+              value={detailValue(
+                details,
+                ["customerName", "customer"],
+                record.location,
+              )}
+            />
+            <ReportField label="Location" value={record.location} />
+            <ReportField
+              label="Mix Type"
+              value={detailValue(details, ["mixType"], designStrength)}
+            />
+            <ReportField
+              label="Project Name"
+              value={detailValue(details, ["projectName", "project"])}
+            />
+            <ReportField
+              label="Other Details"
+              value={detailValue(
+                details,
+                ["otherDetails", "remarks"],
+                record.remarks || "-",
+              )}
+            />
+          </div>
+        </section>
+        <section className="report-summary">
+          <SectionHeading>Average Strength</SectionHeading>
+          <ReportField
+            label="3-5 Days"
+            value={detailValue(details, ["avg3To5Days", "average3To5Days"])}
+          />
+          <ReportField
+            label="6-7 Days"
+            value={detailValue(
+              details,
+              ["avg6To7Days", "average6To7Days"],
+              sevenDayStrength,
+            )}
+          />
+          <ReportField
+            label="28-29 Days"
+            value={detailValue(
+              details,
+              ["avg28To29Days", "average28To29Days"],
+              twentyEightDayStrength,
+            )}
+          />
+          <p className="report-subheading">28-29 Days Compliance with BS</p>
+          <p className="report-centered-value">{compliance}</p>
+        </section>
+      </div>
+
+      <div className="report-two-column report-test-details">
+        <section>
+          <SectionHeading>Test Details</SectionHeading>
+          <div className="report-fields">
+            <ReportField
+              label="Casting Date"
+              value={detailValue(
+                details,
+                ["castingDate", "castDate"],
+                formatReportDate(record.sampleDate),
+              )}
+            />
+            <ReportField label="Casted by" value={record.testedBy} />
+            <ReportField
+              label="Cube Size (mm)"
+              value={detailValue(details, ["cubeSize", "sampleSize"])}
+            />
+            <ReportField
+              label="Sample No."
+              value={detailValue(details, ["sampleNo", "sampleNumber"], record.recordNo)}
+            />
+          </div>
+        </section>
+        <div className="report-fields report-test-measures">
+          <ReportField
+            label="Slump Test (mm)"
+            value={detailValue(details, ["slump", "slumpTest"])}
+          />
+          <ReportField
+            label="Temperature"
+            value={detailValue(details, ["temperature"])}
+          />
+          <ReportField
+            label="Compaction Type"
+            value={detailValue(details, ["compactionType"], "Hand Compaction")}
+          />
+        </div>
+      </div>
+
+      <table className="report-table report-results-table">
+        <thead>
+          <tr>
+            <th>Testing date</th>
+            <th>Cube Age</th>
+            <th>Density (kg/m3)</th>
+            <th>Load (kN)</th>
+            <th>Strength (N/mm2)</th>
+            <th>Water Absorption%</th>
+          </tr>
+        </thead>
+        <tbody>
+          {testRows.map((row, index) => {
+            const values =
+              typeof row === "object" && row !== null
+                ? (row as Record<string, unknown>)
+                : {};
+            return (
+              <tr key={index}>
+                <td>
+                  {textValue(
+                    values.testingDate || values.date,
+                    formatReportDate(record.sampleDate),
+                  )}
+                </td>
+                <td>{textValue(values.cubeAge || values.age)}</td>
+                <td>{textValue(values.density || values.densityKgM3)}</td>
+                <td>{textValue(values.load)}</td>
+                <td>
+                  {textValue(values.strength || values.compressiveStrength)}
+                </td>
+                <td>
+                  {textValue(values.waterAbsorption || values.absorption)}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+
+      <div className="report-strength-block">
+        <p className="report-centered-title">Standard Required Strength:</p>
+        <table className="report-table report-strength-table">
+          <thead>
+            <tr>
+              <th>MIX TYPE</th>
+              <th>7 DAYS</th>
+              <th>28 DAYS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>{designStrength}</td>
+              <td>{sevenDayStrength}</td>
+              <td>{twentyEightDayStrength}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+function GenericReport({ record }: { record: QcRecord }) {
+  const entries = Object.entries(record.details);
+  return (
+    <section>
+      <SectionHeading>{record.testType} Details</SectionHeading>
+      <div className="report-generic-grid">
+        <ReportField label="Sample Date" value={formatReportDate(record.sampleDate)} />
+        <ReportField label="Location" value={record.location} />
+        <ReportField label="Material" value={record.material} />
+        <ReportField label="Tested By" value={record.testedBy} />
+        {entries.map(([key, value]) => (
+          <ReportField key={key} label={keyLabel(key)} value={textValue(value)} />
+        ))}
+      </div>
+    </section>
+  );
+}
 
 export default function ReportPrint() {
   const { id } = useParams();
   const reportId = Number(id);
-  
   const { data: report, isLoading, error } = useGetReport(reportId);
 
-  // Auto-print prompt when loaded? Maybe not auto, let user click it.
-  
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground print-hide">Loading certificate...</div>;
-  if (error || !report) return <div className="p-8 text-center text-destructive print-hide">Failed to load certificate.</div>;
+  if (isLoading) {
+    return (
+      <div className="p-8 text-center text-muted-foreground print-hide">
+        Loading certificate...
+      </div>
+    );
+  }
+  if (error || !report) {
+    return (
+      <div className="p-8 text-center text-destructive print-hide">
+        Failed to load certificate.
+      </div>
+    );
+  }
 
-  const { record, companySubtitle } = report;
+  const { record, companyName, companySubtitle } = report;
 
   return (
-    <div className="min-h-screen bg-muted/30 py-8 print:bg-white print:py-0 print:p-0">
-      <div className="max-w-4xl mx-auto space-y-4 print-hide px-4 mb-4">
-        <div className="flex items-center justify-between bg-card p-4 rounded-lg border shadow-sm">
-          <Link href="/reports" className="flex items-center text-sm font-medium text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Reports
-          </Link>
-          <Button onClick={() => window.print()} className="gap-2">
-            <Printer className="w-4 h-4" /> Print Certificate
-          </Button>
-        </div>
+    <div className="report-page">
+      <div className="report-toolbar print-hide">
+        <Link
+          href="/reports"
+          className="flex items-center text-sm font-medium text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" /> Back to Reports
+        </Link>
+        <Button onClick={() => window.print()} className="gap-2">
+          <Printer className="w-4 h-4" /> Print Certificate
+        </Button>
       </div>
 
-      {/* A4 Print Container */}
-      <div className="w-[210mm] min-h-[297mm] mx-auto bg-white shadow-lg print:shadow-none print:w-full print:min-h-0 box-border p-[20mm]">
-        {/* Header */}
-        <div className="grid grid-cols-[minmax(0,1fr)_170px] items-start gap-8 border-b-2 border-primary pb-6 mb-8">
-          <div className="min-w-0">
-            <img src="/al-manaratain-logo.webp" alt="Al Manaratain Logo" className="h-20 w-auto max-w-full object-contain object-left" />
-            <p className="mt-2 text-[10px] leading-4 text-muted-foreground uppercase font-semibold tracking-wide">{companySubtitle}</p>
+      <main className="report-paper">
+        <header className="report-header">
+          <div className="report-company">{companySubtitle}</div>
+          <img
+            src="/al-manaratain-logo.webp"
+            alt="Al Manaratain Logo"
+            className="report-logo"
+          />
+          <div className="report-title">
+            <strong>
+              {record.testType === "Ready Mix"
+                ? "Readymix Cube Test Report"
+                : `${record.testType} Test Report`}
+            </strong>
+            <span>Ref: {record.recordNo}</span>
           </div>
-          <div className="text-right min-w-0">
-            <h2 className="text-xl font-bold text-foreground mb-1">Quality Certificate</h2>
-            <p className="text-sm font-medium text-muted-foreground">Ref: {record.recordNo}</p>
-            <p className="text-sm text-muted-foreground">Date: {formatDate(new Date().toISOString())}</p>
-          </div>
-        </div>
+        </header>
+        <p className="report-standard">
+          {record.testType === "Ready Mix"
+            ? "ACCORDING TO BS EN 12390-3:2009"
+            : "QUALITY CONTROL TEST REPORT"}
+        </p>
 
-        {/* Certificate Info Grid */}
-        <div className="grid grid-cols-2 gap-x-12 gap-y-4 mb-8 text-sm">
-          <div className="flex border-b border-muted pb-2">
-            <span className="w-1/3 font-bold text-muted-foreground uppercase text-xs">Test Type</span>
-            <span className="w-2/3 font-semibold text-foreground">{record.testType}</span>
-          </div>
-          <div className="flex border-b border-muted pb-2">
-            <span className="w-1/3 font-bold text-muted-foreground uppercase text-xs">Sample Date</span>
-            <span className="w-2/3 font-semibold text-foreground">{formatDate(record.sampleDate)}</span>
-          </div>
-          <div className="flex border-b border-muted pb-2">
-            <span className="w-1/3 font-bold text-muted-foreground uppercase text-xs">Material</span>
-            <span className="w-2/3 font-semibold text-foreground">{record.material}</span>
-          </div>
-          <div className="flex border-b border-muted pb-2">
-            <span className="w-1/3 font-bold text-muted-foreground uppercase text-xs">Location</span>
-            <span className="w-2/3 font-semibold text-foreground">{record.location}</span>
-          </div>
-          <div className="flex border-b border-muted pb-2">
-            <span className="w-1/3 font-bold text-muted-foreground uppercase text-xs">Tested By</span>
-            <span className="w-2/3 font-semibold text-foreground">{record.testedBy}</span>
-          </div>
-          <div className="flex border-b border-muted pb-2">
-            <span className="w-1/3 font-bold text-muted-foreground uppercase text-xs">Final Status</span>
-            <span className="w-2/3 font-semibold text-success uppercase">{record.status}</span>
-          </div>
-        </div>
+        {record.testType === "Ready Mix" ? (
+          <ReadyMixReport record={record} />
+        ) : (
+          <GenericReport record={record} />
+        )}
 
-        {/* Test Results Table */}
-        <div className="mb-10">
-          <h3 className="text-lg font-bold text-primary mb-4 border-l-4 border-primary pl-3">Test Results</h3>
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-muted/50 border-y-2 border-border">
-                <th className="py-3 px-4 text-left font-bold text-xs uppercase tracking-wider text-muted-foreground w-1/2">Parameter</th>
-                <th className="py-3 px-4 text-left font-bold text-xs uppercase tracking-wider text-muted-foreground w-1/2">Measured Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.entries(record.details).length > 0 ? (
-                Object.entries(record.details).map(([key, value], idx) => (
-                  <tr key={key} className="border-b border-border">
-                    <td className="py-3 px-4 font-semibold text-sm capitalize text-foreground">
-                      {key.replace(/([A-Z])/g, ' $1').trim()}
-                    </td>
-                    <td className="py-3 px-4 font-medium text-sm">
-                      {String(value)}
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={2} className="py-6 px-4 text-center text-sm text-muted-foreground italic">
-                    No specific measurements recorded.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Remarks */}
         {record.remarks && (
-          <div className="mb-12">
-            <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">Remarks / Observations</h3>
-            <p className="text-sm p-4 bg-muted/20 border border-muted rounded-md min-h-[60px] whitespace-pre-wrap">
-              {record.remarks}
-            </p>
+          <div className="report-remarks">
+            <span>Remarks:</span> {record.remarks}
           </div>
         )}
 
-        {/* Signatures */}
-        <div className="mt-20 pt-8 border-t-2 border-primary grid grid-cols-2 gap-12 text-center">
+        <footer className="report-signatures">
           <div>
-            <div className="h-16 border-b border-border mx-8 mb-2"></div>
-            <p className="font-bold text-sm text-foreground">{record.testedBy}</p>
-            <p className="text-xs text-muted-foreground uppercase font-semibold mt-1">Quality Technician</p>
+            <span>Tested by:</span>
+            <strong>{record.testedBy}</strong>
           </div>
           <div>
-            <div className="h-16 border-b border-border mx-8 mb-2"></div>
-            <p className="font-bold text-sm text-foreground">{record.reviewedBy || "Authorized Signature"}</p>
-            <p className="text-xs text-muted-foreground uppercase font-semibold mt-1">QC Supervisor</p>
+            <span>Approved by:</span>
+            <strong>{record.reviewedBy || "________________"}</strong>
           </div>
-        </div>
-
-        {/* Footer */}
-        <div className="mt-16 text-center text-xs text-muted-foreground">
-          <p>This certificate is electronically generated and represents the laboratory test results of the stated material.</p>
-          <p className="mt-1">Al Manaratain Company and Ali Al Shaab Group W.L.L. - Kingdom of Bahrain</p>
-        </div>
-      </div>
+          <small>
+            {companyName} · {companySubtitle}
+          </small>
+        </footer>
+      </main>
     </div>
   );
 }
