@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useGetLookups, useCreateRecord, TestType, RecordStatus, QcRecordInput } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -12,6 +12,34 @@ import { getListRecordsQueryKey, getGetDashboardQueryKey } from "@workspace/api-
 import { Save, ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
+
+type TestRow = {
+  id: number;
+  length: string;
+  width: string;
+  height: string;
+  dryWeight: string;
+  wetWeight: string;
+  sampleAge: string;
+  testAge: string;
+  load: string;
+  strength: string;
+  waterAbsorption: string;
+};
+
+const createEmptyRow = (id: number): TestRow => ({
+  id,
+  length: "",
+  width: "",
+  height: "",
+  dryWeight: "",
+  wetWeight: "",
+  sampleAge: "",
+  testAge: "",
+  load: "",
+  strength: "",
+  waterAbsorption: "",
+});
 
 export default function RecordForm() {
   const [, setLocation] = useLocation();
@@ -27,10 +55,41 @@ export default function RecordForm() {
   const [testedBy, setTestedBy] = useState("");
   const [remarks, setRemarks] = useState("");
   
-  const [details, setDetails] = useState<Record<string, string>>({});
+  const [details, setDetails] = useState<Record<string, unknown>>({});
+  const [testRows, setTestRows] = useState<TestRow[]>([createEmptyRow(1)]);
+  const nextRowId = useRef(2);
+  const rowInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
   const handleDetailChange = (key: string, value: string) => {
     setDetails(prev => ({ ...prev, [key]: value }));
+  };
+
+  const usesTestRows = testType === TestType.Ready_Mix || testType === TestType.Blocks;
+
+  const updateTestRow = (rowIndex: number, key: keyof Omit<TestRow, "id">, value: string) => {
+    setTestRows(prev => prev.map((row, index) => (
+      index === rowIndex ? { ...row, [key]: value } : row
+    )));
+  };
+
+  const insertTestRow = (rowIndex: number) => {
+    const newRow = createEmptyRow(nextRowId.current++);
+    setTestRows(prev => {
+      const next = [...prev];
+      next.splice(rowIndex + 1, 0, newRow);
+      return next;
+    });
+    requestAnimationFrame(() => rowInputRefs.current[newRow.id]?.focus());
+  };
+
+  const removeTestRow = (rowIndex: number) => {
+    setTestRows(prev => prev.length === 1 ? prev : prev.filter((_, index) => index !== rowIndex));
+  };
+
+  const handleTestRowKeyDown = (event: React.KeyboardEvent<HTMLInputElement>, rowIndex: number) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    insertTestRow(rowIndex);
   };
 
   const getDynamicFields = () => {
@@ -42,6 +101,10 @@ export default function RecordForm() {
           { key: "airContent", label: "Air Content (%)", type: "number" }
         ];
       case TestType.Blocks:
+        return [
+          { key: "blockType", label: "Block Type", type: "text" },
+          { key: "machine", label: "Machine", type: "text" }
+        ];
       case TestType.Paving_Blocks:
         return [
           { key: "weight", label: "Weight (kg)", type: "number" },
@@ -73,6 +136,30 @@ export default function RecordForm() {
       return;
     }
 
+    const payloadDetails = usesTestRows
+      ? {
+          ...details,
+          testRows: testRows.map(({ id: _id, ...row }, index) => ({
+            rowNo: index + 1,
+            ...(testType === TestType.Ready_Mix
+              ? { testAge: row.testAge }
+              : { sampleAge: row.sampleAge }),
+            length: row.length,
+            width: row.width,
+            height: row.height,
+            dryWeight: row.dryWeight,
+            wetWeight: row.wetWeight,
+            ...(testType === TestType.Ready_Mix
+              ? {
+                  load: row.load,
+                  strength: row.strength,
+                  waterAbsorption: row.waterAbsorption,
+                }
+              : { strength: row.strength }),
+          })),
+        }
+      : details;
+
     const payload: QcRecordInput = {
       testType,
       sampleDate: new Date(sampleDate).toISOString(),
@@ -81,7 +168,7 @@ export default function RecordForm() {
       status: RecordStatus.Review, 
       testedBy,
       remarks,
-      details
+      details: payloadDetails
     };
 
     createRecord.mutate({ data: payload }, {
@@ -123,7 +210,12 @@ export default function RecordForm() {
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label>Test Type <span className="text-destructive">*</span></Label>
-                <Select value={testType} onValueChange={(val: TestType) => { setTestType(val); setDetails({}); }}>
+                   <Select value={testType} onValueChange={(val: TestType) => {
+                     setTestType(val);
+                     setDetails({});
+                     setTestRows([createEmptyRow(1)]);
+                     nextRowId.current = 2;
+                   }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select Test Type" />
                   </SelectTrigger>
@@ -195,20 +287,150 @@ export default function RecordForm() {
           <Card className="md:col-span-2">
             <CardHeader className="bg-muted/30 border-b">
               <CardTitle>Measurement Details: {testType}</CardTitle>
-              <CardDescription>Enter the specific readings obtained during the test.</CardDescription>
+              <CardDescription>
+                {usesTestRows
+                  ? "Enter one specimen per row. Press Enter in a row to insert the next numbered entry."
+                  : "Enter the specific readings obtained during the test."}
+              </CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
-              {getDynamicFields().map(field => (
-                <div key={field.key} className="space-y-2">
-                  <Label>{field.label}</Label>
-                  <Input 
-                    type={field.type} 
-                    value={details[field.key] || ""} 
-                    onChange={e => handleDetailChange(field.key, e.target.value)}
-                    placeholder={`Enter ${field.label.toLowerCase()}`}
-                  />
+            <CardContent className="pt-6">
+              {usesTestRows ? (
+                <div className="space-y-3">
+                  <div className="overflow-x-auto rounded-md border">
+                    <table className="w-full min-w-[980px] text-sm">
+                      <thead className="bg-muted/50">
+                        <tr className="border-b">
+                          <th className="w-12 px-3 py-3 text-left font-semibold">No.</th>
+                          {testType === TestType.Ready_Mix ? (
+                            <th className="px-3 py-3 text-left font-semibold">Test Age</th>
+                          ) : (
+                            <th className="px-3 py-3 text-left font-semibold">Sample Age</th>
+                          )}
+                          <th className="px-3 py-3 text-left font-semibold">Length (mm)</th>
+                          <th className="px-3 py-3 text-left font-semibold">Width (mm)</th>
+                          <th className="px-3 py-3 text-left font-semibold">Height (mm)</th>
+                          <th className="px-3 py-3 text-left font-semibold">Dry Weight</th>
+                          <th className="px-3 py-3 text-left font-semibold">Wet Weight</th>
+                          {testType === TestType.Ready_Mix && (
+                            <>
+                              <th className="px-3 py-3 text-left font-semibold">Load (kN)</th>
+                              <th className="px-3 py-3 text-left font-semibold">Strength</th>
+                            </>
+                          )}
+                          {testType === TestType.Blocks && (
+                            <th className="px-3 py-3 text-left font-semibold">Strength</th>
+                          )}
+                          <th className="w-20 px-3 py-3 text-left font-semibold">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {testRows.map((row, rowIndex) => (
+                          <tr key={row.id} className="border-b last:border-b-0">
+                            <td className="px-3 py-2 font-semibold text-muted-foreground">{rowIndex + 1}</td>
+                            <td className="px-2 py-2">
+                              <Input
+                                ref={element => {
+                                  rowInputRefs.current[row.id] = element;
+                                }}
+                                type="text"
+                                inputMode="numeric"
+                                value={testType === TestType.Ready_Mix ? row.testAge : row.sampleAge}
+                                onChange={event => updateTestRow(rowIndex, testType === TestType.Ready_Mix ? "testAge" : "sampleAge", event.target.value)}
+                                onKeyDown={event => handleTestRowKeyDown(event, rowIndex)}
+                                placeholder="Days"
+                                aria-label={`${testType === TestType.Ready_Mix ? "Test" : "Sample"} age for row ${rowIndex + 1}`}
+                              />
+                            </td>
+                            {(["length", "width", "height", "dryWeight", "wetWeight"] as const).map(key => (
+                              <td key={key} className="px-2 py-2">
+                                <Input
+                                  type="text"
+                                  inputMode="decimal"
+                                  value={row[key]}
+                                  onChange={event => updateTestRow(rowIndex, key, event.target.value)}
+                                  onKeyDown={event => handleTestRowKeyDown(event, rowIndex)}
+                                  placeholder={key === "dryWeight" || key === "wetWeight" ? "kg" : "mm"}
+                                  aria-label={`${key} for row ${rowIndex + 1}`}
+                                />
+                              </td>
+                            ))}
+                            {testType === TestType.Ready_Mix && (
+                              <>
+                                <td className="px-2 py-2">
+                                  <Input
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={row.load}
+                                    onChange={event => updateTestRow(rowIndex, "load", event.target.value)}
+                                    onKeyDown={event => handleTestRowKeyDown(event, rowIndex)}
+                                    placeholder="kN"
+                                    aria-label={`Load for row ${rowIndex + 1}`}
+                                  />
+                                </td>
+                                <td className="px-2 py-2">
+                                  <Input
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={row.strength}
+                                    onChange={event => updateTestRow(rowIndex, "strength", event.target.value)}
+                                    onKeyDown={event => handleTestRowKeyDown(event, rowIndex)}
+                                    placeholder="N/mm²"
+                                    aria-label={`Strength for row ${rowIndex + 1}`}
+                                  />
+                                </td>
+                              </>
+                            )}
+                            {testType === TestType.Blocks && (
+                              <td className="px-2 py-2">
+                                <Input
+                                  type="text"
+                                  inputMode="decimal"
+                                  value={row.strength}
+                                  onChange={event => updateTestRow(rowIndex, "strength", event.target.value)}
+                                  onKeyDown={event => handleTestRowKeyDown(event, rowIndex)}
+                                  placeholder="N/mm²"
+                                  aria-label={`Strength for row ${rowIndex + 1}`}
+                                />
+                              </td>
+                            )}
+                            <td className="px-2 py-2">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeTestRow(rowIndex)}
+                                disabled={testRows.length === 1}
+                              >
+                                Remove
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <Button type="button" variant="outline" onClick={() => insertTestRow(testRows.length - 1)}>
+                    + Add row
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    Pressing Enter adds a new numbered row after the current row.
+                  </p>
                 </div>
-              ))}
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {getDynamicFields().map(field => (
+                    <div key={field.key} className="space-y-2">
+                      <Label>{field.label}</Label>
+                      <Input
+                        type={field.type}
+                        value={String(details[field.key] ?? "")}
+                        onChange={e => handleDetailChange(field.key, e.target.value)}
+                        placeholder={`Enter ${field.label.toLowerCase()}`}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 

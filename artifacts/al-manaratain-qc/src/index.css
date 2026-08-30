@@ -288,6 +288,16 @@
   font-weight: 600;
 }
 
+.report-specimen-block {
+  margin-top: 4mm;
+}
+
+.report-specimen-table th,
+.report-specimen-table td {
+  padding: 1mm 0.8mm;
+  font-size: 7px;
+}
+
 .report-strength-block {
   width: 82mm;
   margin: 31mm auto 0;

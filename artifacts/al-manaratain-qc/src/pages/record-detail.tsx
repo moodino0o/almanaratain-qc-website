@@ -10,6 +10,46 @@ import { useQueryClient } from "@tanstack/react-query";
 import { getListRecordsQueryKey, getGetDashboardQueryKey, getGetRecordQueryKey } from "@workspace/api-client-react";
 import { useState } from "react";
 
+function TestRowsTable({ rows }: { rows: unknown[] }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[760px] text-xs">
+        <thead className="bg-muted/30">
+          <tr className="border-b">
+            <th className="p-2 text-left">No.</th>
+            <th className="p-2 text-left">Age</th>
+            <th className="p-2 text-left">Length</th>
+            <th className="p-2 text-left">Width</th>
+            <th className="p-2 text-left">Height</th>
+            <th className="p-2 text-left">Dry Weight</th>
+            <th className="p-2 text-left">Wet Weight</th>
+            <th className="p-2 text-left">Strength</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => {
+            const values = typeof row === "object" && row !== null
+              ? row as Record<string, unknown>
+              : {};
+            return (
+              <tr key={index} className="border-b last:border-b-0">
+                <td className="p-2 font-semibold">{String(values.rowNo ?? index + 1)}</td>
+                <td className="p-2">{String(values.testAge ?? values.sampleAge ?? "-")}</td>
+                <td className="p-2">{String(values.length ?? "-")}</td>
+                <td className="p-2">{String(values.width ?? "-")}</td>
+                <td className="p-2">{String(values.height ?? "-")}</td>
+                <td className="p-2">{String(values.dryWeight ?? "-")}</td>
+                <td className="p-2">{String(values.wetWeight ?? "-")}</td>
+                <td className="p-2">{String(values.strength ?? values.compressiveStrength ?? "-")}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function RecordDetail() {
   const { id } = useParams();
   const recordId = Number(id);
@@ -110,7 +150,11 @@ export default function RecordDetail() {
                           {key.replace(/([A-Z])/g, ' $1').trim()}
                         </td>
                         <td className="p-4 font-semibold text-foreground">
-                          {String(value)}
+                          {key === "testRows" && Array.isArray(value) ? (
+                            <TestRowsTable rows={value} />
+                          ) : (
+                            String(value)
+                          )}
                         </td>
                       </tr>
                     ))

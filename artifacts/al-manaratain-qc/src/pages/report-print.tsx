@@ -51,6 +51,65 @@ function numericStrength(value: string) {
   return Number.isFinite(number) ? number : null;
 }
 
+function hasSpecimenMeasurements(rows: unknown[]) {
+  return rows.some((row) => {
+    if (typeof row !== "object" || row === null) return false;
+    const values = row as Record<string, unknown>;
+    return ["length", "width", "height", "dryWeight", "wetWeight"].some(
+      (key) => values[key] !== undefined && values[key] !== "",
+    );
+  });
+}
+
+function SpecimenRowsTable({
+  rows,
+  ageLabel,
+}: {
+  rows: unknown[];
+  ageLabel: string;
+}) {
+  if (!hasSpecimenMeasurements(rows)) return null;
+  return (
+    <div className="report-specimen-block">
+      <p className="report-centered-title">Specimen Dimensions and Weights:</p>
+      <table className="report-table report-specimen-table">
+        <thead>
+          <tr>
+            <th>No.</th>
+            <th>{ageLabel}</th>
+            <th>Length (mm)</th>
+            <th>Width (mm)</th>
+            <th>Height (mm)</th>
+            <th>Dry Weight</th>
+            <th>Wet Weight</th>
+            <th>Strength</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => {
+            const values =
+              typeof row === "object" && row !== null
+                ? (row as Record<string, unknown>)
+                : {};
+            return (
+              <tr key={index}>
+                <td>{textValue(values.rowNo, String(index + 1))}</td>
+                <td>{textValue(values.testAge || values.sampleAge)}</td>
+                <td>{textValue(values.length)}</td>
+                <td>{textValue(values.width)}</td>
+                <td>{textValue(values.height)}</td>
+                <td>{textValue(values.dryWeight)}</td>
+                <td>{textValue(values.wetWeight)}</td>
+                <td>{textValue(values.strength || values.compressiveStrength)}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function ReportField({ label, value }: { label: string; value: string }) {
   return (
     <div className="report-field">
@@ -244,6 +303,7 @@ function ReadyMixReport({ record }: { record: QcRecord }) {
           })}
         </tbody>
       </table>
+      <SpecimenRowsTable rows={testRows} ageLabel="Test Age" />
 
       <div className="report-strength-block">
         <p className="report-centered-title">Standard Required Strength:</p>
@@ -269,7 +329,8 @@ function ReadyMixReport({ record }: { record: QcRecord }) {
 }
 
 function GenericReport({ record }: { record: QcRecord }) {
-  const entries = Object.entries(record.details);
+  const entries = Object.entries(record.details).filter(([key]) => key !== "testRows");
+  const testRows = Array.isArray(record.details.testRows) ? record.details.testRows : [];
   return (
     <section>
       <SectionHeading>{record.testType} Details</SectionHeading>
@@ -282,6 +343,7 @@ function GenericReport({ record }: { record: QcRecord }) {
           <ReportField key={key} label={keyLabel(key)} value={textValue(value)} />
         ))}
       </div>
+      <SpecimenRowsTable rows={testRows} ageLabel={record.testType === "Blocks" ? "Sample Age" : "Test Age"} />
     </section>
   );
 }
