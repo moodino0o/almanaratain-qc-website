@@ -368,10 +368,13 @@ export default function RecordDetail() {
             <Edit2 className="w-4 h-4 mr-2" />
             Edit
           </Link>
-          <Button variant="outline" onClick={() => window.print()}>
+          <Link
+            href={`/reports/${recordId}`}
+            className="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-4 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
             <Printer className="w-4 h-4 mr-2" />
             Print
-          </Button>
+          </Link>
           <Button variant="outline" onClick={handleDelete} disabled={isDeleting} className="text-destructive hover:bg-destructive hover:text-white border-destructive/20">
             <Trash2 className="w-4 h-4 mr-2" />
             Delete
