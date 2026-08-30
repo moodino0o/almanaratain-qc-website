@@ -267,13 +267,14 @@ export default function RecordForm() {
   const applicableSieveStandards = useMemo(() => {
     if (!usesSieveRows) return [];
     const materialReferenceItemId = Number(details.materialReferenceItemId);
+    const normalizedMaterial = material.trim().toLocaleLowerCase();
     return (sieveStandards ?? []).filter((standard) => (
       standard.testType === testType &&
       (
         Number.isInteger(materialReferenceItemId) &&
         materialReferenceItemId > 0
           ? standard.materialReferenceItemId === materialReferenceItemId
-          : standard.material === material
+          : standard.material.trim().toLocaleLowerCase() === normalizedMaterial
       )
     ));
   }, [details.materialReferenceItemId, material, sieveStandards, testType, usesSieveRows]);
@@ -401,7 +402,7 @@ export default function RecordForm() {
 
     if (usesSieveRows) {
       const materialReferenceItemId = materialReferenceItems.find(
-        (item) => item.value === material,
+        (item) => item.value.trim().toLocaleLowerCase() === material.trim().toLocaleLowerCase(),
       )?.id;
       if (materialReferenceItemId) {
         payloadDetails.materialReferenceItemId = materialReferenceItemId;

@@ -63,6 +63,11 @@ function textValue(value: unknown): string | null {
   return text || null;
 }
 
+function normalizedText(value: unknown): string | null {
+  const text = textValue(value);
+  return text ? text.toLocaleLowerCase() : null;
+}
+
 function referenceId(value: unknown): number | null {
   const parsed = numericValue(value);
   return parsed !== null && Number.isInteger(parsed) && parsed > 0 ? parsed : null;
@@ -186,7 +191,7 @@ function sieveStandardMatches(
   const recordMaterialId = referenceId(record.details.materialReferenceItemId);
   return recordMaterialId !== null
     ? recordMaterialId === standard.materialReferenceItemId
-    : standard.material === record.material;
+    : normalizedText(standard.material) === normalizedText(record.material);
 }
 
 function rowMatchesStandard(
