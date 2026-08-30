@@ -13,6 +13,8 @@ import {
   useUpdateRecord,
 } from "@workspace/api-client-react";
 import type {
+  DailyReadyMixResult,
+  DailyReadyMixStrengthSummary,
   GetDailyReadyMixResultsParams,
   QcRecord,
   QcRecordUpdate,
@@ -113,6 +115,105 @@ const cubeRowFromSaved = (row: unknown): CubeResultRow => {
   };
 };
 
+type GroupedDailyLocation = {
+  location: string;
+  recordCount: number;
+  sevenDay: DailyReadyMixStrengthSummary;
+  twentyEightDay: DailyReadyMixStrengthSummary;
+  strengthUnit: string;
+};
+
+type GroupedDailyMix = {
+  mixDesign: string;
+  recordCount: number;
+  sevenDay: DailyReadyMixStrengthSummary;
+  twentyEightDay: DailyReadyMixStrengthSummary;
+  strengthUnit: string;
+  locations: GroupedDailyLocation[];
+};
+
+type DailyStrengthAccumulator = {
+  recordCount: number;
+  sevenDay: number[];
+  twentyEightDay: number[];
+  strengthUnit: string;
+};
+
+const createDailyStrengthAccumulator = (): DailyStrengthAccumulator => ({
+  recordCount: 0,
+  sevenDay: [],
+  twentyEightDay: [],
+  strengthUnit: "N/mm²",
+});
+
+const summarizeDailyStrengths = (values: number[]): DailyReadyMixStrengthSummary => ({
+  averageStrength: values.length
+    ? values.reduce((sum, value) => sum + value, 0) / values.length
+    : null,
+  minimumStrength: values.length ? Math.min(...values) : null,
+  maximumStrength: values.length ? Math.max(...values) : null,
+});
+
+function groupDailyResults(records: DailyReadyMixResult[]): GroupedDailyMix[] {
+  const groups = new Map<string, DailyStrengthAccumulator & {
+    locations: Map<string, DailyStrengthAccumulator>;
+  }>();
+
+  for (const record of records) {
+    let group = groups.get(record.mixDesign);
+    if (!group) {
+      group = {
+        ...createDailyStrengthAccumulator(),
+        strengthUnit: record.strengthUnit,
+        locations: new Map(),
+      };
+      groups.set(record.mixDesign, group);
+    }
+    group.recordCount += 1;
+    if (record.sevenDay.averageStrength !== null) {
+      group.sevenDay.push(record.sevenDay.averageStrength);
+    }
+    if (record.twentyEightDay.averageStrength !== null) {
+      group.twentyEightDay.push(record.twentyEightDay.averageStrength);
+    }
+
+    let location = group.locations.get(record.location);
+    if (!location) {
+      location = {
+        ...createDailyStrengthAccumulator(),
+        strengthUnit: record.strengthUnit,
+      };
+      group.locations.set(record.location, location);
+    }
+    location.recordCount += 1;
+    if (record.sevenDay.averageStrength !== null) {
+      location.sevenDay.push(record.sevenDay.averageStrength);
+    }
+    if (record.twentyEightDay.averageStrength !== null) {
+      location.twentyEightDay.push(record.twentyEightDay.averageStrength);
+    }
+  }
+
+  return [...groups.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([mixDesign, group]) => ({
+      mixDesign,
+      recordCount: group.recordCount,
+      sevenDay: summarizeDailyStrengths(group.sevenDay),
+      twentyEightDay: summarizeDailyStrengths(group.twentyEightDay),
+      strengthUnit: group.strengthUnit,
+      locations: [...group.locations.entries()]
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([location, summary]) => ({
+          location,
+          recordCount: summary.recordCount,
+          sevenDay: summarizeDailyStrengths(summary.sevenDay),
+          twentyEightDay: summarizeDailyStrengths(summary.twentyEightDay),
+          strengthUnit: summary.strengthUnit,
+        })),
+    }));
+}
+
 export default function Reports() {
   const queryClient = useQueryClient();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -133,7 +234,6 @@ export default function Reports() {
   };
   const selectedMixDesign = filters?.mixDesign?.trim() ?? "";
   const hasFilters = filters !== null;
-  const showMixSummaries = hasFilters && !selectedMixDesign;
 
   const { data: lookups, isLoading: lookupsLoading } = useGetLookups();
   const { data: readyMixRecords, isLoading: readyMixRecordsLoading } = useListRecords({
@@ -341,9 +441,11 @@ export default function Reports() {
     maximumStrength: null,
     strengthUnit: "N/mm²",
   };
-  const hasResultRows = showMixSummaries
-    ? Boolean(dailyResults.mixes.length)
-    : Boolean(dailyResults.records.length);
+  const groupedDailyResults = useMemo(
+    () => groupDailyResults(dailyResults.records),
+    [dailyResults.records],
+  );
+  const hasResultRows = groupedDailyResults.length > 0;
 
   return (
     <div className="flex h-full flex-col gap-6">
@@ -430,164 +532,60 @@ export default function Reports() {
               <Search className="mb-3 h-10 w-10 text-muted-foreground/40" />
               <p className="font-semibold">No matching Ready Mix results</p>
               <p className="mt-1 max-w-lg text-sm text-muted-foreground">
-                {showMixSummaries
-                  ? `No Ready Mix records matched this date and ${referenceLabel} reference prefix.`
-                  : `No records matched this date, mix design, and ${referenceLabel} reference prefix.`}{" "}
+                No Ready Mix records matched this date{selectedMixDesign ? ", mix design," : ""} and {referenceLabel} reference prefix.{" "}
                 Check that the reference number starts with {referenceLabel === "Site" ? "S" : "H"} and that a strength was recorded.
               </p>
             </div>
-          ) : showMixSummaries ? (
-            <div className="space-y-6">
-              <div>
-                <h3 className="mb-2 text-sm font-semibold text-foreground">By mix design</h3>
-                <div className="overflow-x-auto rounded-md border">
-                  <Table className="min-w-[900px]">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead rowSpan={2}>Mix Design</TableHead>
-                        <TableHead rowSpan={2} className="text-right">Reports</TableHead>
-                        <TableHead colSpan={3} className="border-l text-center">7 Days</TableHead>
-                        <TableHead colSpan={3} className="border-l text-center">28 Days</TableHead>
-                      </TableRow>
-                      <TableRow>
-                        {["Average", "Minimum", "Maximum", "Average", "Minimum", "Maximum"].map((label, index) => (
-                          <TableHead key={`${label}-${index}`} className={index === 0 || index === 3 ? "border-l text-right" : "text-right"}>
-                            {label}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {dailyResults.mixes.map((mix) => (
-                        <TableRow key={mix.mixDesign}>
-                          <TableCell className="font-semibold text-primary">{mix.mixDesign}</TableCell>
-                          <TableCell className="text-right">{mix.recordCount}</TableCell>
-                          <TableCell className="border-l text-right font-semibold">{formatStrength(mix.sevenDay.averageStrength, mix.strengthUnit)}</TableCell>
-                          <TableCell className="text-right">{formatStrength(mix.sevenDay.minimumStrength, mix.strengthUnit)}</TableCell>
-                          <TableCell className="text-right">{formatStrength(mix.sevenDay.maximumStrength, mix.strengthUnit)}</TableCell>
-                          <TableCell className="border-l text-right font-semibold">{formatStrength(mix.twentyEightDay.averageStrength, mix.strengthUnit)}</TableCell>
-                          <TableCell className="text-right">{formatStrength(mix.twentyEightDay.minimumStrength, mix.strengthUnit)}</TableCell>
-                          <TableCell className="text-right">{formatStrength(mix.twentyEightDay.maximumStrength, mix.strengthUnit)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-              <div>
-                <h3 className="mb-2 text-sm font-semibold text-foreground">By location</h3>
-                <div className="overflow-x-auto rounded-md border">
-                  <Table className="min-w-[820px]">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead rowSpan={2}>Location</TableHead>
-                        <TableHead rowSpan={2} className="text-right">Reports</TableHead>
-                        <TableHead colSpan={3} className="border-l text-center">7 Days</TableHead>
-                        <TableHead colSpan={3} className="border-l text-center">28 Days</TableHead>
-                      </TableRow>
-                      <TableRow>
-                        {["Average", "Minimum", "Maximum", "Average", "Minimum", "Maximum"].map((label, index) => (
-                          <TableHead key={`${label}-${index}`} className={index === 0 || index === 3 ? "border-l text-right" : "text-right"}>
-                            {label}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {dailyResults.locations.map((location) => (
-                        <TableRow key={location.location}>
-                          <TableCell className="font-semibold">{location.location}</TableCell>
-                          <TableCell className="text-right">{location.recordCount}</TableCell>
-                          <TableCell className="border-l text-right font-semibold">{formatStrength(location.sevenDay.averageStrength, location.strengthUnit)}</TableCell>
-                          <TableCell className="text-right">{formatStrength(location.sevenDay.minimumStrength, location.strengthUnit)}</TableCell>
-                          <TableCell className="text-right">{formatStrength(location.sevenDay.maximumStrength, location.strengthUnit)}</TableCell>
-                          <TableCell className="border-l text-right font-semibold">{formatStrength(location.twentyEightDay.averageStrength, location.strengthUnit)}</TableCell>
-                          <TableCell className="text-right">{formatStrength(location.twentyEightDay.minimumStrength, location.strengthUnit)}</TableCell>
-                          <TableCell className="text-right">{formatStrength(location.twentyEightDay.maximumStrength, location.strengthUnit)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            </div>
           ) : (
-            <div className="space-y-6">
-              <div>
-                <h3 className="mb-2 text-sm font-semibold text-foreground">By report</h3>
-                <div className="overflow-x-auto rounded-md border">
-                  <Table className="min-w-[1280px]">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead rowSpan={2}>Record No.</TableHead>
-                        <TableHead rowSpan={2}>Reference No.</TableHead>
-                        <TableHead rowSpan={2}>Location</TableHead>
-                        <TableHead rowSpan={2}>Mix Design</TableHead>
-                        <TableHead colSpan={3} className="border-l text-center">7 Days</TableHead>
-                        <TableHead colSpan={3} className="border-l text-center">28 Days</TableHead>
-                      </TableRow>
-                      <TableRow>
-                        {["Average", "Minimum", "Maximum", "Average", "Minimum", "Maximum"].map((label, index) => (
-                          <TableHead key={`${label}-${index}`} className={index === 0 || index === 3 ? "border-l text-right" : "text-right"}>
-                            {label}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {dailyResults.records.map((record) => (
-                        <TableRow key={record.recordId}>
-                          <TableCell className="font-semibold text-primary">{record.recordNo}</TableCell>
-                          <TableCell className="font-medium">{record.referenceNumber}</TableCell>
-                          <TableCell>{record.location}</TableCell>
-                          <TableCell>{record.mixDesign}</TableCell>
-                          <TableCell className="border-l text-right font-semibold">{formatStrength(record.sevenDay.averageStrength, record.strengthUnit)}</TableCell>
-                          <TableCell className="text-right">{formatStrength(record.sevenDay.minimumStrength, record.strengthUnit)}</TableCell>
-                          <TableCell className="text-right">{formatStrength(record.sevenDay.maximumStrength, record.strengthUnit)}</TableCell>
-                          <TableCell className="border-l text-right font-semibold">{formatStrength(record.twentyEightDay.averageStrength, record.strengthUnit)}</TableCell>
-                          <TableCell className="text-right">{formatStrength(record.twentyEightDay.minimumStrength, record.strengthUnit)}</TableCell>
-                          <TableCell className="text-right">{formatStrength(record.twentyEightDay.maximumStrength, record.strengthUnit)}</TableCell>
-                        </TableRow>
+            <div>
+              <h3 className="mb-2 text-sm font-semibold text-foreground">By mix design and plant</h3>
+              <div className="overflow-x-auto rounded-md border">
+                <Table className="min-w-[980px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead rowSpan={2}>Mix Design / Plant</TableHead>
+                      <TableHead rowSpan={2} className="text-right">Reports</TableHead>
+                      <TableHead colSpan={3} className="border-l text-center">7 Days</TableHead>
+                      <TableHead colSpan={3} className="border-l text-center">28 Days</TableHead>
+                    </TableRow>
+                    <TableRow>
+                      {["Average", "Minimum", "Maximum", "Average", "Minimum", "Maximum"].map((label, index) => (
+                        <TableHead key={`${label}-${index}`} className={index === 0 || index === 3 ? "border-l text-right" : "text-right"}>
+                          {label}
+                        </TableHead>
                       ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-              <div>
-                <h3 className="mb-2 text-sm font-semibold text-foreground">By location</h3>
-                <div className="overflow-x-auto rounded-md border">
-                  <Table className="min-w-[820px]">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead rowSpan={2}>Location</TableHead>
-                        <TableHead rowSpan={2} className="text-right">Reports</TableHead>
-                        <TableHead colSpan={3} className="border-l text-center">7 Days</TableHead>
-                        <TableHead colSpan={3} className="border-l text-center">28 Days</TableHead>
-                      </TableRow>
-                      <TableRow>
-                        {["Average", "Minimum", "Maximum", "Average", "Minimum", "Maximum"].map((label, index) => (
-                          <TableHead key={`${label}-${index}`} className={index === 0 || index === 3 ? "border-l text-right" : "text-right"}>
-                            {label}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {dailyResults.locations.map((location) => (
-                        <TableRow key={location.location}>
-                          <TableCell className="font-semibold">{location.location}</TableCell>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {groupedDailyResults.flatMap((mix) => [
+                      <TableRow key={`mix-${mix.mixDesign}`} className="bg-primary/[0.06]">
+                        <TableCell className="font-semibold text-primary">{mix.mixDesign}</TableCell>
+                        <TableCell className="text-right font-semibold">{mix.recordCount}</TableCell>
+                        <TableCell className="border-l text-right font-semibold">{formatStrength(mix.sevenDay.averageStrength, mix.strengthUnit)}</TableCell>
+                        <TableCell className="text-right">{formatStrength(mix.sevenDay.minimumStrength, mix.strengthUnit)}</TableCell>
+                        <TableCell className="text-right">{formatStrength(mix.sevenDay.maximumStrength, mix.strengthUnit)}</TableCell>
+                        <TableCell className="border-l text-right font-semibold">{formatStrength(mix.twentyEightDay.averageStrength, mix.strengthUnit)}</TableCell>
+                        <TableCell className="text-right">{formatStrength(mix.twentyEightDay.minimumStrength, mix.strengthUnit)}</TableCell>
+                        <TableCell className="text-right">{formatStrength(mix.twentyEightDay.maximumStrength, mix.strengthUnit)}</TableCell>
+                      </TableRow>,
+                      ...mix.locations.map((location) => (
+                        <TableRow key={`location-${mix.mixDesign}-${location.location}`} className="text-muted-foreground">
+                          <TableCell className="pl-10 font-medium">
+                            <span aria-hidden="true">↳ </span>
+                            {location.location}
+                          </TableCell>
                           <TableCell className="text-right">{location.recordCount}</TableCell>
-                          <TableCell className="border-l text-right font-semibold">{formatStrength(location.sevenDay.averageStrength, location.strengthUnit)}</TableCell>
+                          <TableCell className="border-l text-right font-semibold text-foreground">{formatStrength(location.sevenDay.averageStrength, location.strengthUnit)}</TableCell>
                           <TableCell className="text-right">{formatStrength(location.sevenDay.minimumStrength, location.strengthUnit)}</TableCell>
                           <TableCell className="text-right">{formatStrength(location.sevenDay.maximumStrength, location.strengthUnit)}</TableCell>
-                          <TableCell className="border-l text-right font-semibold">{formatStrength(location.twentyEightDay.averageStrength, location.strengthUnit)}</TableCell>
+                          <TableCell className="border-l text-right font-semibold text-foreground">{formatStrength(location.twentyEightDay.averageStrength, location.strengthUnit)}</TableCell>
                           <TableCell className="text-right">{formatStrength(location.twentyEightDay.minimumStrength, location.strengthUnit)}</TableCell>
                           <TableCell className="text-right">{formatStrength(location.twentyEightDay.maximumStrength, location.strengthUnit)}</TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      )),
+                    ])}
+                  </TableBody>
+                </Table>
               </div>
             </div>
           )}
