@@ -17,6 +17,51 @@ function dateOnly(value: string): string {
   return value.split("T")[0];
 }
 
+function expiryStatus(value: string | null | undefined) {
+  if (!value) return null;
+  const [year, month, day] = dateOnly(value).split("-").map(Number);
+  if (![year, month, day].every(Number.isFinite)) return null;
+
+  const today = new Date();
+  const todayUtc = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  const expiryUtc = Date.UTC(year, month - 1, day);
+  const daysRemaining = Math.ceil((expiryUtc - todayUtc) / 86_400_000);
+
+  if (daysRemaining < 0) {
+    return {
+      label: "Expired",
+      className: "bg-destructive/10 text-destructive",
+      dotClassName: "bg-destructive",
+    };
+  }
+  if (daysRemaining <= 30) {
+    return {
+      label: daysRemaining === 0 ? "Expires today" : `Expires in ${daysRemaining}d`,
+      className: "bg-warning/15 text-warning-foreground",
+      dotClassName: "bg-warning",
+    };
+  }
+  return null;
+}
+
+function ExpiryInfo({ expiryDate }: { expiryDate?: string | null }) {
+  const status = expiryStatus(expiryDate);
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+      <span>Expiry: {expiryDate ? dateOnly(expiryDate) : "No expiry date"}</span>
+      {status && (
+        <span
+          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${status.className}`}
+          title={status.label}
+        >
+          <span className={`h-1.5 w-1.5 rounded-full ${status.dotClassName}`} aria-hidden="true" />
+          <span>{status.label}</span>
+        </span>
+      )}
+    </div>
+  );
+}
+
 function uploadFile(url: string, file: File, setProgress: (value: number) => void) {
   return new Promise<void>((resolve, reject) => {
     const request = new XMLHttpRequest();
@@ -184,12 +229,12 @@ export default function Archive() {
      </form></CardContent></Card>}
     {!selectedFolder ? <div className="space-y-4">
       <Card><CardHeader><CardTitle>Search archive documents</CardTitle></CardHeader><CardContent><div className="relative"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by file name, category, subcategory, description, or date" /></div></CardContent></Card>
-       {search && <Card><CardHeader><CardTitle>Search results</CardTitle></CardHeader><CardContent className="space-y-2">{globalDocuments.length ? globalDocuments.map((doc) => <div key={doc.id} className="flex flex-wrap items-center gap-3 rounded-lg border p-3"><div className="min-w-0 flex-1"><p className="truncate font-medium">{doc.originalName}</p><p className="text-xs text-muted-foreground">Date: {dateOnly(doc.documentDate)}</p><p className="mt-1 text-sm text-muted-foreground">{doc.description || "No description provided."}</p></div>{(doc.mimeType === "application/pdf" || doc.originalName.toLowerCase().endsWith(".pdf")) && <Button variant="outline" size="sm" asChild><a href={`/api/archive/documents/${doc.id}/content`} target="_blank" rel="noreferrer"><Eye className="mr-2 h-4 w-4" />Review</a></Button>}<Button variant="outline" size="sm" asChild><a href={`/api/archive/documents/${doc.id}/download`}><Download className="mr-2 h-4 w-4" />Download</a></Button><Button variant="outline" size="sm" onClick={() => beginEdit(doc.id)}><Pencil className="mr-2 h-4 w-4" />Edit</Button></div>) : <p className="py-6 text-center text-sm text-muted-foreground">No matching documents.</p>}</CardContent></Card>}
+       {search && <Card><CardHeader><CardTitle>Search results</CardTitle></CardHeader><CardContent className="space-y-2">{globalDocuments.length ? globalDocuments.map((doc) => <div key={doc.id} className="flex flex-wrap items-center gap-3 rounded-lg border p-3"><div className="min-w-0 flex-1"><p className="truncate font-medium">{doc.originalName}</p><p className="text-xs text-muted-foreground">Date: {dateOnly(doc.documentDate)}</p><ExpiryInfo expiryDate={doc.expiryDate} /><p className="mt-1 text-sm text-muted-foreground">{doc.description || "No description provided."}</p></div>{(doc.mimeType === "application/pdf" || doc.originalName.toLowerCase().endsWith(".pdf")) && <Button variant="outline" size="sm" asChild><a href={`/api/archive/documents/${doc.id}/content`} target="_blank" rel="noreferrer"><Eye className="mr-2 h-4 w-4" />Review</a></Button>}<Button variant="outline" size="sm" asChild><a href={`/api/archive/documents/${doc.id}/download`}><Download className="mr-2 h-4 w-4" />Download</a></Button><Button variant="outline" size="sm" onClick={() => beginEdit(doc.id)}><Pencil className="mr-2 h-4 w-4" />Edit</Button></div>) : <p className="py-6 text-center text-sm text-muted-foreground">No matching documents.</p>}</CardContent></Card>}
       <Card><CardHeader><CardTitle>Categories</CardTitle></CardHeader><CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{archive.data?.categories.length ? archive.data.categories.map((folder) => <button key={folder.name} onClick={() => { setSelectedFolder({ category: folder.name }); setSearch(""); }} className="flex items-center gap-3 rounded-lg border p-4 text-left transition hover:border-primary hover:bg-primary/5"><Folder className="h-7 w-7 text-primary" /><span><span className="block font-medium">{folder.name}</span><span className="text-xs text-muted-foreground">{folder.count} document{folder.count === 1 ? "" : "s"}</span></span></button>) : <p className="text-sm text-muted-foreground">No categories yet. Use Add document to create one.</p>}</CardContent></Card>
     </div> : <div className="space-y-4">
       <Button variant="ghost" onClick={() => { setSelectedFolder(null); setSearch(""); }}><ArrowLeft className="mr-2 h-4 w-4" />All categories</Button>
       {!selectedFolder.subcategory && <Card><CardHeader><CardTitle>{selectedTitle} subcategories</CardTitle></CardHeader><CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{(archive.data?.categories.find((folder) => folder.name === selectedFolder.category)?.subcategories ?? []).map((sub) => <button key={sub.name} onClick={() => setSelectedFolder({ category: selectedFolder.category, subcategory: sub.name })} className="flex items-center gap-3 rounded-lg border p-4 text-left transition hover:border-primary hover:bg-primary/5"><Folder className="h-6 w-6 text-primary" /><span><span className="block font-medium">{sub.name}</span><span className="text-xs text-muted-foreground">{sub.count} document{sub.count === 1 ? "" : "s"}</span></span></button>)}</CardContent></Card>}
-        {selectedFolder.subcategory && <Card><CardHeader><div className="flex items-center justify-between gap-4"><CardTitle>{selectedTitle}</CardTitle><div className="relative max-w-sm flex-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search this folder" /></div></div></CardHeader><CardContent className="space-y-2">{visibleDocuments.length ? visibleDocuments.map((doc) => <div key={doc.id} className="flex flex-wrap items-center gap-3 rounded-lg border p-3"><div className="min-w-0 flex-1"><p className="truncate font-medium">{doc.originalName}</p><p className="text-xs text-muted-foreground">Date: {dateOnly(doc.documentDate)}</p><p className="mt-1 text-sm text-muted-foreground">{doc.description || "No description provided."}</p></div>{(doc.mimeType === "application/pdf" || doc.originalName.toLowerCase().endsWith(".pdf")) && <Button variant="outline" size="sm" asChild><a href={`/api/archive/documents/${doc.id}/content`} target="_blank" rel="noreferrer"><Eye className="mr-2 h-4 w-4" />Review</a></Button>}<Button variant="outline" size="sm" asChild><a href={`/api/archive/documents/${doc.id}/download`}><Download className="mr-2 h-4 w-4" />Download</a></Button><Button variant="outline" size="sm" onClick={() => beginEdit(doc.id)}><Pencil className="mr-2 h-4 w-4" />Edit</Button>{archive.data?.canRetire ? <Button type="button" variant="outline" size="sm" disabled={retireDocument.isPending} onClick={() => retire(doc.id, doc.originalName)}><Trash2 className="mr-2 h-4 w-4" />Retire</Button> : null}</div>) : <p className="py-10 text-center text-sm text-muted-foreground">No documents in this folder.</p>}</CardContent></Card>}
+         {selectedFolder.subcategory && <Card><CardHeader><div className="flex items-center justify-between gap-4"><CardTitle>{selectedTitle}</CardTitle><div className="relative max-w-sm flex-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search this folder" /></div></div></CardHeader><CardContent className="space-y-2">{visibleDocuments.length ? visibleDocuments.map((doc) => <div key={doc.id} className="flex flex-wrap items-center gap-3 rounded-lg border p-3"><div className="min-w-0 flex-1"><p className="truncate font-medium">{doc.originalName}</p><p className="text-xs text-muted-foreground">Date: {dateOnly(doc.documentDate)}</p><ExpiryInfo expiryDate={doc.expiryDate} /><p className="mt-1 text-sm text-muted-foreground">{doc.description || "No description provided."}</p></div>{(doc.mimeType === "application/pdf" || doc.originalName.toLowerCase().endsWith(".pdf")) && <Button variant="outline" size="sm" asChild><a href={`/api/archive/documents/${doc.id}/content`} target="_blank" rel="noreferrer"><Eye className="mr-2 h-4 w-4" />Review</a></Button>}<Button variant="outline" size="sm" asChild><a href={`/api/archive/documents/${doc.id}/download`}><Download className="mr-2 h-4 w-4" />Download</a></Button><Button variant="outline" size="sm" onClick={() => beginEdit(doc.id)}><Pencil className="mr-2 h-4 w-4" />Edit</Button>{archive.data?.canRetire ? <Button type="button" variant="outline" size="sm" disabled={retireDocument.isPending} onClick={() => retire(doc.id, doc.originalName)}><Trash2 className="mr-2 h-4 w-4" />Retire</Button> : null}</div>) : <p className="py-10 text-center text-sm text-muted-foreground">No documents in this folder.</p>}</CardContent></Card>}
     </div>}
   </div>;
 }
