@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { useParams, Link } from "wouter";
 import {
   useGetReport,
@@ -102,13 +103,13 @@ function calculatedDensity(values: ValueMap) {
 }
 
 function calculatedWaterAbsorption(values: ValueMap) {
-  const storedAbsorption = numericValue(values.waterAbsorption ?? values.absorption);
-  if (storedAbsorption !== null) return formatNumber(storedAbsorption);
-
   const dryWeight = numericValue(values.dryWeight);
   const wetWeight = numericValue(values.wetWeight);
-  if (dryWeight === null || wetWeight === null || dryWeight <= 0) return "-";
-  return formatNumber(((wetWeight - dryWeight) / dryWeight) * 100);
+  if (dryWeight !== null && wetWeight !== null && dryWeight > 0) {
+    return formatNumber(((wetWeight - dryWeight) / dryWeight) * 100);
+  }
+  const storedAbsorption = numericValue(values.waterAbsorption ?? values.absorption);
+  return storedAbsorption === null ? "-" : formatNumber(storedAbsorption);
 }
 
 function hasSpecimenMeasurements(rows: unknown[]) {
@@ -325,9 +326,11 @@ function StrengthStandardsTable({
 function ReadyMixComplianceBlock({
   record,
   standards,
+  selectedStandard,
 }: {
   record: QcRecord;
   standards: StrengthStandard[];
+  selectedStandard?: StrengthStandard;
 }) {
   const evaluation = objectValue(record.details.strengthEvaluation);
   const configuredStandard = standards
@@ -337,15 +340,16 @@ function ReadyMixComplianceBlock({
         matchesText(standard.material, record.material),
     )
     .sort((left, right) => left.id - right.id)[0];
+  const activeStandard = selectedStandard ?? configuredStandard;
   const status = textValue(evaluation?.status, record.status);
   const statusClass = status.toLocaleLowerCase();
   const standardReference = textValue(
-    configuredStandard?.bsStandard ?? evaluation?.bsStandard,
+    activeStandard?.bsStandard ?? evaluation?.bsStandard,
     "Not configured",
   );
   const requiredStrength =
-    configuredStandard?.requiredStrength ?? numericValue(evaluation?.requiredStrength) ?? null;
-  const strengthUnit = configuredStandard?.strengthUnit ??
+    activeStandard?.requiredStrength ?? numericValue(evaluation?.requiredStrength) ?? null;
+  const strengthUnit = activeStandard?.strengthUnit ??
     textValue(evaluation?.strengthUnit, "N/mm²");
   const reportedStrength = detailValue(record.details, [
     "avg28To29Days",
@@ -476,9 +480,11 @@ function ReportFields({
 function ReadyMixReport({
   record,
   standards,
+  selectedStandard,
 }: {
   record: QcRecord;
   standards: StrengthStandard[];
+  selectedStandard?: StrengthStandard;
 }) {
   const details = record.details;
   const testRows = Array.isArray(details.testRows)
@@ -584,7 +590,11 @@ function ReadyMixReport({
           </tbody>
         </table>
       </section>
-      <ReadyMixComplianceBlock record={record} standards={standards} />
+      <ReadyMixComplianceBlock
+        record={record}
+        standards={standards}
+        selectedStandard={selectedStandard}
+      />
     </>
   );
 }
@@ -824,6 +834,24 @@ export default function ReportPrint() {
     useListStrengthStandards();
   const { data: sieveStandards = [], isLoading: sieveStandardsLoading } =
     useListSieveStandards();
+  const [selectedStrengthStandardId, setSelectedStrengthStandardId] = useState("");
+  const matchingStrengthStandards = useMemo(
+    () =>
+      report
+        ? strengthStandards
+            .filter(
+              (standard) =>
+                standard.testType === report.record.testType &&
+                matchesText(standard.material, report.record.material),
+            )
+            .sort((left, right) => left.id - right.id)
+        : [],
+    [report, strengthStandards],
+  );
+  const selectedStrengthStandard = matchingStrengthStandards.find(
+    (standard) => String(standard.id) === selectedStrengthStandardId,
+  );
+  const activeStrengthStandard = selectedStrengthStandard ?? matchingStrengthStandards[0];
   const isLoading = reportLoading || strengthStandardsLoading || sieveStandardsLoading;
 
   if (isLoading) {
@@ -857,9 +885,11 @@ export default function ReportPrint() {
         matchesText(standard.material, record.material),
     )
     .sort((left, right) => left.id - right.id)[0];
+  const reportStrengthStandard =
+    record.testType === "Ready Mix" ? activeStrengthStandard : configuredStrengthStandard;
   const configuredStandard =
+    reportStrengthStandard?.bsStandard ??
     strengthEvaluation?.bsStandard ??
-    configuredStrengthStandard?.bsStandard ??
     configuredSieveStandards[0]?.standardReference ??
     null;
 
@@ -872,9 +902,28 @@ export default function ReportPrint() {
         >
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Reports
         </Link>
-        <Button onClick={() => window.print()} className="gap-2">
-          <Printer className="w-4 h-4" /> Print Certificate
-        </Button>
+        <div className="flex items-center gap-3">
+          {record.testType === "Ready Mix" && matchingStrengthStandards.length > 0 && (
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>Report standard</span>
+              <select
+                value={selectedStrengthStandardId}
+                onChange={(event) => setSelectedStrengthStandardId(event.target.value)}
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">Auto — first matching standard</option>
+                {matchingStrengthStandards.map((standard) => (
+                  <option key={standard.id} value={standard.id}>
+                    {standard.bsStandard} — {standard.requiredStrength} {standard.strengthUnit}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <Button onClick={() => window.print()} className="gap-2">
+            <Printer className="w-4 h-4" /> Print Certificate
+          </Button>
+        </div>
       </div>
 
       <main className="report-paper">
@@ -903,7 +952,11 @@ export default function ReportPrint() {
         </p>
 
         {record.testType === "Ready Mix" ? (
-          <ReadyMixReport record={record} standards={strengthStandards} />
+          <ReadyMixReport
+            record={record}
+            standards={strengthStandards}
+            selectedStandard={reportStrengthStandard}
+          />
         ) : record.testType === "Blocks" ? (
           <BlocksReport record={record} standards={strengthStandards} />
         ) : record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve" ? (

@@ -10,6 +10,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import { getListRecordsQueryKey, getGetDashboardQueryKey, getGetRecordQueryKey } from "@workspace/api-client-react";
 import { useState } from "react";
 
+function calculatedWaterAbsorption(values: Record<string, unknown>) {
+  const dryWeight = Number(values.dryWeight);
+  const wetWeight = Number(values.wetWeight);
+  if (!Number.isFinite(dryWeight) || !Number.isFinite(wetWeight) || dryWeight <= 0) {
+    return String(values.waterAbsorption ?? "-");
+  }
+  return (((wetWeight - dryWeight) / dryWeight) * 100).toFixed(2);
+}
+
 function TestRowsTable({ rows }: { rows: unknown[] }) {
   return (
     <div className="overflow-x-auto">
@@ -23,6 +32,7 @@ function TestRowsTable({ rows }: { rows: unknown[] }) {
             <th className="p-2 text-left">Height</th>
             <th className="p-2 text-left">Dry Weight</th>
             <th className="p-2 text-left">Wet Weight</th>
+             <th className="p-2 text-left">Water Absorption (%)</th>
             <th className="p-2 text-left">Load (kN)</th>
             <th className="p-2 text-left">Loaded Face Area</th>
             <th className="p-2 text-left">Calculated Strength</th>
@@ -42,6 +52,7 @@ function TestRowsTable({ rows }: { rows: unknown[] }) {
                 <td className="p-2">{String(values.height ?? "-")}</td>
                 <td className="p-2">{String(values.dryWeight ?? "-")}</td>
                 <td className="p-2">{String(values.wetWeight ?? "-")}</td>
+                <td className="p-2">{calculatedWaterAbsorption(values)}</td>
                 <td className="p-2">{String(values.load ?? "-")}</td>
                 <td className="p-2">{String(values.loadedFaceArea ?? "-")}</td>
                 <td className="p-2 font-semibold">

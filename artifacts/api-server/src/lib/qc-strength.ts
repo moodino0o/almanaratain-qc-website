@@ -115,11 +115,22 @@ function calculateRow(row: unknown) {
     loadedFaceArea > 0
       ? rounded((load * 1000) / loadedFaceArea)
       : null;
+  const dryWeight = numericValue(values.dryWeight);
+  const wetWeight = numericValue(values.wetWeight);
+  const waterAbsorption =
+    dryWeight !== null &&
+    wetWeight !== null &&
+    dryWeight > 0
+      ? rounded(((wetWeight - dryWeight) / dryWeight) * 100)
+      : null;
 
   return {
     row: {
       ...values,
       ...(loadedFaceArea !== null ? { loadedFaceArea } : {}),
+      ...(waterAbsorption !== null
+        ? { waterAbsorption: waterAbsorption.toFixed(2) }
+        : { waterAbsorption: "" }),
       ...(calculatedStrength !== null
         ? {
             calculatedStrength,

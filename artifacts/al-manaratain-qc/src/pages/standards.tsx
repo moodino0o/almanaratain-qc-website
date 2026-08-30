@@ -463,6 +463,18 @@ export default function Standards() {
   const invalidateStandards = () => {
     queryClient.invalidateQueries({ queryKey: getListStrengthStandardsQueryKey() });
     queryClient.invalidateQueries({ queryKey: getListSieveStandardsQueryKey() });
+    queryClient.invalidateQueries({
+      predicate: ({ queryKey }) => {
+        const key = queryKey[0];
+        return (
+          typeof key === "string" &&
+          (key === "/api/dashboard" ||
+            key === "/api/records" ||
+            key.startsWith("/api/records/") ||
+            key.startsWith("/api/reports/"))
+        );
+      },
+    });
   };
 
   const openCreate = () => {

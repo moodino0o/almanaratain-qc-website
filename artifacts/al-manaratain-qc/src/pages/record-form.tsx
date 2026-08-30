@@ -60,6 +60,15 @@ const numericInputValue = (value: unknown) => {
   return match?.[0] ?? "";
 };
 
+const calculateWaterAbsorption = (dryWeight: unknown, wetWeight: unknown) => {
+  const dry = Number(numericInputValue(dryWeight));
+  const wet = Number(numericInputValue(wetWeight));
+  if (!numericInputValue(dryWeight) || !numericInputValue(wetWeight) || !Number.isFinite(dry) || !Number.isFinite(wet) || dry <= 0) {
+    return "";
+  }
+  return (((wet - dry) / dry) * 100).toFixed(2);
+};
+
 const sieveSizeNumber = (value: string) => {
   const parsed = Number(numericInputValue(value));
   return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
@@ -78,7 +87,7 @@ const toFormRow = (row: unknown, id: number): TestRow => {
     testAge: numericInputValue(values.testAge),
     load: numericInputValue(values.load),
     strength: numericInputValue(values.strength ?? values.calculatedStrength ?? values.compressiveStrength),
-    waterAbsorption: numericInputValue(values.waterAbsorption),
+    waterAbsorption: calculateWaterAbsorption(values.dryWeight, values.wetWeight),
     sieveSize: stringValue(values.sieveSize),
     sieveSizeReferenceItemId: numericInputValue(values.sieveSizeReferenceItemId)
       ? Number(numericInputValue(values.sieveSizeReferenceItemId))
@@ -204,7 +213,20 @@ export default function RecordForm() {
 
   const updateTestRow = (rowIndex: number, key: keyof Omit<TestRow, "id">, value: string) => {
     setTestRows(prev => prev.map((row, index) => (
-      index === rowIndex ? { ...row, [key]: value } : row
+      index === rowIndex
+        ? {
+            ...row,
+            [key]: value,
+            ...(testType === TestType.Ready_Mix && (key === "dryWeight" || key === "wetWeight")
+              ? {
+                  waterAbsorption: calculateWaterAbsorption(
+                    key === "dryWeight" ? value : row.dryWeight,
+                    key === "wetWeight" ? value : row.wetWeight,
+                  ),
+                }
+              : {}),
+          }
+        : row
     )));
   };
 
@@ -474,7 +496,7 @@ export default function RecordForm() {
         ...(testType === TestType.Ready_Mix
           ? {
               load: row.load,
-              waterAbsorption: row.waterAbsorption,
+              waterAbsorption: calculateWaterAbsorption(row.dryWeight, row.wetWeight),
             }
           : { load: row.load }),
       }));
@@ -919,15 +941,12 @@ export default function RecordForm() {
                             ))}
                              {testType === TestType.Ready_Mix && (
                                <td className="px-2 py-2">
-                                 <Input
-                                   type="text"
-                                   inputMode="decimal"
-                                   value={row.waterAbsorption}
-                                   onChange={event => updateTestRow(rowIndex, "waterAbsorption", event.target.value)}
-                                   onKeyDown={event => handleTestRowKeyDown(event, rowIndex)}
-                                   placeholder="%"
-                                   aria-label={`Water absorption for row ${rowIndex + 1}`}
-                                 />
+                                  <div
+                                    className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground"
+                                    aria-label={`Calculated water absorption for row ${rowIndex + 1}`}
+                                  >
+                                    {row.waterAbsorption ? `${row.waterAbsorption}%` : "—"}
+                                  </div>
                                </td>
                              )}
                             </>
