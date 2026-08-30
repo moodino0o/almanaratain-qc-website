@@ -283,16 +283,23 @@ export default function RecordForm() {
     }
   };
 
-  const applicableStandard = useMemo(() => {
-    if (testType !== TestType.Ready_Mix && testType !== TestType.Blocks) return undefined;
-    return strengthStandards?.find((standard) => (
-      standard.testType === testType &&
-      standard.material === material &&
-      (testType !== TestType.Blocks ||
-        (standard.blockType === String(details.blockType ?? "") &&
-          standard.blockSize === String(details.blockSize ?? "")))
-    ));
+  const matchingStrengthStandards = useMemo(() => {
+    if (testType !== TestType.Ready_Mix && testType !== TestType.Blocks) return [];
+    const normalizedMaterial = material.trim().toLocaleLowerCase();
+    return (strengthStandards ?? [])
+      .filter((standard) => (
+        standard.testType === testType &&
+        standard.material.trim().toLocaleLowerCase() === normalizedMaterial &&
+        (testType !== TestType.Blocks ||
+          (standard.blockType?.trim().toLocaleLowerCase() === String(details.blockType ?? "").trim().toLocaleLowerCase() &&
+            standard.blockSize?.trim().toLocaleLowerCase() === String(details.blockSize ?? "").trim().toLocaleLowerCase()))
+      ))
+      .sort((left, right) => left.id - right.id);
   }, [details.blockSize, details.blockType, material, strengthStandards, testType]);
+
+  const applicableStandard =
+    matchingStrengthStandards.find((standard) => String(standard.id) === selectedStrengthStandardId) ??
+    matchingStrengthStandards[0];
 
   const applicableSieveStandards = useMemo(() => {
     if (!usesSieveRows) return [];
@@ -480,6 +487,10 @@ export default function RecordForm() {
       payloadDetails.customerLocation = customerLocation;
       payloadDetails.referenceNumber = referenceNumber.trim();
     }
+    if (testType === TestType.Ready_Mix || testType === TestType.Blocks) {
+      if (applicableStandard) payloadDetails.strengthStandardId = applicableStandard.id;
+      else delete payloadDetails.strengthStandardId;
+    }
     if (testType === TestType.Blocks) {
       payloadDetails.machine = machine;
     }
@@ -636,6 +647,30 @@ export default function RecordForm() {
                 />
               </div>
 
+              {(testType === TestType.Ready_Mix || testType === TestType.Blocks) && (
+                <div className="space-y-2">
+                  <Label>Evaluation / Report Standard</Label>
+                  <select
+                    value={selectedStrengthStandardId}
+                    onChange={(event) => setSelectedStrengthStandardId(event.target.value)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
+                    disabled={!matchingStrengthStandards.length}
+                  >
+                    <option value="">Automatic first matching standard</option>
+                    {matchingStrengthStandards.map((standard) => (
+                      <option key={standard.id} value={standard.id}>
+                        {standard.bsStandard} — {standard.requiredStrength} {standard.strengthUnit}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    {matchingStrengthStandards.length
+                      ? "This standard will be saved with the record and used for evaluation and reporting."
+                      : "No matching standard is configured for this material yet."}
+                  </p>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label>Tested By (Technician) <span className="text-destructive">*</span></Label>
                 <TypeaheadInput
@@ -789,7 +824,7 @@ export default function RecordForm() {
                     <div className="rounded-md border border-primary/20 bg-primary/[0.04] px-4 py-3 text-sm">
                       {applicableStandard ? (
                         <span>
-                          Automatic evaluation: specimens are compared with{" "}
+                           Automatic evaluation: 28-day cubes are compared with{" "}
                           <strong>{applicableStandard.requiredStrength} {applicableStandard.strengthUnit}</strong>{" "}
                           under <strong>{applicableStandard.bsStandard}</strong>.
                         </span>

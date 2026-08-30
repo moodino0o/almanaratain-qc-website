@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "wouter";
 import {
   useGetReport,
@@ -835,6 +835,11 @@ export default function ReportPrint() {
   const { data: sieveStandards = [], isLoading: sieveStandardsLoading } =
     useListSieveStandards();
   const [selectedStrengthStandardId, setSelectedStrengthStandardId] = useState("");
+  useEffect(() => {
+    if (report) {
+      setSelectedStrengthStandardId(String(report.record.details.strengthStandardId ?? ""));
+    }
+  }, [report]);
   const matchingStrengthStandards = useMemo(
     () =>
       report

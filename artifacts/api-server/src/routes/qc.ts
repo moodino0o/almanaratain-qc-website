@@ -206,7 +206,9 @@ async function ensureDefaultStrengthStandards() {
         existingMaterials.add(material.toLocaleLowerCase());
         insertedDefault = true;
       }
-      if (insertedDefault) await refreshStrengthEvaluations(["Ready Mix"]);
+      if (insertedDefault || existing.length > 0) {
+        await refreshStrengthEvaluations(["Ready Mix"]);
+      }
     })().catch((error) => {
       strengthSeedPromise = null;
       throw error;
@@ -960,6 +962,7 @@ router.get("/records", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+  await refreshStrengthEvaluations(["Ready Mix", "Blocks"]);
 
   const filters = [];
   if (parsed.data.testType) {
@@ -1157,7 +1160,12 @@ router.get("/records/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Record not found" });
     return;
   }
-  res.json(GetRecordResponse.parse(toRecord(record)));
+  await refreshStrengthEvaluations([record.testType]);
+  const [currentRecord] = await db
+    .select()
+    .from(qcRecordsTable)
+    .where(eq(qcRecordsTable.id, parsed.data.id));
+  res.json(GetRecordResponse.parse(toRecord(currentRecord ?? record)));
 });
 
 router.patch("/records/:id", async (req, res): Promise<void> => {
@@ -1245,9 +1253,14 @@ router.get("/reports/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Record not found" });
     return;
   }
+  await refreshStrengthEvaluations([record.testType]);
+  const [currentRecord] = await db
+    .select()
+    .from(qcRecordsTable)
+    .where(eq(qcRecordsTable.id, parsed.data.id));
   res.json(
     GetReportResponse.parse({
-      record: toRecord(record),
+      record: toRecord(currentRecord ?? record),
       companyName: "AL MANARATAIN",
       companySubtitle: "Al Manaratain Company & Ali Shaab Group W.L.L",
     }),

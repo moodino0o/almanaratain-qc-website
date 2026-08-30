@@ -73,26 +73,44 @@ function referenceId(value: unknown): number | null {
   return parsed !== null && Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
+function standardMatchesRecord(
+  standard: QcStrengthStandardRow,
+  record: RecordForStrength,
+) {
+  const blockType = textValue(record.details.blockType);
+  const blockSize = textValue(record.details.blockSize);
+  if (
+    standard.testType !== record.testType ||
+    normalizedText(standard.material) !== normalizedText(record.material)
+  ) {
+    return false;
+  }
+  if (record.testType !== "Blocks") return true;
+  return (
+    normalizedText(standard.blockType) === normalizedText(blockType) &&
+    normalizedText(standard.blockSize) === normalizedText(blockSize)
+  );
+}
+
 function matchingStandard(
   record: RecordForStrength,
   standards: QcStrengthStandardRow[],
 ) {
-  const blockType = textValue(record.details.blockType);
-  const blockSize = textValue(record.details.blockSize);
-
-  return standards.find((standard) => {
-    if (
-      standard.testType !== record.testType ||
-      normalizedText(standard.material) !== normalizedText(record.material)
-    ) {
-      return false;
-    }
-    if (record.testType !== "Blocks") return true;
-    return (
-      normalizedText(standard.blockType) === normalizedText(blockType) &&
-      normalizedText(standard.blockSize) === normalizedText(blockSize)
+  const selectedStandardId = referenceId(record.details.strengthStandardId);
+  if (selectedStandardId !== null) {
+    return standards.find(
+      (standard) =>
+        standard.id === selectedStandardId && standardMatchesRecord(standard, record),
     );
-  });
+  }
+  return standards.find((standard) => standardMatchesRecord(standard, record));
+}
+
+function dayAge(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return null;
+  const match = value.trim().match(/^\d+(?:\.\d+)?/);
+  return match ? Number(match[0]) : null;
 }
 
 function calculateRow(row: unknown) {
@@ -161,16 +179,27 @@ export function evaluateStrengthRecord(
     standard === undefined ? null : numericValue(standard.requiredStrength);
   const rows = Array.isArray(record.details.testRows) ? record.details.testRows : [];
   const calculatedRows = rows.map(calculateRow);
+  const evaluatedRows =
+    record.testType === "Ready Mix"
+      ? calculatedRows.filter((row) => dayAge(row.row && typeof row.row === "object"
+        ? (row.row as Record<string, unknown>).testAge ??
+          (row.row as Record<string, unknown>).cubeAge ??
+          (row.row as Record<string, unknown>).age
+        : null) === 28)
+      : calculatedRows;
   const hasIncompleteMeasurements =
-    calculatedRows.length === 0 || calculatedRows.some((row) => !row.complete);
+    evaluatedRows.length === 0 || evaluatedRows.some((row) => !row.complete);
   const hasFailedMeasurement =
     requiredStrength !== null &&
-    calculatedRows.some(
+    evaluatedRows.some(
       (row) => row.calculatedStrength !== null && row.calculatedStrength < requiredStrength,
     );
 
   let status: StrengthEvaluationStatus = "Review";
-  let reason: string | null = "Complete specimen load and dimensions are required.";
+  let reason: string | null =
+    record.testType === "Ready Mix"
+      ? "A complete 28-day cube result is required."
+      : "Complete specimen load and dimensions are required.";
   if (!standard) {
     reason =
       record.testType === "Blocks"

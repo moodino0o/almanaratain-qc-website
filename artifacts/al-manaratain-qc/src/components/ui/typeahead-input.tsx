@@ -37,6 +37,7 @@ export function TypeaheadInput({
 }: TypeaheadInputProps) {
   const [open, setOpen] = React.useState(false);
   const [inputValue, setInputValue] = React.useState(value);
+  const [showAllOptions, setShowAllOptions] = React.useState(false);
 
   // Sync internal input value with external value
   React.useEffect(() => {
@@ -46,6 +47,7 @@ export function TypeaheadInput({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newVal = e.target.value;
     setInputValue(newVal);
+    setShowAllOptions(false);
     onChange(newVal);
     if (!open && newVal.length > 0) {
       setOpen(true);
@@ -53,13 +55,19 @@ export function TypeaheadInput({
   };
 
   const filteredOptions = React.useMemo(
-    () => filterTypeaheadOptions(options, inputValue),
-    [options, inputValue],
+    () => showAllOptions ? options : filterTypeaheadOptions(options, inputValue),
+    [options, inputValue, showAllOptions],
   );
 
   return (
     <div className={cn("relative w-full", className)}>
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover
+        open={open}
+        onOpenChange={(nextOpen) => {
+          setOpen(nextOpen);
+          if (!nextOpen) setShowAllOptions(false);
+        }}
+      >
         <div className="relative">
           <Input
             value={inputValue}
@@ -72,9 +80,11 @@ export function TypeaheadInput({
           />
           <PopoverTrigger asChild>
             <Button
+              type="button"
               variant="ghost"
               size="icon"
               className="absolute right-0 top-0 h-full w-9 px-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
+              onClick={() => setShowAllOptions(true)}
             >
               <ChevronsUpDown className="h-4 w-4 opacity-50" />
             </Button>
@@ -99,6 +109,7 @@ export function TypeaheadInput({
                       value={option}
                       onSelect={() => {
                         setInputValue(option);
+                        setShowAllOptions(false);
                         onChange(option);
                         setOpen(false);
                       }}
