@@ -54,6 +54,7 @@ export default function RecordForm() {
   const [locationValue, setLocationValue] = useState("");
   const [material, setMaterial] = useState("");
   const [testedBy, setTestedBy] = useState("");
+  const [machine, setMachine] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerLocation, setCustomerLocation] = useState("");
   const [remarks, setRemarks] = useState("");
@@ -165,6 +166,9 @@ export default function RecordForm() {
     if (testType === TestType.Ready_Mix) {
       payloadDetails.customerName = customerName;
       payloadDetails.customerLocation = customerLocation;
+    }
+    if (testType === TestType.Blocks) {
+      payloadDetails.machine = machine;
     }
 
     if (usesTestRows) {
@@ -316,6 +320,17 @@ export default function RecordForm() {
                     />
                   </div>
                 </>
+              )}
+
+              {testType === TestType.Blocks && (
+                <div className="space-y-2">
+                  <Label>Machine</Label>
+                  <Input
+                    value={machine}
+                    onChange={(event) => setMachine(event.target.value)}
+                    placeholder="Enter block machine"
+                  />
+                </div>
               )}
             </CardContent>
           </Card>

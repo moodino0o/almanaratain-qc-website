@@ -19,3 +19,5 @@
 
 export * from "./qc-records";
 export * from "./qc-reference-data";
+export * from "./auth";
+export * from "./archive-documents";

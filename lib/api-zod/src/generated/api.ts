@@ -66,6 +66,218 @@ export const GetLookupsResponse = zod.object({
 
 
 /**
+ * @summary Get the currently authenticated user
+ */
+export const GetCurrentAuthUserResponse = zod.object({
+  "user": zod.union([zod.object({
+  "id": zod.string(),
+  "email": zod.email().nullable(),
+  "firstName": zod.string().nullable(),
+  "lastName": zod.string().nullable(),
+  "profileImageUrl": zod.string().nullable()
+}),zod.null()])
+})
+
+
+/**
+ * @summary Start the browser login flow
+ */
+export const BeginBrowserLoginQueryParams = zod.object({
+  "returnTo": zod.coerce.string().optional()
+})
+
+export const BeginBrowserLoginResponse = zod.void()
+
+
+/**
+ * @summary Complete the browser login flow
+ */
+export const HandleBrowserLoginCallbackResponse = zod.void()
+
+
+/**
+ * @summary Clear the browser session
+ */
+export const LogoutBrowserSessionQueryParams = zod.object({
+  "returnTo": zod.coerce.string().optional()
+})
+
+export const LogoutBrowserSessionResponse = zod.void()
+
+
+/**
+ * @summary Exchange a mobile authorization code for a session token
+ */
+
+
+
+
+
+
+
+export const ExchangeMobileAuthorizationCodeBody = zod.object({
+  "code": zod.string().min(1),
+  "code_verifier": zod.string().min(1),
+  "redirect_uri": zod.url().min(1),
+  "state": zod.string().min(1),
+  "nonce": zod.string().min(1).optional()
+})
+
+export const ExchangeMobileAuthorizationCodeResponse = zod.object({
+  "token": zod.string()
+})
+
+
+/**
+ * @summary Delete a mobile session token
+ */
+export const LogoutMobileSessionResponse = zod.object({
+  "success": zod.literal(true)
+})
+
+
+/**
+ * @summary Request a private presigned upload URL
+ */
+
+
+
+
+
+export const RequestUploadUrlBody = zod.object({
+  "name": zod.string().min(1),
+  "size": zod.int().min(1),
+  "contentType": zod.string().min(1)
+})
+
+
+
+
+
+
+export const RequestUploadUrlResponse = zod.object({
+  "uploadURL": zod.url(),
+  "objectPath": zod.string(),
+  "metadata": zod.object({
+  "name": zod.string().min(1),
+  "size": zod.int().min(1),
+  "contentType": zod.string().min(1)
+})
+})
+
+
+/**
+ * @summary Serve a private stored object
+ */
+export const GetStorageObjectParams = zod.object({
+  "objectPath": zod.coerce.string()
+})
+
+export const GetStorageObjectResponse = zod.unknown()
+
+
+/**
+ * @summary List the private document archive
+ */
+export const ListArchiveResponse = zod.object({
+  "categories": zod.array(zod.object({
+  "name": zod.string(),
+  "count": zod.number(),
+  "subcategories": zod.array(zod.object({
+  "name": zod.string(),
+  "count": zod.number(),
+  "documents": zod.array(zod.object({
+  "id": zod.number(),
+  "originalName": zod.string(),
+  "mimeType": zod.string(),
+  "size": zod.number(),
+  "category": zod.string(),
+  "subcategory": zod.string(),
+  "description": zod.string(),
+  "uploadedAt": zod.coerce.date()
+}))
+}))
+})),
+  "documents": zod.array(zod.object({
+  "id": zod.number(),
+  "originalName": zod.string(),
+  "mimeType": zod.string(),
+  "size": zod.number(),
+  "category": zod.string(),
+  "subcategory": zod.string(),
+  "description": zod.string(),
+  "uploadedAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Save uploaded document metadata
+ */
+
+
+
+
+
+
+export const createArchiveDocumentBodyDescriptionDefault = ``;
+
+export const CreateArchiveDocumentBody = zod.object({
+  "originalName": zod.string().min(1),
+  "objectPath": zod.string().min(1),
+  "mimeType": zod.string().min(1),
+  "size": zod.int().min(1),
+  "category": zod.string().min(1),
+  "subcategory": zod.string().min(1),
+  "description": zod.string().default(createArchiveDocumentBodyDescriptionDefault)
+})
+
+export const CreateArchiveDocumentResponse = zod.object({
+  "id": zod.number(),
+  "originalName": zod.string(),
+  "mimeType": zod.string(),
+  "size": zod.number(),
+  "category": zod.string(),
+  "subcategory": zod.string(),
+  "description": zod.string(),
+  "uploadedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Get one archived document
+ */
+export const GetArchiveDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetArchiveDocumentResponse = zod.object({
+  "id": zod.number(),
+  "originalName": zod.string(),
+  "mimeType": zod.string(),
+  "size": zod.number(),
+  "category": zod.string(),
+  "subcategory": zod.string(),
+  "description": zod.string(),
+  "uploadedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Review or download an archived document
+ */
+export const GetArchiveDocumentContentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetArchiveDocumentContentQueryParams = zod.object({
+  "download": zod.coerce.boolean().optional()
+})
+
+export const GetArchiveDocumentContentResponse = zod.unknown()
+
+
+/**
  * @summary List editable quality control reference data
  */
 export const GetReferenceDataResponse = zod.object({

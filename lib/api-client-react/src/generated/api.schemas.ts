@@ -151,6 +151,107 @@ export interface ReferenceItemInput {
   value: string;
 }
 
+export interface AuthUser {
+  id: string;
+  /** @nullable */
+  email: string | null;
+  /** @nullable */
+  firstName: string | null;
+  /** @nullable */
+  lastName: string | null;
+  /** @nullable */
+  profileImageUrl: string | null;
+}
+
+export interface AuthUserEnvelope {
+  user: AuthUser | null;
+}
+
+export interface MobileTokenExchangeRequest {
+  /** @minLength 1 */
+  code: string;
+  /** @minLength 1 */
+  code_verifier: string;
+  /** @minLength 1 */
+  redirect_uri: string;
+  /** @minLength 1 */
+  state: string;
+  /** @minLength 1 */
+  nonce?: string;
+}
+
+export interface MobileTokenExchangeSuccess {
+  token: string;
+}
+
+export const LogoutSuccessValue = {
+  success: true,
+} as const;
+export type LogoutSuccess = typeof LogoutSuccessValue;
+
+export interface UploadUrlRequest {
+  /** @minLength 1 */
+  name: string;
+  /** @minimum 1 */
+  size: number;
+  /** @minLength 1 */
+  contentType: string;
+}
+
+export interface UploadUrlResponse {
+  uploadURL: string;
+  objectPath: string;
+  metadata: UploadUrlRequest;
+}
+
+export interface ErrorEnvelope {
+  error: string;
+}
+
+export interface ArchiveDocument {
+  id: number;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  category: string;
+  subcategory: string;
+  description: string;
+  uploadedAt: string;
+}
+
+export interface ArchiveDocumentInput {
+  /** @minLength 1 */
+  originalName: string;
+  /** @minLength 1 */
+  objectPath: string;
+  /** @minLength 1 */
+  mimeType: string;
+  /** @minimum 1 */
+  size: number;
+  /** @minLength 1 */
+  category: string;
+  /** @minLength 1 */
+  subcategory: string;
+  description?: string;
+}
+
+export interface ArchiveSubcategory {
+  name: string;
+  count: number;
+  documents: ArchiveDocument[];
+}
+
+export interface ArchiveFolder {
+  name: string;
+  count: number;
+  subcategories: ArchiveSubcategory[];
+}
+
+export interface ArchiveResponse {
+  categories: ArchiveFolder[];
+  documents: ArchiveDocument[];
+}
+
 export interface Report {
   record: QcRecord;
   companyName: string;
@@ -162,6 +263,20 @@ export type TestTypeParamParameter = TestType;
 export type SearchParamParameter = string;
 
 export type LimitParamParameter = number;
+
+export type AuthorizationSessionHeaderParameter = string;
+
+export type BeginBrowserLoginParams = {
+returnTo?: string;
+};
+
+export type LogoutBrowserSessionParams = {
+returnTo?: string;
+};
+
+export type GetArchiveDocumentContentParams = {
+download?: boolean;
+};
 
 export type ListRecordsParams = {
 testType?: TestTypeParamParameter;

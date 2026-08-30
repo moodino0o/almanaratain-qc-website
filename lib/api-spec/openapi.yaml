@@ -12,6 +12,12 @@ tags:
     description: Health operations
   - name: qc
     description: Quality control operations
+  - name: Auth
+    description: Browser and mobile authentication endpoints.
+  - name: Storage
+    description: Object storage upload and serving endpoints.
+  - name: Archive
+    description: Private quality control document archive.
 paths:
   /healthz:
     get:
@@ -50,6 +56,207 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Lookups"
+  /auth/user:
+    get:
+      tags: [Auth]
+      operationId: getCurrentAuthUser
+      summary: Get the currently authenticated user
+      responses:
+        "200":
+          description: Auth status resolved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUserEnvelope"
+  /login:
+    get:
+      tags: [Auth]
+      operationId: beginBrowserLogin
+      summary: Start the browser login flow
+      parameters:
+        - name: returnTo
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect to the authorization endpoint
+  /callback:
+    get:
+      tags: [Auth]
+      operationId: handleBrowserLoginCallback
+      summary: Complete the browser login flow
+      responses:
+        "302":
+          description: Redirect to the requested application path
+  /logout:
+    get:
+      tags: [Auth]
+      operationId: logoutBrowserSession
+      summary: Clear the browser session
+      parameters:
+        - name: returnTo
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect after logout
+  /mobile-auth/token-exchange:
+    post:
+      tags: [Auth]
+      operationId: exchangeMobileAuthorizationCode
+      summary: Exchange a mobile authorization code for a session token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MobileTokenExchangeRequest"
+      responses:
+        "200":
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MobileTokenExchangeSuccess"
+  /mobile-auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logoutMobileSession
+      summary: Delete a mobile session token
+      responses:
+        "200":
+          description: Session deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogoutSuccess"
+  /storage/uploads/request-url:
+    post:
+      tags: [Storage]
+      operationId: requestUploadUrl
+      summary: Request a private presigned upload URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadUrlRequest"
+      responses:
+        "200":
+          description: Presigned upload URL generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadUrlResponse"
+        "400":
+          description: Invalid file metadata
+        "401":
+          description: Authentication required
+  /storage/objects/{objectPath}:
+    get:
+      tags: [Storage]
+      operationId: getStorageObject
+      summary: Serve a private stored object
+      parameters:
+        - name: objectPath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Object content
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Authentication required
+        "404":
+          description: Object not found
+  /archive:
+    get:
+      tags: [Archive]
+      operationId: listArchive
+      summary: List the private document archive
+      responses:
+        "200":
+          description: Archive folders and documents
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArchiveResponse"
+        "401":
+          description: Authentication required
+  /archive/documents:
+    post:
+      tags: [Archive]
+      operationId: createArchiveDocument
+      summary: Save uploaded document metadata
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ArchiveDocumentInput"
+      responses:
+        "201":
+          description: Document metadata saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArchiveDocument"
+        "400":
+          description: Invalid document metadata
+        "401":
+          description: Authentication required
+  /archive/documents/{id}:
+    get:
+      tags: [Archive]
+      operationId: getArchiveDocument
+      summary: Get one archived document
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "200":
+          description: Archived document
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArchiveDocument"
+        "401":
+          description: Authentication required
+        "404":
+          description: Document not found
+  /archive/documents/{id}/content:
+    get:
+      tags: [Archive]
+      operationId: getArchiveDocumentContent
+      summary: Review or download an archived document
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+        - name: download
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Original document content
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Authentication required
+        "404":
+          description: Document not found
   /reference-data:
     get:
       operationId: getReferenceData
@@ -283,6 +490,18 @@ components:
       required: true
       schema:
         type: number
+    AuthorizationSessionHeader:
+      name: Authorization
+      in: header
+      required: false
+      schema:
+        type: string
+    SessionCookie:
+      name: sid
+      in: cookie
+      required: false
+      schema:
+        type: string
   schemas:
     HealthStatus:
       type: object
@@ -572,6 +791,182 @@ components:
         value:
           type: string
           minLength: 1
+    AuthUser:
+      type: object
+      required: [id, email, firstName, lastName, profileImageUrl]
+      properties:
+        id:
+          type: string
+        email:
+          type: ["string", "null"]
+          format: email
+        firstName:
+          type: ["string", "null"]
+        lastName:
+          type: ["string", "null"]
+        profileImageUrl:
+          type: ["string", "null"]
+    AuthUserEnvelope:
+      type: object
+      required: [user]
+      properties:
+        user:
+          oneOf:
+            - $ref: "#/components/schemas/AuthUser"
+            - type: "null"
+    MobileTokenExchangeRequest:
+      type: object
+      required: [code, code_verifier, redirect_uri, state]
+      properties:
+        code:
+          type: string
+          minLength: 1
+        code_verifier:
+          type: string
+          minLength: 1
+        redirect_uri:
+          type: string
+          minLength: 1
+          format: uri
+        state:
+          type: string
+          minLength: 1
+        nonce:
+          type: string
+          minLength: 1
+    MobileTokenExchangeSuccess:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+    LogoutSuccess:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          const: true
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        size:
+          type: integer
+          minimum: 1
+        contentType:
+          type: string
+          minLength: 1
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath, metadata]
+      properties:
+        uploadURL:
+          type: string
+          format: uri
+        objectPath:
+          type: string
+        metadata:
+          $ref: "#/components/schemas/UploadUrlRequest"
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+    ArchiveDocument:
+      type: object
+      required:
+        - id
+        - originalName
+        - mimeType
+        - size
+        - category
+        - subcategory
+        - description
+        - uploadedAt
+      properties:
+        id:
+          type: number
+        originalName:
+          type: string
+        mimeType:
+          type: string
+        size:
+          type: number
+        category:
+          type: string
+        subcategory:
+          type: string
+        description:
+          type: string
+        uploadedAt:
+          type: string
+          format: date-time
+    ArchiveDocumentInput:
+      type: object
+      required: [originalName, objectPath, mimeType, size, category, subcategory]
+      properties:
+        originalName:
+          type: string
+          minLength: 1
+        objectPath:
+          type: string
+          minLength: 1
+        mimeType:
+          type: string
+          minLength: 1
+        size:
+          type: integer
+          minimum: 1
+        category:
+          type: string
+          minLength: 1
+        subcategory:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          default: ""
+    ArchiveFolder:
+      type: object
+      required: [name, count, subcategories]
+      properties:
+        name:
+          type: string
+        count:
+          type: number
+        subcategories:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArchiveSubcategory"
+    ArchiveSubcategory:
+      type: object
+      required: [name, count, documents]
+      properties:
+        name:
+          type: string
+        count:
+          type: number
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArchiveDocument"
+    ArchiveResponse:
+      type: object
+      required: [categories, documents]
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArchiveFolder"
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArchiveDocument"
     Report:
       type: object
       required:
