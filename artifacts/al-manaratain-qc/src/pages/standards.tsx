@@ -560,7 +560,7 @@ export default function Standards() {
       measurementType: criterion.measurementType,
       minimum: criterion.minimum.trim() === "" ? null : Number(criterion.minimum),
       maximum: criterion.maximum.trim() === "" ? null : Number(criterion.maximum),
-      unit: criterion.measurementType === "percentage" ? "%" : criterion.unit.trim() || "kg",
+      unit: criterion.measurementType === "percentage" ? "%" : criterion.unit.trim() || "g",
     });
 
     const saveSieveCriteria = async () => {
