@@ -16,4 +16,6 @@ export interface Lookups {
   blockTypes: string[];
   blockSizes: string[];
   mixStrengths: string[];
+  customers: string[];
+  customerLocations: string[];
 }

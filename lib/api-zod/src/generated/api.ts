@@ -59,8 +59,141 @@ export const GetLookupsResponse = zod.object({
   "locations": zod.array(zod.string()),
   "blockTypes": zod.array(zod.string()),
   "blockSizes": zod.array(zod.string()),
-  "mixStrengths": zod.array(zod.string())
+  "mixStrengths": zod.array(zod.string()),
+  "customers": zod.array(zod.string()),
+  "customerLocations": zod.array(zod.string())
 })
+
+
+/**
+ * @summary List editable quality control reference data
+ */
+export const GetReferenceDataResponse = zod.object({
+  "categories": zod.array(zod.object({
+  "id": zod.number(),
+  "key": zod.string(),
+  "label": zod.string(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "categoryId": zod.number(),
+  "value": zod.string()
+}))
+}))
+})
+
+
+/**
+ * @summary Create a reference data category
+ */
+
+
+
+
+export const CreateReferenceCategoryBody = zod.object({
+  "key": zod.string().min(1),
+  "label": zod.string().min(1)
+})
+
+export const CreateReferenceCategoryResponse = zod.object({
+  "id": zod.number(),
+  "key": zod.string(),
+  "label": zod.string(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "categoryId": zod.number(),
+  "value": zod.string()
+}))
+})
+
+
+/**
+ * @summary Update a reference data category
+ */
+export const UpdateReferenceCategoryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+
+export const UpdateReferenceCategoryBody = zod.object({
+  "key": zod.string().min(1).optional(),
+  "label": zod.string().min(1).optional()
+})
+
+export const UpdateReferenceCategoryResponse = zod.object({
+  "id": zod.number(),
+  "key": zod.string(),
+  "label": zod.string(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "categoryId": zod.number(),
+  "value": zod.string()
+}))
+})
+
+
+/**
+ * @summary Delete a reference data category
+ */
+export const DeleteReferenceCategoryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteReferenceCategoryResponse = zod.void()
+
+
+/**
+ * @summary Add a value to a reference data category
+ */
+export const CreateReferenceItemParams = zod.object({
+  "categoryId": zod.coerce.number()
+})
+
+
+
+
+export const CreateReferenceItemBody = zod.object({
+  "value": zod.string().min(1)
+})
+
+export const CreateReferenceItemResponse = zod.object({
+  "id": zod.number(),
+  "categoryId": zod.number(),
+  "value": zod.string()
+})
+
+
+/**
+ * @summary Update a reference data value
+ */
+export const UpdateReferenceItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const UpdateReferenceItemBody = zod.object({
+  "value": zod.string().min(1)
+})
+
+export const UpdateReferenceItemResponse = zod.object({
+  "id": zod.number(),
+  "categoryId": zod.number(),
+  "value": zod.string()
+})
+
+
+/**
+ * @summary Delete a reference data value
+ */
+export const DeleteReferenceItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteReferenceItemResponse = zod.void()
 
 
 /**

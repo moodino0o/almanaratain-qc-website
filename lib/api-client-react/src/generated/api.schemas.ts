@@ -111,6 +111,44 @@ export interface Lookups {
   blockTypes: string[];
   blockSizes: string[];
   mixStrengths: string[];
+  customers: string[];
+  customerLocations: string[];
+}
+
+export interface ReferenceItem {
+  id: number;
+  categoryId: number;
+  value: string;
+}
+
+export interface ReferenceCategory {
+  id: number;
+  key: string;
+  label: string;
+  items: ReferenceItem[];
+}
+
+export interface ReferenceData {
+  categories: ReferenceCategory[];
+}
+
+export interface ReferenceCategoryInput {
+  /** @minLength 1 */
+  key: string;
+  /** @minLength 1 */
+  label: string;
+}
+
+export interface ReferenceCategoryUpdate {
+  /** @minLength 1 */
+  key?: string;
+  /** @minLength 1 */
+  label?: string;
+}
+
+export interface ReferenceItemInput {
+  /** @minLength 1 */
+  value: string;
 }
 
 export interface Report {

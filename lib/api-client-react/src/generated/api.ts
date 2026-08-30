@@ -27,6 +27,12 @@ import type {
   QcRecord,
   QcRecordInput,
   QcRecordUpdate,
+  ReferenceCategory,
+  ReferenceCategoryInput,
+  ReferenceCategoryUpdate,
+  ReferenceData,
+  ReferenceItem,
+  ReferenceItemInput,
   Report
 } from './api.schemas';
 
@@ -288,6 +294,512 @@ export function useGetLookups<TData = Awaited<ReturnType<typeof getLookups>>, TE
 
 
 
+
+export const getGetReferenceDataUrl = () => {
+
+
+
+
+  return `/api/reference-data`
+}
+
+/**
+ * @summary List editable quality control reference data
+ */
+export const getReferenceData = async ( options?: Parameters<typeof customFetch>[1]): Promise<ReferenceData> => {
+
+  return customFetch<ReferenceData>(getGetReferenceDataUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetReferenceDataQueryKey = () => {
+    return [
+    `/api/reference-data`
+    ] as const;
+    }
+
+
+export const getGetReferenceDataQueryOptions = <TData = Awaited<ReturnType<typeof getReferenceData>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReferenceData>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetReferenceDataQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReferenceData>>> = ({ signal }) => getReferenceData({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getReferenceData>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetReferenceDataQueryResult = NonNullable<Awaited<ReturnType<typeof getReferenceData>>>
+export type GetReferenceDataQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List editable quality control reference data
+ */
+
+export function useGetReferenceData<TData = Awaited<ReturnType<typeof getReferenceData>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReferenceData>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetReferenceDataQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateReferenceCategoryUrl = () => {
+
+
+
+
+  return `/api/reference-data/categories`
+}
+
+/**
+ * @summary Create a reference data category
+ */
+export const createReferenceCategory = async (referenceCategoryInput: ReferenceCategoryInput, options?: Parameters<typeof customFetch>[1]): Promise<ReferenceCategory> => {
+
+  return customFetch<ReferenceCategory>(getCreateReferenceCategoryUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(referenceCategoryInput)
+  }
+);}
+
+
+
+
+
+export const getCreateReferenceCategoryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createReferenceCategory>>, TError,{data: BodyType<ReferenceCategoryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createReferenceCategory>>, TError,{data: BodyType<ReferenceCategoryInput>}, TContext> => {
+
+const mutationKey = ['createReferenceCategory'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createReferenceCategory>>, {data: BodyType<ReferenceCategoryInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createReferenceCategory(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateReferenceCategoryMutationResult = NonNullable<Awaited<ReturnType<typeof createReferenceCategory>>>
+    export type CreateReferenceCategoryMutationBody = BodyType<ReferenceCategoryInput>
+    export type CreateReferenceCategoryMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a reference data category
+ */
+export const useCreateReferenceCategory = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createReferenceCategory>>, TError,{data: BodyType<ReferenceCategoryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createReferenceCategory>>,
+        TError,
+        {data: BodyType<ReferenceCategoryInput>},
+        TContext
+      > => {
+      return useMutation(getCreateReferenceCategoryMutationOptions(options));
+    }
+
+export const getUpdateReferenceCategoryUrl = (id: number,) => {
+
+
+
+
+  return `/api/reference-data/categories/${id}`
+}
+
+/**
+ * @summary Update a reference data category
+ */
+export const updateReferenceCategory = async (id: number,
+    referenceCategoryUpdate: ReferenceCategoryUpdate, options?: Parameters<typeof customFetch>[1]): Promise<ReferenceCategory> => {
+
+  return customFetch<ReferenceCategory>(getUpdateReferenceCategoryUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(referenceCategoryUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateReferenceCategoryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateReferenceCategory>>, TError,{id: number;data: BodyType<ReferenceCategoryUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateReferenceCategory>>, TError,{id: number;data: BodyType<ReferenceCategoryUpdate>}, TContext> => {
+
+const mutationKey = ['updateReferenceCategory'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateReferenceCategory>>, {id: number;data: BodyType<ReferenceCategoryUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateReferenceCategory(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateReferenceCategoryMutationResult = NonNullable<Awaited<ReturnType<typeof updateReferenceCategory>>>
+    export type UpdateReferenceCategoryMutationBody = BodyType<ReferenceCategoryUpdate>
+    export type UpdateReferenceCategoryMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update a reference data category
+ */
+export const useUpdateReferenceCategory = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateReferenceCategory>>, TError,{id: number;data: BodyType<ReferenceCategoryUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateReferenceCategory>>,
+        TError,
+        {id: number;data: BodyType<ReferenceCategoryUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateReferenceCategoryMutationOptions(options));
+    }
+
+export const getDeleteReferenceCategoryUrl = (id: number,) => {
+
+
+
+
+  return `/api/reference-data/categories/${id}`
+}
+
+/**
+ * @summary Delete a reference data category
+ */
+export const deleteReferenceCategory = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteReferenceCategoryUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteReferenceCategoryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteReferenceCategory>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteReferenceCategory>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteReferenceCategory'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteReferenceCategory>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteReferenceCategory(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteReferenceCategoryMutationResult = NonNullable<Awaited<ReturnType<typeof deleteReferenceCategory>>>
+
+    export type DeleteReferenceCategoryMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a reference data category
+ */
+export const useDeleteReferenceCategory = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteReferenceCategory>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteReferenceCategory>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteReferenceCategoryMutationOptions(options));
+    }
+
+export const getCreateReferenceItemUrl = (categoryId: number,) => {
+
+
+
+
+  return `/api/reference-data/categories/${categoryId}/items`
+}
+
+/**
+ * @summary Add a value to a reference data category
+ */
+export const createReferenceItem = async (categoryId: number,
+    referenceItemInput: ReferenceItemInput, options?: Parameters<typeof customFetch>[1]): Promise<ReferenceItem> => {
+
+  return customFetch<ReferenceItem>(getCreateReferenceItemUrl(categoryId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(referenceItemInput)
+  }
+);}
+
+
+
+
+
+export const getCreateReferenceItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createReferenceItem>>, TError,{categoryId: number;data: BodyType<ReferenceItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createReferenceItem>>, TError,{categoryId: number;data: BodyType<ReferenceItemInput>}, TContext> => {
+
+const mutationKey = ['createReferenceItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createReferenceItem>>, {categoryId: number;data: BodyType<ReferenceItemInput>}> = (props) => {
+          const {categoryId,data} = props ?? {};
+
+          return  createReferenceItem(categoryId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateReferenceItemMutationResult = NonNullable<Awaited<ReturnType<typeof createReferenceItem>>>
+    export type CreateReferenceItemMutationBody = BodyType<ReferenceItemInput>
+    export type CreateReferenceItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Add a value to a reference data category
+ */
+export const useCreateReferenceItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createReferenceItem>>, TError,{categoryId: number;data: BodyType<ReferenceItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createReferenceItem>>,
+        TError,
+        {categoryId: number;data: BodyType<ReferenceItemInput>},
+        TContext
+      > => {
+      return useMutation(getCreateReferenceItemMutationOptions(options));
+    }
+
+export const getUpdateReferenceItemUrl = (id: number,) => {
+
+
+
+
+  return `/api/reference-data/items/${id}`
+}
+
+/**
+ * @summary Update a reference data value
+ */
+export const updateReferenceItem = async (id: number,
+    referenceItemInput: ReferenceItemInput, options?: Parameters<typeof customFetch>[1]): Promise<ReferenceItem> => {
+
+  return customFetch<ReferenceItem>(getUpdateReferenceItemUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(referenceItemInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateReferenceItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateReferenceItem>>, TError,{id: number;data: BodyType<ReferenceItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateReferenceItem>>, TError,{id: number;data: BodyType<ReferenceItemInput>}, TContext> => {
+
+const mutationKey = ['updateReferenceItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateReferenceItem>>, {id: number;data: BodyType<ReferenceItemInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateReferenceItem(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateReferenceItemMutationResult = NonNullable<Awaited<ReturnType<typeof updateReferenceItem>>>
+    export type UpdateReferenceItemMutationBody = BodyType<ReferenceItemInput>
+    export type UpdateReferenceItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update a reference data value
+ */
+export const useUpdateReferenceItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateReferenceItem>>, TError,{id: number;data: BodyType<ReferenceItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateReferenceItem>>,
+        TError,
+        {id: number;data: BodyType<ReferenceItemInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateReferenceItemMutationOptions(options));
+    }
+
+export const getDeleteReferenceItemUrl = (id: number,) => {
+
+
+
+
+  return `/api/reference-data/items/${id}`
+}
+
+/**
+ * @summary Delete a reference data value
+ */
+export const deleteReferenceItem = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteReferenceItemUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteReferenceItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteReferenceItem>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteReferenceItem>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteReferenceItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteReferenceItem>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteReferenceItem(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteReferenceItemMutationResult = NonNullable<Awaited<ReturnType<typeof deleteReferenceItem>>>
+
+    export type DeleteReferenceItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a reference data value
+ */
+export const useDeleteReferenceItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteReferenceItem>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteReferenceItem>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteReferenceItemMutationOptions(options));
+    }
 
 export const getListRecordsUrl = (params?: ListRecordsParams,) => {
   const normalizedParams = new URLSearchParams();

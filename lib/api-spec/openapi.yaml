@@ -50,6 +50,114 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Lookups"
+  /reference-data:
+    get:
+      operationId: getReferenceData
+      tags: [qc]
+      summary: List editable quality control reference data
+      responses:
+        "200":
+          description: Reference categories and values
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferenceData"
+  /reference-data/categories:
+    post:
+      operationId: createReferenceCategory
+      tags: [qc]
+      summary: Create a reference data category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReferenceCategoryInput"
+      responses:
+        "201":
+          description: Created category
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferenceCategory"
+  /reference-data/categories/{id}:
+    patch:
+      operationId: updateReferenceCategory
+      tags: [qc]
+      summary: Update a reference data category
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReferenceCategoryUpdate"
+      responses:
+        "200":
+          description: Updated category
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferenceCategory"
+    delete:
+      operationId: deleteReferenceCategory
+      tags: [qc]
+      summary: Delete a reference data category
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "204":
+          description: Category deleted
+  /reference-data/categories/{categoryId}/items:
+    post:
+      operationId: createReferenceItem
+      tags: [qc]
+      summary: Add a value to a reference data category
+      parameters:
+        - $ref: "#/components/parameters/CategoryIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReferenceItemInput"
+      responses:
+        "201":
+          description: Created reference value
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferenceItem"
+  /reference-data/items/{id}:
+    patch:
+      operationId: updateReferenceItem
+      tags: [qc]
+      summary: Update a reference data value
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReferenceItemInput"
+      responses:
+        "200":
+          description: Updated reference value
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferenceItem"
+    delete:
+      operationId: deleteReferenceItem
+      tags: [qc]
+      summary: Delete a reference data value
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "204":
+          description: Reference value deleted
   /records:
     get:
       operationId: listRecords
@@ -169,6 +277,12 @@ components:
         minimum: 1
         maximum: 100
         default: 50
+    CategoryIdParam:
+      name: categoryId
+      in: path
+      required: true
+      schema:
+        type: number
   schemas:
     HealthStatus:
       type: object
@@ -342,6 +456,8 @@ components:
         - blockTypes
         - blockSizes
         - mixStrengths
+        - customers
+        - customerLocations
       properties:
         factories:
           type: array
@@ -379,6 +495,83 @@ components:
           type: array
           items:
             type: string
+        customers:
+          type: array
+          items:
+            type: string
+        customerLocations:
+          type: array
+          items:
+            type: string
+    ReferenceData:
+      type: object
+      required:
+        - categories
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReferenceCategory"
+    ReferenceCategory:
+      type: object
+      required:
+        - id
+        - key
+        - label
+        - items
+      properties:
+        id:
+          type: number
+        key:
+          type: string
+        label:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReferenceItem"
+    ReferenceItem:
+      type: object
+      required:
+        - id
+        - categoryId
+        - value
+      properties:
+        id:
+          type: number
+        categoryId:
+          type: number
+        value:
+          type: string
+    ReferenceCategoryInput:
+      type: object
+      required:
+        - key
+        - label
+      properties:
+        key:
+          type: string
+          minLength: 1
+        label:
+          type: string
+          minLength: 1
+    ReferenceCategoryUpdate:
+      type: object
+      properties:
+        key:
+          type: string
+          minLength: 1
+        label:
+          type: string
+          minLength: 1
+    ReferenceItemInput:
+      type: object
+      required:
+        - value
+      properties:
+        value:
+          type: string
+          minLength: 1
     Report:
       type: object
       required:
