@@ -22,7 +22,7 @@ import type {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,9 +34,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CalendarDays, ClipboardList, Copy, Filter, Loader2, PlusCircle, Save, Search, SlidersHorizontal } from "lucide-react";
+import { CalendarDays, ClipboardList, Copy, Filter, FlaskConical, Loader2, PlusCircle, Save, Search, SlidersHorizontal } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type ReferenceType = "site" | "plant";
 
@@ -400,26 +401,29 @@ export default function Reports() {
               <ClipboardList className="h-6 w-6" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-foreground">Daily Ready Mix Results</h1>
+              <h1 className="text-3xl font-bold tracking-tight text-foreground">Reports</h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                Review Ready Mix strength results by date, mix design, and Site or Plant reference.
+                Review daily strength results or enter Ready Mix cube results.
               </p>
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={openAddResults} className="shrink-0">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Ready Mix cube results
-          </Button>
-          <Button onClick={openFilters} className="shrink-0">
-            <SlidersHorizontal className="mr-2 h-4 w-4" />
-            {hasFilters ? "Change filters" : "Choose results"}
-          </Button>
-        </div>
       </div>
 
-      <Card className="border-t-4 border-t-primary">
+      <Tabs defaultValue="daily" className="w-full">
+        <TabsList className="grid h-auto w-full max-w-xl grid-cols-2">
+          <TabsTrigger value="daily" className="gap-2 py-2.5">
+            <ClipboardList className="h-4 w-4" />
+            Daily Results Report
+          </TabsTrigger>
+          <TabsTrigger value="cube-results" className="gap-2 py-2.5">
+            <FlaskConical className="h-4 w-4" />
+            Ready Mix Cube Results
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="daily" className="mt-4">
+          <Card className="border-t-4 border-t-primary">
         <CardHeader className="pb-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -439,6 +443,12 @@ export default function Reports() {
               <Button variant="outline" size="sm" onClick={openFilters}>
                 <Filter className="mr-2 h-4 w-4" />
                 Edit selection
+              </Button>
+            )}
+            {!hasFilters && (
+              <Button onClick={openFilters} className="shrink-0">
+                <SlidersHorizontal className="mr-2 h-4 w-4" />
+                Choose results
               </Button>
             )}
           </div>
@@ -629,7 +639,34 @@ export default function Reports() {
             </div>
           )}
         </CardContent>
-      </Card>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="cube-results" className="mt-4">
+          <Card className="border-t-4 border-t-primary">
+            <CardHeader>
+              <CardTitle className="text-lg">Ready Mix cube results</CardTitle>
+              <CardDescription>
+                Enter 7-day or 28-day cube measurements for every Ready Mix reference cast on a selected date.
+                You can save the original report and duplicate it as a new editable report.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex min-h-[280px] flex-col items-center justify-center rounded-lg border border-dashed bg-muted/20 p-8 text-center">
+                <FlaskConical className="mb-4 h-10 w-10 text-primary/60" />
+                <h2 className="text-lg font-semibold">Add Ready Mix cube results</h2>
+                <p className="mt-2 max-w-lg text-sm text-muted-foreground">
+                  Choose a casting date and cube age, then enter the dimensions, weights, and load for each report.
+                </p>
+                <Button className="mt-5" onClick={openAddResults}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Ready Mix cube results
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
         <DialogContent>
