@@ -1,14 +1,22 @@
-import { useGetDashboard } from "@workspace/api-client-react";
+import { listArchive, useGetDashboard, useListRecords } from "@workspace/api-client-react";
+import { useAuth } from "@workspace/replit-auth-web";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { CheckCircle2, AlertTriangle, XCircle, Plus, FileText, BarChart3, Clock } from "lucide-react";
+import { CheckCircle2, AlertTriangle, XCircle, Plus, FileText, BarChart3, Clock, Search, FolderOpen } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { formatDateTime } from "@/lib/utils";
 
 export default function Home() {
   const { data: dashboard, isLoading, error } = useGetDashboard();
+  const { isAuthenticated } = useAuth();
+  const [recordSearch, setRecordSearch] = useState("");
+  const [documentSearch, setDocumentSearch] = useState("");
+  const { data: matchingRecords } = useListRecords({ search: recordSearch || undefined });
+  const { data: archive } = useQuery({ queryKey: ["archive"], queryFn: () => listArchive(), enabled: isAuthenticated });
 
   if (isLoading) {
     return (
@@ -54,6 +62,19 @@ export default function Home() {
           New QC Record
         </Link>
       </div>
+
+      <Card className="border-t-4 border-t-primary">
+        <CardHeader className="pb-3"><CardTitle className="text-base">Search quality records and documents</CardTitle><CardDescription>Search Ready Mix by customer, location, mix design, or reference number.</CardDescription></CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          <div className="relative"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-9" value={recordSearch} onChange={(event) => setRecordSearch(event.target.value)} placeholder="Customer, location, mix design, reference number…" /></div>
+          <div className="relative"><FolderOpen className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-9" value={documentSearch} onChange={(event) => setDocumentSearch(event.target.value)} placeholder={isAuthenticated ? "Search archive documents…" : "Sign in to search archive documents"} disabled={!isAuthenticated} /></div>
+        </CardContent>
+      </Card>
+
+      {(recordSearch || documentSearch) && <div className="grid gap-6 lg:grid-cols-2">
+        {recordSearch && <Card><CardHeader><CardTitle>Matching QC records</CardTitle></CardHeader><CardContent className="space-y-2">{(matchingRecords ?? []).slice(0, 8).map((record) => { const details = record.details as Record<string, unknown>; return <Link key={record.id} href={`/records/${record.id}`} className="flex items-center gap-3 rounded border p-3 hover:bg-muted"><span className="min-w-[120px] font-semibold text-primary">{String(details.referenceNumber || record.recordNo)}</span><span className="min-w-0 flex-1 truncate">{record.testType} · {record.material}</span><span className="text-xs text-muted-foreground">{record.location}</span></Link>; })}{matchingRecords?.length === 0 && <p className="text-sm text-muted-foreground">No matching records.</p>}</CardContent></Card>}
+        {documentSearch && isAuthenticated && <Card><CardHeader><CardTitle>Matching archive documents</CardTitle></CardHeader><CardContent className="space-y-2">{(archive?.documents ?? []).filter((doc) => `${doc.originalName} ${doc.category} ${doc.subcategory} ${doc.description}`.toLowerCase().includes(documentSearch.toLowerCase())).slice(0, 8).map((doc) => <a key={doc.id} href={`/api/archive/documents/${doc.id}/download`} className="block rounded border p-3 hover:bg-muted"><span className="block font-medium">{doc.originalName}</span><span className="text-xs text-muted-foreground">{doc.category} / {doc.subcategory} · {doc.documentDate}</span></a>)}{archive?.documents.filter((doc) => `${doc.originalName} ${doc.category} ${doc.subcategory} ${doc.description}`.toLowerCase().includes(documentSearch.toLowerCase())).length === 0 && <p className="text-sm text-muted-foreground">No matching documents.</p>}</CardContent></Card>}
+      </div>}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
@@ -124,7 +145,7 @@ export default function Home() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Record No.</TableHead>
+                  <TableHead>Reference / Record No.</TableHead>
                   <TableHead>Test Type</TableHead>
                   <TableHead>Material</TableHead>
                   <TableHead>Sample Date</TableHead>
@@ -142,7 +163,7 @@ export default function Home() {
                 ) : (
                   dashboard.recentRecords.map((record) => (
                     <TableRow key={record.id}>
-                      <TableCell className="font-medium">{record.recordNo}</TableCell>
+                        <TableCell className="font-medium">{String((record.details as Record<string, unknown>).referenceNumber || record.recordNo)}</TableCell>
                       <TableCell>{record.testType}</TableCell>
                       <TableCell>{record.material}</TableCell>
                       <TableCell>{formatDateTime(record.sampleDate)}</TableCell>

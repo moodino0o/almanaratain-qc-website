@@ -897,6 +897,7 @@ components:
         - size
         - category
         - subcategory
+        - documentDate
         - description
         - uploadedAt
       properties:
@@ -912,6 +913,9 @@ components:
           type: string
         subcategory:
           type: string
+        documentDate:
+          type: string
+          format: date
         description:
           type: string
         uploadedAt:
@@ -919,7 +923,7 @@ components:
           format: date-time
     ArchiveDocumentInput:
       type: object
-      required: [originalName, objectPath, mimeType, size, category, subcategory]
+      required: [originalName, objectPath, mimeType, size, category, subcategory, documentDate]
       properties:
         originalName:
           type: string
@@ -939,6 +943,9 @@ components:
         subcategory:
           type: string
           minLength: 1
+        documentDate:
+          type: string
+          format: date
         description:
           type: string
           default: ""

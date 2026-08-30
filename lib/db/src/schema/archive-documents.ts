@@ -3,6 +3,8 @@ import {
   integer,
   pgTable,
   serial,
+  date,
+  sql,
   text,
   timestamp,
   varchar,
@@ -19,6 +21,9 @@ export const archiveDocumentsTable = pgTable(
     size: integer("size").notNull(),
     category: text("category").notNull(),
     subcategory: text("subcategory").notNull(),
+    documentDate: date("document_date", { mode: "string" })
+      .notNull()
+      .default(sql`CURRENT_DATE`),
     description: text("description").notNull().default(""),
     uploadedBy: varchar("uploaded_by").references(() => usersTable.id, {
       onDelete: "set null",

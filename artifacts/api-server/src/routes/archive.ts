@@ -31,6 +31,7 @@ function toDocument(row: typeof archiveDocumentsTable.$inferSelect) {
     size: row.size,
     category: row.category,
     subcategory: row.subcategory,
+    documentDate: row.documentDate,
     description: row.description,
     uploadedAt: row.createdAt.toISOString(),
   };

@@ -402,6 +402,7 @@ router.get("/records", async (req, res): Promise<void> => {
         ilike(qcRecordsTable.location, search),
         ilike(qcRecordsTable.material, search),
         ilike(qcRecordsTable.testedBy, search),
+        ilike(sql`${qcRecordsTable.details}::text`, search),
       ),
     );
   }

@@ -55,6 +55,7 @@ export default function RecordForm() {
   const [material, setMaterial] = useState("");
   const [testedBy, setTestedBy] = useState("");
   const [machine, setMachine] = useState("");
+  const [referenceNumber, setReferenceNumber] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerLocation, setCustomerLocation] = useState("");
   const [remarks, setRemarks] = useState("");
@@ -166,6 +167,7 @@ export default function RecordForm() {
     if (testType === TestType.Ready_Mix) {
       payloadDetails.customerName = customerName;
       payloadDetails.customerLocation = customerLocation;
+      payloadDetails.referenceNumber = referenceNumber;
     }
     if (testType === TestType.Blocks) {
       payloadDetails.machine = machine;
@@ -301,6 +303,14 @@ export default function RecordForm() {
 
               {testType === TestType.Ready_Mix && (
                 <>
+                  <div className="space-y-2">
+                    <Label>Reference Number</Label>
+                    <Input
+                      value={referenceNumber}
+                      onChange={(event) => setReferenceNumber(event.target.value)}
+                      placeholder="Enter reference number"
+                    />
+                  </div>
                   <div className="space-y-2">
                     <Label>Ready Mix Customer Name</Label>
                     <TypeaheadInput
