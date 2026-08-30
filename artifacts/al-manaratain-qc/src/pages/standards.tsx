@@ -338,7 +338,6 @@ function SieveEditor({
           />
         </div>
         </div>
-        </div>
         <div className="rounded-lg border border-amber-500/30 bg-background/80">
           <div className="flex flex-col gap-3 border-b border-amber-500/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
