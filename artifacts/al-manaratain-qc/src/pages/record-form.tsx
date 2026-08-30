@@ -133,6 +133,7 @@ export default function RecordForm() {
   const [customerName, setCustomerName] = useState("");
   const [customerLocation, setCustomerLocation] = useState("");
   const [remarks, setRemarks] = useState("");
+  const [selectedStrengthStandardId, setSelectedStrengthStandardId] = useState("");
   
   const [details, setDetails] = useState<Record<string, unknown>>({});
   const [testRows, setTestRows] = useState<TestRow[]>([createEmptyRow(1)]);
@@ -183,6 +184,7 @@ export default function RecordForm() {
     setCustomerName(stringValue(savedDetails.customerName));
     setCustomerLocation(stringValue(savedDetails.customerLocation));
     setMachine(stringValue(savedDetails.machine));
+    setSelectedStrengthStandardId(stringValue(savedDetails.strengthStandardId));
     setDetails(savedDetails);
     setTestRows(
       savedRows.length
@@ -589,6 +591,7 @@ export default function RecordForm() {
                 <Select value={testType} onValueChange={(val: TestType) => {
                   setTestType(val);
                   setDetails({});
+                  setSelectedStrengthStandardId("");
                   setTestRows([createEmptyRow(1)]);
                   nextRowId.current = 2;
                 }}>
