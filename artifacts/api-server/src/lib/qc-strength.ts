@@ -217,17 +217,26 @@ export function evaluateSieveRecord(
         ? { ...(row as Record<string, unknown>) }
         : {};
     const amountReturned = numericValue(values.amountReturned);
-    const existingPassingAmount = numericValue(values.passingAmount);
-    const passingAmount =
-      sampleWeight !== null && amountReturned !== null
-        ? rounded(sampleWeight - amountReturned)
-        : existingPassingAmount;
+    const canCalculatePassing =
+      sampleWeight !== null &&
+      sampleWeight > 0 &&
+      amountReturned !== null &&
+      amountReturned >= 0 &&
+      amountReturned <= sampleWeight;
+    const passingAmount = canCalculatePassing
+      ? rounded(sampleWeight - amountReturned)
+      : null;
     const passingPercentage =
-      sampleWeight !== null && sampleWeight > 0 && passingAmount !== null
+      passingAmount !== null && sampleWeight !== null
         ? rounded((passingAmount / sampleWeight) * 100)
-        : numericValue(values.passingPercentage);
+        : null;
+    const {
+      passingAmount: _existingPassingAmount,
+      passingPercentage: _existingPassingPercentage,
+      ...sourceValues
+    } = values;
     return {
-      ...values,
+      ...sourceValues,
       rowNo: referenceId(values.rowNo) ?? index + 1,
       ...(amountReturned !== null ? { amountReturned } : {}),
       ...(passingAmount !== null ? { passingAmount } : {}),
