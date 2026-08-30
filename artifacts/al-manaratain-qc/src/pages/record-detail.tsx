@@ -1,6 +1,6 @@
 import { useParams, Link, useLocation } from "wouter";
 import { useGetRecord, useUpdateRecord, useDeleteRecord, RecordStatus } from "@workspace/api-client-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
@@ -19,23 +19,67 @@ function calculatedWaterAbsorption(values: Record<string, unknown>) {
   return (((wetWeight - dryWeight) / dryWeight) * 100).toFixed(2);
 }
 
-function TestRowsTable({ rows }: { rows: unknown[] }) {
+type DetailMap = Record<string, unknown>;
+
+function displayValue(value: unknown, fallback = "—") {
+  return value === undefined || value === null || value === "" ? fallback : String(value);
+}
+
+function DetailSummaryTable({ entries }: { entries: ReadonlyArray<readonly [string, unknown]> }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[760px] text-xs">
+      <table className="w-full min-w-[640px] text-sm">
+        <tbody>
+          {entries.map(([label, value]) => (
+            <tr key={label} className="border-b last:border-b-0">
+              <th className="w-[30%] bg-muted/20 p-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {label}
+              </th>
+              <td className="p-3 font-medium text-foreground">{displayValue(value)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function MeasurementTable({
+  title,
+  entries,
+}: {
+  title: string;
+  entries: ReadonlyArray<readonly [string, unknown]>;
+}) {
+  return (
+    <Card>
+      <CardHeader className="bg-muted/30 border-b">
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        <DetailSummaryTable entries={entries} />
+      </CardContent>
+    </Card>
+  );
+}
+
+function TestRowsTable({ rows, includeAbsorption }: { rows: unknown[]; includeAbsorption: boolean }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className={`w-full ${includeAbsorption ? "min-w-[1040px]" : "min-w-[900px]"} text-xs`}>
         <thead className="bg-muted/30">
           <tr className="border-b">
             <th className="p-2 text-left">No.</th>
             <th className="p-2 text-left">Age</th>
-            <th className="p-2 text-left">Length</th>
-            <th className="p-2 text-left">Width</th>
-            <th className="p-2 text-left">Height</th>
+            <th className="p-2 text-left">Length (mm)</th>
+            <th className="p-2 text-left">Width (mm)</th>
+            <th className="p-2 text-left">Height (mm)</th>
             <th className="p-2 text-left">Dry Weight</th>
             <th className="p-2 text-left">Wet Weight</th>
-             <th className="p-2 text-left">Water Absorption (%)</th>
+            {includeAbsorption && <th className="p-2 text-left">Water Absorption (%)</th>}
             <th className="p-2 text-left">Load (kN)</th>
-            <th className="p-2 text-left">Loaded Face Area</th>
-            <th className="p-2 text-left">Calculated Strength</th>
+            <th className="p-2 text-left">Loaded Face Area (mm²)</th>
+            <th className="p-2 text-left">Calculated Strength (N/mm²)</th>
           </tr>
         </thead>
         <tbody>
@@ -45,18 +89,18 @@ function TestRowsTable({ rows }: { rows: unknown[] }) {
               : {};
             return (
               <tr key={index} className="border-b last:border-b-0">
-                <td className="p-2 font-semibold">{String(values.rowNo ?? index + 1)}</td>
-                <td className="p-2">{String(values.testAge ?? values.sampleAge ?? "-")}</td>
-                <td className="p-2">{String(values.length ?? "-")}</td>
-                <td className="p-2">{String(values.width ?? "-")}</td>
-                <td className="p-2">{String(values.height ?? "-")}</td>
-                <td className="p-2">{String(values.dryWeight ?? "-")}</td>
-                <td className="p-2">{String(values.wetWeight ?? "-")}</td>
-                <td className="p-2">{calculatedWaterAbsorption(values)}</td>
-                <td className="p-2">{String(values.load ?? "-")}</td>
-                <td className="p-2">{String(values.loadedFaceArea ?? "-")}</td>
+                <td className="p-2 font-semibold">{displayValue(values.rowNo, String(index + 1))}</td>
+                <td className="p-2">{displayValue(values.testAge ?? values.sampleAge)}</td>
+                <td className="p-2">{displayValue(values.length)}</td>
+                <td className="p-2">{displayValue(values.width)}</td>
+                <td className="p-2">{displayValue(values.height)}</td>
+                <td className="p-2">{displayValue(values.dryWeight)}</td>
+                <td className="p-2">{displayValue(values.wetWeight)}</td>
+                {includeAbsorption && <td className="p-2">{calculatedWaterAbsorption(values)}</td>}
+                <td className="p-2">{displayValue(values.load)}</td>
+                <td className="p-2">{displayValue(values.loadedFaceArea)}</td>
                 <td className="p-2 font-semibold">
-                  {String(values.calculatedStrength ?? values.strength ?? values.compressiveStrength ?? "-")}
+                  {displayValue(values.calculatedStrength ?? values.strength ?? values.compressiveStrength)}
                 </td>
               </tr>
             );
@@ -87,11 +131,11 @@ function SieveRowsTable({ rows }: { rows: unknown[] }) {
               : {};
             return (
               <tr key={index} className="border-b last:border-b-0">
-                <td className="p-2 font-semibold">{String(values.rowNo ?? index + 1)}</td>
-                <td className="p-2">{String(values.sieveSize ?? "-")}</td>
-                <td className="p-2">{String(values.amountReturned ?? "-")}</td>
-                <td className="p-2">{String(values.passingAmount ?? "-")}</td>
-                <td className="p-2">{String(values.passingPercentage ?? "-")}</td>
+                <td className="p-2 font-semibold">{displayValue(values.rowNo, String(index + 1))}</td>
+                <td className="p-2">{displayValue(values.sieveSize)}</td>
+                <td className="p-2">{displayValue(values.amountReturned)}</td>
+                <td className="p-2">{displayValue(values.passingAmount)}</td>
+                <td className="p-2">{displayValue(values.passingPercentage)}</td>
               </tr>
             );
           })}
@@ -134,7 +178,8 @@ function StrengthEvaluation({ value }: { value: unknown }) {
 }
 
 function detailText(details: Record<string, unknown>, key: string, fallback = "—") {
-  const value = details[key];
+  const normalizedKey = key.toLocaleLowerCase();
+  const value = Object.entries(details).find(([candidate]) => candidate.toLocaleLowerCase() === normalizedKey)?.[1];
   return value === undefined || value === null || value === "" ? fallback : String(value);
 }
 
@@ -214,37 +259,64 @@ export default function RecordDetail() {
 
   const isStrengthEvaluated = record.testType === "Ready Mix" || record.testType === "Blocks";
   const isSieveEvaluated = record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve";
-  const recordDetails = record.details as Record<string, unknown>;
-  const readyMixContext = [
-    ["Customer Name", detailText(recordDetails, "customerName", record.location)],
-    ["Location", detailText(recordDetails, "customerLocation", record.location)],
-    ["Slump", detailText(recordDetails, "slump")],
-    ["Temperature", detailText(recordDetails, "temperature")],
-    ["Reference Number", detailText(recordDetails, "referenceNumber")],
+  const recordDetails = record.details as DetailMap;
+  const summaryEntries: Array<readonly [string, unknown]> = [
+    ["Record No.", record.recordNo],
+    ["Test Type", record.testType],
     ["Sample Date", formatDate(record.sampleDate)],
-    ["Material", record.material],
-  ] as const;
-  const readyMixContextKeys = new Set(["customerName", "customerLocation", "referenceNumber"]);
-  const readyMixMeasurementOrder = [
-    "slump",
-    "temperature",
-    "airContent",
-    "designStrength",
-    "cubeAge",
-    "load",
-    "compressiveStrength",
-    "testRows",
-    "strengthEvaluation",
+    ["Location", record.location],
+    ["Material / Product", record.material],
+    ["Tested By", record.testedBy],
   ];
-  const measuredEntries = Object.entries(record.details)
-    .filter(([key]) => record.testType !== "Ready Mix" || !readyMixContextKeys.has(key))
-    .sort(([left], [right]) => {
-      if (record.testType !== "Ready Mix") return 0;
-      const leftIndex = readyMixMeasurementOrder.indexOf(left);
-      const rightIndex = readyMixMeasurementOrder.indexOf(right);
-      return (leftIndex < 0 ? readyMixMeasurementOrder.length : leftIndex) -
-        (rightIndex < 0 ? readyMixMeasurementOrder.length : rightIndex);
-    });
+
+  if (record.testType === "Ready Mix") {
+    summaryEntries.push(
+      ["Reference Number", detailText(recordDetails, "referenceNumber")],
+      ["Customer Name", detailText(recordDetails, "customerName", record.location)],
+      ["Customer Location", detailText(recordDetails, "customerLocation", record.location)],
+    );
+  }
+  if (record.testType === "Blocks" || record.testType === "Paving Blocks") {
+    summaryEntries.push(
+      ["Block Type", detailText(recordDetails, "blockType", record.material)],
+      ["Block Size (mm)", detailText(recordDetails, "blockSize")],
+      ["Machine", detailText(recordDetails, "machine")],
+    );
+  }
+  if (record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve") {
+    summaryEntries.push(
+      ["Sample Weight", detailText(recordDetails, "sampleWeight")],
+      ["Supplier", detailText(recordDetails, "supplier")],
+      [
+        record.testType === "Aggregate Sieve" ? "Material Condition" : "Condition",
+        detailText(recordDetails, record.testType === "Aggregate Sieve" ? "materialCondition" : "condition"),
+      ],
+      ["Dry Sample", detailText(recordDetails, "drySample")],
+      ["Wet Sample", detailText(recordDetails, "wetSample")],
+    );
+    if (record.testType === "Aggregate Sieve") {
+      summaryEntries.push(["Fineness Modulus", detailText(recordDetails, "finenessModulus")]);
+    } else {
+      summaryEntries.push(
+        ["Silt Before", detailText(recordDetails, "siltBefore")],
+        ["Silt After", detailText(recordDetails, "siltAfter")],
+      );
+    }
+  }
+  if (record.testType === "Water") {
+    summaryEntries.push(["Source", detailText(recordDetails, "source")]);
+  }
+  if (record.reviewedBy) summaryEntries.push(["Reviewed By", record.reviewedBy]);
+
+  const testRows = Array.isArray(recordDetails.testRows) ? recordDetails.testRows : [];
+  const hasLegacySpecimen = ["length", "width", "height", "dryWeight", "wetWeight", "load", "loadedFaceArea", "calculatedStrength"]
+    .some((key) => recordDetails[key] !== undefined && recordDetails[key] !== "");
+  const specimenRows = testRows.length > 0
+    ? testRows
+    : hasLegacySpecimen
+      ? [recordDetails]
+      : [];
+  const sieveRows = Array.isArray(recordDetails.sieveRows) ? recordDetails.sieveRows : [];
 
   const handleDelete = () => {
     if (!confirm("Are you sure you want to delete this record? This action cannot be undone.")) return;
@@ -307,156 +379,215 @@ export default function RecordDetail() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 space-y-6">
+      <Card className="border-t-4 border-t-primary">
+        <CardHeader className="bg-muted/30 border-b">
+          <CardTitle>Record Information</CardTitle>
+          <CardDescription>Sample, material, and test context.</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <DetailSummaryTable entries={summaryEntries} />
+        </CardContent>
+      </Card>
+
+      {record.testType === "Ready Mix" && (
+        <>
+          <MeasurementTable
+            title="Measurement Details: Ready Mix"
+            entries={[
+              ["Slump (mm)", detailText(recordDetails, "slump")],
+              ["Temperature (°C)", detailText(recordDetails, "temperature")],
+              ["Air Content (%)", detailText(recordDetails, "airContent")],
+            ]}
+          />
           <Card>
             <CardHeader className="bg-muted/30 border-b">
-              <CardTitle>Measured Data</CardTitle>
+              <CardTitle>Specimen Measurements</CardTitle>
+              <CardDescription>Concrete cube measurements and calculated strength.</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-              <table className="w-full text-sm">
-                <tbody>
-                  {measuredEntries.length === 0 ? (
-                    <tr>
-                      <td className="p-6 text-center text-muted-foreground">No detailed measurements recorded.</td>
-                    </tr>
-                  ) : (
-                    measuredEntries.map(([key, value], idx) => (
-                      <tr key={key} className={idx !== 0 ? "border-t" : ""}>
-                        <td className="p-4 font-medium text-muted-foreground capitalize bg-muted/10 w-1/3">
-                          {key.replace(/([A-Z])/g, ' $1').trim()}
-                        </td>
-                        <td className="p-4 font-semibold text-foreground">
-                          {key === "testRows" && Array.isArray(value) ? (
-                            <TestRowsTable rows={value} />
-                          ) : key === "sieveRows" && Array.isArray(value) ? (
-                            <SieveRowsTable rows={value} />
-                          ) : key === "strengthEvaluation" ? (
-                            <StrengthEvaluation value={value} />
-                          ) : key === "sieveEvaluation" ? (
-                            <SieveEvaluation value={value} />
-                          ) : (
-                            typeof value === "object" && value !== null ? JSON.stringify(value) : String(value)
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+              {specimenRows.length > 0
+                ? <TestRowsTable rows={specimenRows} includeAbsorption />
+                : <p className="p-6 text-center text-muted-foreground">No specimen measurements recorded.</p>}
             </CardContent>
           </Card>
+        </>
+      )}
 
+      {record.testType === "Blocks" && (
+        <>
           <Card>
-            <CardHeader>
-              <CardTitle>Remarks & Observations</CardTitle>
+            <CardHeader className="bg-muted/30 border-b">
+              <CardTitle>Specimen Measurements</CardTitle>
+              <CardDescription>Block sample dimensions, weights, load, and calculated strength.</CardDescription>
             </CardHeader>
-            <CardContent>
-              {record.remarks ? (
-                <p className="text-foreground whitespace-pre-wrap">{record.remarks}</p>
-              ) : (
-                <p className="text-muted-foreground italic">No remarks provided.</p>
-              )}
+            <CardContent className="p-0">
+              {specimenRows.length > 0
+                ? <TestRowsTable rows={specimenRows} includeAbsorption={false} />
+                : <p className="p-6 text-center text-muted-foreground">No specimen measurements recorded.</p>}
             </CardContent>
           </Card>
-        </div>
+          <MeasurementTable
+            title="Block Test Result"
+            entries={[
+              ["Block No.", detailText(recordDetails, "blockNo", detailText(recordDetails, "blockNumber"))],
+              ["Strength (N/mm²)", detailText(recordDetails, "strength", detailText(recordDetails, "compressiveStrength"))],
+              ["Shape Factor", detailText(recordDetails, "shapeFactor")],
+            ]}
+          />
+        </>
+      )}
 
-        <div className="space-y-6">
-          <Card className="border-t-4 border-t-primary">
-            <CardHeader>
-              <CardTitle>Context Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {record.testType === "Ready Mix" ? (
-                <>
-                  {readyMixContext.map(([label, value]) => (
-                    <div key={label}>
-                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">{label}</p>
-                      <p className="font-medium text-foreground">{value}</p>
-                    </div>
-                  ))}
-                  <div className="border-t pt-4">
-                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Tested By</p>
-                    <p className="font-medium text-foreground">{record.testedBy}</p>
-                  </div>
-                </>
-              ) : (
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Material</p>
-                  <p className="font-medium text-foreground">{record.material}</p>
-                </div>
-              )}
-              {record.testType !== "Ready Mix" && (
-                <>
-                  <div>
-                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Location</p>
-                    <p className="font-medium text-foreground">{record.location}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Sample Date</p>
-                    <p className="font-medium text-foreground">{formatDate(record.sampleDate)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Tested By</p>
-                    <p className="font-medium text-foreground">{record.testedBy}</p>
-                  </div>
-                </>
-              )}
-              {record.reviewedBy && (
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Reviewed By</p>
-                  <p className="font-medium text-foreground">{record.reviewedBy}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
+      {(record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve") && (
+        <>
           <Card>
-            <CardHeader>
-              <CardTitle>{isStrengthEvaluated || isSieveEvaluated ? "Automatic Quality Evaluation" : "Quality Review"}</CardTitle>
-              <CardDescription>
-                {isStrengthEvaluated || isSieveEvaluated
-                  ? "The status is enforced from the configured standard and measured values."
-                  : "Update the final status of this sample."}
-              </CardDescription>
+            <CardHeader className="bg-muted/30 border-b">
+              <CardTitle>Sieve Measurements</CardTitle>
+              <CardDescription>Returned and passing amounts for each sieve or pore size.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {isStrengthEvaluated || isSieveEvaluated ? (
-                isSieveEvaluated
-                  ? <SieveEvaluation value={record.details.sieveEvaluation} />
-                  : <StrengthEvaluation value={record.details.strengthEvaluation} />
-              ) : (
-                <>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-success border-success/30 hover:bg-success hover:text-white"
-                    onClick={() => handleStatusUpdate(RecordStatus.Passed)}
-                    disabled={record.status === RecordStatus.Passed || updateRecord.isPending}
-                  >
-                    <Check className="w-4 h-4 mr-2" /> Mark as Passed
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-destructive border-destructive/30 hover:bg-destructive hover:text-white"
-                    onClick={() => handleStatusUpdate(RecordStatus.Failed)}
-                    disabled={record.status === RecordStatus.Failed || updateRecord.isPending}
-                  >
-                    <X className="w-4 h-4 mr-2" /> Mark as Failed
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-warning border-warning/30 hover:bg-warning hover:text-white"
-                    onClick={() => handleStatusUpdate(RecordStatus.Review)}
-                    disabled={record.status === RecordStatus.Review || updateRecord.isPending}
-                  >
-                    <AlertTriangle className="w-4 h-4 mr-2" /> Set to Review
-                  </Button>
-                </>
-              )}
+            <CardContent className="p-0">
+              {sieveRows.length > 0
+                ? <SieveRowsTable rows={sieveRows} />
+                : <p className="p-6 text-center text-muted-foreground">No sieve measurements recorded.</p>}
             </CardContent>
           </Card>
-        </div>
-      </div>
+        </>
+      )}
+
+      {record.testType === "Paving Blocks" && (
+        <>
+          {specimenRows.length > 0 ? (
+            <Card>
+              <CardHeader className="bg-muted/30 border-b">
+                <CardTitle>Paving Block Specimen Measurements</CardTitle>
+                <CardDescription>Saved specimen dimensions, weights, load, and calculated strength.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <TestRowsTable rows={specimenRows} includeAbsorption={false} />
+              </CardContent>
+            </Card>
+          ) : (
+            <MeasurementTable
+              title="Paving Block Measurements"
+              entries={[
+                ["Weight (kg)", detailText(recordDetails, "weight")],
+                ["Length (mm)", detailText(recordDetails, "length")],
+                ["Width (mm)", detailText(recordDetails, "width")],
+                ["Height (mm)", detailText(recordDetails, "height")],
+                ["Compressive Strength (N/mm²)", detailText(recordDetails, "compressiveStrength")],
+              ]}
+            />
+          )}
+          <MeasurementTable
+            title="Paving Block Test Result"
+            entries={[
+              ["Target", detailText(recordDetails, "target")],
+              ["Strength", detailText(recordDetails, "strength", detailText(recordDetails, "compressiveStrength"))],
+              ["Correction Factor", detailText(recordDetails, "correctionFactor")],
+            ]}
+          />
+        </>
+      )}
+
+      {record.testType === "Water" && (
+        <MeasurementTable
+          title="Water Quality Measurements"
+          entries={[
+            ["pH", detailText(recordDetails, "ph")],
+            ["TDS", detailText(recordDetails, "tds")],
+            ["Chloride", detailText(recordDetails, "chloride")],
+            ["Sulphate", detailText(recordDetails, "sulphate")],
+            ["Observation 1", detailText(recordDetails, "observation1")],
+            ["Observation 2", detailText(recordDetails, "observation2")],
+          ]}
+        />
+      )}
+
+      {(record.testType !== "Ready Mix" &&
+        record.testType !== "Blocks" &&
+        record.testType !== "Sand Sieve" &&
+        record.testType !== "Aggregate Sieve" &&
+        record.testType !== "Paving Blocks" &&
+        record.testType !== "Water") && (
+          <MeasurementTable
+            title={`${record.testType} Measurements`}
+            entries={[
+              ["Observation 1", detailText(recordDetails, "observation1")],
+              ["Observation 2", detailText(recordDetails, "observation2")],
+            ]}
+          />
+      )}
+
+      {isSieveEvaluated && (
+        <Card>
+          <CardHeader className="bg-muted/30 border-b">
+            <CardTitle>Automatic Sieve Evaluation</CardTitle>
+            <CardDescription>Comparison with the configured sieve standard.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SieveEvaluation value={recordDetails.sieveEvaluation} />
+          </CardContent>
+        </Card>
+      )}
+
+      {isStrengthEvaluated && (
+        <Card>
+          <CardHeader className="bg-muted/30 border-b">
+            <CardTitle>Automatic Quality Evaluation</CardTitle>
+            <CardDescription>Status is based on the configured standard and measured values.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <StrengthEvaluation value={recordDetails.strengthEvaluation} />
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Remarks & Observations</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {record.remarks ? (
+            <p className="whitespace-pre-wrap text-foreground">{record.remarks}</p>
+          ) : (
+            <p className="italic text-muted-foreground">No remarks provided.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {!isStrengthEvaluated && !isSieveEvaluated && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Quality Review</CardTitle>
+            <CardDescription>Update the final status of this sample.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-3">
+            <Button
+              variant="outline"
+              className="text-success border-success/30 hover:bg-success hover:text-white"
+              onClick={() => handleStatusUpdate(RecordStatus.Passed)}
+              disabled={record.status === RecordStatus.Passed || updateRecord.isPending}
+            >
+              <Check className="mr-2 h-4 w-4" /> Mark as Passed
+            </Button>
+            <Button
+              variant="outline"
+              className="text-destructive border-destructive/30 hover:bg-destructive hover:text-white"
+              onClick={() => handleStatusUpdate(RecordStatus.Failed)}
+              disabled={record.status === RecordStatus.Failed || updateRecord.isPending}
+            >
+              <X className="mr-2 h-4 w-4" /> Mark as Failed
+            </Button>
+            <Button
+              variant="outline"
+              className="text-warning border-warning/30 hover:bg-warning hover:text-white"
+              onClick={() => handleStatusUpdate(RecordStatus.Review)}
+              disabled={record.status === RecordStatus.Review || updateRecord.isPending}
+            >
+              <AlertTriangle className="mr-2 h-4 w-4" /> Set to Review
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
