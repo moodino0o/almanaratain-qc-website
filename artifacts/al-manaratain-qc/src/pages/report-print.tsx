@@ -124,6 +124,7 @@ function SieveRowsTable({ rows }: { rows: unknown[] }) {
           <tr>
             <th>No.</th>
             <th>Sieve / Pore Size</th>
+            <th>Amount Returned</th>
             <th>Amount Passing</th>
             <th>% Passing</th>
           </tr>
@@ -136,6 +137,7 @@ function SieveRowsTable({ rows }: { rows: unknown[] }) {
               <tr key={index}>
                 <td>{textValue(values.rowNo, String(index + 1))}</td>
                 <td>{textValue(values.sieveSize)}</td>
+                <td>{textValue(values.amountReturned)}</td>
                 <td>{textValue(values.passingAmount)}</td>
                 <td>{textValue(values.passingPercentage)}</td>
               </tr>

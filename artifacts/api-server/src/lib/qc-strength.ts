@@ -210,14 +210,28 @@ export function evaluateSieveRecord(
   const sourceRows = Array.isArray(record.details.sieveRows)
     ? record.details.sieveRows
     : [];
+  const sampleWeight = numericValue(record.details.sampleWeight);
   const rows: Array<Record<string, unknown>> = sourceRows.map((row, index) => {
     const values =
       typeof row === "object" && row !== null
         ? { ...(row as Record<string, unknown>) }
         : {};
+    const amountReturned = numericValue(values.amountReturned);
+    const existingPassingAmount = numericValue(values.passingAmount);
+    const passingAmount =
+      sampleWeight !== null && amountReturned !== null
+        ? rounded(sampleWeight - amountReturned)
+        : existingPassingAmount;
+    const passingPercentage =
+      sampleWeight !== null && sampleWeight > 0 && passingAmount !== null
+        ? rounded((passingAmount / sampleWeight) * 100)
+        : numericValue(values.passingPercentage);
     return {
       ...values,
       rowNo: referenceId(values.rowNo) ?? index + 1,
+      ...(amountReturned !== null ? { amountReturned } : {}),
+      ...(passingAmount !== null ? { passingAmount } : {}),
+      ...(passingPercentage !== null ? { passingPercentage } : {}),
     };
   });
 

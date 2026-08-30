@@ -64,6 +64,7 @@ function SieveRowsTable({ rows }: { rows: unknown[] }) {
           <tr className="border-b">
             <th className="p-2 text-left">No.</th>
             <th className="p-2 text-left">Sieve / Pore Size</th>
+            <th className="p-2 text-left">Amount Returned</th>
             <th className="p-2 text-left">Amount Passing</th>
             <th className="p-2 text-left">% Passing</th>
           </tr>
@@ -77,6 +78,7 @@ function SieveRowsTable({ rows }: { rows: unknown[] }) {
               <tr key={index} className="border-b last:border-b-0">
                 <td className="p-2 font-semibold">{String(values.rowNo ?? index + 1)}</td>
                 <td className="p-2">{String(values.sieveSize ?? "-")}</td>
+                <td className="p-2">{String(values.amountReturned ?? "-")}</td>
                 <td className="p-2">{String(values.passingAmount ?? "-")}</td>
                 <td className="p-2">{String(values.passingPercentage ?? "-")}</td>
               </tr>
