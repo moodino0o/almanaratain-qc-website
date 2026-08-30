@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { CheckCircle2, Search, Filter, Printer, FileText, Download } from "lucide-react";
-import { formatDateTime } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 
 export default function Reports() {
   const [search, setSearch] = useState("");
@@ -128,7 +128,7 @@ export default function Reports() {
                     <TableCell>{record.testType}</TableCell>
                     <TableCell>{record.location}</TableCell>
                     <TableCell>{record.material}</TableCell>
-                    <TableCell>{formatDateTime(record.sampleDate)}</TableCell>
+                    <TableCell>{formatDate(record.sampleDate)}</TableCell>
                     <TableCell className="text-right">
                       <Link 
                         href={`/reports/${record.id}`}

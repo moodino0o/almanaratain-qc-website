@@ -50,7 +50,7 @@ export default function RecordForm() {
   const createRecord = useCreateRecord();
 
   const [testType, setTestType] = useState<TestType>(TestType.Ready_Mix);
-  const [sampleDate, setSampleDate] = useState(new Date().toISOString().slice(0, 16));
+  const [sampleDate, setSampleDate] = useState(new Date().toISOString().slice(0, 10));
   const [locationValue, setLocationValue] = useState("");
   const [material, setMaterial] = useState("");
   const [testedBy, setTestedBy] = useState("");
@@ -262,9 +262,9 @@ export default function RecordForm() {
               </div>
 
               <div className="space-y-2">
-                <Label>Sample Date & Time <span className="text-destructive">*</span></Label>
+                <Label>Sample Date <span className="text-destructive">*</span></Label>
                 <Input 
-                  type="datetime-local" 
+                  type="date" 
                   value={sampleDate} 
                   onChange={e => setSampleDate(e.target.value)} 
                   required
@@ -355,6 +355,28 @@ export default function RecordForm() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
+              {testType === TestType.Ready_Mix && (
+                <div className="mb-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Slump (mm)</Label>
+                    <Input
+                      type="number"
+                      value={String(details.slump ?? "")}
+                      onChange={event => handleDetailChange("slump", event.target.value)}
+                      placeholder="Enter slump"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Temperature (°C)</Label>
+                    <Input
+                      type="number"
+                      value={String(details.temperature ?? "")}
+                      onChange={event => handleDetailChange("temperature", event.target.value)}
+                      placeholder="Enter temperature"
+                    />
+                  </div>
+                </div>
+              )}
               {usesTestRows ? (
                 <div className="space-y-3">
                   <div className="overflow-x-auto rounded-md border">

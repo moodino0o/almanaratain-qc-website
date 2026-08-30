@@ -3,7 +3,7 @@ import { useGetRecord, useUpdateRecord, useDeleteRecord, RecordStatus } from "@w
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatDateTime } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { CheckCircle2, AlertTriangle, XCircle, ArrowLeft, Printer, Trash2, Edit2, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -194,7 +194,7 @@ export default function RecordDetail() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Sample Date</p>
-                <p className="font-medium text-foreground">{formatDateTime(record.sampleDate)}</p>
+                <p className="font-medium text-foreground">{formatDate(record.sampleDate)}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Tested By</p>

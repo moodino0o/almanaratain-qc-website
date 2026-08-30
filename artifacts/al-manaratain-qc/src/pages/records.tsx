@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { CheckCircle2, AlertTriangle, XCircle, Search, Plus, Filter } from "lucide-react";
-import { formatDateTime } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 
 export default function Records() {
   const [search, setSearch] = useState("");
@@ -116,7 +116,7 @@ export default function Records() {
                     </TableCell>
                     <TableCell className="truncate max-w-[150px]">{record.location}</TableCell>
                     <TableCell className="truncate max-w-[150px]">{record.material}</TableCell>
-                    <TableCell>{formatDateTime(record.sampleDate)}</TableCell>
+                    <TableCell>{formatDate(record.sampleDate)}</TableCell>
                     <TableCell>{record.testedBy}</TableCell>
                     <TableCell>{getStatusBadge(record.status)}</TableCell>
                     <TableCell className="text-right">

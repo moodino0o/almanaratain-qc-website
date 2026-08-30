@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { CheckCircle2, AlertTriangle, XCircle, Plus, FileText, BarChart3, Clock, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { formatDateTime } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 
 export default function Home() {
   const { data: dashboard, isLoading, error } = useGetDashboard();
@@ -160,7 +160,7 @@ export default function Home() {
                         <TableCell className="font-medium">{String((record.details as Record<string, unknown>).referenceNumber || record.recordNo)}</TableCell>
                       <TableCell>{record.testType}</TableCell>
                       <TableCell>{record.material}</TableCell>
-                      <TableCell>{formatDateTime(record.sampleDate)}</TableCell>
+                      <TableCell>{formatDate(record.sampleDate)}</TableCell>
                       <TableCell>{getStatusBadge(record.status)}</TableCell>
                       <TableCell className="text-right">
                         <Link 
