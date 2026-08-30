@@ -1,17 +1,19 @@
 import { useParams, Link } from "wouter";
-import { useGetReport } from "@workspace/api-client-react";
-import type { QcRecord } from "@workspace/api-client-react";
+import {
+  useGetReport,
+  useListSieveStandards,
+  useListStrengthStandards,
+} from "@workspace/api-client-react";
+import type {
+  QcRecord,
+  SieveStandard,
+  StrengthStandard,
+} from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer } from "lucide-react";
 
 type DetailMap = QcRecord["details"];
-
-const keyLabel = (key: string) =>
-  key
-    .replace(/([A-Z])/g, " $1")
-    .replace(/[_-]/g, " ")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase())
-    .trim();
+type ValueMap = Record<string, unknown>;
 
 function textValue(value: unknown, fallback = "-") {
   if (value === null || value === undefined || value === "") return fallback;
@@ -30,6 +32,24 @@ function detailValue(details: DetailMap, keys: string[], fallback = "-") {
     }
   }
   return fallback;
+}
+
+function objectValue(value: unknown): ValueMap | null {
+  return typeof value === "object" && value !== null
+    ? value as ValueMap
+    : null;
+}
+
+function normalizedText(value: unknown) {
+  return String(value ?? "").trim().toLocaleLowerCase();
+}
+
+function matchesText(left: unknown, right: unknown) {
+  return normalizedText(left) === normalizedText(right);
+}
+
+function formatNumber(value: number, digits = 1) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(digits);
 }
 
 function formatReportDate(value: string | undefined | null) {
@@ -154,7 +174,7 @@ function SieveEvaluationTable({ value }: { value: unknown }) {
   const evaluation = value as Record<string, unknown>;
   const criteria = Array.isArray(evaluation.criteria) ? evaluation.criteria : [];
   return (
-    <div className="report-strength-block">
+    <div className="report-evaluation-block">
       <p className="report-centered-title">
         Sieve Evaluation: {textValue(evaluation.status)}{evaluation.reason ? ` — ${textValue(evaluation.reason)}` : ""}
       </p>
@@ -177,6 +197,139 @@ function SieveEvaluationTable({ value }: { value: unknown }) {
   );
 }
 
+function StrengthStandardsTable({
+  record,
+  standards,
+  evaluation,
+}: {
+  record: QcRecord;
+  standards: StrengthStandard[];
+  evaluation: ValueMap | null;
+}) {
+  const configuredStandards = standards
+    .filter((standard) => standard.testType === record.testType)
+    .sort((left, right) => left.id - right.id);
+  const rows = configuredStandards.length
+    ? configuredStandards
+    : evaluation?.requiredStrength != null
+      ? [{
+          id: -1,
+          testType: record.testType,
+          material: record.material,
+          blockType: typeof evaluation.blockType === "string" ? evaluation.blockType : null,
+          blockSize: typeof evaluation.blockSize === "string" ? evaluation.blockSize : null,
+          bsStandard: textValue(evaluation.bsStandard),
+          requiredStrength: Number(evaluation.requiredStrength),
+          strengthUnit: textValue(evaluation.strengthUnit, "N/mm²"),
+        } satisfies StrengthStandard]
+      : [];
+
+  if (!rows.length) return null;
+
+  const isBlocks = record.testType === "Blocks";
+  return (
+    <div className="report-standard-block">
+      <p className="report-centered-title">Standard Required Strength:</p>
+      <table className="report-table report-strength-table">
+        <thead>
+          <tr>
+            {isBlocks ? (
+              <>
+                <th>BLOCK TYPE</th>
+                <th>BLOCK SIZE</th>
+                <th>BS STANDARD</th>
+                <th>REQUIRED STRENGTH</th>
+              </>
+            ) : (
+              <>
+                <th>MIX TYPE</th>
+                <th>7 DAYS</th>
+                <th>28 DAYS</th>
+                <th>BS STANDARD</th>
+              </>
+            )}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((standard) => (
+            <tr key={standard.id}>
+              {isBlocks ? (
+                <>
+                  <td>{textValue(standard.blockType, standard.material)}</td>
+                  <td>{textValue(standard.blockSize)}</td>
+                  <td>{textValue(standard.bsStandard)}</td>
+                  <td>
+                    {formatNumber(standard.requiredStrength)} {standard.strengthUnit}
+                  </td>
+                </>
+              ) : (
+                <>
+                  <td>{standard.material}</td>
+                  <td>
+                    {formatNumber(standard.requiredStrength * 0.7)} {standard.strengthUnit}
+                  </td>
+                  <td>
+                    {formatNumber(standard.requiredStrength)} {standard.strengthUnit}
+                  </td>
+                  <td>{standard.bsStandard}</td>
+                </>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function SieveStandardsTable({
+  standards,
+  record,
+}: {
+  standards: SieveStandard[];
+  record: QcRecord;
+}) {
+  const matchingStandards = standards
+    .filter(
+      (standard) =>
+        standard.testType === record.testType &&
+        matchesText(standard.material, record.material),
+    )
+    .sort((left, right) => left.id - right.id);
+
+  if (!matchingStandards.length) return null;
+
+  return (
+    <div className="report-standard-block report-sieve-standard-block">
+      <p className="report-centered-title">
+        Applicable Sieve Standard: {matchingStandards[0].standardReference}
+      </p>
+      <table className="report-table report-strength-table">
+        <thead>
+          <tr>
+            <th>SIEVE / PORE SIZE</th>
+            <th>LIMIT</th>
+            <th>MEASUREMENT</th>
+          </tr>
+        </thead>
+        <tbody>
+          {matchingStandards.map((standard) => (
+            <tr key={standard.id}>
+              <td>{standard.sieveSize}</td>
+              <td>
+                {standard.minimum == null ? "—" : formatNumber(standard.minimum)} to{" "}
+                {standard.maximum == null ? "—" : formatNumber(standard.maximum)}{" "}
+                {standard.unit}
+              </td>
+              <td>{standard.measurementType === "amount" ? "Amount" : "Percentage"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function ReportField({ label, value }: { label: string; value: string }) {
   return (
     <div className="report-field">
@@ -190,7 +343,29 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
   return <h3 className="report-section-heading">{children}</h3>;
 }
 
-function ReadyMixReport({ record }: { record: QcRecord }) {
+function ReportFields({
+  entries,
+  className = "",
+}: {
+  entries: ReadonlyArray<readonly [string, string]>;
+  className?: string;
+}) {
+  return (
+    <div className={`report-fields ${className}`}>
+      {entries.map(([label, value]) => (
+        <ReportField key={label} label={label} value={value} />
+      ))}
+    </div>
+  );
+}
+
+function ReadyMixReport({
+  record,
+  standards,
+}: {
+  record: QcRecord;
+  standards: StrengthStandard[];
+}) {
   const details = record.details;
   const strengthEvaluation =
     typeof details.strengthEvaluation === "object" && details.strengthEvaluation !== null
@@ -379,78 +554,238 @@ function ReadyMixReport({ record }: { record: QcRecord }) {
       </table>
       <SpecimenRowsTable rows={testRows} ageLabel="Test Age" />
 
-      <div className="report-strength-block">
-        <p className="report-centered-title">Standard Required Strength:</p>
-        <table className="report-table report-strength-table">
-          <thead>
-            <tr>
-              <th>MIX TYPE</th>
-              <th>7 DAYS</th>
-              <th>28 DAYS</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>{designStrength}</td>
-              <td>{sevenDayStrength}</td>
-              <td>{twentyEightDayStrength}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <StrengthStandardsTable
+        record={record}
+        standards={standards}
+        evaluation={strengthEvaluation}
+      />
     </>
   );
 }
 
-function GenericReport({ record }: { record: QcRecord }) {
-  const entries = Object.entries(record.details).filter(
-    ([key]) => !["testRows", "sieveRows", "strengthEvaluation", "sieveEvaluation"].includes(key),
+function RecordContextFields({ record }: { record: QcRecord }) {
+  return (
+    <ReportFields
+      entries={[
+        ["Sample Date", formatReportDate(record.sampleDate)],
+        ["Location", record.location],
+        ["Material", record.material],
+        ["Tested By", record.testedBy],
+      ]}
+    />
   );
-  const testRows = Array.isArray(record.details.testRows) ? record.details.testRows : [];
-  const sieveRows = Array.isArray(record.details.sieveRows) ? record.details.sieveRows : [];
-  const strengthEvaluation =
-    typeof record.details.strengthEvaluation === "object" && record.details.strengthEvaluation !== null
-      ? record.details.strengthEvaluation as Record<string, unknown>
-      : null;
-  const sieveEvaluation =
-    typeof record.details.sieveEvaluation === "object" && record.details.sieveEvaluation !== null
-      ? record.details.sieveEvaluation as Record<string, unknown>
-      : null;
+}
+
+function BlocksReport({
+  record,
+  standards,
+}: {
+  record: QcRecord;
+  standards: StrengthStandard[];
+}) {
+  const details = record.details;
+  const evaluation = objectValue(details.strengthEvaluation);
+  const testRows = Array.isArray(details.testRows) ? details.testRows : [];
+  return (
+    <>
+      <div className="report-two-column">
+        <section>
+          <SectionHeading>Block Details</SectionHeading>
+          <ReportFields
+            entries={[
+              ["Block Type", detailValue(details, ["blockType"], record.material)],
+              ["Block Size (mm)", detailValue(details, ["blockSize"])],
+              ["Block No.", detailValue(details, ["blockNo", "blockNumber"])],
+              ["Machine", detailValue(details, ["machine"])],
+              ["Sample Date", formatReportDate(record.sampleDate)],
+            ]}
+          />
+        </section>
+        <section className="report-summary">
+          <SectionHeading>Test Result</SectionHeading>
+          <ReportFields
+            entries={[
+              ["Strength", detailValue(details, ["strength", "compressiveStrength"])],
+              ["Shape Factor", detailValue(details, ["shapeFactor"])],
+              ["Evaluation", textValue(evaluation?.status ?? record.status)],
+            ]}
+          />
+        </section>
+      </div>
+
+      <div className="report-two-column report-test-details">
+        <section>
+          <SectionHeading>Test Information</SectionHeading>
+          <RecordContextFields record={record} />
+        </section>
+        <section className="report-test-measures">
+          <ReportFields
+            entries={[
+              ["Required Minimum", evaluation?.requiredStrength == null
+                ? "-"
+                : `${textValue(evaluation.requiredStrength)} ${textValue(evaluation.strengthUnit, "N/mm²")}`],
+              ["Applicable BS", textValue(evaluation?.bsStandard)],
+            ]}
+          />
+        </section>
+      </div>
+
+      <SpecimenRowsTable rows={testRows} ageLabel="Sample Age" />
+      <StrengthStandardsTable record={record} standards={standards} evaluation={evaluation} />
+    </>
+  );
+}
+
+function SieveReport({
+  record,
+  standards,
+}: {
+  record: QcRecord;
+  standards: SieveStandard[];
+}) {
+  const details = record.details;
+  const sieveRows = Array.isArray(details.sieveRows) ? details.sieveRows : [];
+  const evaluation = objectValue(details.sieveEvaluation);
+  const isAggregate = record.testType === "Aggregate Sieve";
+  const measurementEntries = isAggregate
+    ? [
+        ["Supplier", detailValue(details, ["supplier"])],
+        ["Material Condition", detailValue(details, ["materialCondition", "condition"])],
+        ["Dry Sample", detailValue(details, ["drySample"])],
+        ["Wet Sample", detailValue(details, ["wetSample"])],
+        ["Fineness Modulus", detailValue(details, ["finenessModulus"])],
+      ] as const
+    : [
+        ["Supplier", detailValue(details, ["supplier"])],
+        ["Condition", detailValue(details, ["condition"])],
+        ["Dry Sample", detailValue(details, ["drySample"])],
+        ["Wet Sample", detailValue(details, ["wetSample"])],
+        ["Silt Before", detailValue(details, ["siltBefore"])],
+        ["Silt After", detailValue(details, ["siltAfter"])],
+      ] as const;
+
+  return (
+    <>
+      <div className="report-two-column">
+        <section>
+          <SectionHeading>Sample Details</SectionHeading>
+          <ReportFields
+            entries={[
+              ["Sample Date", formatReportDate(record.sampleDate)],
+              ["Location", record.location],
+              ["Material", record.material],
+              ["Tested By", record.testedBy],
+              ["Sample Weight", detailValue(details, ["sampleWeight"])],
+            ]}
+          />
+        </section>
+        <section className="report-summary">
+          <SectionHeading>{isAggregate ? "Aggregate Details" : "Sand Details"}</SectionHeading>
+          <ReportFields entries={measurementEntries} />
+        </section>
+      </div>
+
+      <SieveRowsTable rows={sieveRows} />
+      <SieveStandardsTable standards={standards} record={record} />
+      {evaluation && (
+        <SieveEvaluationTable value={evaluation} />
+      )}
+    </>
+  );
+}
+
+function PavingBlocksReport({ record, standards }: {
+  record: QcRecord;
+  standards: StrengthStandard[];
+}) {
+  const details = record.details;
+  const evaluation = objectValue(details.strengthEvaluation);
+  return (
+    <>
+      <div className="report-two-column">
+        <section>
+          <SectionHeading>Paving Block Details</SectionHeading>
+          <ReportFields
+            entries={[
+              ["Sample Date", formatReportDate(record.sampleDate)],
+              ["Location", record.location],
+              ["Block Type", detailValue(details, ["blockType"])],
+              ["Block Size (mm)", detailValue(details, ["blockSize"])],
+              ["Machine", detailValue(details, ["machine"])],
+            ]}
+          />
+        </section>
+        <section className="report-summary">
+          <SectionHeading>Test Result</SectionHeading>
+          <ReportFields
+            entries={[
+              ["Target", detailValue(details, ["target"])],
+              ["Strength", detailValue(details, ["strength", "compressiveStrength"])],
+              ["Correction Factor", detailValue(details, ["correctionFactor"])],
+              ["Evaluation", textValue(evaluation?.status ?? record.status)],
+            ]}
+          />
+        </section>
+      </div>
+      <div className="report-two-column report-test-details">
+        <section>
+          <SectionHeading>Test Information</SectionHeading>
+          <RecordContextFields record={record} />
+        </section>
+        <section className="report-test-measures">
+          <ReportFields
+            entries={[
+              ["Required Minimum", evaluation?.requiredStrength == null
+                ? "-"
+                : `${textValue(evaluation.requiredStrength)} ${textValue(evaluation.strengthUnit, "N/mm²")}`],
+              ["Applicable BS", textValue(evaluation?.bsStandard)],
+            ]}
+          />
+        </section>
+      </div>
+      <SpecimenRowsTable
+        rows={Array.isArray(details.testRows) ? details.testRows : []}
+        ageLabel="Sample Age"
+      />
+      <StrengthStandardsTable record={record} standards={standards} evaluation={evaluation} />
+    </>
+  );
+}
+
+function WaterReport({ record }: { record: QcRecord }) {
+  const details = record.details;
+  return (
+    <section>
+      <SectionHeading>Water Quality Details</SectionHeading>
+      <div className="report-two-column">
+        <ReportFields
+          entries={[
+            ["Sample Date", formatReportDate(record.sampleDate)],
+            ["Location", record.location],
+            ["Material", record.material],
+            ["Source", detailValue(details, ["source"])],
+          ]}
+        />
+        <ReportFields
+          className="report-summary"
+          entries={[
+            ["Tested By", record.testedBy],
+            ["pH", detailValue(details, ["ph", "pH"])],
+            ["TDS", detailValue(details, ["tds"])],
+            ["Chloride", detailValue(details, ["chloride"])],
+            ["Sulphate", detailValue(details, ["sulphate", "sulfate"])],
+          ]}
+        />
+      </div>
+    </section>
+  );
+}
+
+function FallbackReport({ record }: { record: QcRecord }) {
   return (
     <section>
       <SectionHeading>{record.testType} Details</SectionHeading>
-      <div className="report-generic-grid">
-        <ReportField label="Sample Date" value={formatReportDate(record.sampleDate)} />
-        <ReportField label="Location" value={record.location} />
-        <ReportField label="Material" value={record.material} />
-        <ReportField label="Tested By" value={record.testedBy} />
-        {strengthEvaluation && (
-          <>
-            <ReportField label="Applicable BS" value={textValue(strengthEvaluation.bsStandard)} />
-            <ReportField
-              label="Required Minimum"
-              value={
-                strengthEvaluation.requiredStrength == null
-                  ? "-"
-                  : `${textValue(strengthEvaluation.requiredStrength)} ${textValue(strengthEvaluation.strengthUnit, "N/mm²")}`
-              }
-            />
-            <ReportField label="Automatic Evaluation" value={textValue(strengthEvaluation.status)} />
-          </>
-        )}
-        {sieveEvaluation && (
-          <>
-            <ReportField label="Applicable Reference" value={textValue(sieveEvaluation.standardReference)} />
-            <ReportField label="Automatic Evaluation" value={textValue(sieveEvaluation.status)} />
-          </>
-        )}
-        {entries.map(([key, value]) => (
-          <ReportField key={key} label={keyLabel(key)} value={textValue(value)} />
-        ))}
-      </div>
-      <SpecimenRowsTable rows={testRows} ageLabel={record.testType === "Blocks" ? "Sample Age" : "Test Age"} />
-      <SieveRowsTable rows={sieveRows} />
-      <SieveEvaluationTable value={sieveEvaluation} />
+      <RecordContextFields record={record} />
     </section>
   );
 }
@@ -458,7 +793,12 @@ function GenericReport({ record }: { record: QcRecord }) {
 export default function ReportPrint() {
   const { id } = useParams();
   const reportId = Number(id);
-  const { data: report, isLoading, error } = useGetReport(reportId);
+  const { data: report, isLoading: reportLoading, error } = useGetReport(reportId);
+  const { data: strengthStandards = [], isLoading: strengthStandardsLoading } =
+    useListStrengthStandards();
+  const { data: sieveStandards = [], isLoading: sieveStandardsLoading } =
+    useListSieveStandards();
+  const isLoading = reportLoading || strengthStandardsLoading || sieveStandardsLoading;
 
   if (isLoading) {
     return (
@@ -476,10 +816,18 @@ export default function ReportPrint() {
   }
 
   const { record, companyName, companySubtitle } = report;
+  const strengthEvaluation = objectValue(record.details.strengthEvaluation);
+  const configuredSieveStandards = sieveStandards
+    .filter(
+      (standard) =>
+        standard.testType === record.testType &&
+        matchesText(standard.material, record.material),
+    )
+    .sort((left, right) => left.id - right.id);
   const configuredStandard =
-    typeof record.details.strengthEvaluation === "object" && record.details.strengthEvaluation !== null
-      ? (record.details.strengthEvaluation as Record<string, unknown>).bsStandard
-      : null;
+    strengthEvaluation?.bsStandard ??
+    configuredSieveStandards[0]?.standardReference ??
+    null;
 
   return (
     <div className="report-page">
@@ -513,17 +861,25 @@ export default function ReportPrint() {
           </div>
         </header>
         <p className="report-standard">
-          {record.testType === "Ready Mix"
-            ? configuredStandard
-              ? `ACCORDING TO ${String(configuredStandard)}`
-              : "ACCORDING TO BS EN 12390-3:2009"
-            : "QUALITY CONTROL TEST REPORT"}
+          {configuredStandard
+            ? `ACCORDING TO ${String(configuredStandard)}`
+            : record.testType === "Ready Mix"
+              ? "ACCORDING TO BS EN 12390-3:2009"
+              : "QUALITY CONTROL TEST REPORT"}
         </p>
 
         {record.testType === "Ready Mix" ? (
-          <ReadyMixReport record={record} />
+          <ReadyMixReport record={record} standards={strengthStandards} />
+        ) : record.testType === "Blocks" ? (
+          <BlocksReport record={record} standards={strengthStandards} />
+        ) : record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve" ? (
+          <SieveReport record={record} standards={sieveStandards} />
+        ) : record.testType === "Paving Blocks" ? (
+          <PavingBlocksReport record={record} standards={strengthStandards} />
+        ) : record.testType === "Water" ? (
+          <WaterReport record={record} />
         ) : (
-          <GenericReport record={record} />
+          <FallbackReport record={record} />
         )}
 
         {record.remarks && (
