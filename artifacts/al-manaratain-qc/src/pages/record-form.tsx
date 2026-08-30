@@ -14,6 +14,17 @@ import { toast } from "sonner";
 import { Link } from "wouter";
 import { TypeaheadInput } from "@/components/ui/typeahead-input";
 import {
+  calculateWaterAbsorption,
+  createEmptyRow,
+  prepareDetailsForForm,
+  prepareRecordForForm,
+  sieveSizeNumber,
+  stringValue,
+  toFormRow,
+  numericInputValue,
+  type TestRow,
+} from "./record-form-utils";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -22,89 +33,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-type TestRow = {
-  id: number;
-  length: string;
-  width: string;
-  height: string;
-  dryWeight: string;
-  wetWeight: string;
-  sampleAge: string;
-  testAge: string;
-  load: string;
-  strength: string;
-  waterAbsorption: string;
-  sieveSize: string;
-  sieveSizeReferenceItemId: number | null;
-  amountReturned: string;
-  passingAmount: string;
-  passingPercentage: string;
-};
-
-const createEmptyRow = (id: number): TestRow => ({
-  id,
-  length: "",
-  width: "",
-  height: "",
-  dryWeight: "",
-  wetWeight: "",
-  sampleAge: "",
-  testAge: "",
-  load: "",
-  strength: "",
-  waterAbsorption: "",
-  sieveSize: "",
-  sieveSizeReferenceItemId: null,
-  amountReturned: "",
-  passingAmount: "",
-  passingPercentage: "",
-});
-
 const REFERENCE_NUMBER_MAX_LENGTH = 32;
-const stringValue = (value: unknown) => (value == null ? "" : String(value));
-
-const numericInputValue = (value: unknown) => {
-  const match = stringValue(value).match(/[-+]?(?:\d+\.?\d*|\.\d+)/);
-  return match?.[0] ?? "";
-};
-
-const calculateWaterAbsorption = (dryWeight: unknown, wetWeight: unknown) => {
-  const dry = Number(numericInputValue(dryWeight));
-  const wet = Number(numericInputValue(wetWeight));
-  if (!numericInputValue(dryWeight) || !numericInputValue(wetWeight) || !Number.isFinite(dry) || !Number.isFinite(wet) || dry <= 0) {
-    return "";
-  }
-  return (((wet - dry) / dry) * 100).toFixed(2);
-};
-
-const sieveSizeNumber = (value: string) => {
-  const parsed = Number(numericInputValue(value));
-  return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
-};
-
-const toFormRow = (row: unknown, id: number): TestRow => {
-  const values = typeof row === "object" && row !== null ? row as Record<string, unknown> : {};
-  return {
-    id,
-    length: numericInputValue(values.length),
-    width: numericInputValue(values.width),
-    height: numericInputValue(values.height),
-    dryWeight: numericInputValue(values.dryWeight),
-    wetWeight: numericInputValue(values.wetWeight),
-    sampleAge: numericInputValue(values.sampleAge),
-    testAge: numericInputValue(values.testAge),
-    load: numericInputValue(values.load),
-    strength: numericInputValue(values.strength ?? values.calculatedStrength ?? values.compressiveStrength),
-    waterAbsorption: calculateWaterAbsorption(values.dryWeight, values.wetWeight),
-    sieveSize: stringValue(values.sieveSize),
-    sieveSizeReferenceItemId: numericInputValue(values.sieveSizeReferenceItemId)
-      ? Number(numericInputValue(values.sieveSizeReferenceItemId))
-      : null,
-    amountReturned: numericInputValue(values.amountReturned),
-    passingAmount: numericInputValue(values.passingAmount),
-    passingPercentage: numericInputValue(values.passingPercentage),
-  };
-};
 
 export default function RecordForm() {
   const [, setLocation] = useLocation();
@@ -163,34 +92,7 @@ export default function RecordForm() {
   useEffect(() => {
     if (!isEditing || !existingRecord || initializedRecordId.current === recordId) return;
 
-    const savedDetails =
-      typeof existingRecord.details === "object" && existingRecord.details !== null
-        ? { ...existingRecord.details as Record<string, unknown> }
-        : {};
-    const savedRows = Array.isArray(savedDetails.sieveRows)
-      ? savedDetails.sieveRows
-      : Array.isArray(savedDetails.testRows)
-        ? savedDetails.testRows
-        : [];
-    const numericDetailKeys = [
-      "slump",
-      "temperature",
-      "weight",
-      "sampleWeight",
-      "dryWeight",
-      "wetWeight",
-      "length",
-      "width",
-      "height",
-      "compressiveStrength",
-      "passing10mm",
-      "passing5mm",
-      "finenessModulus",
-      "moisture",
-    ];
-    for (const key of numericDetailKeys) {
-      if (key in savedDetails) savedDetails[key] = numericInputValue(savedDetails[key]);
-    }
+    const { details: savedDetails, sourceRows: savedRows } = prepareDetailsForForm(existingRecord.details);
 
     setTestType(existingRecord.testType);
     setSampleDate(existingRecord.sampleDate.slice(0, 10));
@@ -224,55 +126,24 @@ export default function RecordForm() {
       return;
     }
 
-    const sourceDetails =
-      typeof duplicateSource.details === "object" && duplicateSource.details !== null
-        ? { ...duplicateSource.details }
-        : {};
-    const numericDetailKeys = [
-      "slump",
-      "temperature",
-      "weight",
-      "sampleWeight",
-      "dryWeight",
-      "wetWeight",
-      "length",
-      "width",
-      "height",
-      "compressiveStrength",
-      "passing10mm",
-      "passing5mm",
-      "finenessModulus",
-      "moisture",
-    ];
-    for (const key of numericDetailKeys) {
-      if (key in sourceDetails) sourceDetails[key] = numericInputValue(sourceDetails[key]);
-    }
-
-    const sourceRows = Array.isArray(sourceDetails.sieveRows)
-      ? sourceDetails.sieveRows
-      : Array.isArray(sourceDetails.testRows)
-        ? sourceDetails.testRows
-        : [];
-
-    setTestType(duplicateSource.testType);
-    setSampleDate(duplicateSource.sampleDate.slice(0, 10));
-    setLocationValue(duplicateSource.location);
-    setMaterial(duplicateSource.material);
-    setTestedBy(duplicateSource.testedBy);
-    setRemarks(duplicateSource.remarks ?? "");
-    setReferenceNumber(stringValue(sourceDetails.referenceNumber));
-    setCustomerName(stringValue(sourceDetails.customerName));
-    setCustomerLocation(stringValue(sourceDetails.customerLocation));
-    setMachine(stringValue(sourceDetails.machine));
-    setSelectedStrengthStandardId(stringValue(sourceDetails.strengthStandardId));
-    setDetails(sourceDetails);
+    const formValues = prepareRecordForForm(duplicateSource);
+    setTestType(formValues.testType);
+    setSampleDate(formValues.sampleDate);
+    setLocationValue(formValues.location);
+    setMaterial(formValues.material);
+    setTestedBy(formValues.testedBy);
+    setRemarks(formValues.remarks);
+    setReferenceNumber(formValues.referenceNumber);
+    setCustomerName(formValues.customerName);
+    setCustomerLocation(formValues.customerLocation);
+    setMachine(formValues.machine);
+    setSelectedStrengthStandardId(formValues.selectedStrengthStandardId);
+    setDetails(formValues.details);
     setTestRows(
-      sourceRows.length
-        ? sourceRows.map((row, index) => toFormRow(row, index + 1))
-        : [createEmptyRow(1)],
+      formValues.testRows,
     );
-    sieveContextKeyRef.current = `${duplicateSource.testType}|${String(sourceDetails.materialReferenceItemId ?? duplicateSource.material)}`;
-    nextRowId.current = Math.max(sourceRows.length + 1, 2);
+    sieveContextKeyRef.current = `${formValues.testType}|${String(formValues.details.materialReferenceItemId ?? formValues.material)}`;
+    nextRowId.current = Math.max(formValues.testRows.length + 1, 2);
     setDuplicateSourceId("");
     setIsDuplicateOpen(false);
     toast.success(`Copied ${duplicateSource.recordNo}. Review the values, then save as a new record.`);
