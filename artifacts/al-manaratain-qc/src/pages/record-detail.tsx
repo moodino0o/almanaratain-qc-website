@@ -122,6 +122,11 @@ function StrengthEvaluation({ value }: { value: unknown }) {
   );
 }
 
+function detailText(details: Record<string, unknown>, key: string, fallback = "—") {
+  const value = details[key];
+  return value === undefined || value === null || value === "" ? fallback : String(value);
+}
+
 function SieveEvaluation({ value }: { value: unknown }) {
   if (typeof value !== "object" || value === null) {
     return <span className="text-muted-foreground">No automatic sieve evaluation has been recorded.</span>;
@@ -198,6 +203,16 @@ export default function RecordDetail() {
 
   const isStrengthEvaluated = record.testType === "Ready Mix" || record.testType === "Blocks";
   const isSieveEvaluated = record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve";
+  const recordDetails = record.details as Record<string, unknown>;
+  const readyMixContext = [
+    ["Customer Name", detailText(recordDetails, "customerName", record.location)],
+    ["Location", detailText(recordDetails, "customerLocation", record.location)],
+    ["Slump", detailText(recordDetails, "slump")],
+    ["Temperature", detailText(recordDetails, "temperature")],
+    ["Reference Number", detailText(recordDetails, "referenceNumber")],
+    ["Sample Date", formatDate(record.sampleDate)],
+    ["Material", record.material],
+  ] as const;
 
   const handleDelete = () => {
     if (!confirm("Are you sure you want to delete this record? This action cannot be undone.")) return;
@@ -320,29 +335,40 @@ export default function RecordDetail() {
               <CardTitle>Context Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Material</p>
-                <p className="font-medium text-foreground">{record.material}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Location</p>
-                <p className="font-medium text-foreground">{record.location}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Sample Date</p>
-                <p className="font-medium text-foreground">{formatDate(record.sampleDate)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Tested By</p>
-                <p className="font-medium text-foreground">{record.testedBy}</p>
-              </div>
-              {record.testType === "Ready Mix" && (
+              {record.testType === "Ready Mix" ? (
+                <>
+                  {readyMixContext.map(([label, value]) => (
+                    <div key={label}>
+                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">{label}</p>
+                      <p className="font-medium text-foreground">{value}</p>
+                    </div>
+                  ))}
+                  <div className="border-t pt-4">
+                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Tested By</p>
+                    <p className="font-medium text-foreground">{record.testedBy}</p>
+                  </div>
+                </>
+              ) : (
                 <div>
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Reference Number</p>
-                  <p className="font-medium text-foreground">
-                    {String(record.details.referenceNumber ?? "—")}
-                  </p>
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Material</p>
+                  <p className="font-medium text-foreground">{record.material}</p>
                 </div>
+              )}
+              {record.testType !== "Ready Mix" && (
+                <>
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Location</p>
+                    <p className="font-medium text-foreground">{record.location}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Sample Date</p>
+                    <p className="font-medium text-foreground">{formatDate(record.sampleDate)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Tested By</p>
+                    <p className="font-medium text-foreground">{record.testedBy}</p>
+                  </div>
+                </>
               )}
               {record.reviewedBy && (
                 <div>

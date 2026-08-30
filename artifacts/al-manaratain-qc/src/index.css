@@ -219,16 +219,64 @@
 }
 
 .report-ready-mix-info .report-fields {
-  grid-template-columns: 1fr;
-  gap: 1.6mm;
-}
-
-.report-ready-mix-info .report-field {
-  grid-template-columns: 42mm minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.8mm 10mm;
 }
 
 .report-ready-mix-results {
   margin-top: 5mm;
+}
+
+.report-ready-mix-measures {
+  margin-top: 4mm;
+}
+
+.report-measure-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.8mm 8mm;
+}
+
+.report-compliance-block {
+  margin-top: 5mm;
+  border-top: 1px solid #111;
+  padding-top: 2mm;
+}
+
+.report-compliance-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2mm 5mm;
+  text-align: center;
+}
+
+.report-compliance-grid span {
+  display: block;
+  margin-bottom: 0.8mm;
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.report-compliance-grid strong {
+  display: block;
+  font-size: 10px;
+}
+
+.report-compliance-status {
+  font-weight: 700;
+}
+
+.report-compliance-status.passed {
+  color: #16733b;
+}
+
+.report-compliance-status.failed {
+  color: #b42318;
+}
+
+.report-compliance-status.review {
+  color: #996515;
 }
 
 .report-field {
@@ -301,6 +349,10 @@
 .report-results-table td {
   font-size: 10px;
   font-weight: 600;
+}
+
+.report-results-table th {
+  font-size: 7.5px;
 }
 
 .report-specimen-block {

@@ -322,6 +322,75 @@ function StrengthStandardsTable({
   );
 }
 
+function ReadyMixComplianceBlock({
+  record,
+  standards,
+}: {
+  record: QcRecord;
+  standards: StrengthStandard[];
+}) {
+  const evaluation = objectValue(record.details.strengthEvaluation);
+  const configuredStandard = standards
+    .filter(
+      (standard) =>
+        standard.testType === "Ready Mix" &&
+        matchesText(standard.material, record.material),
+    )
+    .sort((left, right) => left.id - right.id)[0];
+  const status = textValue(evaluation?.status, record.status);
+  const statusClass = status.toLocaleLowerCase();
+  const standardReference = textValue(
+    evaluation?.bsStandard ?? configuredStandard?.bsStandard,
+    "Not configured",
+  );
+  const requiredStrength =
+    numericValue(evaluation?.requiredStrength) ?? configuredStandard?.requiredStrength ?? null;
+  const reportedStrength = detailValue(record.details, [
+    "avg28To29Days",
+    "average28To29Days",
+    "twentyEightDayStrength",
+    "strength28Days",
+    "averageStrength",
+    "compressiveStrength",
+  ]);
+  const reason =
+    textValue(evaluation?.reason, "") ||
+    (status === "Passed"
+      ? "The reported result meets the configured minimum strength."
+      : status === "Failed"
+        ? "The reported result does not meet the configured minimum strength."
+        : "The result cannot be confirmed against a configured BS strength standard.");
+
+  return (
+    <section className="report-compliance-block">
+      <SectionHeading>BS Standard Compliance</SectionHeading>
+      <div className="report-compliance-grid">
+        <div>
+          <span>BS Standard</span>
+          <strong>{standardReference}</strong>
+        </div>
+        <div>
+          <span>Required Minimum</span>
+          <strong>
+            {requiredStrength === null
+              ? "Not configured"
+              : `${formatNumber(requiredStrength)} ${textValue(evaluation?.strengthUnit, configuredStandard?.strengthUnit ?? "N/mm²")}`}
+          </strong>
+        </div>
+        <div>
+          <span>Reported Strength</span>
+          <strong>{reportedStrength}</strong>
+        </div>
+        <div>
+          <span>Compliance</span>
+          <strong className={`report-compliance-status ${statusClass}`}>{status}</strong>
+        </div>
+      </div>
+      <p className="report-compliance-reason">{reason}</p>
+    </section>
+  );
+}
+
 function SieveStandardsTable({
   standards,
   record,
@@ -401,8 +470,10 @@ function ReportFields({
 
 function ReadyMixReport({
   record,
+  standards,
 }: {
   record: QcRecord;
+  standards: StrengthStandard[];
 }) {
   const details = record.details;
   const testRows = Array.isArray(details.testRows)
@@ -424,48 +495,44 @@ function ReadyMixReport({
   return (
     <>
       <section className="report-ready-mix-info">
-        <SectionHeading>Ready Mix Test Information</SectionHeading>
-        <div className="report-fields">
-          <ReportField
-            label="Customer Name"
-            value={detailValue(details, ["customerName", "customer"], record.location)}
-          />
-          <ReportField
-            label="Location"
-            value={detailValue(details, ["customerLocation"], record.location)}
-          />
-          <ReportField
-            label="Slump"
-            value={detailValue(details, ["slump", "slumpTest"])}
-          />
-          <ReportField
-            label="Temperature"
-            value={detailValue(details, ["temperature"])}
-          />
-          <ReportField
-            label="Reference Number"
-            value={detailValue(details, ["referenceNumber"])}
-          />
-          <ReportField
-            label="Sample Date"
-            value={formatReportDate(record.sampleDate)}
-          />
-          <ReportField label="Material" value={record.material} />
+        <SectionHeading>General Information</SectionHeading>
+        <ReportFields
+          entries={[
+            ["Sample Date", formatReportDate(record.sampleDate)],
+            ["Plant / Production Location", record.location],
+            ["Material / Product", record.material],
+            ["Tested By (Technician)", record.testedBy],
+            ["Reference Number", detailValue(details, ["referenceNumber"])],
+            ["Ready Mix Customer Name", detailValue(details, ["customerName", "customer"], record.location)],
+            ["Customer Location", detailValue(details, ["customerLocation"], record.location)],
+          ]}
+        />
+      </section>
+
+      <section className="report-ready-mix-measures">
+        <SectionHeading>Measurement Details: Ready Mix</SectionHeading>
+        <div className="report-measure-grid">
+          <ReportField label="Slump (mm)" value={detailValue(details, ["slump", "slumpTest"])} />
+          <ReportField label="Temperature (°C)" value={detailValue(details, ["temperature"])} />
+          <ReportField label="Air Content (%)" value={detailValue(details, ["airContent"])} />
         </div>
       </section>
 
       <section className="report-ready-mix-results">
-        <SectionHeading>Test Results</SectionHeading>
+        <SectionHeading>Specimen Measurements</SectionHeading>
         <table className="report-table report-results-table">
           <thead>
             <tr>
-              <th>Age (days)</th>
+              <th>No.</th>
+              <th>Test Age</th>
               <th>Length (mm)</th>
               <th>Width (mm)</th>
               <th>Height (mm)</th>
-              <th>Density (kg/m³)</th>
+              <th>Dry Weight</th>
+              <th>Wet Weight</th>
               <th>Water Absorption (%)</th>
-              <th>Strength (N/mm²)</th>
+              <th>Load (kN)</th>
+              <th>Calculated Strength</th>
             </tr>
           </thead>
           <tbody>
@@ -487,6 +554,7 @@ function ReadyMixReport({
                 height: values.height || detailValue(details, ["height"], ""),
                 dryWeight: values.dryWeight || detailValue(details, ["dryWeight"], ""),
                 wetWeight: values.wetWeight || detailValue(details, ["wetWeight"], ""),
+                load: values.load || detailValue(details, ["load"], ""),
                 strength:
                   values.calculatedStrength ||
                   values.strength ||
@@ -495,12 +563,15 @@ function ReadyMixReport({
               };
               return (
                 <tr key={index}>
+                  <td>{index + 1}</td>
                   <td>{textValue(displayValues.testAge)}</td>
                   <td>{textValue(displayValues.length)}</td>
                   <td>{textValue(displayValues.width)}</td>
                   <td>{textValue(displayValues.height)}</td>
-                  <td>{calculatedDensity(displayValues)}</td>
+                  <td>{textValue(displayValues.dryWeight)}</td>
+                  <td>{textValue(displayValues.wetWeight)}</td>
                   <td>{calculatedWaterAbsorption(displayValues)}</td>
+                  <td>{textValue(displayValues.load)}</td>
                   <td>{textValue(displayValues.strength)}</td>
                 </tr>
               );
@@ -508,6 +579,7 @@ function ReadyMixReport({
           </tbody>
         </table>
       </section>
+      <ReadyMixComplianceBlock record={record} standards={standards} />
     </>
   );
 }
