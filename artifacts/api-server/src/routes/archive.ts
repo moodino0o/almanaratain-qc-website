@@ -4,7 +4,7 @@ import {
   CreateArchiveDocumentResponse,
   GetArchiveDocumentResponse,
   ListArchiveResponse,
-  RetireArchiveDocumentParams,
+  GetArchiveDocumentParams,
 } from "@workspace/api-zod";
 import { archiveDocumentsTable, db } from "@workspace/db";
 import { desc, eq } from "drizzle-orm";
@@ -24,6 +24,7 @@ function getArchiveManagerEmails(): Set<string> {
       .filter(Boolean),
   );
 }
+
 function requireUser(req: Request, res: Response): boolean {
   if (!req.isAuthenticated()) {
     res.status(401).json({ error: "Authentication required" });
@@ -41,6 +42,7 @@ function requireArchiveManager(req: Request, res: Response): boolean {
   }
   return true;
 }
+
 function toDocument(row: typeof archiveDocumentsTable.$inferSelect) {
   return {
     id: row.id,
@@ -111,15 +113,15 @@ router.post("/archive/documents", async (req, res) => {
   }
   try {
     await storage.getObjectEntityFile(input.objectPath);
-  const [row] = await db
-    .select()
-    .from(archiveDocumentsTable)
-    .where(eq(archiveDocumentsTable.id, id));
-
-    const [deleted] = await db
-      .delete(archiveDocumentsTable)
-      .where(eq(archiveDocumentsTable.id, id))
-      .returning({ id: archiveDocumentsTable.id });
+    const [row] = await db
+      .insert(archiveDocumentsTable)
+      .values({
+        ...input,
+        documentDate: input.documentDate.toISOString().slice(0, 10),
+        description: input.description ?? "",
+        uploadedBy: req.user!.id,
+      })
+      .returning();
     res.status(201).json(CreateArchiveDocumentResponse.parse(toDocument(row)));
   } catch (error) {
     req.log.error({ err: error }, "Unable to save archive document");
@@ -129,16 +131,11 @@ router.post("/archive/documents", async (req, res) => {
 
 router.get("/archive/documents/:id", async (req, res) => {
   if (!requireUser(req, res)) return;
-  const id = parsedParams.data.id;
+  const id = Number(req.params.id);
   const [row] = await db
     .select()
     .from(archiveDocumentsTable)
     .where(eq(archiveDocumentsTable.id, id));
-
-    const [deleted] = await db
-      .delete(archiveDocumentsTable)
-      .where(eq(archiveDocumentsTable.id, id))
-      .returning({ id: archiveDocumentsTable.id });
   if (!row) {
     res.status(404).json({ error: "Document not found" });
     return;
@@ -171,7 +168,6 @@ async function serveContent(req: Request, res: Response, download: boolean): Pro
       return;
     }
     Readable.fromWeb(response.body as ReadableStream<Uint8Array>).pipe(res);
-    return;
   } catch (error) {
     if (error instanceof ObjectNotFoundError) {
       res.status(404).json({ error: "Stored file not found" });
@@ -181,5 +177,33 @@ async function serveContent(req: Request, res: Response, download: boolean): Pro
   }
 }
 
-  const parsedParams = RetireArchiveDocumentParams.safeParse(req.params);
+router.get("/archive/documents/:id/content", (req, res) => serveContent(req, res, false));
+router.get("/archive/documents/:id/download", (req, res) => serveContent(req, res, true));
+
+router.delete("/archive/documents/:id", async (req, res) => {
+  if (!requireArchiveManager(req, res)) return;
+  const parsedParams = GetArchiveDocumentParams.safeParse(req.params);
+  if (!parsedParams.success) {
+    res.status(400).json({ error: "Invalid document id" });
+    return;
+  }
+  const id = parsedParams.data.id;
+  const [row] = await db
+    .select()
+    .from(archiveDocumentsTable)
+    .where(eq(archiveDocumentsTable.id, id));
+  if (!row) {
+    res.status(404).json({ error: "Document not found" });
+    return;
+  }
+  try {
+    await storage.deleteObjectEntity(row.objectPath);
+    await db.delete(archiveDocumentsTable).where(eq(archiveDocumentsTable.id, id));
+    res.status(204).send();
+  } catch (error) {
+    req.log.error({ err: error, documentId: id }, "Unable to retire archive document");
+    res.status(500).json({ error: "Unable to clean up the stored file or metadata" });
+  }
+});
+
 export default router;
