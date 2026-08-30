@@ -12,8 +12,8 @@ import {
 } from "@/components/ui/command";
 import {
   Popover,
+  PopoverAnchor,
   PopoverContent,
-  PopoverTrigger,
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { filterTypeaheadOptions } from "./typeahead-options";
@@ -68,28 +68,37 @@ export function TypeaheadInput({
           if (!nextOpen) setShowAllOptions(false);
         }}
       >
-        <div className="relative">
-          <Input
-            value={inputValue}
-            onChange={handleInputChange}
-            placeholder={placeholder}
-            onFocus={() => setOpen(true)}
-            aria-autocomplete="list"
-            aria-expanded={open}
-            className="pr-10"
-          />
-          <PopoverTrigger asChild>
+        <PopoverAnchor asChild>
+          <div className="relative">
+            <Input
+              value={inputValue}
+              onChange={handleInputChange}
+              placeholder={placeholder}
+              onFocus={() => setOpen(true)}
+              aria-autocomplete="list"
+              aria-expanded={open}
+              className="pr-10"
+            />
             <Button
               type="button"
               variant="ghost"
               size="icon"
               className="absolute right-0 top-0 h-full w-9 px-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
-              onClick={() => setShowAllOptions(true)}
+              onPointerDown={(event) => {
+                event.preventDefault();
+                setShowAllOptions(true);
+                setOpen(true);
+              }}
+              onClick={() => {
+                setShowAllOptions(true);
+                setOpen(true);
+              }}
+              aria-label={`Show all ${placeholder.toLowerCase().replace("select or type", "").trim() || "options"}`}
             >
               <ChevronsUpDown className="h-4 w-4 opacity-50" />
             </Button>
-          </PopoverTrigger>
-        </div>
+          </div>
+        </PopoverAnchor>
         <PopoverContent
           className="w-[var(--radix-popover-trigger-width)] p-0"
           align="start"
