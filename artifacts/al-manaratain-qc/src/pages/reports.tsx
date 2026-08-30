@@ -388,6 +388,7 @@ export default function Reports() {
     maximumStrength: null,
     strengthUnit: "N/mm²",
   };
+  const resultsBusy = isSavingResults || duplicatingRecordId !== null;
   const hasResultRows = showMixSummaries
     ? Boolean(dailyResults.mixes.length)
     : Boolean(dailyResults.records.length);
@@ -731,7 +732,7 @@ export default function Reports() {
         onOpenChange={(open) => {
           if (open) {
             setIsAddResultsOpen(true);
-          } else if (!isSavingResults) {
+          } else if (!resultsBusy) {
             resetAddResults();
           }
         }}
@@ -827,7 +828,7 @@ export default function Reports() {
                               size="sm"
                               className="shrink-0"
                               onClick={() => duplicateReport(entry)}
-                              disabled={isSavingResults || duplicatingRecordId !== null}
+                              disabled={resultsBusy}
                             >
                               {duplicatingRecordId === entry.record.id ? (
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -897,13 +898,13 @@ export default function Reports() {
                 <Button
                   variant="outline"
                   onClick={() => setAddResultsStep("setup")}
-                  disabled={isSavingResults}
+                  disabled={resultsBusy}
                 >
                   Back
                 </Button>
                 <Button
                   onClick={saveResults}
-                  disabled={!resultEntries.length || isSavingResults}
+                  disabled={!resultEntries.length || resultsBusy}
                 >
                   {isSavingResults ? (
                     <>
