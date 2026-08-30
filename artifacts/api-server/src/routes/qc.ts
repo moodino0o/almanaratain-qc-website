@@ -14,6 +14,7 @@ import {
   qcRecordsTable,
   qcReferenceCategoriesTable,
   qcReferenceItemsTable,
+  qcSieveStandardsTable,
   qcStrengthStandardsTable,
 } from "@workspace/db";
 import {
@@ -52,8 +53,19 @@ import {
   UpdateStrengthStandardBody,
   UpdateStrengthStandardParams,
   UpdateStrengthStandardResponse,
+  CreateSieveStandardBody,
+  CreateSieveStandardResponse,
+  DeleteSieveStandardParams,
+  ListSieveStandardsResponse,
+  UpdateSieveStandardBody,
+  UpdateSieveStandardParams,
+  UpdateSieveStandardResponse,
 } from "@workspace/api-zod";
-import { evaluateStrengthRecord } from "../lib/qc-strength";
+import {
+  evaluateSieveRecord,
+  evaluateStrengthRecord,
+  type SieveStandardForEvaluation,
+} from "../lib/qc-strength";
 
 const router: IRouter = Router();
 
@@ -95,6 +107,11 @@ const REFERENCE_SEED = [
     label: "Mix Strengths",
     values: ["20 N OPC", "20 N SRC", "25 N OPC", "30 N SRC", "40 N OPC"],
   },
+  {
+    key: "sieveSizes",
+    label: "Sieve / Pore Sizes",
+    values: ["0.063 mm", "0.125 mm", "0.25 mm", "0.5 mm", "1 mm", "2 mm", "5 mm", "10 mm", "20 mm"],
+  },
   { key: "customers", label: "Customers", values: [] },
   { key: "customerLocations", label: "Customer Locations", values: [] },
 ] as const;
@@ -104,11 +121,6 @@ let referenceSeedPromise: Promise<void> | null = null;
 async function ensureReferenceData() {
   if (!referenceSeedPromise) {
     referenceSeedPromise = (async () => {
-      const [total] = await db
-        .select({ value: count() })
-        .from(qcReferenceCategoriesTable);
-      if (Number(total?.value ?? 0) > 0) return;
-
       for (const seed of REFERENCE_SEED) {
         const [category] = await db
           .insert(qcReferenceCategoriesTable)
@@ -116,14 +128,22 @@ async function ensureReferenceData() {
           .onConflictDoNothing({ target: qcReferenceCategoriesTable.key })
           .returning();
 
-        if (!category) {
+        const targetCategory =
+          category ??
+          (
+            await db
+              .select()
+              .from(qcReferenceCategoriesTable)
+              .where(eq(qcReferenceCategoriesTable.key, seed.key))
+          )[0];
+        if (!targetCategory) {
           throw new Error(`Unable to initialize reference category: ${seed.key}`);
         }
 
         if (seed.values.length > 0) {
           await db
             .insert(qcReferenceItemsTable)
-            .values(seed.values.map((value) => ({ categoryId: category.id, value })))
+            .values(seed.values.map((value) => ({ categoryId: targetCategory.id, value })))
             .onConflictDoNothing();
         }
       }
@@ -184,6 +204,59 @@ const toStrengthStandard = (row: typeof qcStrengthStandardsTable.$inferSelect) =
   strengthUnit: row.strengthUnit,
 });
 
+const withSieveReferenceValues = (
+  standard: typeof qcSieveStandardsTable.$inferSelect,
+  referenceItems: typeof qcReferenceItemsTable.$inferSelect[],
+): SieveStandardForEvaluation => {
+  const material = referenceItems.find(
+    (item) => item.id === standard.materialReferenceItemId,
+  );
+  const sieveSize = referenceItems.find(
+    (item) => item.id === standard.sieveSizeReferenceItemId,
+  );
+  return {
+    ...standard,
+    material: material?.value ?? "",
+    sieveSize: sieveSize?.value ?? "",
+  };
+};
+
+const toSieveStandard = (standard: SieveStandardForEvaluation) => ({
+  id: standard.id,
+  testType: standard.testType,
+  materialReferenceItemId: standard.materialReferenceItemId,
+  material: standard.material,
+  sieveSizeReferenceItemId: standard.sieveSizeReferenceItemId,
+  sieveSize: standard.sieveSize,
+  standardReference: standard.standardReference,
+  measurementType: standard.measurementType,
+  minimum: standard.minimum === null ? null : Number(standard.minimum),
+  maximum: standard.maximum === null ? null : Number(standard.maximum),
+  unit: standard.unit,
+});
+
+async function loadSieveStandards(): Promise<SieveStandardForEvaluation[]> {
+  const [standards, referenceItems] = await Promise.all([
+    db
+      .select()
+      .from(qcSieveStandardsTable)
+      .orderBy(
+        asc(qcSieveStandardsTable.testType),
+        asc(qcSieveStandardsTable.materialReferenceItemId),
+        asc(qcSieveStandardsTable.sieveSizeReferenceItemId),
+        asc(qcSieveStandardsTable.id),
+      ),
+    db.select().from(qcReferenceItemsTable),
+  ]);
+  return standards.map((standard) =>
+    withSieveReferenceValues(standard, referenceItems),
+  );
+}
+
+async function listSieveStandards() {
+  return (await loadSieveStandards()).map(toSieveStandard);
+}
+
 router.get("/dashboard", async (_req, res): Promise<void> => {
   const [totals] = await db
     .select({
@@ -238,6 +311,7 @@ router.get("/lookups", async (_req, res): Promise<void> => {
       mixStrengths: lookupValues(categories, "mixStrengths"),
       customers: lookupValues(categories, "customers"),
       customerLocations: lookupValues(categories, "customerLocations"),
+      sieveSizes: lookupValues(categories, "sieveSizes"),
     }),
   );
 });
@@ -392,15 +466,21 @@ router.delete("/reference-data/items/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const [item] = await db
-    .delete(qcReferenceItemsTable)
-    .where(eq(qcReferenceItemsTable.id, params.data.id))
-    .returning();
-  if (!item) {
-    res.status(404).json({ error: "Reference value not found" });
-    return;
+  try {
+    const [item] = await db
+      .delete(qcReferenceItemsTable)
+      .where(eq(qcReferenceItemsTable.id, params.data.id))
+      .returning();
+    if (!item) {
+      res.status(404).json({ error: "Reference value not found" });
+      return;
+    }
+    res.sendStatus(204);
+  } catch {
+    res.status(409).json({
+      error: "This reference value is used by a configured sieve standard and cannot be deleted.",
+    });
   }
-  res.sendStatus(204);
 });
 
 router.get("/strength-standards", async (_req, res): Promise<void> => {
@@ -497,6 +577,185 @@ router.delete("/strength-standards/:id", async (req, res): Promise<void> => {
   res.sendStatus(204);
 });
 
+async function getReferenceItemForCategory(id: number, key: string) {
+  const [row] = await db
+    .select({ item: qcReferenceItemsTable })
+    .from(qcReferenceItemsTable)
+    .innerJoin(
+      qcReferenceCategoriesTable,
+      eq(qcReferenceCategoriesTable.id, qcReferenceItemsTable.categoryId),
+    )
+    .where(
+      and(
+        eq(qcReferenceItemsTable.id, id),
+        eq(qcReferenceCategoriesTable.key, key),
+      ),
+    );
+  return row?.item;
+}
+
+function validateSieveLimits(
+  minimum: number | null | undefined,
+  maximum: number | null | undefined,
+) {
+  if (minimum == null && maximum == null) return "At least one acceptance limit is required";
+  if (minimum != null && maximum != null && minimum > maximum) {
+    return "The minimum limit cannot exceed the maximum limit";
+  }
+  return null;
+}
+
+router.get("/sieve-standards", async (_req, res): Promise<void> => {
+  res.json(ListSieveStandardsResponse.parse(await listSieveStandards()));
+});
+
+router.post("/sieve-standards", async (req, res): Promise<void> => {
+  const body = CreateSieveStandardBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+  const limitError = validateSieveLimits(body.data.minimum, body.data.maximum);
+  if (limitError) {
+    res.status(400).json({ error: limitError });
+    return;
+  }
+  const [material, sieveSize] = await Promise.all([
+    getReferenceItemForCategory(body.data.materialReferenceItemId, "materials"),
+    getReferenceItemForCategory(body.data.sieveSizeReferenceItemId, "sieveSizes"),
+  ]);
+  if (!material || !sieveSize) {
+    res.status(400).json({
+      error: "Choose a material and sieve size from Reference Data.",
+    });
+    return;
+  }
+  try {
+    const [standard] = await db
+      .insert(qcSieveStandardsTable)
+      .values({
+        testType: body.data.testType,
+        materialReferenceItemId: material.id,
+        sieveSizeReferenceItemId: sieveSize.id,
+        standardReference: body.data.standardReference.trim(),
+        measurementType: body.data.measurementType,
+        minimum: body.data.minimum == null ? null : String(body.data.minimum),
+        maximum: body.data.maximum == null ? null : String(body.data.maximum),
+        unit: body.data.unit?.trim() || (body.data.measurementType === "percentage" ? "%" : "kg"),
+      })
+      .returning();
+    if (!standard) {
+      res.status(500).json({ error: "Unable to create sieve standard" });
+      return;
+    }
+    const standards = await listSieveStandards();
+    const created = standards.find((item) => item.id === standard.id);
+    res.status(201).json(
+      CreateSieveStandardResponse.parse(created ?? toSieveStandard(withSieveReferenceValues(standard, [material, sieveSize]))),
+    );
+  } catch {
+    res.status(409).json({ error: "A sieve standard already exists for this material and sieve size." });
+  }
+});
+
+router.patch("/sieve-standards/:id", async (req, res): Promise<void> => {
+  const params = UpdateSieveStandardParams.safeParse(req.params);
+  const body = UpdateSieveStandardBody.safeParse(req.body);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+  const current = await db
+    .select()
+    .from(qcSieveStandardsTable)
+    .where(eq(qcSieveStandardsTable.id, params.data.id));
+  if (!current[0]) {
+    res.status(404).json({ error: "Sieve standard not found" });
+    return;
+  }
+  const minimum =
+    body.data.minimum !== undefined
+      ? body.data.minimum
+      : current[0].minimum === null
+        ? null
+        : Number(current[0].minimum);
+  const maximum =
+    body.data.maximum !== undefined
+      ? body.data.maximum
+      : current[0].maximum === null
+        ? null
+        : Number(current[0].maximum);
+  const limitError = validateSieveLimits(
+    minimum === null || Number.isFinite(minimum) ? minimum : null,
+    maximum === null || Number.isFinite(maximum) ? maximum : null,
+  );
+  if (limitError) {
+    res.status(400).json({ error: limitError });
+    return;
+  }
+  const materialId = body.data.materialReferenceItemId ?? current[0].materialReferenceItemId;
+  const sieveSizeId = body.data.sieveSizeReferenceItemId ?? current[0].sieveSizeReferenceItemId;
+  const [material, sieveSize] = await Promise.all([
+    getReferenceItemForCategory(materialId, "materials"),
+    getReferenceItemForCategory(sieveSizeId, "sieveSizes"),
+  ]);
+  if (!material || !sieveSize) {
+    res.status(400).json({
+      error: "Choose a material and sieve size from Reference Data.",
+    });
+    return;
+  }
+  try {
+    await db
+      .update(qcSieveStandardsTable)
+      .set({
+        ...(body.data.testType !== undefined ? { testType: body.data.testType } : {}),
+        materialReferenceItemId: material.id,
+        sieveSizeReferenceItemId: sieveSize.id,
+        ...(body.data.standardReference !== undefined
+          ? { standardReference: body.data.standardReference.trim() }
+          : {}),
+        ...(body.data.measurementType !== undefined
+          ? { measurementType: body.data.measurementType }
+          : {}),
+        ...(body.data.minimum !== undefined
+          ? { minimum: body.data.minimum == null ? null : String(body.data.minimum) }
+          : {}),
+        ...(body.data.maximum !== undefined
+          ? { maximum: body.data.maximum == null ? null : String(body.data.maximum) }
+          : {}),
+        ...(body.data.unit !== undefined ? { unit: body.data.unit.trim() } : {}),
+      })
+      .where(eq(qcSieveStandardsTable.id, params.data.id));
+    const standards = await listSieveStandards();
+    const updated = standards.find((item) => item.id === params.data.id);
+    res.json(UpdateSieveStandardResponse.parse(updated));
+  } catch {
+    res.status(409).json({ error: "A sieve standard already exists for this material and sieve size." });
+  }
+});
+
+router.delete("/sieve-standards/:id", async (req, res): Promise<void> => {
+  const params = DeleteSieveStandardParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const [standard] = await db
+    .delete(qcSieveStandardsTable)
+    .where(eq(qcSieveStandardsTable.id, params.data.id))
+    .returning();
+  if (!standard) {
+    res.status(404).json({ error: "Sieve standard not found" });
+    return;
+  }
+  res.sendStatus(204);
+});
+
 router.get("/records", async (req, res): Promise<void> => {
   const parsed = ListRecordsQueryParams.safeParse(req.query);
   if (!parsed.success) {
@@ -538,15 +797,28 @@ router.post("/records", async (req, res): Promise<void> => {
     return;
   }
 
-  const standards = await db.select().from(qcStrengthStandardsTable);
-  const evaluated = evaluateStrengthRecord(
+  const [strengthStandards, sieveStandards] = await Promise.all([
+    db.select().from(qcStrengthStandardsTable),
+    loadSieveStandards(),
+  ]);
+  const evaluated =
+    parsed.data.testType === "Sand Sieve" || parsed.data.testType === "Aggregate Sieve"
+      ? evaluateSieveRecord(
+          {
+            testType: parsed.data.testType,
+            material: parsed.data.material,
+            details: parsed.data.details,
+          },
+          sieveStandards,
+        )
+      : evaluateStrengthRecord(
     {
       testType: parsed.data.testType,
       material: parsed.data.material,
       details: parsed.data.details,
     },
-    standards,
-  );
+          strengthStandards,
+        );
   const prefix = parsed.data.testType
     .replace(/[^A-Z]/gi, "")
     .slice(0, 3)
@@ -612,8 +884,14 @@ router.patch("/records/:id", async (req, res): Promise<void> => {
     material: body.data.material ?? existing.material,
     details: body.data.details ?? existing.details,
   };
-  const standards = await db.select().from(qcStrengthStandardsTable);
-  const evaluated = evaluateStrengthRecord(candidate, standards);
+  const [strengthStandards, sieveStandards] = await Promise.all([
+    db.select().from(qcStrengthStandardsTable),
+    loadSieveStandards(),
+  ]);
+  const evaluated =
+    candidate.testType === "Sand Sieve" || candidate.testType === "Aggregate Sieve"
+      ? evaluateSieveRecord(candidate, sieveStandards)
+      : evaluateStrengthRecord(candidate, strengthStandards);
   const { sampleDate, ...rest } = body.data;
   const updates = {
     ...rest,

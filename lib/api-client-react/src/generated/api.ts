@@ -44,6 +44,9 @@ import type {
   ReferenceItem,
   ReferenceItemInput,
   Report,
+  SieveStandard,
+  SieveStandardInput,
+  SieveStandardUpdate,
   StrengthStandard,
   StrengthStandardInput,
   StrengthStandardUpdate,
@@ -2239,6 +2242,297 @@ export const useDeleteStrengthStandard = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteStrengthStandardMutationOptions(options));
+    }
+
+export const getListSieveStandardsUrl = () => {
+
+
+
+
+  return `/api/sieve-standards`
+}
+
+/**
+ * @summary List configurable sieve acceptance standards
+ */
+export const listSieveStandards = async ( options?: Parameters<typeof customFetch>[1]): Promise<SieveStandard[]> => {
+
+  return customFetch<SieveStandard[]>(getListSieveStandardsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSieveStandardsQueryKey = () => {
+    return [
+    `/api/sieve-standards`
+    ] as const;
+    }
+
+
+export const getListSieveStandardsQueryOptions = <TData = Awaited<ReturnType<typeof listSieveStandards>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSieveStandards>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSieveStandardsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSieveStandards>>> = ({ signal }) => listSieveStandards({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSieveStandards>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSieveStandardsQueryResult = NonNullable<Awaited<ReturnType<typeof listSieveStandards>>>
+export type ListSieveStandardsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List configurable sieve acceptance standards
+ */
+
+export function useListSieveStandards<TData = Awaited<ReturnType<typeof listSieveStandards>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSieveStandards>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSieveStandardsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateSieveStandardUrl = () => {
+
+
+
+
+  return `/api/sieve-standards`
+}
+
+/**
+ * @summary Create a sieve acceptance standard
+ */
+export const createSieveStandard = async (sieveStandardInput: SieveStandardInput, options?: Parameters<typeof customFetch>[1]): Promise<SieveStandard> => {
+
+  return customFetch<SieveStandard>(getCreateSieveStandardUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(sieveStandardInput)
+  }
+);}
+
+
+
+
+
+export const getCreateSieveStandardMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSieveStandard>>, TError,{data: BodyType<SieveStandardInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSieveStandard>>, TError,{data: BodyType<SieveStandardInput>}, TContext> => {
+
+const mutationKey = ['createSieveStandard'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSieveStandard>>, {data: BodyType<SieveStandardInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createSieveStandard(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSieveStandardMutationResult = NonNullable<Awaited<ReturnType<typeof createSieveStandard>>>
+    export type CreateSieveStandardMutationBody = BodyType<SieveStandardInput>
+    export type CreateSieveStandardMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a sieve acceptance standard
+ */
+export const useCreateSieveStandard = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSieveStandard>>, TError,{data: BodyType<SieveStandardInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSieveStandard>>,
+        TError,
+        {data: BodyType<SieveStandardInput>},
+        TContext
+      > => {
+      return useMutation(getCreateSieveStandardMutationOptions(options));
+    }
+
+export const getUpdateSieveStandardUrl = (id: number,) => {
+
+
+
+
+  return `/api/sieve-standards/${id}`
+}
+
+/**
+ * @summary Update a sieve acceptance standard
+ */
+export const updateSieveStandard = async (id: number,
+    sieveStandardUpdate: SieveStandardUpdate, options?: Parameters<typeof customFetch>[1]): Promise<SieveStandard> => {
+
+  return customFetch<SieveStandard>(getUpdateSieveStandardUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(sieveStandardUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateSieveStandardMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSieveStandard>>, TError,{id: number;data: BodyType<SieveStandardUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSieveStandard>>, TError,{id: number;data: BodyType<SieveStandardUpdate>}, TContext> => {
+
+const mutationKey = ['updateSieveStandard'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSieveStandard>>, {id: number;data: BodyType<SieveStandardUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateSieveStandard(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateSieveStandardMutationResult = NonNullable<Awaited<ReturnType<typeof updateSieveStandard>>>
+    export type UpdateSieveStandardMutationBody = BodyType<SieveStandardUpdate>
+    export type UpdateSieveStandardMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update a sieve acceptance standard
+ */
+export const useUpdateSieveStandard = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSieveStandard>>, TError,{id: number;data: BodyType<SieveStandardUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateSieveStandard>>,
+        TError,
+        {id: number;data: BodyType<SieveStandardUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateSieveStandardMutationOptions(options));
+    }
+
+export const getDeleteSieveStandardUrl = (id: number,) => {
+
+
+
+
+  return `/api/sieve-standards/${id}`
+}
+
+/**
+ * @summary Delete a sieve acceptance standard
+ */
+export const deleteSieveStandard = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteSieveStandardUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteSieveStandardMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSieveStandard>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteSieveStandard>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteSieveStandard'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteSieveStandard>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteSieveStandard(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteSieveStandardMutationResult = NonNullable<Awaited<ReturnType<typeof deleteSieveStandard>>>
+
+    export type DeleteSieveStandardMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a sieve acceptance standard
+ */
+export const useDeleteSieveStandard = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSieveStandard>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteSieveStandard>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteSieveStandardMutationOptions(options));
     }
 
 export const getListRecordsUrl = (params?: ListRecordsParams,) => {

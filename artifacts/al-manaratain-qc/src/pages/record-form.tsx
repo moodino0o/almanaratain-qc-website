@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useParams } from "wouter";
-import { useGetLookups, useGetRecord, useCreateRecord, useUpdateRecord, useListStrengthStandards, TestType, RecordStatus, QcRecordInput, QcRecordUpdate } from "@workspace/api-client-react";
+import { useGetLookups, useGetReferenceData, useGetRecord, useCreateRecord, useUpdateRecord, useListSieveStandards, useListStrengthStandards, TestType, RecordStatus, QcRecordInput, QcRecordUpdate } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,10 @@ type TestRow = {
   load: string;
   strength: string;
   waterAbsorption: string;
+  sieveSize: string;
+  sieveSizeReferenceItemId: number | null;
+  passingAmount: string;
+  passingPercentage: string;
 };
 
 const createEmptyRow = (id: number): TestRow => ({
@@ -40,6 +44,10 @@ const createEmptyRow = (id: number): TestRow => ({
   load: "",
   strength: "",
   waterAbsorption: "",
+  sieveSize: "",
+  sieveSizeReferenceItemId: null,
+  passingAmount: "",
+  passingPercentage: "",
 });
 
 const REFERENCE_NUMBER_MAX_LENGTH = 32;
@@ -64,6 +72,12 @@ const toFormRow = (row: unknown, id: number): TestRow => {
     load: numericInputValue(values.load),
     strength: "",
     waterAbsorption: numericInputValue(values.waterAbsorption),
+    sieveSize: stringValue(values.sieveSize),
+    sieveSizeReferenceItemId: numericInputValue(values.sieveSizeReferenceItemId)
+      ? Number(numericInputValue(values.sieveSizeReferenceItemId))
+      : null,
+    passingAmount: numericInputValue(values.passingAmount),
+    passingPercentage: numericInputValue(values.passingPercentage),
   };
 };
 
@@ -75,6 +89,7 @@ export default function RecordForm() {
   const queryClient = useQueryClient();
   
   const { data: lookups, isLoading: lookupsLoading } = useGetLookups();
+  const { data: referenceData } = useGetReferenceData();
   const {
     data: existingRecord,
     isLoading: recordLoading,
@@ -86,6 +101,7 @@ export default function RecordForm() {
     },
   });
   const { data: strengthStandards } = useListStrengthStandards();
+  const { data: sieveStandards } = useListSieveStandards();
   const createRecord = useCreateRecord();
   const updateRecord = useUpdateRecord();
   const initializedRecordId = useRef<number | null>(null);
@@ -113,7 +129,11 @@ export default function RecordForm() {
       typeof existingRecord.details === "object" && existingRecord.details !== null
         ? { ...existingRecord.details as Record<string, unknown> }
         : {};
-    const savedRows = Array.isArray(savedDetails.testRows) ? savedDetails.testRows : [];
+    const savedRows = Array.isArray(savedDetails.sieveRows)
+      ? savedDetails.sieveRows
+      : Array.isArray(savedDetails.testRows)
+        ? savedDetails.testRows
+        : [];
     const numericDetailKeys = [
       "slump",
       "temperature",
@@ -157,6 +177,16 @@ export default function RecordForm() {
   };
 
   const usesTestRows = testType === TestType.Ready_Mix || testType === TestType.Blocks;
+  const usesSieveRows = testType === TestType.Sand_Sieve || testType === TestType.Aggregate_Sieve;
+
+  const materialReferenceItems = useMemo(
+    () => referenceData?.categories.find((category) => category.key === "materials")?.items ?? [],
+    [referenceData],
+  );
+  const sieveSizeReferenceItems = useMemo(
+    () => referenceData?.categories.find((category) => category.key === "sieveSizes")?.items ?? [],
+    [referenceData],
+  );
 
   const updateTestRow = (rowIndex: number, key: keyof Omit<TestRow, "id">, value: string) => {
     setTestRows(prev => prev.map((row, index) => (
@@ -206,12 +236,7 @@ export default function RecordForm() {
         ];
       case TestType.Sand_Sieve:
       case TestType.Aggregate_Sieve:
-        return [
-          { key: "passing10mm", label: "Passing 10mm (%)", type: "number" },
-          { key: "passing5mm", label: "Passing 5mm (%)", type: "number" },
-          { key: "finenessModulus", label: "Fineness Modulus", type: "number" },
-          { key: "moisture", label: "Moisture Content (%)", type: "number" }
-        ];
+        return [];
       default:
         return [
           { key: "observation1", label: "Observation 1", type: "text" },
@@ -230,6 +255,20 @@ export default function RecordForm() {
           standard.blockSize === String(details.blockSize ?? "")))
     ));
   }, [details.blockSize, details.blockType, material, strengthStandards, testType]);
+
+  const applicableSieveStandards = useMemo(() => {
+    if (!usesSieveRows) return [];
+    const materialReferenceItemId = Number(details.materialReferenceItemId);
+    return (sieveStandards ?? []).filter((standard) => (
+      standard.testType === testType &&
+      (
+        Number.isInteger(materialReferenceItemId) &&
+        materialReferenceItemId > 0
+          ? standard.materialReferenceItemId === materialReferenceItemId
+          : standard.material === material
+      )
+    ));
+  }, [details.materialReferenceItemId, material, sieveStandards, testType, usesSieveRows]);
 
   const calculateStrength = (row: TestRow) => {
     const load = Number(row.load);
@@ -277,6 +316,24 @@ export default function RecordForm() {
     }
 
     let payloadDetails: Record<string, unknown> = { ...details };
+
+    if (usesSieveRows) {
+      const materialReferenceItemId = materialReferenceItems.find(
+        (item) => item.value === material,
+      )?.id;
+      if (materialReferenceItemId) {
+        payloadDetails.materialReferenceItemId = materialReferenceItemId;
+      }
+      payloadDetails.sieveRows = testRows.map(({ id: _id, ...row }, index) => ({
+        rowNo: index + 1,
+        sieveSize: row.sieveSize,
+        sieveSizeReferenceItemId: row.sieveSizeReferenceItemId ??
+          sieveSizeReferenceItems.find((item) => item.value === row.sieveSize)?.id ??
+          null,
+        passingAmount: row.passingAmount,
+        passingPercentage: row.passingPercentage,
+      }));
+    }
 
     if (testType === TestType.Ready_Mix) {
       payloadDetails.customerName = customerName;
@@ -513,7 +570,7 @@ export default function RecordForm() {
             <CardHeader className="bg-muted/30 border-b">
               <CardTitle>Measurement Details: {testType}</CardTitle>
               <CardDescription>
-                {usesTestRows
+                {usesTestRows || usesSieveRows
                   ? "Enter one specimen per row. Press Enter in a row to insert the next numbered entry."
                   : "Enter the specific readings obtained during the test."}
               </CardDescription>
@@ -541,7 +598,7 @@ export default function RecordForm() {
                   </div>
                 </div>
               )}
-              {usesTestRows ? (
+              {usesTestRows || usesSieveRows ? (
                 <div className="space-y-3">
                   {(testType === TestType.Ready_Mix || testType === TestType.Blocks) && (
                     <div className="rounded-md border border-primary/20 bg-primary/[0.04] px-4 py-3 text-sm">
@@ -558,21 +615,47 @@ export default function RecordForm() {
                       )}
                     </div>
                   )}
+                  {usesSieveRows && (
+                    <div className="rounded-md border border-amber-500/30 bg-amber-500/[0.04] px-4 py-3 text-sm">
+                      {applicableSieveStandards.length ? (
+                        <span>
+                          Automatic evaluation will compare{" "}
+                          <strong>{applicableSieveStandards.length} configured sieve criteria</strong>{" "}
+                          for {material}.
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          Automatic evaluation will remain in Review until sieve standards are configured for this material.
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <div className="overflow-x-auto rounded-md border">
-                    <table className="w-full min-w-[1080px] text-sm">
+                    <table className={`w-full ${usesSieveRows ? "min-w-[760px]" : "min-w-[1080px]"} text-sm`}>
                       <thead className="bg-muted/50">
                         <tr className="border-b">
                           <th className="w-12 px-3 py-3 text-left font-semibold">No.</th>
-                          {testType === TestType.Ready_Mix ? (
+                          {usesSieveRows ? (
+                            <th className="px-3 py-3 text-left font-semibold">Sieve / Pore Size</th>
+                          ) : testType === TestType.Ready_Mix ? (
                             <th className="px-3 py-3 text-left font-semibold">Test Age</th>
                           ) : (
                             <th className="px-3 py-3 text-left font-semibold">Sample Age</th>
                           )}
-                          <th className="px-3 py-3 text-left font-semibold">Length (mm)</th>
-                          <th className="px-3 py-3 text-left font-semibold">Width (mm)</th>
-                          <th className="px-3 py-3 text-left font-semibold">Height (mm)</th>
-                          <th className="px-3 py-3 text-left font-semibold">Dry Weight</th>
-                          <th className="px-3 py-3 text-left font-semibold">Wet Weight</th>
+                          {usesSieveRows ? (
+                            <>
+                              <th className="px-3 py-3 text-left font-semibold">Amount Passing</th>
+                              <th className="px-3 py-3 text-left font-semibold">% Passing</th>
+                            </>
+                          ) : (
+                            <>
+                              <th className="px-3 py-3 text-left font-semibold">Length (mm)</th>
+                              <th className="px-3 py-3 text-left font-semibold">Width (mm)</th>
+                              <th className="px-3 py-3 text-left font-semibold">Height (mm)</th>
+                              <th className="px-3 py-3 text-left font-semibold">Dry Weight</th>
+                              <th className="px-3 py-3 text-left font-semibold">Wet Weight</th>
+                            </>
+                          )}
                            {(testType === TestType.Ready_Mix || testType === TestType.Blocks) && (
                              <>
                                <th className="px-3 py-3 text-left font-semibold">Load (kN)</th>
@@ -586,6 +669,48 @@ export default function RecordForm() {
                         {testRows.map((row, rowIndex) => (
                           <tr key={row.id} className="border-b last:border-b-0">
                             <td className="px-3 py-2 font-semibold text-muted-foreground">{rowIndex + 1}</td>
+                            {usesSieveRows ? (
+                              <>
+                                <td className="px-2 py-2">
+                                  <TypeaheadInput
+                                    value={row.sieveSize}
+                                    onChange={(value) => {
+                                      const item = sieveSizeReferenceItems.find((candidate) => candidate.value === value);
+                                      setTestRows((previous) => previous.map((candidate, index) => (
+                                        index === rowIndex
+                                          ? { ...candidate, sieveSize: value, sieveSizeReferenceItemId: item?.id ?? null }
+                                          : candidate
+                                      )));
+                                    }}
+                                    options={sieveSizeReferenceItems.map((item) => item.value)}
+                                    placeholder="Select sieve..."
+                                  />
+                                </td>
+                                <td className="px-2 py-2">
+                                  <Input
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={row.passingAmount}
+                                    onChange={event => updateTestRow(rowIndex, "passingAmount", event.target.value)}
+                                    onKeyDown={event => handleTestRowKeyDown(event, rowIndex)}
+                                    placeholder="kg"
+                                    aria-label={`Amount passing for row ${rowIndex + 1}`}
+                                  />
+                                </td>
+                                <td className="px-2 py-2">
+                                  <Input
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={row.passingPercentage}
+                                    onChange={event => updateTestRow(rowIndex, "passingPercentage", event.target.value)}
+                                    onKeyDown={event => handleTestRowKeyDown(event, rowIndex)}
+                                    placeholder="%"
+                                    aria-label={`Percentage passing for row ${rowIndex + 1}`}
+                                  />
+                                </td>
+                              </>
+                            ) : (
+                            <>
                             <td className="px-2 py-2">
                               <Input
                                 ref={element => {
@@ -613,6 +738,8 @@ export default function RecordForm() {
                                 />
                               </td>
                             ))}
+                            </>
+                            )}
                              {(testType === TestType.Ready_Mix || testType === TestType.Blocks) && (
                               <>
                                 <td className="px-2 py-2">

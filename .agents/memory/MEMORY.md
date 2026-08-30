@@ -1,1 +1,2 @@
 - [Archive retirement authorization](archive-retirement-authorization.md) — keep archive retirement fail-closed behind the configured manager email allowlist.
+- [Reference-data seeding](reference-data-seeding.md) — startup seed reconciliation must add missing categories and items to existing databases instead of returning early.

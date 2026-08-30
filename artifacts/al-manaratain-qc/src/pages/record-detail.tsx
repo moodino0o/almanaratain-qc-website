@@ -56,6 +56,38 @@ function TestRowsTable({ rows }: { rows: unknown[] }) {
   );
 }
 
+function SieveRowsTable({ rows }: { rows: unknown[] }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[620px] text-xs">
+        <thead className="bg-muted/30">
+          <tr className="border-b">
+            <th className="p-2 text-left">No.</th>
+            <th className="p-2 text-left">Sieve / Pore Size</th>
+            <th className="p-2 text-left">Amount Passing</th>
+            <th className="p-2 text-left">% Passing</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => {
+            const values = typeof row === "object" && row !== null
+              ? row as Record<string, unknown>
+              : {};
+            return (
+              <tr key={index} className="border-b last:border-b-0">
+                <td className="p-2 font-semibold">{String(values.rowNo ?? index + 1)}</td>
+                <td className="p-2">{String(values.sieveSize ?? "-")}</td>
+                <td className="p-2">{String(values.passingAmount ?? "-")}</td>
+                <td className="p-2">{String(values.passingPercentage ?? "-")}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function StrengthEvaluation({ value }: { value: unknown }) {
   if (typeof value !== "object" || value === null) {
     return (
@@ -83,6 +115,52 @@ function StrengthEvaluation({ value }: { value: unknown }) {
       <p>BS reference: {String(evaluation.bsStandard ?? "Not configured")}</p>
       {evaluation.reason != null && (
         <p className="text-muted-foreground">{String(evaluation.reason)}</p>
+      )}
+    </div>
+  );
+}
+
+function SieveEvaluation({ value }: { value: unknown }) {
+  if (typeof value !== "object" || value === null) {
+    return <span className="text-muted-foreground">No automatic sieve evaluation has been recorded.</span>;
+  }
+  const evaluation = value as Record<string, unknown>;
+  const status = String(evaluation.status ?? "Review");
+  const criteria = Array.isArray(evaluation.criteria) ? evaluation.criteria : [];
+  const statusClass =
+    status === RecordStatus.Passed ? "text-success" :
+      status === RecordStatus.Failed ? "text-destructive" : "text-warning";
+  return (
+    <div className="space-y-3">
+      <p className={`font-bold ${statusClass}`}>{status}</p>
+      <p>Reference: {String(evaluation.standardReference ?? "Not configured")}</p>
+      {evaluation.reason != null && <p className="text-muted-foreground">{String(evaluation.reason)}</p>}
+      {criteria.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[560px] text-xs">
+            <thead className="bg-muted/30"><tr className="border-b">
+              <th className="p-2 text-left">Sieve / Pore Size</th>
+              <th className="p-2 text-left">Measured</th>
+              <th className="p-2 text-left">Allowed Range</th>
+              <th className="p-2 text-left">Result</th>
+            </tr></thead>
+            <tbody>
+              {criteria.map((criterion, index) => {
+                const item = typeof criterion === "object" && criterion !== null
+                  ? criterion as Record<string, unknown> : {};
+                const within = item.withinLimits;
+                return <tr key={index} className="border-b last:border-b-0">
+                  <td className="p-2">{String(item.sieveSize ?? "-")}</td>
+                  <td className="p-2">{item.measuredValue == null ? "Missing" : `${item.measuredValue} ${String(item.unit ?? "")}`}</td>
+                  <td className="p-2">{item.minimum == null ? "—" : String(item.minimum)} to {item.maximum == null ? "—" : String(item.maximum)} {String(item.unit ?? "")}</td>
+                  <td className={`p-2 font-semibold ${within === true ? "text-success" : within === false ? "text-destructive" : "text-warning"}`}>
+                    {within === true ? "Pass" : within === false ? "Fail" : "Review"}
+                  </td>
+                </tr>;
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
@@ -117,6 +195,7 @@ export default function RecordDetail() {
   };
 
   const isStrengthEvaluated = record.testType === "Ready Mix" || record.testType === "Blocks";
+  const isSieveEvaluated = record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve";
 
   const handleDelete = () => {
     if (!confirm("Are you sure you want to delete this record? This action cannot be undone.")) return;
@@ -201,8 +280,12 @@ export default function RecordDetail() {
                         <td className="p-4 font-semibold text-foreground">
                           {key === "testRows" && Array.isArray(value) ? (
                             <TestRowsTable rows={value} />
+                          ) : key === "sieveRows" && Array.isArray(value) ? (
+                            <SieveRowsTable rows={value} />
                           ) : key === "strengthEvaluation" ? (
                             <StrengthEvaluation value={value} />
+                          ) : key === "sieveEvaluation" ? (
+                            <SieveEvaluation value={value} />
                           ) : (
                             typeof value === "object" && value !== null ? JSON.stringify(value) : String(value)
                           )}
@@ -270,16 +353,18 @@ export default function RecordDetail() {
 
           <Card>
             <CardHeader>
-              <CardTitle>{isStrengthEvaluated ? "Automatic Quality Evaluation" : "Quality Review"}</CardTitle>
+              <CardTitle>{isStrengthEvaluated || isSieveEvaluated ? "Automatic Quality Evaluation" : "Quality Review"}</CardTitle>
               <CardDescription>
-                {isStrengthEvaluated
-                  ? "The status is enforced from the configured standard and measured specimens."
+                {isStrengthEvaluated || isSieveEvaluated
+                  ? "The status is enforced from the configured standard and measured values."
                   : "Update the final status of this sample."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {isStrengthEvaluated ? (
-                <StrengthEvaluation value={record.details.strengthEvaluation} />
+              {isStrengthEvaluated || isSieveEvaluated ? (
+                isSieveEvaluated
+                  ? <SieveEvaluation value={record.details.sieveEvaluation} />
+                  : <StrengthEvaluation value={record.details.strengthEvaluation} />
               ) : (
                 <>
                   <Button

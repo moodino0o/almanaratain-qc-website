@@ -61,7 +61,8 @@ export const GetLookupsResponse = zod.object({
   "blockSizes": zod.array(zod.string()),
   "mixStrengths": zod.array(zod.string()),
   "customers": zod.array(zod.string()),
-  "customerLocations": zod.array(zod.string())
+  "customerLocations": zod.array(zod.string()),
+  "sieveSizes": zod.array(zod.string())
 })
 
 
@@ -560,6 +561,107 @@ export const DeleteStrengthStandardParams = zod.object({
 })
 
 export const DeleteStrengthStandardResponse = zod.void()
+
+
+/**
+ * @summary List configurable sieve acceptance standards
+ */
+export const ListSieveStandardsResponseItem = zod.object({
+  "id": zod.number(),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "materialReferenceItemId": zod.number(),
+  "material": zod.string(),
+  "sieveSizeReferenceItemId": zod.number(),
+  "sieveSize": zod.string(),
+  "standardReference": zod.string(),
+  "measurementType": zod.enum(['percentage', 'amount']),
+  "minimum": zod.number().nullable(),
+  "maximum": zod.number().nullable(),
+  "unit": zod.string()
+})
+export const ListSieveStandardsResponse = zod.array(ListSieveStandardsResponseItem)
+
+
+/**
+ * @summary Create a sieve acceptance standard
+ */
+
+
+
+export const createSieveStandardBodyUnitDefault = `%`;
+
+export const CreateSieveStandardBody = zod.object({
+  "testType": zod.enum(['Sand Sieve', 'Aggregate Sieve']),
+  "materialReferenceItemId": zod.number().min(1),
+  "sieveSizeReferenceItemId": zod.number().min(1),
+  "standardReference": zod.string().min(1),
+  "measurementType": zod.enum(['percentage', 'amount']),
+  "minimum": zod.number().nullish(),
+  "maximum": zod.number().nullish(),
+  "unit": zod.string().default(createSieveStandardBodyUnitDefault)
+})
+
+export const CreateSieveStandardResponse = zod.object({
+  "id": zod.number(),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "materialReferenceItemId": zod.number(),
+  "material": zod.string(),
+  "sieveSizeReferenceItemId": zod.number(),
+  "sieveSize": zod.string(),
+  "standardReference": zod.string(),
+  "measurementType": zod.enum(['percentage', 'amount']),
+  "minimum": zod.number().nullable(),
+  "maximum": zod.number().nullable(),
+  "unit": zod.string()
+})
+
+
+/**
+ * @summary Update a sieve acceptance standard
+ */
+export const UpdateSieveStandardParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+
+
+export const UpdateSieveStandardBody = zod.object({
+  "testType": zod.enum(['Sand Sieve', 'Aggregate Sieve']).optional(),
+  "materialReferenceItemId": zod.number().min(1).optional(),
+  "sieveSizeReferenceItemId": zod.number().min(1).optional(),
+  "standardReference": zod.string().min(1).optional(),
+  "measurementType": zod.enum(['percentage', 'amount']).optional(),
+  "minimum": zod.number().nullish(),
+  "maximum": zod.number().nullish(),
+  "unit": zod.string().optional()
+})
+
+export const UpdateSieveStandardResponse = zod.object({
+  "id": zod.number(),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "materialReferenceItemId": zod.number(),
+  "material": zod.string(),
+  "sieveSizeReferenceItemId": zod.number(),
+  "sieveSize": zod.string(),
+  "standardReference": zod.string(),
+  "measurementType": zod.enum(['percentage', 'amount']),
+  "minimum": zod.number().nullable(),
+  "maximum": zod.number().nullable(),
+  "unit": zod.string()
+})
+
+
+/**
+ * @summary Delete a sieve acceptance standard
+ */
+export const DeleteSieveStandardParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteSieveStandardResponse = zod.void()
 
 
 /**

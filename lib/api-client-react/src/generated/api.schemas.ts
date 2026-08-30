@@ -113,6 +113,7 @@ export interface Lookups {
   mixStrengths: string[];
   customers: string[];
   customerLocations: string[];
+  sieveSizes: string[];
 }
 
 export interface ReferenceItem {
@@ -192,6 +193,94 @@ export interface StrengthStandardUpdate {
   /** @minimum 0 */
   requiredStrength?: number;
   strengthUnit?: string;
+}
+
+export type SieveStandardMeasurementType = typeof SieveStandardMeasurementType[keyof typeof SieveStandardMeasurementType];
+
+
+export const SieveStandardMeasurementType = {
+  percentage: 'percentage',
+  amount: 'amount',
+} as const;
+
+export interface SieveStandard {
+  id: number;
+  testType: TestType;
+  materialReferenceItemId: number;
+  material: string;
+  sieveSizeReferenceItemId: number;
+  sieveSize: string;
+  standardReference: string;
+  measurementType: SieveStandardMeasurementType;
+  /** @nullable */
+  minimum: number | null;
+  /** @nullable */
+  maximum: number | null;
+  unit: string;
+}
+
+export type SieveStandardInputTestType = typeof SieveStandardInputTestType[keyof typeof SieveStandardInputTestType];
+
+
+export const SieveStandardInputTestType = {
+  Sand_Sieve: 'Sand Sieve',
+  Aggregate_Sieve: 'Aggregate Sieve',
+} as const;
+
+export type SieveStandardInputMeasurementType = typeof SieveStandardInputMeasurementType[keyof typeof SieveStandardInputMeasurementType];
+
+
+export const SieveStandardInputMeasurementType = {
+  percentage: 'percentage',
+  amount: 'amount',
+} as const;
+
+export interface SieveStandardInput {
+  testType: SieveStandardInputTestType;
+  /** @minimum 1 */
+  materialReferenceItemId: number;
+  /** @minimum 1 */
+  sieveSizeReferenceItemId: number;
+  /** @minLength 1 */
+  standardReference: string;
+  measurementType: SieveStandardInputMeasurementType;
+  /** @nullable */
+  minimum?: number | null;
+  /** @nullable */
+  maximum?: number | null;
+  unit?: string;
+}
+
+export type SieveStandardUpdateTestType = typeof SieveStandardUpdateTestType[keyof typeof SieveStandardUpdateTestType];
+
+
+export const SieveStandardUpdateTestType = {
+  Sand_Sieve: 'Sand Sieve',
+  Aggregate_Sieve: 'Aggregate Sieve',
+} as const;
+
+export type SieveStandardUpdateMeasurementType = typeof SieveStandardUpdateMeasurementType[keyof typeof SieveStandardUpdateMeasurementType];
+
+
+export const SieveStandardUpdateMeasurementType = {
+  percentage: 'percentage',
+  amount: 'amount',
+} as const;
+
+export interface SieveStandardUpdate {
+  testType?: SieveStandardUpdateTestType;
+  /** @minimum 1 */
+  materialReferenceItemId?: number;
+  /** @minimum 1 */
+  sieveSizeReferenceItemId?: number;
+  /** @minLength 1 */
+  standardReference?: string;
+  measurementType?: SieveStandardUpdateMeasurementType;
+  /** @nullable */
+  minimum?: number | null;
+  /** @nullable */
+  maximum?: number | null;
+  unit?: string;
 }
 
 export interface AuthUser {

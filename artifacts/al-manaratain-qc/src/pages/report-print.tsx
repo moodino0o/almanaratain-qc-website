@@ -114,6 +114,67 @@ function SpecimenRowsTable({
   );
 }
 
+function SieveRowsTable({ rows }: { rows: unknown[] }) {
+  if (!rows.length) return null;
+  return (
+    <div className="report-specimen-block">
+      <p className="report-centered-title">Sieve Measurements:</p>
+      <table className="report-table">
+        <thead>
+          <tr>
+            <th>No.</th>
+            <th>Sieve / Pore Size</th>
+            <th>Amount Passing</th>
+            <th>% Passing</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => {
+            const values = typeof row === "object" && row !== null
+              ? row as Record<string, unknown> : {};
+            return (
+              <tr key={index}>
+                <td>{textValue(values.rowNo, String(index + 1))}</td>
+                <td>{textValue(values.sieveSize)}</td>
+                <td>{textValue(values.passingAmount)}</td>
+                <td>{textValue(values.passingPercentage)}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function SieveEvaluationTable({ value }: { value: unknown }) {
+  if (typeof value !== "object" || value === null) return null;
+  const evaluation = value as Record<string, unknown>;
+  const criteria = Array.isArray(evaluation.criteria) ? evaluation.criteria : [];
+  return (
+    <div className="report-strength-block">
+      <p className="report-centered-title">
+        Sieve Evaluation: {textValue(evaluation.status)}{evaluation.reason ? ` — ${textValue(evaluation.reason)}` : ""}
+      </p>
+      <table className="report-table">
+        <thead><tr><th>Sieve / Pore Size</th><th>Measured</th><th>Allowed Range</th><th>Result</th></tr></thead>
+        <tbody>
+          {criteria.map((criterion, index) => {
+            const item = typeof criterion === "object" && criterion !== null
+              ? criterion as Record<string, unknown> : {};
+            return <tr key={index}>
+              <td>{textValue(item.sieveSize)}</td>
+              <td>{item.measuredValue == null ? "Missing" : `${textValue(item.measuredValue)} ${textValue(item.unit)}`}</td>
+              <td>{item.minimum == null ? "—" : textValue(item.minimum)} to {item.maximum == null ? "—" : textValue(item.maximum)} {textValue(item.unit)}</td>
+              <td>{item.withinLimits === true ? "Pass" : item.withinLimits === false ? "Fail" : "Review"}</td>
+            </tr>;
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function ReportField({ label, value }: { label: string; value: string }) {
   return (
     <div className="report-field">
@@ -354,12 +415,17 @@ function ReadyMixReport({ record }: { record: QcRecord }) {
 
 function GenericReport({ record }: { record: QcRecord }) {
   const entries = Object.entries(record.details).filter(
-    ([key]) => key !== "testRows" && key !== "strengthEvaluation",
+    ([key]) => !["testRows", "sieveRows", "strengthEvaluation", "sieveEvaluation"].includes(key),
   );
   const testRows = Array.isArray(record.details.testRows) ? record.details.testRows : [];
+  const sieveRows = Array.isArray(record.details.sieveRows) ? record.details.sieveRows : [];
   const strengthEvaluation =
     typeof record.details.strengthEvaluation === "object" && record.details.strengthEvaluation !== null
       ? record.details.strengthEvaluation as Record<string, unknown>
+      : null;
+  const sieveEvaluation =
+    typeof record.details.sieveEvaluation === "object" && record.details.sieveEvaluation !== null
+      ? record.details.sieveEvaluation as Record<string, unknown>
       : null;
   return (
     <section>
@@ -383,11 +449,19 @@ function GenericReport({ record }: { record: QcRecord }) {
             <ReportField label="Automatic Evaluation" value={textValue(strengthEvaluation.status)} />
           </>
         )}
+        {sieveEvaluation && (
+          <>
+            <ReportField label="Applicable Reference" value={textValue(sieveEvaluation.standardReference)} />
+            <ReportField label="Automatic Evaluation" value={textValue(sieveEvaluation.status)} />
+          </>
+        )}
         {entries.map(([key, value]) => (
           <ReportField key={key} label={keyLabel(key)} value={textValue(value)} />
         ))}
       </div>
       <SpecimenRowsTable rows={testRows} ageLabel={record.testType === "Blocks" ? "Sample Age" : "Test Age"} />
+      <SieveRowsTable rows={sieveRows} />
+      <SieveEvaluationTable value={sieveEvaluation} />
     </section>
   );
 }

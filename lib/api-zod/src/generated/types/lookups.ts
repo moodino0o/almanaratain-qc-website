@@ -18,4 +18,5 @@ export interface Lookups {
   mixStrengths: string[];
   customers: string[];
   customerLocations: string[];
+  sieveSizes: string[];
 }

@@ -481,6 +481,66 @@ paths:
       responses:
         "204":
           description: Strength standard deleted
+  /sieve-standards:
+    get:
+      operationId: listSieveStandards
+      tags: [qc]
+      summary: List configurable sieve acceptance standards
+      responses:
+        "200":
+          description: Configured sieve standards
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SieveStandard"
+    post:
+      operationId: createSieveStandard
+      tags: [qc]
+      summary: Create a sieve acceptance standard
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SieveStandardInput"
+      responses:
+        "201":
+          description: Created sieve standard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SieveStandard"
+  /sieve-standards/{id}:
+    patch:
+      operationId: updateSieveStandard
+      tags: [qc]
+      summary: Update a sieve acceptance standard
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SieveStandardUpdate"
+      responses:
+        "200":
+          description: Updated sieve standard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SieveStandard"
+    delete:
+      operationId: deleteSieveStandard
+      tags: [qc]
+      summary: Delete a sieve acceptance standard
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "204":
+          description: Sieve standard deleted
   /records:
     get:
       operationId: listRecords
@@ -793,6 +853,7 @@ components:
         - mixStrengths
         - customers
         - customerLocations
+        - sieveSizes
       properties:
         factories:
           type: array
@@ -835,6 +896,10 @@ components:
           items:
             type: string
         customerLocations:
+          type: array
+          items:
+            type: string
+        sieveSizes:
           type: array
           items:
             type: string
@@ -980,6 +1045,99 @@ components:
           type: number
           minimum: 0
         strengthUnit:
+          type: string
+    SieveStandard:
+      type: object
+      required:
+        - id
+        - testType
+        - materialReferenceItemId
+        - material
+        - sieveSizeReferenceItemId
+        - sieveSize
+        - standardReference
+        - measurementType
+        - minimum
+        - maximum
+        - unit
+      properties:
+        id:
+          type: number
+        testType:
+          $ref: "#/components/schemas/TestType"
+        materialReferenceItemId:
+          type: number
+        material:
+          type: string
+        sieveSizeReferenceItemId:
+          type: number
+        sieveSize:
+          type: string
+        standardReference:
+          type: string
+        measurementType:
+          type: string
+          enum: [percentage, amount]
+        minimum:
+          type: ["number", "null"]
+        maximum:
+          type: ["number", "null"]
+        unit:
+          type: string
+    SieveStandardInput:
+      type: object
+      required:
+        - testType
+        - materialReferenceItemId
+        - sieveSizeReferenceItemId
+        - standardReference
+        - measurementType
+      properties:
+        testType:
+          type: string
+          enum: [Sand Sieve, Aggregate Sieve]
+        materialReferenceItemId:
+          type: number
+          minimum: 1
+        sieveSizeReferenceItemId:
+          type: number
+          minimum: 1
+        standardReference:
+          type: string
+          minLength: 1
+        measurementType:
+          type: string
+          enum: [percentage, amount]
+        minimum:
+          type: ["number", "null"]
+        maximum:
+          type: ["number", "null"]
+        unit:
+          type: string
+          default: "%"
+    SieveStandardUpdate:
+      type: object
+      properties:
+        testType:
+          type: string
+          enum: [Sand Sieve, Aggregate Sieve]
+        materialReferenceItemId:
+          type: number
+          minimum: 1
+        sieveSizeReferenceItemId:
+          type: number
+          minimum: 1
+        standardReference:
+          type: string
+          minLength: 1
+        measurementType:
+          type: string
+          enum: [percentage, amount]
+        minimum:
+          type: ["number", "null"]
+        maximum:
+          type: ["number", "null"]
+        unit:
           type: string
     AuthUser:
       type: object
