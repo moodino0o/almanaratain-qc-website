@@ -418,4 +418,15 @@
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
+
+  .report-paper,
+  .report-paper table,
+  .report-paper tr,
+  .report-paper .report-strength-block,
+  .report-paper .report-specimen-block,
+  .report-paper .report-remarks,
+  .report-paper .report-signatures {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
 }

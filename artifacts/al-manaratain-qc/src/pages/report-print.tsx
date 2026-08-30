@@ -251,10 +251,9 @@ function ReadyMixReport({ record }: { record: QcRecord }) {
               )}
             />
             <ReportField
-              label="Customer Location"
-              value={detailValue(details, ["customerLocation"], "-")}
+              label="Location"
+              value={detailValue(details, ["customerLocation"], record.location)}
             />
-            <ReportField label="Plant / Production Location" value={record.location} />
             <ReportField
               label="Mix Type"
               value={detailValue(details, ["mixType"], designStrength)}
@@ -332,18 +331,6 @@ function ReadyMixReport({ record }: { record: QcRecord }) {
             label="Temperature"
             value={detailValue(details, ["temperature"])}
           />
-            <ReportField
-              label="Applicable BS"
-              value={textValue(strengthEvaluation?.bsStandard)}
-            />
-            <ReportField
-              label="Required Minimum"
-              value={
-                strengthEvaluation?.requiredStrength == null
-                  ? "-"
-                  : `${textValue(strengthEvaluation.requiredStrength)} ${textValue(strengthEvaluation.strengthUnit, "N/mm²")}`
-              }
-            />
           <ReportField
             label="Compaction Type"
             value={detailValue(details, ["compactionType"], "Hand Compaction")}
