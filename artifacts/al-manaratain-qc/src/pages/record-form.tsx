@@ -103,6 +103,13 @@ export default function RecordForm() {
   const { id } = useParams();
   const recordId = id ? Number(id) : 0;
   const isEditing = Number.isInteger(recordId) && recordId > 0;
+  const duplicateSourceId = Number(
+    typeof window === "undefined"
+      ? 0
+      : new URLSearchParams(window.location.search).get("duplicateFrom"),
+  );
+  const isDuplicating = !isEditing && Number.isInteger(duplicateSourceId) && duplicateSourceId > 0;
+  const sourceRecordId = isEditing ? recordId : isDuplicating ? duplicateSourceId : 0;
   const queryClient = useQueryClient();
   
   const { data: lookups, isLoading: lookupsLoading } = useGetLookups();
@@ -111,10 +118,10 @@ export default function RecordForm() {
     data: existingRecord,
     isLoading: recordLoading,
     isError: recordError,
-  } = useGetRecord(recordId, {
+  } = useGetRecord(sourceRecordId, {
     query: {
-      queryKey: getGetRecordQueryKey(recordId),
-      enabled: isEditing,
+      queryKey: getGetRecordQueryKey(sourceRecordId),
+      enabled: isEditing || isDuplicating,
     },
   });
   const { data: strengthStandards } = useListStrengthStandards();
@@ -142,7 +149,7 @@ export default function RecordForm() {
   const sieveContextKeyRef = useRef("");
 
   useEffect(() => {
-    if (!isEditing || !existingRecord || initializedRecordId.current === recordId) return;
+    if ((!isEditing && !isDuplicating) || !existingRecord || initializedRecordId.current === sourceRecordId) return;
 
     const savedDetails =
       typeof existingRecord.details === "object" && existingRecord.details !== null
@@ -156,7 +163,6 @@ export default function RecordForm() {
     const numericDetailKeys = [
       "slump",
       "temperature",
-      "airContent",
       "weight",
       "sampleWeight",
       "dryWeight",
@@ -193,8 +199,8 @@ export default function RecordForm() {
     );
     sieveContextKeyRef.current = `${existingRecord.testType}|${String(savedDetails.materialReferenceItemId ?? existingRecord.material)}`;
     nextRowId.current = Math.max(savedRows.length + 1, 2);
-    initializedRecordId.current = recordId;
-  }, [existingRecord, isEditing, recordId]);
+    initializedRecordId.current = sourceRecordId;
+  }, [existingRecord, isDuplicating, isEditing, sourceRecordId]);
 
   const handleDetailChange = (key: string, value: string) => {
     setDetails(prev => ({ ...prev, [key]: value }));
@@ -257,8 +263,7 @@ export default function RecordForm() {
       case TestType.Ready_Mix:
         return [
           { key: "slump", label: "Slump (mm)", type: "number" },
-          { key: "temperature", label: "Temperature (°C)", type: "number" },
-          { key: "airContent", label: "Air Content (%)", type: "number" }
+          { key: "temperature", label: "Temperature (°C)", type: "number" }
         ];
       case TestType.Blocks:
         return [
@@ -556,11 +561,11 @@ export default function RecordForm() {
     });
   };
 
-  if (lookupsLoading || (isEditing && recordLoading)) {
+  if (lookupsLoading || ((isEditing || isDuplicating) && recordLoading)) {
     return <div className="p-8 text-center text-muted-foreground">Loading form data...</div>;
   }
 
-  if (isEditing && (recordError || !existingRecord)) {
+  if ((isEditing || isDuplicating) && (recordError || !existingRecord)) {
     return <div className="p-8 text-center text-destructive">Failed to load the record for editing.</div>;
   }
 
@@ -777,15 +782,6 @@ export default function RecordForm() {
                       value={String(details.temperature ?? "")}
                       onChange={event => handleDetailChange("temperature", event.target.value)}
                       placeholder="Enter temperature"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Air Content (%)</Label>
-                    <Input
-                      type="number"
-                      value={String(details.airContent ?? "")}
-                      onChange={event => handleDetailChange("airContent", event.target.value)}
-                      placeholder="Enter air content"
                     />
                   </div>
                 </div>
