@@ -1,150 +1,271 @@
-import { useState } from "react";
-import { useListRecords, TestType, RecordStatus } from "@workspace/api-client-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useMemo, useState } from "react";
+import {
+  DailyReadyMixReferenceType,
+  TestType,
+  getGetDailyReadyMixResultsQueryKey,
+  useGetDailyReadyMixResults,
+  useGetLookups,
+  useListRecords,
+} from "@workspace/api-client-react";
+import type { GetDailyReadyMixResultsParams } from "@workspace/api-client-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Link } from "wouter";
-import { CheckCircle2, Search, Filter, Printer, FileText, Download } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { CalendarDays, ClipboardList, Filter, Search, SlidersHorizontal } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
+type ReferenceType = "site" | "plant";
+
+const today = () => new Date().toISOString().slice(0, 10);
+
+function formatStrength(value: number | null | undefined, unit = "N/mm²") {
+  return value == null ? "Missing" : `${value.toFixed(1)} ${unit}`;
+}
+
+function detailValue(details: Record<string, unknown>, keys: string[]) {
+  const normalized = new Map(
+    Object.entries(details).map(([key, value]) => [key.toLowerCase(), value]),
+  );
+  for (const key of keys) {
+    const value = normalized.get(key.toLowerCase());
+    if (value !== undefined && value !== null && value !== "") return String(value).trim();
+  }
+  return "";
+}
+
 export default function Reports() {
-  const [search, setSearch] = useState("");
-  const [testType, setTestType] = useState<TestType | "All">("All");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [draftDate, setDraftDate] = useState(today);
+  const [draftMixDesign, setDraftMixDesign] = useState("");
+  const [draftReferenceType, setDraftReferenceType] = useState<ReferenceType>("site");
+  const [filters, setFilters] = useState<GetDailyReadyMixResultsParams | null>(null);
 
-  const { data: records, isLoading } = useListRecords({ 
-    search: search || undefined, 
-    testType: testType === "All" ? undefined : testType 
+  const { data: lookups, isLoading: lookupsLoading } = useGetLookups();
+  const { data: readyMixRecords } = useListRecords({
+    testType: TestType.Ready_Mix,
+    limit: 100,
   });
+  const { data: results, isLoading: resultsLoading, isError } = useGetDailyReadyMixResults(
+    filters ?? { sampleDate: today(), mixDesign: "", referenceType: DailyReadyMixReferenceType.site },
+    {
+      query: {
+        enabled: filters !== null,
+        queryKey: getGetDailyReadyMixResultsQueryKey(filters ?? { sampleDate: today(), mixDesign: "", referenceType: DailyReadyMixReferenceType.site }),
+      },
+    },
+  );
 
-  // Only show passed records or all? Reports usually for passed, but we'll show all and highlight.
-  const displayRecords = records?.filter(r => r.status === RecordStatus.Passed) || [];
+  const mixDesigns = useMemo(() => {
+    const values = new Set<string>();
+    for (const value of lookups?.mixStrengths ?? []) values.add(value);
+    for (const record of readyMixRecords ?? []) {
+      const details = record.details as Record<string, unknown>;
+      const design = detailValue(details, ["designStrength", "mixStrength", "mixType"]);
+      if (design) values.add(design);
+    }
+    return [...values].sort((left, right) => left.localeCompare(right));
+  }, [lookups?.mixStrengths, readyMixRecords]);
+
+  const openFilters = () => {
+    setDraftDate(filters?.sampleDate ?? today());
+    setDraftMixDesign(filters?.mixDesign ?? mixDesigns[0] ?? "");
+    setDraftReferenceType(filters?.referenceType ?? DailyReadyMixReferenceType.site);
+    setIsFilterOpen(true);
+  };
+
+  const applyFilters = () => {
+    if (!draftDate || !draftMixDesign.trim()) return;
+    setFilters({
+      sampleDate: draftDate,
+      mixDesign: draftMixDesign.trim(),
+      referenceType: draftReferenceType,
+    });
+    setIsFilterOpen(false);
+  };
+
+  const referenceLabel = filters?.referenceType === DailyReadyMixReferenceType.plant ? "Plant" : "Site";
+  const hasFilters = filters !== null;
 
   return (
-    <div className="space-y-6 flex flex-col h-full">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="flex h-full flex-col gap-6">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">QC Certificates</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Generate and print official quality control certificates.</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 shrink-0">
-        <Card className="bg-primary text-primary-foreground border-primary">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5" /> Ready for Certificate
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{displayRecords.length}</div>
-            <p className="text-sm opacity-80 mt-1">Records with 'Passed' status</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FileText className="w-5 h-5 text-muted-foreground" /> Export Data
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">Download the current view as a spreadsheet for external analysis.</p>
-            <Button variant="outline" className="w-full" disabled={displayRecords.length === 0}>
-              <Download className="w-4 h-4 mr-2" /> Export to CSV
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="flex-1 flex flex-col min-h-0">
-        <CardHeader className="pb-4 shrink-0">
-          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-            <div className="relative w-full max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search passed records..." 
-                className="pl-9"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-primary/10 p-2.5 text-primary">
+              <ClipboardList className="h-6 w-6" />
             </div>
-            
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Filter className="w-4 h-4 text-muted-foreground hidden sm:block" />
-              <div className="w-full sm:w-[200px]">
-                <Select value={testType} onValueChange={(val: any) => setTestType(val)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filter by Test Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="All">All Test Types</SelectItem>
-                    {Object.values(TestType).map(type => (
-                      <SelectItem key={type} value={type}>{type}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-foreground">Daily Ready Mix Results</h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Review Ready Mix strength results by date, mix design, and Site or Plant reference.
+              </p>
             </div>
           </div>
+        </div>
+        <Button onClick={openFilters} className="shrink-0">
+          <SlidersHorizontal className="mr-2 h-4 w-4" />
+          {hasFilters ? "Change filters" : "Choose results"}
+        </Button>
+      </div>
+
+      <Card className="border-t-4 border-t-primary">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle className="text-lg">Selected daily results</CardTitle>
+              <CardDescription>
+                {hasFilters
+                  ? `${formatDate(filters.sampleDate)} · ${filters.mixDesign} · ${referenceLabel} references start with ${referenceLabel === "Site" ? "S" : "H"}`
+                  : "Choose a date, mix design, and reference category to view the results."}
+              </CardDescription>
+            </div>
+            {hasFilters && (
+              <Button variant="outline" size="sm" onClick={openFilters}>
+                <Filter className="mr-2 h-4 w-4" />
+                Edit selection
+              </Button>
+            )}
+          </div>
         </CardHeader>
-        <CardContent className="flex-1 overflow-auto p-0">
-          <Table className="min-w-[700px]">
-            <TableHeader className="sticky top-0 bg-card z-10 shadow-sm">
-              <TableRow>
-                <TableHead className="w-[120px]">Record No.</TableHead>
-                <TableHead>Test Type</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Material</TableHead>
-                <TableHead>Sample Date</TableHead>
-                <TableHead className="text-right w-[150px]">Certificate</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center h-48 text-muted-foreground">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
-                      Loading records...
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : displayRecords.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center h-48 text-muted-foreground">
-                    <div className="flex flex-col items-center justify-center">
-                      <FileText className="w-10 h-10 text-muted-foreground/30 mb-2" />
-                      <p>No passed records available for certificates.</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                displayRecords.map((record) => (
-                  <TableRow key={record.id}>
-                    <TableCell className="font-semibold text-primary">{record.recordNo}</TableCell>
-                    <TableCell>{record.testType}</TableCell>
-                    <TableCell>{record.location}</TableCell>
-                    <TableCell>{record.material}</TableCell>
-                    <TableCell>{formatDate(record.sampleDate)}</TableCell>
-                    <TableCell className="text-right">
-                      <Link 
-                        href={`/reports/${record.id}`}
-                        className="inline-flex h-8 items-center justify-center rounded-md bg-secondary text-secondary-foreground px-3 text-xs font-medium shadow-sm transition-colors hover:bg-secondary/80"
-                      >
-                        <Printer className="w-3 h-3 mr-2" />
-                        Print
-                      </Link>
-                    </TableCell>
+        <CardContent>
+          {!hasFilters ? (
+            <div className="flex min-h-[280px] flex-col items-center justify-center rounded-lg border border-dashed bg-muted/20 p-8 text-center">
+              <CalendarDays className="mb-4 h-10 w-10 text-primary/60" />
+              <h2 className="text-lg font-semibold">Start with a daily result search</h2>
+              <p className="mt-2 max-w-md text-sm text-muted-foreground">
+                Use the filter popup to specify the sample date, mix design, and whether the reference number belongs to a Site or Plant.
+              </p>
+              <Button className="mt-5" onClick={openFilters}>Choose date and mix design</Button>
+            </div>
+          ) : resultsLoading ? (
+            <div className="flex min-h-[280px] items-center justify-center text-muted-foreground">
+              Loading daily Ready Mix results...
+            </div>
+          ) : isError ? (
+            <div className="flex min-h-[280px] flex-col items-center justify-center text-center text-destructive">
+              <p className="font-semibold">The daily results could not be loaded.</p>
+              <p className="mt-1 text-sm">Please try the selection again.</p>
+            </div>
+          ) : !results?.records.length ? (
+            <div className="flex min-h-[280px] flex-col items-center justify-center text-center">
+              <Search className="mb-3 h-10 w-10 text-muted-foreground/40" />
+              <p className="font-semibold">No matching Ready Mix results</p>
+              <p className="mt-1 max-w-lg text-sm text-muted-foreground">
+                No records matched this date, mix design, and {referenceLabel} reference prefix. Check that the reference number starts with {referenceLabel === "Site" ? "S" : "H"} and that a strength was recorded.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-md border">
+              <Table className="min-w-[760px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Record No.</TableHead>
+                    <TableHead>Reference No.</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Mix Design</TableHead>
+                    <TableHead className="text-right">Strength</TableHead>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                </TableHeader>
+                <TableBody>
+                  {results.records.map((record) => (
+                    <TableRow key={record.recordId}>
+                      <TableCell className="font-semibold text-primary">{record.recordNo}</TableCell>
+                      <TableCell className="font-medium">{record.referenceNumber}</TableCell>
+                      <TableCell>{record.location}</TableCell>
+                      <TableCell>{record.mixDesign}</TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {formatStrength(record.averageStrength, record.strengthUnit)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+                <TableFooter>
+                  <TableRow>
+                    <TableCell colSpan={4}>Daily minimum</TableCell>
+                    <TableCell className="text-right">{formatStrength(results.minimumStrength, results.strengthUnit)}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell colSpan={4}>Daily average</TableCell>
+                    <TableCell className="text-right">{formatStrength(results.averageStrength, results.strengthUnit)}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell colSpan={4}>Daily maximum</TableCell>
+                    <TableCell className="text-right">{formatStrength(results.maximumStrength, results.strengthUnit)}</TableCell>
+                  </TableRow>
+                </TableFooter>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Choose daily Ready Mix results</DialogTitle>
+            <DialogDescription>
+              Select the exact day and mix design. Reference numbers beginning with S are Sites; H are Plants.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-5 py-2">
+            <div className="grid gap-2">
+              <Label htmlFor="daily-result-date">Sample date</Label>
+              <Input
+                id="daily-result-date"
+                type="date"
+                value={draftDate}
+                onChange={(event) => setDraftDate(event.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="daily-result-mix">Mix design</Label>
+              <select
+                id="daily-result-mix"
+                value={draftMixDesign}
+                onChange={(event) => setDraftMixDesign(event.target.value)}
+                disabled={lookupsLoading || mixDesigns.length === 0}
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">Select a mix design</option>
+                {mixDesigns.map((mixDesign) => (
+                  <option key={mixDesign} value={mixDesign}>{mixDesign}</option>
+                ))}
+              </select>
+              {!lookupsLoading && mixDesigns.length === 0 && (
+                <p className="text-xs text-destructive">No Ready Mix designs are available yet.</p>
+              )}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="daily-result-reference">Reference category</Label>
+              <select
+                id="daily-result-reference"
+                value={draftReferenceType}
+                onChange={(event) => setDraftReferenceType(event.target.value as ReferenceType)}
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="site">Site — reference starts with S</option>
+                <option value="plant">Plant — reference starts with H</option>
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsFilterOpen(false)}>Cancel</Button>
+            <Button onClick={applyFilters} disabled={!draftDate || !draftMixDesign.trim()}>
+              Show results
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

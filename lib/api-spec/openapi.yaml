@@ -576,6 +576,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/QcRecord"
+  /daily-ready-mix-results:
+    get:
+      operationId: getDailyReadyMixResults
+      tags: [qc]
+      summary: Get daily Ready Mix strength results
+      parameters:
+        - name: sampleDate
+          in: query
+          required: true
+          schema:
+            type: string
+            description: Sample date in YYYY-MM-DD format
+        - name: mixDesign
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - name: referenceType
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/DailyReadyMixReferenceType"
+      responses:
+        "200":
+          description: Daily Ready Mix strength results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyReadyMixResults"
   /records/{id}:
     get:
       operationId: getRecord
@@ -1138,6 +1168,83 @@ components:
         maximum:
           type: ["number", "null"]
         unit:
+          type: string
+    DailyReadyMixReferenceType:
+      type: string
+      enum: [site, plant]
+    DailyReadyMixResult:
+      type: object
+      required:
+        - recordId
+        - recordNo
+        - sampleDate
+        - location
+        - mixDesign
+        - referenceNumber
+        - referenceType
+        - strengths
+        - averageStrength
+        - minimumStrength
+        - maximumStrength
+        - strengthUnit
+      properties:
+        recordId:
+          type: number
+        recordNo:
+          type: string
+        sampleDate:
+          type: string
+          format: date
+        location:
+          type: string
+        mixDesign:
+          type: string
+        referenceNumber:
+          type: string
+        referenceType:
+          $ref: "#/components/schemas/DailyReadyMixReferenceType"
+        strengths:
+          type: array
+          items:
+            type: number
+        averageStrength:
+          type: ["number", "null"]
+        minimumStrength:
+          type: ["number", "null"]
+        maximumStrength:
+          type: ["number", "null"]
+        strengthUnit:
+          type: string
+    DailyReadyMixResults:
+      type: object
+      required:
+        - sampleDate
+        - mixDesign
+        - referenceType
+        - records
+        - averageStrength
+        - minimumStrength
+        - maximumStrength
+        - strengthUnit
+      properties:
+        sampleDate:
+          type: string
+          format: date
+        mixDesign:
+          type: string
+        referenceType:
+          $ref: "#/components/schemas/DailyReadyMixReferenceType"
+        records:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailyReadyMixResult"
+        averageStrength:
+          type: ["number", "null"]
+        minimumStrength:
+          type: ["number", "null"]
+        maximumStrength:
+          type: ["number", "null"]
+        strengthUnit:
           type: string
     AuthUser:
       type: object

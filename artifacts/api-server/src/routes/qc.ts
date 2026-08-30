@@ -33,6 +33,8 @@ import {
   GetReferenceDataResponse,
   GetRecordParams,
   GetRecordResponse,
+  GetDailyReadyMixResultsQueryParams,
+  GetDailyReadyMixResultsResponse,
   GetReportParams,
   GetReportResponse,
   CreateStrengthStandardBody,
@@ -192,6 +194,61 @@ const toRecord = (row: typeof qcRecordsTable.$inferSelect) => ({
   ...row,
   createdAt: row.createdAt.toISOString(),
 });
+
+function detailsValue(details: unknown, keys: string[]) {
+  if (typeof details !== "object" || details === null) return undefined;
+  const values = details as Record<string, unknown>;
+  const normalized = new Map(
+    Object.entries(values).map(([key, value]) => [key.toLowerCase(), value]),
+  );
+  for (const key of keys) {
+    const value = normalized.get(key.toLowerCase());
+    if (value !== undefined && value !== null && value !== "") return value;
+  }
+  return undefined;
+}
+
+function numericValue(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return null;
+  const parsed = Number.parseFloat(value.replace(/,/g, ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function readyMixStrengths(details: unknown) {
+  const directStrength = detailsValue(details, [
+    "avg28To29Days",
+    "average28To29Days",
+    "twentyEightDayStrength",
+    "strength28Days",
+    "averageStrength",
+    "compressiveStrength",
+    "strength",
+  ]);
+  const directNumber = numericValue(directStrength);
+  if (directNumber !== null) return [directNumber];
+
+  if (typeof details !== "object" || details === null) return [];
+  const rows = (details as Record<string, unknown>).testRows;
+  if (!Array.isArray(rows)) return [];
+  const rowStrengths = rows
+    .map((row) => detailsValue(row, ["calculatedStrength", "strength", "compressiveStrength"]))
+    .map(numericValue)
+    .filter((value): value is number => value !== null);
+  if (!rowStrengths.length) return [];
+  const average = rowStrengths.reduce((sum, value) => sum + value, 0) / rowStrengths.length;
+  return [average];
+}
+
+function readyMixDesign(details: unknown, material: string) {
+  const value = detailsValue(details, ["designStrength", "mixStrength", "mixType"]);
+  return value === undefined ? material : String(value).trim();
+}
+
+function referenceNumber(details: unknown) {
+  const value = detailsValue(details, ["referenceNumber"]);
+  return value === undefined ? "" : String(value).trim();
+}
 
 const toStrengthStandard = (row: typeof qcStrengthStandardsTable.$inferSelect) => ({
   id: row.id,
@@ -788,6 +845,86 @@ router.get("/records", async (req, res): Promise<void> => {
     .limit(parsed.data.limit ?? 50);
 
   res.json(ListRecordsResponse.parse(rows.map(toRecord)));
+});
+
+router.get("/daily-ready-mix-results", async (req, res): Promise<void> => {
+  const parsed = GetDailyReadyMixResultsQueryParams.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const { sampleDate, mixDesign, referenceType } = parsed.data;
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(sampleDate) ||
+    Number.isNaN(Date.parse(`${sampleDate}T00:00:00.000Z`))
+  ) {
+    res.status(400).json({ error: "sampleDate must be a valid YYYY-MM-DD date" });
+    return;
+  }
+  const rows = await db
+    .select()
+    .from(qcRecordsTable)
+    .where(
+      and(
+        eq(qcRecordsTable.testType, "Ready Mix"),
+        eq(qcRecordsTable.sampleDate, sampleDate),
+      ),
+    )
+    .orderBy(asc(qcRecordsTable.location), asc(qcRecordsTable.id));
+
+  const prefix = referenceType === "site" ? "S" : "H";
+  const normalizedMixDesign = mixDesign.trim().toLocaleLowerCase();
+  const matchingRecords = rows.flatMap((row) => {
+    const reference = referenceNumber(row.details);
+    const design = readyMixDesign(row.details, row.material);
+    if (
+      !reference.toLocaleUpperCase().startsWith(prefix) ||
+      design.toLocaleLowerCase() !== normalizedMixDesign
+    ) {
+      return [];
+    }
+    const strengths = readyMixStrengths(row.details);
+    const recordStrength =
+      strengths.length > 0
+        ? strengths.reduce((sum, value) => sum + value, 0) / strengths.length
+        : null;
+    return [{
+      recordId: row.id,
+      recordNo: row.recordNo,
+      sampleDate: row.sampleDate,
+      location: row.location,
+      mixDesign: design,
+      referenceNumber: reference,
+      referenceType,
+      strengths,
+      averageStrength: recordStrength,
+      minimumStrength: recordStrength,
+      maximumStrength: recordStrength,
+      strengthUnit: "N/mm²",
+    }];
+  });
+  const numericStrengths = matchingRecords
+    .map((record) => record.averageStrength)
+    .filter((value): value is number => value !== null);
+  const summaryAverage = numericStrengths.length
+    ? numericStrengths.reduce((sum, value) => sum + value, 0) / numericStrengths.length
+    : null;
+  const summaryMinimum = numericStrengths.length ? Math.min(...numericStrengths) : null;
+  const summaryMaximum = numericStrengths.length ? Math.max(...numericStrengths) : null;
+
+  res.json(
+    GetDailyReadyMixResultsResponse.parse({
+      sampleDate,
+      mixDesign: mixDesign.trim(),
+      referenceType,
+      records: matchingRecords,
+      averageStrength: summaryAverage,
+      minimumStrength: summaryMinimum,
+      maximumStrength: summaryMaximum,
+      strengthUnit: "N/mm²",
+    }),
+  );
 });
 
 router.post("/records", async (req, res): Promise<void> => {

@@ -71,6 +71,46 @@ function numericStrength(value: string) {
   return Number.isFinite(number) ? number : null;
 }
 
+function numericValue(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return null;
+  const number = Number.parseFloat(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function calculatedDensity(values: ValueMap) {
+  const storedDensity = numericValue(values.density ?? values.densityKgM3);
+  if (storedDensity !== null) return formatNumber(storedDensity);
+
+  const dryWeight = numericValue(values.dryWeight);
+  const length = numericValue(values.length);
+  const width = numericValue(values.width);
+  const height = numericValue(values.height);
+  if (
+    dryWeight === null ||
+    length === null ||
+    width === null ||
+    height === null ||
+    dryWeight <= 0 ||
+    length <= 0 ||
+    width <= 0 ||
+    height <= 0
+  ) {
+    return "-";
+  }
+  return formatNumber((dryWeight * 1_000_000_000) / (length * width * height));
+}
+
+function calculatedWaterAbsorption(values: ValueMap) {
+  const storedAbsorption = numericValue(values.waterAbsorption ?? values.absorption);
+  if (storedAbsorption !== null) return formatNumber(storedAbsorption);
+
+  const dryWeight = numericValue(values.dryWeight);
+  const wetWeight = numericValue(values.wetWeight);
+  if (dryWeight === null || wetWeight === null || dryWeight <= 0) return "-";
+  return formatNumber(((wetWeight - dryWeight) / dryWeight) * 100);
+}
+
 function hasSpecimenMeasurements(rows: unknown[]) {
   return rows.some((row) => {
     if (typeof row !== "object" || row === null) return false;
@@ -361,51 +401,21 @@ function ReportFields({
 
 function ReadyMixReport({
   record,
-  standards,
 }: {
   record: QcRecord;
-  standards: StrengthStandard[];
 }) {
   const details = record.details;
-  const strengthEvaluation =
-    typeof details.strengthEvaluation === "object" && details.strengthEvaluation !== null
-      ? details.strengthEvaluation as Record<string, unknown>
-      : null;
-  const designStrength = detailValue(
-    details,
-    ["designStrength", "mixStrength", "mixType"],
-    record.material,
-  );
-  const strengthNumber = numericStrength(designStrength);
-  const sevenDayStrength = detailValue(
-    details,
-    ["sevenDayStrength", "strength7Days", "avg3To5Days", "average3To5Days"],
-    strengthNumber ? `${(strengthNumber * 0.7).toFixed(1)} N/mm²` : "-",
-  );
-  const twentyEightDayStrength = detailValue(
-    details,
-    [
-      "twentyEightDayStrength",
-      "strength28Days",
-      "avg28To29Days",
-      "average28To29Days",
-      "compressiveStrength",
-    ],
-    "-",
-  );
-  const compliance = detailValue(
-    details,
-    ["compliance", "complianceStatus"],
-    String(strengthEvaluation?.status ?? record.status),
-  );
   const testRows = Array.isArray(details.testRows)
     ? details.testRows
     : [
         {
-          testingDate: formatReportDate(record.sampleDate),
-          cubeAge: detailValue(details, ["cubeAge", "age"]),
+          testAge: detailValue(details, ["cubeAge", "age"]),
+          length: detailValue(details, ["length"]),
+          width: detailValue(details, ["width"]),
+          height: detailValue(details, ["height"]),
+          dryWeight: detailValue(details, ["dryWeight"]),
+          wetWeight: detailValue(details, ["wetWeight"]),
           density: detailValue(details, ["density", "densityKgM3"]),
-          load: detailValue(details, ["load"]),
           strength: detailValue(details, ["strength", "compressiveStrength"]),
           waterAbsorption: detailValue(details, ["waterAbsorption", "absorption"]),
         },
@@ -413,93 +423,19 @@ function ReadyMixReport({
 
   return (
     <>
-      <div className="report-two-column">
-        <section>
-          <SectionHeading>Customer and Mix Details</SectionHeading>
-          <div className="report-fields">
-            <ReportField
-              label="Customer Name"
-              value={detailValue(
-                details,
-                ["customerName", "customer"],
-                record.location,
-              )}
-            />
-            <ReportField
-              label="Location"
-              value={detailValue(details, ["customerLocation"], record.location)}
-            />
-            <ReportField
-              label="Mix Type"
-              value={detailValue(details, ["mixType"], designStrength)}
-            />
-            <ReportField
-              label="Project Name"
-              value={detailValue(details, ["projectName", "project"])}
-            />
-            <ReportField
-              label="Other Details"
-              value={detailValue(
-                details,
-                ["otherDetails", "remarks"],
-                record.remarks || "-",
-              )}
-            />
-          </div>
-        </section>
-        <section className="report-summary">
-          <SectionHeading>Average Strength</SectionHeading>
+      <section className="report-ready-mix-info">
+        <SectionHeading>Ready Mix Test Information</SectionHeading>
+        <div className="report-fields">
           <ReportField
-            label="3-5 Days"
-            value={detailValue(details, ["avg3To5Days", "average3To5Days"])}
+            label="Customer Name"
+            value={detailValue(details, ["customerName", "customer"], record.location)}
           />
           <ReportField
-            label="6-7 Days"
-            value={detailValue(
-              details,
-              ["avg6To7Days", "average6To7Days"],
-              sevenDayStrength,
-            )}
+            label="Location"
+            value={detailValue(details, ["customerLocation"], record.location)}
           />
           <ReportField
-            label="28-29 Days"
-            value={detailValue(
-              details,
-              ["avg28To29Days", "average28To29Days"],
-              twentyEightDayStrength,
-            )}
-          />
-          <p className="report-subheading">28-29 Days Compliance with BS</p>
-          <p className="report-centered-value">{compliance}</p>
-        </section>
-      </div>
-
-      <div className="report-two-column report-test-details">
-        <section>
-          <SectionHeading>Test Details</SectionHeading>
-          <div className="report-fields">
-            <ReportField
-              label="Casting Date"
-              value={detailValue(
-                details,
-                ["castingDate", "castDate"],
-                formatReportDate(record.sampleDate),
-              )}
-            />
-            <ReportField label="Casted by" value={record.testedBy} />
-            <ReportField
-              label="Cube Size (mm)"
-              value={detailValue(details, ["cubeSize", "sampleSize"])}
-            />
-            <ReportField
-              label="Sample No."
-              value={detailValue(details, ["sampleNo", "sampleNumber"], record.recordNo)}
-            />
-          </div>
-        </section>
-        <div className="report-fields report-test-measures">
-          <ReportField
-            label="Slump Test (mm)"
+            label="Slump"
             value={detailValue(details, ["slump", "slumpTest"])}
           />
           <ReportField
@@ -507,58 +443,71 @@ function ReadyMixReport({
             value={detailValue(details, ["temperature"])}
           />
           <ReportField
-            label="Compaction Type"
-            value={detailValue(details, ["compactionType"], "Hand Compaction")}
+            label="Reference Number"
+            value={detailValue(details, ["referenceNumber"])}
           />
+          <ReportField
+            label="Sample Date"
+            value={formatReportDate(record.sampleDate)}
+          />
+          <ReportField label="Material" value={record.material} />
         </div>
-      </div>
+      </section>
 
-      <table className="report-table report-results-table">
-        <thead>
-          <tr>
-            <th>Testing date</th>
-            <th>Cube Age</th>
-            <th>Density (kg/m3)</th>
-            <th>Load (kN)</th>
-            <th>Strength (N/mm2)</th>
-            <th>Water Absorption%</th>
-          </tr>
-        </thead>
-        <tbody>
-          {testRows.map((row, index) => {
-            const values =
-              typeof row === "object" && row !== null
-                ? (row as Record<string, unknown>)
-                : {};
-            return (
-              <tr key={index}>
-                <td>
-                  {textValue(
-                    values.testingDate || values.date,
-                    formatReportDate(record.sampleDate),
-                  )}
-                </td>
-                <td>{textValue(values.cubeAge || values.age)}</td>
-                <td>{textValue(values.density || values.densityKgM3)}</td>
-                <td>{textValue(values.load)}</td>
-                <td>
-                  {textValue(values.strength || values.compressiveStrength)}
-                </td>
-                <td>
-                  {textValue(values.waterAbsorption || values.absorption)}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      <SpecimenRowsTable rows={testRows} ageLabel="Test Age" />
-
-      <StrengthStandardsTable
-        record={record}
-        standards={standards}
-        evaluation={strengthEvaluation}
-      />
+      <section className="report-ready-mix-results">
+        <SectionHeading>Test Results</SectionHeading>
+        <table className="report-table report-results-table">
+          <thead>
+            <tr>
+              <th>Age (days)</th>
+              <th>Length (mm)</th>
+              <th>Width (mm)</th>
+              <th>Height (mm)</th>
+              <th>Density (kg/m³)</th>
+              <th>Water Absorption (%)</th>
+              <th>Strength (N/mm²)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {testRows.map((row, index) => {
+              const values =
+                typeof row === "object" && row !== null
+                  ? (row as Record<string, unknown>)
+                  : {};
+              const displayValues: ValueMap = {
+                ...values,
+                testAge:
+                  values.testAge ||
+                  values.sampleAge ||
+                  values.cubeAge ||
+                  values.age ||
+                  detailValue(details, ["cubeAge", "age"]),
+                length: values.length || detailValue(details, ["length"], ""),
+                width: values.width || detailValue(details, ["width"], ""),
+                height: values.height || detailValue(details, ["height"], ""),
+                dryWeight: values.dryWeight || detailValue(details, ["dryWeight"], ""),
+                wetWeight: values.wetWeight || detailValue(details, ["wetWeight"], ""),
+                strength:
+                  values.calculatedStrength ||
+                  values.strength ||
+                  values.compressiveStrength ||
+                  detailValue(details, ["strength", "compressiveStrength"], ""),
+              };
+              return (
+                <tr key={index}>
+                  <td>{textValue(displayValues.testAge)}</td>
+                  <td>{textValue(displayValues.length)}</td>
+                  <td>{textValue(displayValues.width)}</td>
+                  <td>{textValue(displayValues.height)}</td>
+                  <td>{calculatedDensity(displayValues)}</td>
+                  <td>{calculatedWaterAbsorption(displayValues)}</td>
+                  <td>{textValue(displayValues.strength)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </section>
     </>
   );
 }
@@ -869,7 +818,7 @@ export default function ReportPrint() {
         </p>
 
         {record.testType === "Ready Mix" ? (
-          <ReadyMixReport record={record} standards={strengthStandards} />
+          <ReadyMixReport record={record} />
         ) : record.testType === "Blocks" ? (
           <BlocksReport record={record} standards={strengthStandards} />
         ) : record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve" ? (

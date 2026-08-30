@@ -26,7 +26,9 @@ import type {
   ArchiveResponse,
   AuthUserEnvelope,
   BeginBrowserLoginParams,
+  DailyReadyMixResults,
   Dashboard,
+  GetDailyReadyMixResultsParams,
   HealthStatus,
   ListRecordsParams,
   LogoutBrowserSessionParams,
@@ -2689,6 +2691,90 @@ export const useCreateRecord = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getCreateRecordMutationOptions(options));
     }
+
+export const getGetDailyReadyMixResultsUrl = (params: GetDailyReadyMixResultsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/daily-ready-mix-results?${stringifiedParams}` : `/api/daily-ready-mix-results`
+}
+
+/**
+ * @summary Get daily Ready Mix strength results
+ */
+export const getDailyReadyMixResults = async (params: GetDailyReadyMixResultsParams, options?: Parameters<typeof customFetch>[1]): Promise<DailyReadyMixResults> => {
+
+  return customFetch<DailyReadyMixResults>(getGetDailyReadyMixResultsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDailyReadyMixResultsQueryKey = (params?: GetDailyReadyMixResultsParams,) => {
+    return [
+    `/api/daily-ready-mix-results`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetDailyReadyMixResultsQueryOptions = <TData = Awaited<ReturnType<typeof getDailyReadyMixResults>>, TError = ErrorType<unknown>>(params: GetDailyReadyMixResultsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDailyReadyMixResults>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDailyReadyMixResultsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDailyReadyMixResults>>> = ({ signal }) => getDailyReadyMixResults(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDailyReadyMixResults>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDailyReadyMixResultsQueryResult = NonNullable<Awaited<ReturnType<typeof getDailyReadyMixResults>>>
+export type GetDailyReadyMixResultsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get daily Ready Mix strength results
+ */
+
+export function useGetDailyReadyMixResults<TData = Awaited<ReturnType<typeof getDailyReadyMixResults>>, TError = ErrorType<unknown>>(
+ params: GetDailyReadyMixResultsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDailyReadyMixResults>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDailyReadyMixResultsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetRecordUrl = (id: number,) => {
 

@@ -732,6 +732,43 @@ export const CreateRecordResponse = zod.object({
 
 
 /**
+ * @summary Get daily Ready Mix strength results
+ */
+
+
+
+export const GetDailyReadyMixResultsQueryParams = zod.object({
+  "sampleDate": zod.coerce.string(),
+  "mixDesign": zod.coerce.string().min(1),
+  "referenceType": zod.enum(['site', 'plant'])
+})
+
+export const GetDailyReadyMixResultsResponse = zod.object({
+  "sampleDate": zod.coerce.date(),
+  "mixDesign": zod.string(),
+  "referenceType": zod.enum(['site', 'plant']),
+  "records": zod.array(zod.object({
+  "recordId": zod.number(),
+  "recordNo": zod.string(),
+  "sampleDate": zod.coerce.date(),
+  "location": zod.string(),
+  "mixDesign": zod.string(),
+  "referenceNumber": zod.string(),
+  "referenceType": zod.enum(['site', 'plant']),
+  "strengths": zod.array(zod.number()),
+  "averageStrength": zod.number().nullable(),
+  "minimumStrength": zod.number().nullable(),
+  "maximumStrength": zod.number().nullable(),
+  "strengthUnit": zod.string()
+})),
+  "averageStrength": zod.number().nullable(),
+  "minimumStrength": zod.number().nullable(),
+  "maximumStrength": zod.number().nullable(),
+  "strengthUnit": zod.string()
+})
+
+
+/**
  * @summary Get one quality control record
  */
 export const GetRecordParams = zod.object({

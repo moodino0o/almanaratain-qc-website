@@ -283,6 +283,46 @@ export interface SieveStandardUpdate {
   unit?: string;
 }
 
+export type DailyReadyMixReferenceType = typeof DailyReadyMixReferenceType[keyof typeof DailyReadyMixReferenceType];
+
+
+export const DailyReadyMixReferenceType = {
+  site: 'site',
+  plant: 'plant',
+} as const;
+
+export interface DailyReadyMixResult {
+  recordId: number;
+  recordNo: string;
+  sampleDate: string;
+  location: string;
+  mixDesign: string;
+  referenceNumber: string;
+  referenceType: DailyReadyMixReferenceType;
+  strengths: number[];
+  /** @nullable */
+  averageStrength: number | null;
+  /** @nullable */
+  minimumStrength: number | null;
+  /** @nullable */
+  maximumStrength: number | null;
+  strengthUnit: string;
+}
+
+export interface DailyReadyMixResults {
+  sampleDate: string;
+  mixDesign: string;
+  referenceType: DailyReadyMixReferenceType;
+  records: DailyReadyMixResult[];
+  /** @nullable */
+  averageStrength: number | null;
+  /** @nullable */
+  minimumStrength: number | null;
+  /** @nullable */
+  maximumStrength: number | null;
+  strengthUnit: string;
+}
+
 export interface AuthUser {
   id: string;
   /** @nullable */
@@ -434,5 +474,17 @@ search?: SearchParamParameter;
  * @maximum 100
  */
 limit?: LimitParamParameter;
+};
+
+export type GetDailyReadyMixResultsParams = {
+/**
+ * Sample date in YYYY-MM-DD format
+ */
+sampleDate: string;
+/**
+ * @minLength 1
+ */
+mixDesign: string;
+referenceType: DailyReadyMixReferenceType;
 };
 

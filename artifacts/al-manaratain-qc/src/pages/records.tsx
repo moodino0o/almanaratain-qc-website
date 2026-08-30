@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { CheckCircle2, AlertTriangle, XCircle, Search, Plus, Filter } from "lucide-react";
+import { CheckCircle2, AlertTriangle, XCircle, Search, Plus, Filter, Printer } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 export default function Records() {
@@ -120,12 +120,21 @@ export default function Records() {
                     <TableCell>{record.testedBy}</TableCell>
                     <TableCell>{getStatusBadge(record.status)}</TableCell>
                     <TableCell className="text-right">
-                      <Link 
-                        href={`/records/${record.id}`}
-                        className="inline-flex h-8 items-center justify-center rounded-md bg-secondary text-secondary-foreground px-3 text-xs font-medium shadow-sm transition-colors hover:bg-secondary/80"
-                      >
-                        View
-                      </Link>
+                      <div className="flex justify-end gap-2">
+                        <Link
+                          href={`/records/${record.id}`}
+                          className="inline-flex h-8 items-center justify-center rounded-md bg-secondary text-secondary-foreground px-3 text-xs font-medium shadow-sm transition-colors hover:bg-secondary/80"
+                        >
+                          View
+                        </Link>
+                        <Link
+                          href={`/reports/${record.id}`}
+                          className="inline-flex h-8 items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+                        >
+                          <Printer className="mr-1.5 h-3.5 w-3.5" />
+                          Print
+                        </Link>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
