@@ -48,6 +48,7 @@ A browser-based laboratory and production quality-control system with structured
 
 - Match Al Manaratain branding and use the official logo.
 - Preserve the Access program's QC workflows while making data entry and report printing browser-friendly.
+- Printed report layouts should closely mirror the corresponding legacy Access forms.
 
 ## Gotchas
 
