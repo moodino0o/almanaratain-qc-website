@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "wouter";
 import {
   useGetReport,
@@ -143,6 +143,32 @@ function sortCubeRowsByAge(rows: unknown[]) {
       return left.index - right.index;
     })
     .map(({ row }) => row);
+}
+
+function cubeRowAge(row: unknown) {
+  const values = typeof row === "object" && row !== null
+    ? row as Record<string, unknown>
+    : {};
+  const rawAge = values.testAge ?? values.sampleAge ?? values.cubeAge ?? values.age;
+  if (rawAge === undefined || rawAge === null || rawAge === "") return null;
+  const age = numericValue(rawAge);
+  return age;
+}
+
+function cubeRowStrength(row: unknown) {
+  const values = typeof row === "object" && row !== null
+    ? row as Record<string, unknown>
+    : {};
+  return numericValue(values.calculatedStrength ?? values.strength ?? values.compressiveStrength);
+}
+
+function averageStrengthForAge(rows: unknown[], age: number) {
+  const strengths = rows
+    .filter((row) => cubeRowAge(row) === age)
+    .map(cubeRowStrength)
+    .filter((strength): strength is number => strength !== null);
+  if (!strengths.length) return null;
+  return strengths.reduce((total, strength) => total + strength, 0) / strengths.length;
 }
 
 function SpecimenRowsTable({
@@ -350,10 +376,12 @@ function ReadyMixComplianceBlock({
   record,
   standards,
   selectedStandard,
+  reportedStrength,
 }: {
   record: QcRecord;
   standards: StrengthStandard[];
   selectedStandard?: StrengthStandard;
+  reportedStrength: number | null;
 }) {
   const evaluation = objectValue(record.details.strengthEvaluation);
   const configuredStandard = standards
@@ -374,23 +402,15 @@ function ReadyMixComplianceBlock({
     activeStandard?.requiredStrength ?? numericValue(evaluation?.requiredStrength) ?? null;
   const strengthUnit = activeStandard?.strengthUnit ??
     textValue(evaluation?.strengthUnit, "N/mm²");
-  const reportedStrength = detailValue(record.details, [
-    "avg28To29Days",
-    "average28To29Days",
-    "twentyEightDayStrength",
-    "strength28Days",
-    "averageStrength",
-    "compressiveStrength",
-  ]);
   const storedReason = textValue(evaluation?.reason, "");
   const reason =
     (configuredStandard && /no matching standard/i.test(storedReason)
       ? "A matching standard is configured; complete specimen load and dimensions are required to confirm compliance."
       : storedReason) ||
     (status === "Passed"
-      ? "The reported result meets the configured minimum strength."
+      ? "The 28-day average result meets the configured minimum strength."
       : status === "Failed"
-        ? "The reported result does not meet the configured minimum strength."
+        ? "The 28-day average result does not meet the configured minimum strength."
         : "The result cannot be confirmed against a configured BS strength standard.");
 
   return (
@@ -410,8 +430,12 @@ function ReadyMixComplianceBlock({
           </strong>
         </div>
         <div>
-          <span>Reported Strength</span>
-          <strong>{reportedStrength}</strong>
+          <span>28-Day Average Strength</span>
+          <strong>
+            {reportedStrength === null
+              ? "—"
+              : `${formatNumber(reportedStrength, 2)} ${strengthUnit}`}
+          </strong>
         </div>
         <div>
           <span>Compliance</span>
@@ -526,6 +550,7 @@ function ReadyMixReport({
         },
       ];
   const orderedTestRows = sortCubeRowsByAge(testRows);
+  const average28DayStrength = averageStrengthForAge(orderedTestRows, 28);
 
   return (
     <>
@@ -576,6 +601,11 @@ function ReadyMixReport({
                 typeof row === "object" && row !== null
                   ? (row as Record<string, unknown>)
                   : {};
+              const age = cubeRowAge(row);
+              const nextAge = index < orderedTestRows.length - 1
+                ? cubeRowAge(orderedTestRows[index + 1])
+                : null;
+              const isLastRowForAge = age !== null && age !== nextAge;
               const displayValues: ValueMap = {
                 ...values,
                 testAge:
@@ -597,18 +627,30 @@ function ReadyMixReport({
                   detailValue(details, ["strength", "compressiveStrength"], ""),
               };
               return (
-                <tr key={index}>
-                  <td>{index + 1}</td>
-                  <td>{textValue(displayValues.testAge)}</td>
-                  <td>{textValue(displayValues.length)}</td>
-                  <td>{textValue(displayValues.width)}</td>
-                  <td>{textValue(displayValues.height)}</td>
-                  <td>{textValue(displayValues.dryWeight)}</td>
-                  <td>{textValue(displayValues.wetWeight)}</td>
-                  <td>{calculatedWaterAbsorption(displayValues)}</td>
-                  <td>{textValue(displayValues.load)}</td>
-                  <td>{textValue(displayValues.strength)}</td>
-                </tr>
+                <Fragment key={index}>
+                  <tr>
+                    <td>{index + 1}</td>
+                    <td>{textValue(displayValues.testAge)}</td>
+                    <td>{textValue(displayValues.length)}</td>
+                    <td>{textValue(displayValues.width)}</td>
+                    <td>{textValue(displayValues.height)}</td>
+                    <td>{textValue(displayValues.dryWeight)}</td>
+                    <td>{textValue(displayValues.wetWeight)}</td>
+                    <td>{calculatedWaterAbsorption(displayValues)}</td>
+                    <td>{textValue(displayValues.load)}</td>
+                    <td>{textValue(displayValues.strength)}</td>
+                  </tr>
+                  {isLastRowForAge && (
+                    <tr className="report-average-row">
+                      <td colSpan={9}>Average Strength ({age} days)</td>
+                      <td>
+                        {averageStrengthForAge(orderedTestRows, age) === null
+                          ? "-"
+                          : `${formatNumber(averageStrengthForAge(orderedTestRows, age) ?? 0, 2)} N/mm2`}
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               );
             })}
           </tbody>
@@ -618,6 +660,7 @@ function ReadyMixReport({
         record={record}
         standards={standards}
         selectedStandard={selectedStandard}
+        reportedStrength={average28DayStrength}
       />
     </>
   );

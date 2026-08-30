@@ -8,7 +8,7 @@ import { CheckCircle2, AlertTriangle, XCircle, ArrowLeft, Printer, Trash2, Edit2
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListRecordsQueryKey, getGetDashboardQueryKey, getGetRecordQueryKey } from "@workspace/api-client-react";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 
 function calculatedWaterAbsorption(values: Record<string, unknown>) {
   const dryWeight = Number(values.dryWeight);
@@ -46,6 +46,40 @@ function sortCubeRowsByAge(rows: unknown[]) {
       return left.index - right.index;
     })
     .map(({ row }) => row);
+}
+
+function cubeRowAge(row: unknown) {
+  const values = typeof row === "object" && row !== null
+    ? row as Record<string, unknown>
+    : {};
+  const rawAge = values.testAge ?? values.sampleAge ?? values.cubeAge ?? values.age;
+  if (rawAge === undefined || rawAge === null || rawAge === "") return null;
+  const age = Number.parseFloat(String(rawAge).replace(/,/g, ""));
+  return Number.isFinite(age) ? age : null;
+}
+
+function cubeRowStrength(row: unknown) {
+  const values = typeof row === "object" && row !== null
+    ? row as Record<string, unknown>
+    : {};
+  const strength = Number.parseFloat(String(
+    values.calculatedStrength ?? values.strength ?? values.compressiveStrength ?? "",
+  ));
+  return Number.isFinite(strength) ? strength : null;
+}
+
+function averageStrengthForAge(rows: unknown[], age: number) {
+  const strengths = rows
+    .filter((row) => cubeRowAge(row) === age)
+    .map(cubeRowStrength)
+    .filter((strength): strength is number => strength !== null);
+  if (!strengths.length) return null;
+  return strengths.reduce((total, strength) => total + strength, 0) / strengths.length;
+}
+
+function formatAverageStrength(value: number | null) {
+  if (value === null) return "—";
+  return Number.isInteger(value) ? String(value) : value.toFixed(2);
 }
 
 function DetailSummaryTable({ entries }: { entries: ReadonlyArray<readonly [string, unknown]> }) {
@@ -119,24 +153,39 @@ function TestRowsTable({
             const values = typeof row === "object" && row !== null
               ? row as Record<string, unknown>
               : {};
+            const age = cubeRowAge(row);
+            const nextAge = index < displayRows.length - 1 ? cubeRowAge(displayRows[index + 1]) : null;
+            const isLastRowForAge = age !== null && age !== nextAge;
             return (
-              <tr key={index} className="border-b last:border-b-0">
-                <td className="p-2 font-semibold">
-                  {sortByAge ? index + 1 : displayValue(values.rowNo, String(index + 1))}
-                </td>
-                <td className="p-2">{displayValue(values.testAge ?? values.sampleAge)}</td>
-                <td className="p-2">{displayValue(values.length)}</td>
-                <td className="p-2">{displayValue(values.width)}</td>
-                <td className="p-2">{displayValue(values.height)}</td>
-                <td className="p-2">{displayValue(values.dryWeight)}</td>
-                <td className="p-2">{displayValue(values.wetWeight)}</td>
-                {includeAbsorption && <td className="p-2">{calculatedWaterAbsorption(values)}</td>}
-                <td className="p-2">{displayValue(values.load)}</td>
-                <td className="p-2">{displayValue(values.loadedFaceArea)}</td>
-                <td className="p-2 font-semibold">
-                  {displayValue(values.calculatedStrength ?? values.strength ?? values.compressiveStrength)}
-                </td>
-              </tr>
+              <Fragment key={index}>
+                <tr className="border-b">
+                  <td className="p-2 font-semibold">
+                    {sortByAge ? index + 1 : displayValue(values.rowNo, String(index + 1))}
+                  </td>
+                  <td className="p-2">{displayValue(values.testAge ?? values.sampleAge)}</td>
+                  <td className="p-2">{displayValue(values.length)}</td>
+                  <td className="p-2">{displayValue(values.width)}</td>
+                  <td className="p-2">{displayValue(values.height)}</td>
+                  <td className="p-2">{displayValue(values.dryWeight)}</td>
+                  <td className="p-2">{displayValue(values.wetWeight)}</td>
+                  {includeAbsorption && <td className="p-2">{calculatedWaterAbsorption(values)}</td>}
+                  <td className="p-2">{displayValue(values.load)}</td>
+                  <td className="p-2">{displayValue(values.loadedFaceArea)}</td>
+                  <td className="p-2 font-semibold">
+                    {displayValue(values.calculatedStrength ?? values.strength ?? values.compressiveStrength)}
+                  </td>
+                </tr>
+                {sortByAge && isLastRowForAge && (
+                  <tr className="border-b bg-muted/20">
+                    <td className="p-2 text-right font-semibold text-muted-foreground" colSpan={includeAbsorption ? 10 : 9}>
+                      Average Strength ({age} days)
+                    </td>
+                    <td className="p-2 font-bold">
+                      {formatAverageStrength(averageStrengthForAge(displayRows, age))}
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             );
           })}
         </tbody>
