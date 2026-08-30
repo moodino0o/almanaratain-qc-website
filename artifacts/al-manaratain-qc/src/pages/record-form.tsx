@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useParams } from "wouter";
-import { useGetLookups, useGetReferenceData, useGetRecord, useCreateRecord, useUpdateRecord, useListSieveStandards, useListStrengthStandards, TestType, RecordStatus, QcRecordInput, QcRecordUpdate } from "@workspace/api-client-react";
+import { useGetLookups, useGetReferenceData, useGetRecord, useCreateRecord, useUpdateRecord, useListRecords, useListSieveStandards, useListStrengthStandards, TestType, RecordStatus, QcRecordInput, QcRecordUpdate } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -9,10 +9,18 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListRecordsQueryKey, getGetDashboardQueryKey, getGetRecordQueryKey } from "@workspace/api-client-react";
-import { Save, ArrowLeft, Loader2 } from "lucide-react";
+import { Save, ArrowLeft, Copy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
 import { TypeaheadInput } from "@/components/ui/typeahead-input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type TestRow = {
   id: number;
@@ -119,6 +127,17 @@ export default function RecordForm() {
   });
   const { data: strengthStandards } = useListStrengthStandards();
   const { data: sieveStandards } = useListSieveStandards();
+  const [isDuplicateOpen, setIsDuplicateOpen] = useState(false);
+  const [duplicateSourceId, setDuplicateSourceId] = useState("");
+  const { data: duplicateRecords, isLoading: duplicateRecordsLoading, isError: duplicateRecordsError } = useListRecords(
+    { limit: 100 },
+    {
+      query: {
+        enabled: !isEditing && isDuplicateOpen,
+        queryKey: getListRecordsQueryKey({ limit: 100 }),
+      },
+    },
+  );
   const createRecord = useCreateRecord();
   const updateRecord = useUpdateRecord();
   const initializedRecordId = useRef<number | null>(null);
@@ -194,6 +213,70 @@ export default function RecordForm() {
     nextRowId.current = Math.max(savedRows.length + 1, 2);
     initializedRecordId.current = recordId;
   }, [existingRecord, isEditing, recordId]);
+
+  const duplicateSource = duplicateRecords?.find(
+    (record) => String(record.id) === duplicateSourceId,
+  );
+
+  const copyRecordIntoNewForm = () => {
+    if (!duplicateSource) {
+      toast.error("Choose a record to duplicate.");
+      return;
+    }
+
+    const sourceDetails =
+      typeof duplicateSource.details === "object" && duplicateSource.details !== null
+        ? { ...duplicateSource.details }
+        : {};
+    const numericDetailKeys = [
+      "slump",
+      "temperature",
+      "weight",
+      "sampleWeight",
+      "dryWeight",
+      "wetWeight",
+      "length",
+      "width",
+      "height",
+      "compressiveStrength",
+      "passing10mm",
+      "passing5mm",
+      "finenessModulus",
+      "moisture",
+    ];
+    for (const key of numericDetailKeys) {
+      if (key in sourceDetails) sourceDetails[key] = numericInputValue(sourceDetails[key]);
+    }
+
+    const sourceRows = Array.isArray(sourceDetails.sieveRows)
+      ? sourceDetails.sieveRows
+      : Array.isArray(sourceDetails.testRows)
+        ? sourceDetails.testRows
+        : [];
+
+    setTestType(duplicateSource.testType);
+    setSampleDate(duplicateSource.sampleDate.slice(0, 10));
+    setLocationValue(duplicateSource.location);
+    setMaterial(duplicateSource.material);
+    setTestedBy(duplicateSource.testedBy);
+    setRemarks(duplicateSource.remarks ?? "");
+    setReferenceNumber(stringValue(sourceDetails.referenceNumber));
+    setCustomerName(stringValue(sourceDetails.customerName));
+    setCustomerLocation(stringValue(sourceDetails.customerLocation));
+    setMachine(stringValue(sourceDetails.machine));
+    setSelectedStrengthStandardId(stringValue(sourceDetails.strengthStandardId));
+    setDetails(sourceDetails);
+    setTestRows(
+      sourceRows.length
+        ? sourceRows.map((row, index) => toFormRow(row, index + 1))
+        : [createEmptyRow(1)],
+    );
+    sieveContextKeyRef.current = `${duplicateSource.testType}|${String(sourceDetails.materialReferenceItemId ?? duplicateSource.material)}`;
+    nextRowId.current = Math.max(sourceRows.length + 1, 2);
+    setDuplicateSourceId("");
+    setIsDuplicateOpen(false);
+    toast.success(`Copied ${duplicateSource.recordNo}. Review the values, then save as a new record.`);
+  };
 
   const handleDetailChange = (key: string, value: string) => {
     setDetails(prev => ({ ...prev, [key]: value }));
@@ -565,20 +648,34 @@ export default function RecordForm() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-12">
-      <div className="flex items-center gap-4">
-        <Link href={isEditing ? `/records/${recordId}` : "/records"} className="p-2 rounded-md hover:bg-muted transition-colors">
-          <ArrowLeft className="w-5 h-5 text-muted-foreground" />
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            {isEditing ? "Edit QC Record" : "New QC Record"}
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            {isEditing
-              ? "Update the saved sample details and measurements."
-              : "Enter test measurements and details for quality assurance."}
-          </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-center gap-4">
+          <Link href={isEditing ? `/records/${recordId}` : "/records"} className="p-2 rounded-md hover:bg-muted transition-colors">
+            <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">
+              {isEditing ? "Edit QC Record" : "New QC Record"}
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              {isEditing
+                ? "Update the saved sample details and measurements."
+                : "Enter test measurements and details for quality assurance."}
+            </p>
+          </div>
         </div>
+        {!isEditing && (
+          <Button
+            type="button"
+            variant="outline"
+            className="shrink-0 self-start"
+            onClick={() => setIsDuplicateOpen(true)}
+            disabled={createRecord.isPending || updateRecord.isPending}
+          >
+            <Copy className="mr-2 h-4 w-4" />
+            Duplicate existing record
+          </Button>
+        )}
       </div>
 
       <form
@@ -1079,6 +1176,79 @@ export default function RecordForm() {
           </Card>
         </div>
       </form>
+
+      {!isEditing && (
+        <Dialog
+          open={isDuplicateOpen}
+          onOpenChange={(open) => {
+            if (!createRecord.isPending && !updateRecord.isPending) {
+              setIsDuplicateOpen(open);
+              if (!open) setDuplicateSourceId("");
+            }
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Duplicate an existing QC record</DialogTitle>
+              <DialogDescription>
+                Choose a saved record to copy into this new, editable form. The original record will not be changed.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-2 py-2">
+              <Label htmlFor="duplicate-source-record">Source record</Label>
+              {duplicateRecordsLoading ? (
+                <div className="flex h-10 items-center rounded-md border px-3 text-sm text-muted-foreground">
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Loading saved records...
+                </div>
+              ) : duplicateRecordsError ? (
+                <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                  Saved records could not be loaded. Close this window and try again.
+                </p>
+              ) : !duplicateRecords?.length ? (
+                <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+                  No saved records are available to duplicate.
+                </p>
+              ) : (
+                <select
+                  id="duplicate-source-record"
+                  value={duplicateSourceId}
+                  onChange={(event) => setDuplicateSourceId(event.target.value)}
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">Choose a record...</option>
+                  {duplicateRecords.map((record) => (
+                    <option key={record.id} value={record.id}>
+                      {record.recordNo} · {record.testType} · {record.material} · {record.location} · {record.sampleDate.slice(0, 10)}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsDuplicateOpen(false);
+                  setDuplicateSourceId("");
+                }}
+                disabled={createRecord.isPending || updateRecord.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={copyRecordIntoNewForm}
+                disabled={!duplicateSource || duplicateRecordsLoading || Boolean(duplicateRecordsError) || createRecord.isPending || updateRecord.isPending}
+              >
+                <Copy className="mr-2 h-4 w-4" />
+                Copy to new record
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

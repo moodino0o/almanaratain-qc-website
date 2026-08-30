@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import {
   DailyReadyMixReferenceType,
-  RecordStatus,
   TestType,
   getGetDashboardQueryKey,
   getGetDailyReadyMixResultsQueryKey,
@@ -10,14 +9,12 @@ import {
   getListRecordsQueryKey,
   useGetDailyReadyMixResults,
   useGetLookups,
-  useCreateRecord,
   useListRecords,
   useUpdateRecord,
 } from "@workspace/api-client-react";
 import type {
   GetDailyReadyMixResultsParams,
   QcRecord,
-  QcRecordInput,
   QcRecordUpdate,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -34,7 +31,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CalendarDays, ClipboardList, Copy, Filter, FlaskConical, Loader2, PlusCircle, Save, Search, SlidersHorizontal } from "lucide-react";
+import { CalendarDays, ClipboardList, Filter, FlaskConical, Loader2, PlusCircle, Save, Search, SlidersHorizontal } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -129,8 +126,6 @@ export default function Reports() {
   const [cubeAge, setCubeAge] = useState("28");
   const [resultEntries, setResultEntries] = useState<ReadyMixResultEntry[]>([]);
   const [isSavingResults, setIsSavingResults] = useState(false);
-  const [duplicatingRecordId, setDuplicatingRecordId] = useState<number | null>(null);
-  const createRecord = useCreateRecord();
   const updateRecord = useUpdateRecord();
   const queryParams = filters ?? {
     sampleDate: today(),
@@ -319,48 +314,6 @@ export default function Reports() {
     }
   };
 
-  const duplicateReport = async (entry: ReadyMixResultEntry) => {
-    const age = numberValue(cubeAge);
-    if (age === null || !Number.isInteger(age) || age < 1 || age > 365) {
-      toast.error("Cube age must be a whole number of days between 1 and 365.");
-      return;
-    }
-    if (!validateResultEntry(entry, age)) return;
-
-    setDuplicatingRecordId(entry.record.id);
-    try {
-      const savedRecord = await saveResultEntry(entry, age);
-      const duplicateInput: QcRecordInput = {
-        testType: savedRecord.testType,
-        sampleDate: savedRecord.sampleDate,
-        location: savedRecord.location,
-        material: savedRecord.material,
-        status: RecordStatus.Review,
-        testedBy: savedRecord.testedBy,
-        reviewedBy: null,
-        remarks: savedRecord.remarks ?? null,
-        details: savedRecord.details,
-      };
-      const duplicate = await createRecord.mutateAsync({ data: duplicateInput });
-      const duplicateRows = entry.rows.map((row) => ({ ...row })) as [CubeResultRow, CubeResultRow];
-      setResultEntries((previous) => [...previous, { record: duplicate, rows: duplicateRows }]);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: getListRecordsQueryKey() }),
-        queryClient.invalidateQueries({ queryKey: getGetDashboardQueryKey() }),
-        queryClient.invalidateQueries({ queryKey: ["/api/daily-ready-mix-results"] }),
-        queryClient.invalidateQueries({ queryKey: getGetRecordQueryKey(savedRecord.id) }),
-        queryClient.invalidateQueries({ queryKey: getGetReportQueryKey(savedRecord.id) }),
-        queryClient.invalidateQueries({ queryKey: getGetRecordQueryKey(duplicate.id) }),
-        queryClient.invalidateQueries({ queryKey: getGetReportQueryKey(duplicate.id) }),
-      ]);
-      toast.success(`Saved ${referenceNumber(entry.record)} and duplicated it as ${duplicate.recordNo}.`);
-    } catch {
-      toast.error(`Could not save and duplicate ${referenceNumber(entry.record)}.`);
-    } finally {
-      setDuplicatingRecordId(null);
-    }
-  };
-
   const openFilters = () => {
     setDraftDate(filters?.sampleDate ?? today());
     setDraftMixDesign(filters?.mixDesign ?? "");
@@ -388,7 +341,6 @@ export default function Reports() {
     maximumStrength: null,
     strengthUnit: "N/mm²",
   };
-  const resultsBusy = isSavingResults || duplicatingRecordId !== null;
   const hasResultRows = showMixSummaries
     ? Boolean(dailyResults.mixes.length)
     : Boolean(dailyResults.records.length);
@@ -649,7 +601,7 @@ export default function Reports() {
               <CardTitle className="text-lg">Ready Mix cube results</CardTitle>
               <CardDescription>
                 Enter 7-day or 28-day cube measurements for every Ready Mix reference cast on a selected date.
-                You can save the original report and duplicate it as a new editable report.
+                 Save cube measurements to the original Ready Mix report.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -732,7 +684,7 @@ export default function Reports() {
         onOpenChange={(open) => {
           if (open) {
             setIsAddResultsOpen(true);
-          } else if (!resultsBusy) {
+          } else if (!isSavingResults) {
             resetAddResults();
           }
         }}
@@ -812,32 +764,13 @@ export default function Reports() {
                 <div className="max-h-[58vh] space-y-4 overflow-y-auto pr-1">
                   {resultEntries.map((entry) => (
                     <Card key={entry.record.id} className="overflow-hidden border">
-                        <CardHeader className="border-b bg-muted/20 px-4 py-3">
-                          <div className="flex items-start justify-between gap-4">
-                            <div>
-                              <CardTitle className="text-base">
-                                {referenceNumber(entry.record)}
-                              </CardTitle>
-                              <CardDescription>
-                                {entry.record.recordNo} · {entry.record.location} · {entry.record.material}
-                              </CardDescription>
-                            </div>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="shrink-0"
-                              onClick={() => duplicateReport(entry)}
-                              disabled={resultsBusy}
-                            >
-                              {duplicatingRecordId === entry.record.id ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              ) : (
-                                <Copy className="mr-2 h-4 w-4" />
-                              )}
-                              {duplicatingRecordId === entry.record.id ? "Duplicating" : "Duplicate report"}
-                            </Button>
-                          </div>
+                         <CardHeader className="border-b bg-muted/20 px-4 py-3">
+                           <CardTitle className="text-base">
+                             {referenceNumber(entry.record)}
+                           </CardTitle>
+                           <CardDescription>
+                             {entry.record.recordNo} · {entry.record.location} · {entry.record.material}
+                           </CardDescription>
                       </CardHeader>
                       <CardContent className="overflow-x-auto p-0">
                         <table className="min-w-[980px] w-full text-sm">
@@ -898,13 +831,13 @@ export default function Reports() {
                 <Button
                   variant="outline"
                   onClick={() => setAddResultsStep("setup")}
-                  disabled={resultsBusy}
+                   disabled={isSavingResults}
                 >
                   Back
                 </Button>
                 <Button
                   onClick={saveResults}
-                  disabled={!resultEntries.length || resultsBusy}
+                  disabled={!resultEntries.length || isSavingResults}
                 >
                   {isSavingResults ? (
                     <>
