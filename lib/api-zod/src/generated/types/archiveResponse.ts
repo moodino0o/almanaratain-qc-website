@@ -11,4 +11,5 @@ import type { ArchiveFolder } from './archiveFolder';
 export interface ArchiveResponse {
   categories: ArchiveFolder[];
   documents: ArchiveDocument[];
+  canRetire: boolean;
 }

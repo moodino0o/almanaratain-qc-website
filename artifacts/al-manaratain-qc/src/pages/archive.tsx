@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
-import { FileSpreadsheet, FileText, Folder, Upload, Download, Eye, Search, ArrowLeft, Plus } from "lucide-react";
+import { FileSpreadsheet, FileText, Folder, Upload, Download, Eye, Search, ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { useAuth } from "@workspace/replit-auth-web";
-import { listArchive, useCreateArchiveDocument, useRequestUploadUrl } from "@workspace/api-client-react";
+import { listArchive, useCreateArchiveDocument, useRequestUploadUrl, useRetireArchiveDocument } from "@workspace/api-client-react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +30,7 @@ export default function Archive() {
   const archive = useQuery({ queryKey: ["archive"], queryFn: () => listArchive(), enabled: isAuthenticated });
   const requestUrl = useRequestUploadUrl();
   const createDocument = useCreateArchiveDocument();
+  const retireDocument = useRetireArchiveDocument();
   const fileRef = useRef<HTMLInputElement>(null);
   const [selectedFolder, setSelectedFolder] = useState<{ category: string; subcategory?: string } | null>(null);
   const [showEntry, setShowEntry] = useState(false);
@@ -72,6 +73,19 @@ export default function Archive() {
     }
   }
 
+  async function retire(documentId: number, originalName: string) {
+    if (!archive.data?.canRetire) return;
+    if (!window.confirm(`Retire "${originalName}"? The stored file and archive metadata will be permanently removed.`)) return;
+
+    try {
+      await retireDocument.mutateAsync({ id: documentId });
+      toast.success("Document retired from the archive.");
+      await archive.refetch();
+    } catch {
+      toast.error("The document could not be retired. Please try again.");
+    }
+  }
+
   if (isLoading) return <div className="py-20 text-center text-muted-foreground">Checking archive access…</div>;
   if (!isAuthenticated) return <Card className="mx-auto mt-16 max-w-lg text-center"><CardHeader><CardTitle>Private document archive</CardTitle></CardHeader><CardContent className="space-y-4"><p className="text-sm text-muted-foreground">Sign in to upload, review, and download controlled documents.</p><Button onClick={login}>Sign in with Replit</Button></CardContent></Card>;
 
@@ -93,7 +107,7 @@ export default function Archive() {
     {!selectedFolder ? <Card><CardHeader><CardTitle>Categories</CardTitle></CardHeader><CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{archive.data?.categories.length ? archive.data.categories.map((folder) => <button key={folder.name} onClick={() => setSelectedFolder({ category: folder.name })} className="flex items-center gap-3 rounded-lg border p-4 text-left transition hover:border-primary hover:bg-primary/5"><Folder className="h-7 w-7 text-primary" /><span><span className="block font-medium">{folder.name}</span><span className="text-xs text-muted-foreground">{folder.count} document{folder.count === 1 ? "" : "s"}</span></span></button>) : <p className="text-sm text-muted-foreground">No categories yet. Use Add document to create one.</p>}</CardContent></Card> : <div className="space-y-4">
       <Button variant="ghost" onClick={() => { setSelectedFolder(null); setSearch(""); }}><ArrowLeft className="mr-2 h-4 w-4" />All categories</Button>
       {!selectedFolder.subcategory && <Card><CardHeader><CardTitle>{selectedTitle} subcategories</CardTitle></CardHeader><CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{(archive.data?.categories.find((folder) => folder.name === selectedFolder.category)?.subcategories ?? []).map((sub) => <button key={sub.name} onClick={() => setSelectedFolder({ category: selectedFolder.category, subcategory: sub.name })} className="flex items-center gap-3 rounded-lg border p-4 text-left transition hover:border-primary hover:bg-primary/5"><Folder className="h-6 w-6 text-primary" /><span><span className="block font-medium">{sub.name}</span><span className="text-xs text-muted-foreground">{sub.count} document{sub.count === 1 ? "" : "s"}</span></span></button>)}</CardContent></Card>}
-      {selectedFolder.subcategory && <Card><CardHeader><div className="flex items-center justify-between gap-4"><CardTitle>{selectedTitle}</CardTitle><div className="relative max-w-sm flex-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search this folder" /></div></div></CardHeader><CardContent className="space-y-2">{visibleDocuments.length ? visibleDocuments.map((doc) => <div key={doc.id} className="flex flex-wrap items-center gap-3 rounded-lg border p-3"><div className="rounded bg-primary/10 p-2 text-primary">{doc.mimeType.includes("spreadsheet") || doc.originalName.endsWith("xlsx") ? <FileSpreadsheet className="h-5 w-5" /> : <FileText className="h-5 w-5" />}</div><div className="min-w-0 flex-1"><p className="truncate font-medium">{doc.originalName}</p><p className="text-xs text-muted-foreground">{doc.documentDate} · {(doc.size / 1024).toFixed(1)} KB</p></div>{doc.originalName.toLowerCase().endsWith(".pdf") && <Button variant="outline" size="sm" asChild><a href={`/api/archive/documents/${doc.id}/content`} target="_blank" rel="noreferrer"><Eye className="mr-2 h-4 w-4" />Review</a></Button>}<Button variant="outline" size="sm" asChild><a href={`/api/archive/documents/${doc.id}/download`}><Download className="mr-2 h-4 w-4" />Download</a></Button></div>) : <p className="py-10 text-center text-sm text-muted-foreground">No documents in this folder.</p>}</CardContent></Card>}
+       {selectedFolder.subcategory && <Card><CardHeader><div className="flex items-center justify-between gap-4"><CardTitle>{selectedTitle}</CardTitle><div className="relative max-w-sm flex-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search this folder" /></div></div></CardHeader><CardContent className="space-y-2">{visibleDocuments.length ? visibleDocuments.map((doc) => <div key={doc.id} className="flex flex-wrap items-center gap-3 rounded-lg border p-3"><div className="rounded bg-primary/10 p-2 text-primary">{doc.mimeType.includes("spreadsheet") || doc.originalName.endsWith("xlsx") ? <FileSpreadsheet className="h-5 w-5" /> : <FileText className="h-5 w-5" />}</div><div className="min-w-0 flex-1"><p className="truncate font-medium">{doc.originalName}</p><p className="text-xs text-muted-foreground">{doc.documentDate} · {(doc.size / 1024).toFixed(1)} KB</p></div>{doc.originalName.toLowerCase().endsWith(".pdf") && <Button variant="outline" size="sm" asChild><a href={`/api/archive/documents/${doc.id}/content`} target="_blank" rel="noreferrer"><Eye className="mr-2 h-4 w-4" />Review</a></Button>}<Button variant="outline" size="sm" asChild><a href={`/api/archive/documents/${doc.id}/download`}><Download className="mr-2 h-4 w-4" />Download</a></Button>{archive.data?.canRetire ? <Button type="button" variant="outline" size="sm" disabled={retireDocument.isPending} onClick={() => retire(doc.id, doc.originalName)}><Trash2 className="mr-2 h-4 w-4" />Retire</Button> : null}</div>) : <p className="py-10 text-center text-sm text-muted-foreground">No documents in this folder.</p>}</CardContent></Card>}
     </div>}
   </div>;
 }

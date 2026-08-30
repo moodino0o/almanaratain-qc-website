@@ -1,0 +1,1 @@
+- [Archive retirement authorization](archive-retirement-authorization.md) — keep archive retirement fail-closed behind the configured manager email allowlist.

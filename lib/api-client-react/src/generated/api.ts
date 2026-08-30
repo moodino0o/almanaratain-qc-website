@@ -1143,6 +1143,77 @@ export function useGetArchiveDocument<TData = Awaited<ReturnType<typeof getArchi
 
 
 
+export const getRetireArchiveDocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/archive/documents/${id}`
+}
+
+/**
+ * @summary Retire an archived document and remove its stored file
+ */
+export const retireArchiveDocument = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getRetireArchiveDocumentUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRetireArchiveDocumentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof retireArchiveDocument>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof retireArchiveDocument>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['retireArchiveDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof retireArchiveDocument>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  retireArchiveDocument(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RetireArchiveDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof retireArchiveDocument>>>
+
+    export type RetireArchiveDocumentMutationError = ErrorType<void>
+
+    /**
+ * @summary Retire an archived document and remove its stored file
+ */
+export const useRetireArchiveDocument = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof retireArchiveDocument>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof retireArchiveDocument>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRetireArchiveDocumentMutationOptions(options));
+    }
+
 export const getGetArchiveDocumentContentUrl = (id: number,) => {
 
 

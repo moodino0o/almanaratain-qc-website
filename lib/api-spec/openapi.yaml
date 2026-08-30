@@ -233,6 +233,23 @@ paths:
           description: Authentication required
         "404":
           description: Document not found
+    delete:
+      tags: [Archive]
+      operationId: retireArchiveDocument
+      summary: Retire an archived document and remove its stored file
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "204":
+          description: Document retired
+        "401":
+          description: Authentication required
+        "403":
+          description: Archive manager access required
+        "404":
+          description: Document not found
+        "500":
+          description: Unable to clean up the stored file or metadata
   /archive/documents/{id}/content:
     get:
       tags: [Archive]
@@ -975,7 +992,7 @@ components:
             $ref: "#/components/schemas/ArchiveDocument"
     ArchiveResponse:
       type: object
-      required: [categories, documents]
+      required: [categories, documents, canRetire]
       properties:
         categories:
           type: array
@@ -985,6 +1002,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ArchiveDocument"
+        canRetire:
+          type: boolean
     Report:
       type: object
       required:
@@ -998,4 +1017,3 @@ components:
           type: string
         companySubtitle:
           type: string
-

@@ -4,6 +4,7 @@ import {
   CreateArchiveDocumentResponse,
   GetArchiveDocumentResponse,
   ListArchiveResponse,
+  RetireArchiveDocumentParams,
 } from "@workspace/api-zod";
 import { archiveDocumentsTable, db } from "@workspace/db";
 import { desc, eq } from "drizzle-orm";
@@ -15,6 +16,14 @@ const storage = new ObjectStorageService();
 const allowedExtensions = new Set(["pdf", "doc", "docx", "xls", "xlsx"]);
 const maxFileSize = 25 * 1024 * 1024;
 
+function getArchiveManagerEmails(): Set<string> {
+  return new Set(
+    (process.env.ARCHIVE_MANAGER_EMAILS ?? "")
+      .split(",")
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean),
+  );
+}
 function requireUser(req: Request, res: Response): boolean {
   if (!req.isAuthenticated()) {
     res.status(401).json({ error: "Authentication required" });
@@ -23,6 +32,15 @@ function requireUser(req: Request, res: Response): boolean {
   return true;
 }
 
+function requireArchiveManager(req: Request, res: Response): boolean {
+  if (!requireUser(req, res)) return false;
+  const email = req.user?.email?.trim().toLowerCase();
+  if (!email || !getArchiveManagerEmails().has(email)) {
+    res.status(403).json({ error: "Archive manager access required" });
+    return false;
+  }
+  return true;
+}
 function toDocument(row: typeof archiveDocumentsTable.$inferSelect) {
   return {
     id: row.id,
@@ -63,7 +81,15 @@ router.get("/archive", async (req, res) => {
       subcategories,
     };
   });
-  res.json(ListArchiveResponse.parse({ categories, documents }));
+  res.json(
+    ListArchiveResponse.parse({
+      categories,
+      documents,
+      canRetire: getArchiveManagerEmails().has(
+        req.user?.email?.trim().toLowerCase() ?? "",
+      ),
+    }),
+  );
 });
 
 router.post("/archive/documents", async (req, res) => {
@@ -85,15 +111,15 @@ router.post("/archive/documents", async (req, res) => {
   }
   try {
     await storage.getObjectEntityFile(input.objectPath);
-    const [row] = await db
-      .insert(archiveDocumentsTable)
-      .values({
-        ...input,
-        documentDate: input.documentDate.toISOString().slice(0, 10),
-        description: input.description ?? "",
-        uploadedBy: req.user!.id,
-      })
-      .returning();
+  const [row] = await db
+    .select()
+    .from(archiveDocumentsTable)
+    .where(eq(archiveDocumentsTable.id, id));
+
+    const [deleted] = await db
+      .delete(archiveDocumentsTable)
+      .where(eq(archiveDocumentsTable.id, id))
+      .returning({ id: archiveDocumentsTable.id });
     res.status(201).json(CreateArchiveDocumentResponse.parse(toDocument(row)));
   } catch (error) {
     req.log.error({ err: error }, "Unable to save archive document");
@@ -103,11 +129,16 @@ router.post("/archive/documents", async (req, res) => {
 
 router.get("/archive/documents/:id", async (req, res) => {
   if (!requireUser(req, res)) return;
-  const id = Number(req.params.id);
+  const id = parsedParams.data.id;
   const [row] = await db
     .select()
     .from(archiveDocumentsTable)
     .where(eq(archiveDocumentsTable.id, id));
+
+    const [deleted] = await db
+      .delete(archiveDocumentsTable)
+      .where(eq(archiveDocumentsTable.id, id))
+      .returning({ id: archiveDocumentsTable.id });
   if (!row) {
     res.status(404).json({ error: "Document not found" });
     return;
@@ -150,7 +181,5 @@ async function serveContent(req: Request, res: Response, download: boolean): Pro
   }
 }
 
-router.get("/archive/documents/:id/content", (req, res) => serveContent(req, res, false));
-router.get("/archive/documents/:id/download", (req, res) => serveContent(req, res, true));
-
+  const parsedParams = RetireArchiveDocumentParams.safeParse(req.params);
 export default router;

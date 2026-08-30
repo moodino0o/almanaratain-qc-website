@@ -252,6 +252,7 @@ export interface ArchiveFolder {
 export interface ArchiveResponse {
   categories: ArchiveFolder[];
   documents: ArchiveDocument[];
+  canRetire: boolean;
 }
 
 export interface Report {
@@ -285,4 +286,3 @@ search?: SearchParamParameter;
  */
 limit?: LimitParamParameter;
 };
-
