@@ -1,6 +1,6 @@
-# [Project name]
+# Al Manaratain Quality Control
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A browser-based laboratory and production quality-control system with structured test entry, searchable records, review workflows, and printable certificates.
 
 ## Run & Operate
 
@@ -22,23 +22,37 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- Web application: `artifacts/al-manaratain-qc`
+- API routes: `artifacts/api-server/src/routes/qc.ts`
+- API contract: `lib/api-spec/openapi.yaml`
+- Database model: `lib/db/src/schema/qc-records.ts`
+- Brand theme: `artifacts/al-manaratain-qc/src/index.css`
+- Official logo: `artifacts/al-manaratain-qc/public/al-manaratain-logo.webp`
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Quality tests share one record envelope while type-specific measurements are stored in a structured JSON details map.
+- Calendar-only sampling dates are stored as PostgreSQL `date` values to avoid timezone shifts.
+- API request and response shapes are generated from the shared OpenAPI specification.
+- Printable certificates have a dedicated A4 route and print stylesheet.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Live control-room dashboard and recent activity.
+- QC record entry for ready mix, blocks, paving blocks, sieve tests, water, flakiness/elongation, and RMX trials.
+- Searchable test register with status review and deletion.
+- Report center and branded A4 quality certificates.
+- Reference data view for factories, plants, technicians, suppliers, materials, and product definitions.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Match Al Manaratain branding and use the official logo.
+- Preserve the Access program's QC workflows while making data entry and report printing browser-friendly.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Re-run API codegen after every OpenAPI change.
+- The generated server validators coerce OpenAPI date strings to `Date`; convert them back to `YYYY-MM-DD` before writing PostgreSQL date columns.
 
 ## Pointers
 

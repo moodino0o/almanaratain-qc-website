@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: qc
+    description: Quality control operations
 paths:
   /healthz:
     get:
@@ -24,7 +26,149 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [qc]
+      summary: Get QC dashboard summary
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+  /lookups:
+    get:
+      operationId: getLookups
+      tags: [qc]
+      summary: Get quality control lookup values
+      responses:
+        "200":
+          description: Lookup values
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lookups"
+  /records:
+    get:
+      operationId: listRecords
+      tags: [qc]
+      summary: List quality control records
+      parameters:
+        - $ref: "#/components/parameters/TestTypeParam"
+        - $ref: "#/components/parameters/SearchParam"
+        - $ref: "#/components/parameters/LimitParam"
+      responses:
+        "200":
+          description: Quality control records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QcRecord"
+    post:
+      operationId: createRecord
+      tags: [qc]
+      summary: Create a quality control record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QcRecordInput"
+      responses:
+        "201":
+          description: Created record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QcRecord"
+  /records/{id}:
+    get:
+      operationId: getRecord
+      tags: [qc]
+      summary: Get one quality control record
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "200":
+          description: Quality control record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QcRecord"
+        "404":
+          description: Record not found
+    patch:
+      operationId: updateRecord
+      tags: [qc]
+      summary: Update a quality control record
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QcRecordUpdate"
+      responses:
+        "200":
+          description: Updated record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QcRecord"
+    delete:
+      operationId: deleteRecord
+      tags: [qc]
+      summary: Delete a quality control record
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "204":
+          description: Record deleted
+  /reports/{id}:
+    get:
+      operationId: getReport
+      tags: [qc]
+      summary: Get a print-ready report record
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "200":
+          description: Print-ready quality control report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
 components:
+  parameters:
+    RecordIdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: number
+    TestTypeParam:
+      name: testType
+      in: query
+      schema:
+        $ref: "#/components/schemas/TestType"
+    SearchParam:
+      name: search
+      in: query
+      schema:
+        type: string
+    LimitParam:
+      name: limit
+      in: query
+      schema:
+        type: number
+        minimum: 1
+        maximum: 100
+        default: 50
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +177,219 @@ components:
           type: string
       required:
         - status
+    TestType:
+      type: string
+      enum:
+        - Ready Mix
+        - Blocks
+        - Paving Blocks
+        - Sand Sieve
+        - Aggregate Sieve
+        - Water
+        - Flakiness & Elongation
+        - RMX Trial
+    RecordStatus:
+      type: string
+      enum:
+        - Passed
+        - Review
+        - Failed
+    QcRecord:
+      type: object
+      required:
+        - id
+        - recordNo
+        - testType
+        - sampleDate
+        - location
+        - material
+        - status
+        - testedBy
+        - details
+      properties:
+        id:
+          type: number
+        recordNo:
+          type: string
+        testType:
+          $ref: "#/components/schemas/TestType"
+        sampleDate:
+          type: string
+          format: date
+        location:
+          type: string
+        material:
+          type: string
+        status:
+          $ref: "#/components/schemas/RecordStatus"
+        testedBy:
+          type: string
+        reviewedBy:
+          type: ["string", "null"]
+        remarks:
+          type: ["string", "null"]
+        details:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+    QcRecordInput:
+      type: object
+      required:
+        - testType
+        - sampleDate
+        - location
+        - material
+        - status
+        - testedBy
+        - details
+      properties:
+        testType:
+          $ref: "#/components/schemas/TestType"
+        sampleDate:
+          type: string
+          format: date
+        location:
+          type: string
+          minLength: 1
+        material:
+          type: string
+          minLength: 1
+        status:
+          $ref: "#/components/schemas/RecordStatus"
+        testedBy:
+          type: string
+          minLength: 1
+        reviewedBy:
+          type: ["string", "null"]
+        remarks:
+          type: ["string", "null"]
+        details:
+          type: object
+          additionalProperties: true
+    QcRecordUpdate:
+      type: object
+      properties:
+        testType:
+          $ref: "#/components/schemas/TestType"
+        sampleDate:
+          type: string
+          format: date
+        location:
+          type: string
+        material:
+          type: string
+        status:
+          $ref: "#/components/schemas/RecordStatus"
+        testedBy:
+          type: string
+        reviewedBy:
+          type: ["string", "null"]
+        remarks:
+          type: ["string", "null"]
+        details:
+          type: object
+          additionalProperties: true
+    Dashboard:
+      type: object
+      required:
+        - totalRecords
+        - passedRecords
+        - reviewRecords
+        - failedRecords
+        - recordsThisMonth
+        - byType
+        - recentRecords
+      properties:
+        totalRecords:
+          type: number
+        passedRecords:
+          type: number
+        reviewRecords:
+          type: number
+        failedRecords:
+          type: number
+        recordsThisMonth:
+          type: number
+        byType:
+          type: array
+          items:
+            $ref: "#/components/schemas/TypeCount"
+        recentRecords:
+          type: array
+          items:
+            $ref: "#/components/schemas/QcRecord"
+    TypeCount:
+      type: object
+      required:
+        - testType
+        - count
+      properties:
+        testType:
+          $ref: "#/components/schemas/TestType"
+        count:
+          type: number
+    Lookups:
+      type: object
+      required:
+        - factories
+        - plants
+        - employees
+        - suppliers
+        - materials
+        - locations
+        - blockTypes
+        - blockSizes
+        - mixStrengths
+      properties:
+        factories:
+          type: array
+          items:
+            type: string
+        plants:
+          type: array
+          items:
+            type: string
+        employees:
+          type: array
+          items:
+            type: string
+        suppliers:
+          type: array
+          items:
+            type: string
+        materials:
+          type: array
+          items:
+            type: string
+        locations:
+          type: array
+          items:
+            type: string
+        blockTypes:
+          type: array
+          items:
+            type: string
+        blockSizes:
+          type: array
+          items:
+            type: string
+        mixStrengths:
+          type: array
+          items:
+            type: string
+    Report:
+      type: object
+      required:
+        - record
+        - companyName
+        - companySubtitle
+      properties:
+        record:
+          $ref: "#/components/schemas/QcRecord"
+        companyName:
+          type: string
+        companySubtitle:
+          type: string
 
