@@ -19,6 +19,7 @@ import RecordDetail from '@/pages/record-detail';
 import Reports from '@/pages/reports';
 import ReportPrint from '@/pages/report-print';
 import Settings from '@/pages/settings';
+import Standards from '@/pages/standards';
 import Archive from '@/pages/archive';
 
 const queryClient = new QueryClient();
@@ -46,9 +47,11 @@ function Router() {
             <Route path="/" component={Home} />
             <Route path="/records" component={Records} />
             <Route path="/records/new" component={RecordForm} />
+            <Route path="/records/:id/edit" component={RecordForm} />
             <Route path="/records/:id" component={RecordDetail} />
             <Route path="/reports" component={Reports} />
             <Route path="/settings" component={Settings} />
+            <Route path="/standards" component={Standards} />
             <Route path="/archive" component={Archive} />
             <Route component={NotFound} />
           </Switch>

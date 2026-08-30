@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { ClipboardList, LayoutDashboard, Settings, FileText, Beaker, Archive } from "lucide-react";
+import { ClipboardList, LayoutDashboard, Settings, FileText, Beaker, Archive, FileCheck2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LayoutProps {
@@ -15,6 +15,7 @@ export function Layout({ children }: LayoutProps) {
     { href: "/records", label: "QC Register", icon: ClipboardList },
     { href: "/reports", label: "Reports", icon: FileText },
     { href: "/archive", label: "Archive", icon: Archive },
+    { href: "/standards", label: "Standards", icon: FileCheck2 },
     { href: "/settings", label: "Reference Data", icon: Settings },
   ];
 

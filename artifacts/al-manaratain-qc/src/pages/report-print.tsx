@@ -82,7 +82,9 @@ function SpecimenRowsTable({
             <th>Height (mm)</th>
             <th>Dry Weight</th>
             <th>Wet Weight</th>
-            <th>Strength</th>
+            <th>Load (kN)</th>
+            <th>Loaded Face Area (mm2)</th>
+            <th>Calculated Strength (N/mm2)</th>
           </tr>
         </thead>
         <tbody>
@@ -100,7 +102,9 @@ function SpecimenRowsTable({
                 <td>{textValue(values.height)}</td>
                 <td>{textValue(values.dryWeight)}</td>
                 <td>{textValue(values.wetWeight)}</td>
-                <td>{textValue(values.strength || values.compressiveStrength)}</td>
+                <td>{textValue(values.load)}</td>
+                <td>{textValue(values.loadedFaceArea)}</td>
+                <td>{textValue(values.calculatedStrength || values.strength || values.compressiveStrength)}</td>
               </tr>
             );
           })}
@@ -125,6 +129,10 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 
 function ReadyMixReport({ record }: { record: QcRecord }) {
   const details = record.details;
+  const strengthEvaluation =
+    typeof details.strengthEvaluation === "object" && details.strengthEvaluation !== null
+      ? details.strengthEvaluation as Record<string, unknown>
+      : null;
   const designStrength = detailValue(
     details,
     ["designStrength", "mixStrength", "mixType"],
@@ -150,7 +158,7 @@ function ReadyMixReport({ record }: { record: QcRecord }) {
   const compliance = detailValue(
     details,
     ["compliance", "complianceStatus"],
-    record.status,
+    String(strengthEvaluation?.status ?? record.status),
   );
   const testRows = Array.isArray(details.testRows)
     ? details.testRows
@@ -261,6 +269,18 @@ function ReadyMixReport({ record }: { record: QcRecord }) {
             label="Temperature"
             value={detailValue(details, ["temperature"])}
           />
+            <ReportField
+              label="Applicable BS"
+              value={textValue(strengthEvaluation?.bsStandard)}
+            />
+            <ReportField
+              label="Required Minimum"
+              value={
+                strengthEvaluation?.requiredStrength == null
+                  ? "-"
+                  : `${textValue(strengthEvaluation.requiredStrength)} ${textValue(strengthEvaluation.strengthUnit, "N/mm²")}`
+              }
+            />
           <ReportField
             label="Compaction Type"
             value={detailValue(details, ["compactionType"], "Hand Compaction")}
@@ -333,8 +353,14 @@ function ReadyMixReport({ record }: { record: QcRecord }) {
 }
 
 function GenericReport({ record }: { record: QcRecord }) {
-  const entries = Object.entries(record.details).filter(([key]) => key !== "testRows");
+  const entries = Object.entries(record.details).filter(
+    ([key]) => key !== "testRows" && key !== "strengthEvaluation",
+  );
   const testRows = Array.isArray(record.details.testRows) ? record.details.testRows : [];
+  const strengthEvaluation =
+    typeof record.details.strengthEvaluation === "object" && record.details.strengthEvaluation !== null
+      ? record.details.strengthEvaluation as Record<string, unknown>
+      : null;
   return (
     <section>
       <SectionHeading>{record.testType} Details</SectionHeading>
@@ -343,6 +369,20 @@ function GenericReport({ record }: { record: QcRecord }) {
         <ReportField label="Location" value={record.location} />
         <ReportField label="Material" value={record.material} />
         <ReportField label="Tested By" value={record.testedBy} />
+        {strengthEvaluation && (
+          <>
+            <ReportField label="Applicable BS" value={textValue(strengthEvaluation.bsStandard)} />
+            <ReportField
+              label="Required Minimum"
+              value={
+                strengthEvaluation.requiredStrength == null
+                  ? "-"
+                  : `${textValue(strengthEvaluation.requiredStrength)} ${textValue(strengthEvaluation.strengthUnit, "N/mm²")}`
+              }
+            />
+            <ReportField label="Automatic Evaluation" value={textValue(strengthEvaluation.status)} />
+          </>
+        )}
         {entries.map(([key, value]) => (
           <ReportField key={key} label={keyLabel(key)} value={textValue(value)} />
         ))}
@@ -373,6 +413,10 @@ export default function ReportPrint() {
   }
 
   const { record, companyName, companySubtitle } = report;
+  const configuredStandard =
+    typeof record.details.strengthEvaluation === "object" && record.details.strengthEvaluation !== null
+      ? (record.details.strengthEvaluation as Record<string, unknown>).bsStandard
+      : null;
 
   return (
     <div className="report-page">
@@ -407,7 +451,9 @@ export default function ReportPrint() {
         </header>
         <p className="report-standard">
           {record.testType === "Ready Mix"
-            ? "ACCORDING TO BS EN 12390-3:2009"
+            ? configuredStandard
+              ? `ACCORDING TO ${String(configuredStandard)}`
+              : "ACCORDING TO BS EN 12390-3:2009"
             : "QUALITY CONTROL TEST REPORT"}
         </p>
 

@@ -44,6 +44,9 @@ import type {
   ReferenceItem,
   ReferenceItemInput,
   Report,
+  StrengthStandard,
+  StrengthStandardInput,
+  StrengthStandardUpdate,
   UploadUrlRequest,
   UploadUrlResponse
 } from './api.schemas';
@@ -1945,6 +1948,297 @@ export const useDeleteReferenceItem = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteReferenceItemMutationOptions(options));
+    }
+
+export const getListStrengthStandardsUrl = () => {
+
+
+
+
+  return `/api/strength-standards`
+}
+
+/**
+ * @summary List configurable compressive strength standards
+ */
+export const listStrengthStandards = async ( options?: Parameters<typeof customFetch>[1]): Promise<StrengthStandard[]> => {
+
+  return customFetch<StrengthStandard[]>(getListStrengthStandardsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListStrengthStandardsQueryKey = () => {
+    return [
+    `/api/strength-standards`
+    ] as const;
+    }
+
+
+export const getListStrengthStandardsQueryOptions = <TData = Awaited<ReturnType<typeof listStrengthStandards>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStrengthStandards>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListStrengthStandardsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listStrengthStandards>>> = ({ signal }) => listStrengthStandards({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listStrengthStandards>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListStrengthStandardsQueryResult = NonNullable<Awaited<ReturnType<typeof listStrengthStandards>>>
+export type ListStrengthStandardsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List configurable compressive strength standards
+ */
+
+export function useListStrengthStandards<TData = Awaited<ReturnType<typeof listStrengthStandards>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStrengthStandards>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListStrengthStandardsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateStrengthStandardUrl = () => {
+
+
+
+
+  return `/api/strength-standards`
+}
+
+/**
+ * @summary Create a compressive strength standard
+ */
+export const createStrengthStandard = async (strengthStandardInput: StrengthStandardInput, options?: Parameters<typeof customFetch>[1]): Promise<StrengthStandard> => {
+
+  return customFetch<StrengthStandard>(getCreateStrengthStandardUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(strengthStandardInput)
+  }
+);}
+
+
+
+
+
+export const getCreateStrengthStandardMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createStrengthStandard>>, TError,{data: BodyType<StrengthStandardInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createStrengthStandard>>, TError,{data: BodyType<StrengthStandardInput>}, TContext> => {
+
+const mutationKey = ['createStrengthStandard'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createStrengthStandard>>, {data: BodyType<StrengthStandardInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createStrengthStandard(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateStrengthStandardMutationResult = NonNullable<Awaited<ReturnType<typeof createStrengthStandard>>>
+    export type CreateStrengthStandardMutationBody = BodyType<StrengthStandardInput>
+    export type CreateStrengthStandardMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a compressive strength standard
+ */
+export const useCreateStrengthStandard = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createStrengthStandard>>, TError,{data: BodyType<StrengthStandardInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createStrengthStandard>>,
+        TError,
+        {data: BodyType<StrengthStandardInput>},
+        TContext
+      > => {
+      return useMutation(getCreateStrengthStandardMutationOptions(options));
+    }
+
+export const getUpdateStrengthStandardUrl = (id: number,) => {
+
+
+
+
+  return `/api/strength-standards/${id}`
+}
+
+/**
+ * @summary Update a compressive strength standard
+ */
+export const updateStrengthStandard = async (id: number,
+    strengthStandardUpdate: StrengthStandardUpdate, options?: Parameters<typeof customFetch>[1]): Promise<StrengthStandard> => {
+
+  return customFetch<StrengthStandard>(getUpdateStrengthStandardUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(strengthStandardUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateStrengthStandardMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateStrengthStandard>>, TError,{id: number;data: BodyType<StrengthStandardUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateStrengthStandard>>, TError,{id: number;data: BodyType<StrengthStandardUpdate>}, TContext> => {
+
+const mutationKey = ['updateStrengthStandard'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateStrengthStandard>>, {id: number;data: BodyType<StrengthStandardUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateStrengthStandard(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateStrengthStandardMutationResult = NonNullable<Awaited<ReturnType<typeof updateStrengthStandard>>>
+    export type UpdateStrengthStandardMutationBody = BodyType<StrengthStandardUpdate>
+    export type UpdateStrengthStandardMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update a compressive strength standard
+ */
+export const useUpdateStrengthStandard = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateStrengthStandard>>, TError,{id: number;data: BodyType<StrengthStandardUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateStrengthStandard>>,
+        TError,
+        {id: number;data: BodyType<StrengthStandardUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateStrengthStandardMutationOptions(options));
+    }
+
+export const getDeleteStrengthStandardUrl = (id: number,) => {
+
+
+
+
+  return `/api/strength-standards/${id}`
+}
+
+/**
+ * @summary Delete a compressive strength standard
+ */
+export const deleteStrengthStandard = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteStrengthStandardUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteStrengthStandardMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteStrengthStandard>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteStrengthStandard>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteStrengthStandard'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteStrengthStandard>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteStrengthStandard(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteStrengthStandardMutationResult = NonNullable<Awaited<ReturnType<typeof deleteStrengthStandard>>>
+
+    export type DeleteStrengthStandardMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a compressive strength standard
+ */
+export const useDeleteStrengthStandard = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteStrengthStandard>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteStrengthStandard>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteStrengthStandardMutationOptions(options));
     }
 
 export const getListRecordsUrl = (params?: ListRecordsParams,) => {

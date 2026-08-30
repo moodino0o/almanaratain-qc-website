@@ -151,6 +151,49 @@ export interface ReferenceItemInput {
   value: string;
 }
 
+export interface StrengthStandard {
+  id: number;
+  testType: TestType;
+  material: string;
+  /** @nullable */
+  blockType: string | null;
+  /** @nullable */
+  blockSize: string | null;
+  bsStandard: string;
+  requiredStrength: number;
+  strengthUnit: string;
+}
+
+export interface StrengthStandardInput {
+  testType: TestType;
+  /** @minLength 1 */
+  material: string;
+  /** @nullable */
+  blockType?: string | null;
+  /** @nullable */
+  blockSize?: string | null;
+  /** @minLength 1 */
+  bsStandard: string;
+  /** @minimum 0 */
+  requiredStrength: number;
+  strengthUnit?: string;
+}
+
+export interface StrengthStandardUpdate {
+  testType?: TestType;
+  /** @minLength 1 */
+  material?: string;
+  /** @nullable */
+  blockType?: string | null;
+  /** @nullable */
+  blockSize?: string | null;
+  /** @minLength 1 */
+  bsStandard?: string;
+  /** @minimum 0 */
+  requiredStrength?: number;
+  strengthUnit?: string;
+}
+
 export interface AuthUser {
   id: string;
   /** @nullable */

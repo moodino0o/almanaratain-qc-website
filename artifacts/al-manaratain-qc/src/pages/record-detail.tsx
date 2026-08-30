@@ -1,4 +1,4 @@
-import { useParams, Link } from "wouter";
+import { useParams, Link, useLocation } from "wouter";
 import { useGetRecord, useUpdateRecord, useDeleteRecord, RecordStatus } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +23,9 @@ function TestRowsTable({ rows }: { rows: unknown[] }) {
             <th className="p-2 text-left">Height</th>
             <th className="p-2 text-left">Dry Weight</th>
             <th className="p-2 text-left">Wet Weight</th>
-            <th className="p-2 text-left">Strength</th>
+            <th className="p-2 text-left">Load (kN)</th>
+            <th className="p-2 text-left">Loaded Face Area</th>
+            <th className="p-2 text-left">Calculated Strength</th>
           </tr>
         </thead>
         <tbody>
@@ -40,7 +42,11 @@ function TestRowsTable({ rows }: { rows: unknown[] }) {
                 <td className="p-2">{String(values.height ?? "-")}</td>
                 <td className="p-2">{String(values.dryWeight ?? "-")}</td>
                 <td className="p-2">{String(values.wetWeight ?? "-")}</td>
-                <td className="p-2">{String(values.strength ?? values.compressiveStrength ?? "-")}</td>
+                <td className="p-2">{String(values.load ?? "-")}</td>
+                <td className="p-2">{String(values.loadedFaceArea ?? "-")}</td>
+                <td className="p-2 font-semibold">
+                  {String(values.calculatedStrength ?? values.strength ?? values.compressiveStrength ?? "-")}
+                </td>
               </tr>
             );
           })}
@@ -50,9 +56,42 @@ function TestRowsTable({ rows }: { rows: unknown[] }) {
   );
 }
 
+function StrengthEvaluation({ value }: { value: unknown }) {
+  if (typeof value !== "object" || value === null) {
+    return (
+      <span className="text-muted-foreground">
+        No automatic evaluation has been recorded for this historical record.
+      </span>
+    );
+  }
+  const evaluation = value as Record<string, unknown>;
+  const status = String(evaluation.status ?? "Review");
+  const statusClass =
+    status === RecordStatus.Passed
+      ? "text-success"
+      : status === RecordStatus.Failed
+        ? "text-destructive"
+        : "text-warning";
+  return (
+    <div className="space-y-1">
+      <p className={`font-bold ${statusClass}`}>{status}</p>
+      <p>
+        Minimum: {evaluation.requiredStrength == null
+          ? "Not configured"
+          : `${evaluation.requiredStrength} ${String(evaluation.strengthUnit ?? "N/mm²")}`}
+      </p>
+      <p>BS reference: {String(evaluation.bsStandard ?? "Not configured")}</p>
+      {evaluation.reason != null && (
+        <p className="text-muted-foreground">{String(evaluation.reason)}</p>
+      )}
+    </div>
+  );
+}
+
 export default function RecordDetail() {
   const { id } = useParams();
   const recordId = Number(id);
+  const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -77,6 +116,8 @@ export default function RecordDetail() {
     });
   };
 
+  const isStrengthEvaluated = record.testType === "Ready Mix" || record.testType === "Blocks";
+
   const handleDelete = () => {
     if (!confirm("Are you sure you want to delete this record? This action cannot be undone.")) return;
     setIsDeleting(true);
@@ -85,7 +126,8 @@ export default function RecordDetail() {
         toast.success("Record Deleted");
         queryClient.invalidateQueries({ queryKey: getListRecordsQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetDashboardQueryKey() });
-        window.history.back(); // Using history instead of setLocation to match where they came from
+        queryClient.removeQueries({ queryKey: getGetRecordQueryKey(recordId) });
+        setLocation("/records");
       },
       onError: () => {
         toast.error("Failed to delete record.");
@@ -119,6 +161,13 @@ export default function RecordDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href={`/records/${recordId}/edit`}
+            className="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-4 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            <Edit2 className="w-4 h-4 mr-2" />
+            Edit
+          </Link>
           <Button variant="outline" onClick={() => window.print()}>
             <Printer className="w-4 h-4 mr-2" />
             Print
@@ -152,8 +201,10 @@ export default function RecordDetail() {
                         <td className="p-4 font-semibold text-foreground">
                           {key === "testRows" && Array.isArray(value) ? (
                             <TestRowsTable rows={value} />
+                          ) : key === "strengthEvaluation" ? (
+                            <StrengthEvaluation value={value} />
                           ) : (
-                            String(value)
+                            typeof value === "object" && value !== null ? JSON.stringify(value) : String(value)
                           )}
                         </td>
                       </tr>
@@ -200,6 +251,14 @@ export default function RecordDetail() {
                 <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Tested By</p>
                 <p className="font-medium text-foreground">{record.testedBy}</p>
               </div>
+              {record.testType === "Ready Mix" && (
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Reference Number</p>
+                  <p className="font-medium text-foreground">
+                    {String(record.details.referenceNumber ?? "—")}
+                  </p>
+                </div>
+              )}
               {record.reviewedBy && (
                 <div>
                   <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Reviewed By</p>
@@ -211,34 +270,44 @@ export default function RecordDetail() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Quality Review</CardTitle>
-              <CardDescription>Update the final status of this sample.</CardDescription>
+              <CardTitle>{isStrengthEvaluated ? "Automatic Quality Evaluation" : "Quality Review"}</CardTitle>
+              <CardDescription>
+                {isStrengthEvaluated
+                  ? "The status is enforced from the configured standard and measured specimens."
+                  : "Update the final status of this sample."}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button 
-                variant="outline" 
-                className="w-full justify-start text-success border-success/30 hover:bg-success hover:text-white"
-                onClick={() => handleStatusUpdate(RecordStatus.Passed)}
-                disabled={record.status === RecordStatus.Passed || updateRecord.isPending}
-              >
-                <Check className="w-4 h-4 mr-2" /> Mark as Passed
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full justify-start text-destructive border-destructive/30 hover:bg-destructive hover:text-white"
-                onClick={() => handleStatusUpdate(RecordStatus.Failed)}
-                disabled={record.status === RecordStatus.Failed || updateRecord.isPending}
-              >
-                <X className="w-4 h-4 mr-2" /> Mark as Failed
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full justify-start text-warning border-warning/30 hover:bg-warning hover:text-white"
-                onClick={() => handleStatusUpdate(RecordStatus.Review)}
-                disabled={record.status === RecordStatus.Review || updateRecord.isPending}
-              >
-                <AlertTriangle className="w-4 h-4 mr-2" /> Set to Review
-              </Button>
+              {isStrengthEvaluated ? (
+                <StrengthEvaluation value={record.details.strengthEvaluation} />
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-success border-success/30 hover:bg-success hover:text-white"
+                    onClick={() => handleStatusUpdate(RecordStatus.Passed)}
+                    disabled={record.status === RecordStatus.Passed || updateRecord.isPending}
+                  >
+                    <Check className="w-4 h-4 mr-2" /> Mark as Passed
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-destructive border-destructive/30 hover:bg-destructive hover:text-white"
+                    onClick={() => handleStatusUpdate(RecordStatus.Failed)}
+                    disabled={record.status === RecordStatus.Failed || updateRecord.isPending}
+                  >
+                    <X className="w-4 h-4 mr-2" /> Mark as Failed
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-warning border-warning/30 hover:bg-warning hover:text-white"
+                    onClick={() => handleStatusUpdate(RecordStatus.Review)}
+                    disabled={record.status === RecordStatus.Review || updateRecord.isPending}
+                  >
+                    <AlertTriangle className="w-4 h-4 mr-2" /> Set to Review
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>

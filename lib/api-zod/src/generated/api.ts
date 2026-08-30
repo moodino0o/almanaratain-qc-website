@@ -471,6 +471,98 @@ export const DeleteReferenceItemResponse = zod.void()
 
 
 /**
+ * @summary List configurable compressive strength standards
+ */
+export const ListStrengthStandardsResponseItem = zod.object({
+  "id": zod.number(),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "material": zod.string(),
+  "blockType": zod.string().nullable(),
+  "blockSize": zod.string().nullable(),
+  "bsStandard": zod.string(),
+  "requiredStrength": zod.number(),
+  "strengthUnit": zod.string()
+})
+export const ListStrengthStandardsResponse = zod.array(ListStrengthStandardsResponseItem)
+
+
+/**
+ * @summary Create a compressive strength standard
+ */
+
+
+export const createStrengthStandardBodyRequiredStrengthMin = 0;
+
+export const createStrengthStandardBodyStrengthUnitDefault = `N/mm\xB2`;
+
+export const CreateStrengthStandardBody = zod.object({
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "material": zod.string().min(1),
+  "blockType": zod.string().nullish(),
+  "blockSize": zod.string().nullish(),
+  "bsStandard": zod.string().min(1),
+  "requiredStrength": zod.number().min(createStrengthStandardBodyRequiredStrengthMin),
+  "strengthUnit": zod.string().default(createStrengthStandardBodyStrengthUnitDefault)
+})
+
+export const CreateStrengthStandardResponse = zod.object({
+  "id": zod.number(),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "material": zod.string(),
+  "blockType": zod.string().nullable(),
+  "blockSize": zod.string().nullable(),
+  "bsStandard": zod.string(),
+  "requiredStrength": zod.number(),
+  "strengthUnit": zod.string()
+})
+
+
+/**
+ * @summary Update a compressive strength standard
+ */
+export const UpdateStrengthStandardParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+export const updateStrengthStandardBodyRequiredStrengthMin = 0;
+
+
+
+export const UpdateStrengthStandardBody = zod.object({
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']).optional(),
+  "material": zod.string().min(1).optional(),
+  "blockType": zod.string().nullish(),
+  "blockSize": zod.string().nullish(),
+  "bsStandard": zod.string().min(1).optional(),
+  "requiredStrength": zod.number().min(updateStrengthStandardBodyRequiredStrengthMin).optional(),
+  "strengthUnit": zod.string().optional()
+})
+
+export const UpdateStrengthStandardResponse = zod.object({
+  "id": zod.number(),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "material": zod.string(),
+  "blockType": zod.string().nullable(),
+  "blockSize": zod.string().nullable(),
+  "bsStandard": zod.string(),
+  "requiredStrength": zod.number(),
+  "strengthUnit": zod.string()
+})
+
+
+/**
+ * @summary Delete a compressive strength standard
+ */
+export const DeleteStrengthStandardParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteStrengthStandardResponse = zod.void()
+
+
+/**
  * @summary List quality control records
  */
 export const listRecordsQueryLimitDefault = 50;

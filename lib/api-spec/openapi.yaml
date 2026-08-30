@@ -421,6 +421,66 @@ paths:
       responses:
         "204":
           description: Reference value deleted
+  /strength-standards:
+    get:
+      operationId: listStrengthStandards
+      tags: [qc]
+      summary: List configurable compressive strength standards
+      responses:
+        "200":
+          description: Configured strength standards
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StrengthStandard"
+    post:
+      operationId: createStrengthStandard
+      tags: [qc]
+      summary: Create a compressive strength standard
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StrengthStandardInput"
+      responses:
+        "201":
+          description: Created strength standard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StrengthStandard"
+  /strength-standards/{id}:
+    patch:
+      operationId: updateStrengthStandard
+      tags: [qc]
+      summary: Update a compressive strength standard
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StrengthStandardUpdate"
+      responses:
+        "200":
+          description: Updated strength standard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StrengthStandard"
+    delete:
+      operationId: deleteStrengthStandard
+      tags: [qc]
+      summary: Delete a compressive strength standard
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "204":
+          description: Strength standard deleted
   /records:
     get:
       operationId: listRecords
@@ -847,6 +907,80 @@ components:
         value:
           type: string
           minLength: 1
+    StrengthStandard:
+      type: object
+      required:
+        - id
+        - testType
+        - material
+        - blockType
+        - blockSize
+        - bsStandard
+        - requiredStrength
+        - strengthUnit
+      properties:
+        id:
+          type: number
+        testType:
+          $ref: "#/components/schemas/TestType"
+        material:
+          type: string
+        blockType:
+          type: ["string", "null"]
+        blockSize:
+          type: ["string", "null"]
+        bsStandard:
+          type: string
+        requiredStrength:
+          type: number
+        strengthUnit:
+          type: string
+    StrengthStandardInput:
+      type: object
+      required:
+        - testType
+        - material
+        - bsStandard
+        - requiredStrength
+      properties:
+        testType:
+          $ref: "#/components/schemas/TestType"
+        material:
+          type: string
+          minLength: 1
+        blockType:
+          type: ["string", "null"]
+        blockSize:
+          type: ["string", "null"]
+        bsStandard:
+          type: string
+          minLength: 1
+        requiredStrength:
+          type: number
+          minimum: 0
+        strengthUnit:
+          type: string
+          default: N/mm²
+    StrengthStandardUpdate:
+      type: object
+      properties:
+        testType:
+          $ref: "#/components/schemas/TestType"
+        material:
+          type: string
+          minLength: 1
+        blockType:
+          type: ["string", "null"]
+        blockSize:
+          type: ["string", "null"]
+        bsStandard:
+          type: string
+          minLength: 1
+        requiredStrength:
+          type: number
+          minimum: 0
+        strengthUnit:
+          type: string
     AuthUser:
       type: object
       required: [id, email, firstName, lastName, profileImageUrl]

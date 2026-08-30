@@ -14,6 +14,7 @@ import {
   qcRecordsTable,
   qcReferenceCategoriesTable,
   qcReferenceItemsTable,
+  qcStrengthStandardsTable,
 } from "@workspace/db";
 import {
   CreateReferenceCategoryBody,
@@ -33,6 +34,10 @@ import {
   GetRecordResponse,
   GetReportParams,
   GetReportResponse,
+  CreateStrengthStandardBody,
+  CreateStrengthStandardResponse,
+  DeleteStrengthStandardParams,
+  ListStrengthStandardsResponse,
   ListRecordsQueryParams,
   ListRecordsResponse,
   UpdateReferenceCategoryBody,
@@ -44,7 +49,11 @@ import {
   UpdateRecordBody,
   UpdateRecordParams,
   UpdateRecordResponse,
+  UpdateStrengthStandardBody,
+  UpdateStrengthStandardParams,
+  UpdateStrengthStandardResponse,
 } from "@workspace/api-zod";
+import { evaluateStrengthRecord } from "../lib/qc-strength";
 
 const router: IRouter = Router();
 
@@ -162,6 +171,17 @@ function lookupValues(
 const toRecord = (row: typeof qcRecordsTable.$inferSelect) => ({
   ...row,
   createdAt: row.createdAt.toISOString(),
+});
+
+const toStrengthStandard = (row: typeof qcStrengthStandardsTable.$inferSelect) => ({
+  id: row.id,
+  testType: row.testType,
+  material: row.material,
+  blockType: row.blockType,
+  blockSize: row.blockSize,
+  bsStandard: row.bsStandard,
+  requiredStrength: Number(row.requiredStrength),
+  strengthUnit: row.strengthUnit,
 });
 
 router.get("/dashboard", async (_req, res): Promise<void> => {
@@ -383,6 +403,100 @@ router.delete("/reference-data/items/:id", async (req, res): Promise<void> => {
   res.sendStatus(204);
 });
 
+router.get("/strength-standards", async (_req, res): Promise<void> => {
+  const standards = await db
+    .select()
+    .from(qcStrengthStandardsTable)
+    .orderBy(asc(qcStrengthStandardsTable.testType), asc(qcStrengthStandardsTable.material), asc(qcStrengthStandardsTable.id));
+  res.json(ListStrengthStandardsResponse.parse(standards.map(toStrengthStandard)));
+});
+
+router.post("/strength-standards", async (req, res): Promise<void> => {
+  const body = CreateStrengthStandardBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+
+  const [standard] = await db
+    .insert(qcStrengthStandardsTable)
+    .values({
+      testType: body.data.testType,
+      material: body.data.material.trim(),
+      blockType: body.data.blockType?.trim() || null,
+      blockSize: body.data.blockSize?.trim() || null,
+      bsStandard: body.data.bsStandard.trim(),
+      requiredStrength: String(body.data.requiredStrength),
+      strengthUnit: body.data.strengthUnit?.trim() || "N/mm²",
+    })
+    .returning();
+
+  if (!standard) {
+    res.status(500).json({ error: "Unable to create strength standard" });
+    return;
+  }
+  res.status(201).json(CreateStrengthStandardResponse.parse(toStrengthStandard(standard)));
+});
+
+router.patch("/strength-standards/:id", async (req, res): Promise<void> => {
+  const params = UpdateStrengthStandardParams.safeParse(req.params);
+  const body = UpdateStrengthStandardBody.safeParse(req.body);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+
+  const updates = {
+    ...(body.data.testType !== undefined ? { testType: body.data.testType } : {}),
+    ...(body.data.material !== undefined ? { material: body.data.material.trim() } : {}),
+    ...(body.data.blockType !== undefined
+      ? { blockType: body.data.blockType?.trim() || null }
+      : {}),
+    ...(body.data.blockSize !== undefined
+      ? { blockSize: body.data.blockSize?.trim() || null }
+      : {}),
+    ...(body.data.bsStandard !== undefined ? { bsStandard: body.data.bsStandard.trim() } : {}),
+    ...(body.data.requiredStrength !== undefined
+      ? { requiredStrength: String(body.data.requiredStrength) }
+      : {}),
+    ...(body.data.strengthUnit !== undefined
+      ? { strengthUnit: body.data.strengthUnit.trim() || "N/mm²" }
+      : {}),
+  };
+
+  const [standard] = await db
+    .update(qcStrengthStandardsTable)
+    .set(updates)
+    .where(eq(qcStrengthStandardsTable.id, params.data.id))
+    .returning();
+  if (!standard) {
+    res.status(404).json({ error: "Strength standard not found" });
+    return;
+  }
+  res.json(UpdateStrengthStandardResponse.parse(toStrengthStandard(standard)));
+});
+
+router.delete("/strength-standards/:id", async (req, res): Promise<void> => {
+  const params = DeleteStrengthStandardParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const [standard] = await db
+    .delete(qcStrengthStandardsTable)
+    .where(eq(qcStrengthStandardsTable.id, params.data.id))
+    .returning();
+  if (!standard) {
+    res.status(404).json({ error: "Strength standard not found" });
+    return;
+  }
+  res.sendStatus(204);
+});
+
 router.get("/records", async (req, res): Promise<void> => {
   const parsed = ListRecordsQueryParams.safeParse(req.query);
   if (!parsed.success) {
@@ -424,6 +538,15 @@ router.post("/records", async (req, res): Promise<void> => {
     return;
   }
 
+  const standards = await db.select().from(qcStrengthStandardsTable);
+  const evaluated = evaluateStrengthRecord(
+    {
+      testType: parsed.data.testType,
+      material: parsed.data.material,
+      details: parsed.data.details,
+    },
+    standards,
+  );
   const prefix = parsed.data.testType
     .replace(/[^A-Z]/gi, "")
     .slice(0, 3)
@@ -433,6 +556,8 @@ router.post("/records", async (req, res): Promise<void> => {
     .insert(qcRecordsTable)
     .values({
       ...parsed.data,
+      status: evaluated.status ?? parsed.data.status,
+      details: evaluated.details,
       sampleDate: parsed.data.sampleDate.toISOString().slice(0, 10),
       recordNo,
     })
@@ -473,9 +598,27 @@ router.patch("/records/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: body.error.message });
     return;
   }
+  const [existing] = await db
+    .select()
+    .from(qcRecordsTable)
+    .where(eq(qcRecordsTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Record not found" });
+    return;
+  }
+
+  const candidate = {
+    testType: body.data.testType ?? existing.testType,
+    material: body.data.material ?? existing.material,
+    details: body.data.details ?? existing.details,
+  };
+  const standards = await db.select().from(qcStrengthStandardsTable);
+  const evaluated = evaluateStrengthRecord(candidate, standards);
   const { sampleDate, ...rest } = body.data;
   const updates = {
     ...rest,
+    status: evaluated.status ?? body.data.status ?? existing.status,
+    ...(evaluated.status !== undefined ? { details: evaluated.details } : {}),
     ...(sampleDate
       ? { sampleDate: sampleDate.toISOString().slice(0, 10) }
       : {}),
