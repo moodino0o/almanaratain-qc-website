@@ -61,6 +61,7 @@ function toDocument(row: typeof archiveDocumentsTable.$inferSelect) {
     category: row.category,
     subcategory: row.subcategory,
     documentDate: row.documentDate,
+    expiryDate: row.expiryDate,
     description: row.description,
     uploadedAt: row.createdAt.toISOString(),
   };
@@ -140,6 +141,7 @@ router.post("/archive/documents", async (req, res) => {
       .values({
         ...input,
         documentDate: input.documentDate.toISOString().slice(0, 10),
+        expiryDate: input.expiryDate?.toISOString().slice(0, 10) ?? null,
         description: input.description ?? "",
         uploadedBy: req.user!.id,
       })
@@ -178,6 +180,9 @@ router.patch("/archive/documents/:id", async (req, res) => {
     .set({
       ...parsedBody.data,
       documentDate: parsedBody.data.documentDate?.toISOString().slice(0, 10),
+      expiryDate: parsedBody.data.expiryDate === undefined
+        ? undefined
+        : parsedBody.data.expiryDate?.toISOString().slice(0, 10) ?? null,
     })
     .where(eq(archiveDocumentsTable.id, parsedParams.data.id))
     .returning();

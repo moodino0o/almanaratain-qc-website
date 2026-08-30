@@ -216,6 +216,8 @@ export interface ArchiveDocument {
   category: string;
   subcategory: string;
   documentDate: string;
+  /** @nullable */
+  expiryDate: string | null;
   description: string;
   uploadedAt: string;
 }
@@ -234,6 +236,8 @@ export interface ArchiveDocumentInput {
   /** @minLength 1 */
   subcategory: string;
   documentDate: string;
+  /** @nullable */
+  expiryDate?: string | null;
   description?: string;
 }
 
@@ -245,6 +249,8 @@ export interface ArchiveDocumentUpdate {
   /** @minLength 1 */
   subcategory?: string;
   documentDate?: string;
+  /** @nullable */
+  expiryDate?: string | null;
   description?: string;
 }
 

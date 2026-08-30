@@ -14,6 +14,8 @@ export interface ArchiveDocument {
   category: string;
   subcategory: string;
   documentDate: Date;
+  /** @nullable */
+  expiryDate: Date | null;
   description: string;
   uploadedAt: Date;
 }

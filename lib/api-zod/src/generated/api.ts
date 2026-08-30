@@ -194,6 +194,7 @@ export const ListArchiveResponse = zod.object({
   "category": zod.string(),
   "subcategory": zod.string(),
   "documentDate": zod.coerce.date(),
+  "expiryDate": zod.coerce.date().nullable(),
   "description": zod.string(),
   "uploadedAt": zod.coerce.date()
 }))
@@ -207,6 +208,7 @@ export const ListArchiveResponse = zod.object({
   "category": zod.string(),
   "subcategory": zod.string(),
   "documentDate": zod.coerce.date(),
+  "expiryDate": zod.coerce.date().nullable(),
   "description": zod.string(),
   "uploadedAt": zod.coerce.date()
 })),
@@ -233,6 +235,7 @@ export const CreateArchiveDocumentBody = zod.object({
   "category": zod.string().min(1),
   "subcategory": zod.string().min(1),
   "documentDate": zod.coerce.date(),
+  "expiryDate": zod.coerce.date().nullish(),
   "description": zod.string().default(createArchiveDocumentBodyDescriptionDefault)
 })
 
@@ -244,6 +247,7 @@ export const CreateArchiveDocumentResponse = zod.object({
   "category": zod.string(),
   "subcategory": zod.string(),
   "documentDate": zod.coerce.date(),
+  "expiryDate": zod.coerce.date().nullable(),
   "description": zod.string(),
   "uploadedAt": zod.coerce.date()
 })
@@ -264,6 +268,7 @@ export const GetArchiveDocumentResponse = zod.object({
   "category": zod.string(),
   "subcategory": zod.string(),
   "documentDate": zod.coerce.date(),
+  "expiryDate": zod.coerce.date().nullable(),
   "description": zod.string(),
   "uploadedAt": zod.coerce.date()
 })
@@ -286,6 +291,7 @@ export const UpdateArchiveDocumentBody = zod.object({
   "category": zod.string().min(1).optional(),
   "subcategory": zod.string().min(1).optional(),
   "documentDate": zod.coerce.date().optional(),
+  "expiryDate": zod.coerce.date().nullish(),
   "description": zod.string().optional()
 })
 
@@ -297,6 +303,7 @@ export const UpdateArchiveDocumentResponse = zod.object({
   "category": zod.string(),
   "subcategory": zod.string(),
   "documentDate": zod.coerce.date(),
+  "expiryDate": zod.coerce.date().nullable(),
   "description": zod.string(),
   "uploadedAt": zod.coerce.date()
 })

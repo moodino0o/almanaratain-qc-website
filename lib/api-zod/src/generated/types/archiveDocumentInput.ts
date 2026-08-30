@@ -20,5 +20,7 @@ export interface ArchiveDocumentInput {
   /** @minLength 1 */
   subcategory: string;
   documentDate: Date;
+  /** @nullable */
+  expiryDate?: Date | null;
   description?: string;
 }

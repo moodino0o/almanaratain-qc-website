@@ -940,6 +940,7 @@ components:
         - category
         - subcategory
         - documentDate
+        - expiryDate
         - description
         - uploadedAt
       properties:
@@ -957,6 +958,9 @@ components:
           type: string
         documentDate:
           type: string
+          format: date
+        expiryDate:
+          type: ["string", "null"]
           format: date
         description:
           type: string
@@ -988,6 +992,9 @@ components:
         documentDate:
           type: string
           format: date
+        expiryDate:
+          type: ["string", "null"]
+          format: date
         description:
           type: string
           default: ""
@@ -1005,6 +1012,9 @@ components:
           minLength: 1
         documentDate:
           type: string
+          format: date
+        expiryDate:
+          type: ["string", "null"]
           format: date
         description:
           type: string

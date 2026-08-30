@@ -24,6 +24,7 @@ export const archiveDocumentsTable = pgTable(
     documentDate: date("document_date", { mode: "string" })
       .notNull()
       .default(sql`CURRENT_DATE`),
+    expiryDate: date("expiry_date", { mode: "string" }),
     description: text("description").notNull().default(""),
     uploadedBy: varchar("uploaded_by").references(() => usersTable.id, {
       onDelete: "set null",

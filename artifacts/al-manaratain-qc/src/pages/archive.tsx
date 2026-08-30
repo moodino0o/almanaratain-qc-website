@@ -46,6 +46,7 @@ export default function Archive() {
   const [subcategory, setSubcategory] = useState("");
   const [newSubcategory, setNewSubcategory] = useState("");
   const [documentDate, setDocumentDate] = useState(new Date().toISOString().slice(0, 10));
+  const [expiryDate, setExpiryDate] = useState("");
   const [description, setDescription] = useState("");
   const [search, setSearch] = useState("");
   const [progress, setProgress] = useState(0);
@@ -54,6 +55,7 @@ export default function Archive() {
   const [editCategory, setEditCategory] = useState("");
   const [editSubcategory, setEditSubcategory] = useState("");
   const [editDocumentDate, setEditDocumentDate] = useState("");
+  const [editExpiryDate, setEditExpiryDate] = useState("");
   const [editDescription, setEditDescription] = useState("");
 
   const visibleDocuments = useMemo(() => {
@@ -92,9 +94,9 @@ export default function Archive() {
       setProgress(1);
       const signed = await requestUrl.mutateAsync({ data: { name: file.name, size: file.size, contentType: file.type || "application/octet-stream" } });
       await uploadFile(signed.uploadURL, file, setProgress);
-       await createDocument.mutateAsync({ data: { originalName: documentName.trim() || file.name, objectPath: signed.objectPath, mimeType: file.type || "application/octet-stream", size: file.size, category: enteredCategory, subcategory: enteredSubcategory, documentDate, description: description.trim() } });
+       await createDocument.mutateAsync({ data: { originalName: documentName.trim() || file.name, objectPath: signed.objectPath, mimeType: file.type || "application/octet-stream", size: file.size, category: enteredCategory, subcategory: enteredSubcategory, documentDate, expiryDate: expiryDate || null, description: description.trim() } });
       toast.success("Document added to the archive.");
-        setFile(null); setDocumentName(""); setCategory(""); setNewCategory(""); setSubcategory(""); setNewSubcategory(""); setDescription(""); setProgress(0); setShowEntry(false);
+        setFile(null); setDocumentName(""); setCategory(""); setNewCategory(""); setSubcategory(""); setNewSubcategory(""); setDocumentDate(new Date().toISOString().slice(0, 10)); setExpiryDate(""); setDescription(""); setProgress(0); setShowEntry(false);
       if (fileRef.current) fileRef.current.value = "";
       await archive.refetch();
     } catch {
@@ -111,6 +113,7 @@ export default function Archive() {
     setEditCategory(document.category);
     setEditSubcategory(document.subcategory);
     setEditDocumentDate(document.documentDate);
+    setEditExpiryDate(document.expiryDate ?? "");
     setEditDescription(document.description);
   }
 
@@ -125,6 +128,7 @@ export default function Archive() {
           category: editCategory,
           subcategory: editSubcategory,
           documentDate: editDocumentDate,
+          expiryDate: editExpiryDate || null,
           description: editDescription.trim(),
         },
       });
@@ -163,7 +167,8 @@ export default function Archive() {
        <div className="space-y-2 md:col-span-2"><Label>Document name (optional)</Label><Input value={documentName} onChange={(e) => setDocumentName(e.target.value)} placeholder="Leave blank to use the uploaded file name" /></div>
        <div className="space-y-2"><Label>Category</Label><select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={category} onChange={(e) => { setCategory(e.target.value); setSubcategory(""); setNewSubcategory(""); }}><option value="">Choose a category</option>{archive.data?.categories.map((folder) => <option key={folder.name} value={folder.name}>{folder.name}</option>)}<option value="__new__">＋ New category</option></select>{category === "__new__" && <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="Enter new category name" />}</div>
        <div className="space-y-2"><Label>Subcategory</Label><select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={subcategory} onChange={(e) => setSubcategory(e.target.value)} disabled={category === ""}><option value="">{category ? "Choose a subcategory" : "Choose a category first"}</option>{subcategoryOptions.map((sub) => <option key={sub.name} value={sub.name}>{sub.name}</option>)}<option value="__new__">＋ New subcategory</option></select>{subcategory === "__new__" && <Input value={newSubcategory} onChange={(e) => setNewSubcategory(e.target.value)} placeholder="Enter new subcategory name" />}</div>
-      <div className="space-y-2"><Label>Document date</Label><Input type="date" value={documentDate} onChange={(e) => setDocumentDate(e.target.value)} /></div>
+       <div className="space-y-2"><Label>Document date</Label><Input type="date" value={documentDate} onChange={(e) => setDocumentDate(e.target.value)} /></div>
+       <div className="space-y-2"><Label>Expiry date (optional)</Label><Input type="date" value={expiryDate} min={documentDate} onChange={(e) => setExpiryDate(e.target.value)} /></div>
       <div className="space-y-2 md:col-span-2"><Label>Description</Label><Textarea value={description} onChange={(e) => setDescription(e.target.value)} /></div>
       {progress > 0 && <div className="md:col-span-2"><div className="h-2 overflow-hidden rounded bg-muted"><div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} /></div><p className="mt-1 text-xs text-muted-foreground">{progress}% uploaded</p></div>}
        <Button type="submit" disabled={!file || !enteredCategory || !enteredSubcategory || requestUrl.isPending || createDocument.isPending}>Save document</Button>
@@ -172,7 +177,8 @@ export default function Archive() {
        <div className="space-y-2 md:col-span-2"><Label>Document name</Label><Input value={editName} onChange={(e) => setEditName(e.target.value)} /></div>
        <div className="space-y-2"><Label>Category</Label><select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={editCategory} onChange={(e) => { setEditCategory(e.target.value); setEditSubcategory(""); }}><option value="">Choose a category</option>{archive.data?.categories.map((folder) => <option key={folder.name} value={folder.name}>{folder.name}</option>)}</select></div>
        <div className="space-y-2"><Label>Subcategory</Label><select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={editSubcategory} onChange={(e) => setEditSubcategory(e.target.value)} disabled={!editCategory}><option value="">Choose a subcategory</option>{editSubcategoryOptions.map((sub) => <option key={sub.name} value={sub.name}>{sub.name}</option>)}</select></div>
-       <div className="space-y-2"><Label>Document date</Label><Input type="date" value={editDocumentDate} onChange={(e) => setEditDocumentDate(e.target.value)} /></div>
+        <div className="space-y-2"><Label>Document date</Label><Input type="date" value={editDocumentDate} onChange={(e) => setEditDocumentDate(e.target.value)} /></div>
+        <div className="space-y-2"><Label>Expiry date (optional)</Label><Input type="date" value={editExpiryDate} min={editDocumentDate} onChange={(e) => setEditExpiryDate(e.target.value)} /></div>
        <div className="space-y-2 md:col-span-2"><Label>Description</Label><Textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} /></div>
        <div className="flex gap-2"><Button type="submit" disabled={!editName.trim() || !editCategory || !editSubcategory || updateDocument.isPending}>Save changes</Button><Button type="button" variant="outline" onClick={() => setEditingDocumentId(null)}>Cancel</Button></div>
      </form></CardContent></Card>}
