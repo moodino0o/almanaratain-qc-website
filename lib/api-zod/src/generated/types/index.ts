@@ -8,6 +8,7 @@
 
 export * from './archiveDocument';
 export * from './archiveDocumentInput';
+export * from './archiveDocumentUpdate';
 export * from './archiveFolder';
 export * from './archiveResponse';
 export * from './archiveSubcategory';

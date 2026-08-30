@@ -5,6 +5,8 @@ import {
   GetArchiveDocumentResponse,
   ListArchiveResponse,
   GetArchiveDocumentParams,
+  UpdateArchiveDocumentBody,
+  UpdateArchiveDocumentResponse,
 } from "@workspace/api-zod";
 import { archiveDocumentsTable, db } from "@workspace/db";
 import { desc, eq } from "drizzle-orm";
@@ -14,6 +16,13 @@ import { ObjectNotFoundError, ObjectStorageService } from "../lib/objectStorage"
 const router: IRouter = Router();
 const storage = new ObjectStorageService();
 const allowedExtensions = new Set(["pdf", "doc", "docx", "xls", "xlsx"]);
+const allowedMimeTypes = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+]);
 const maxFileSize = 25 * 1024 * 1024;
 
 function getArchiveManagerEmails(): Set<string> {
@@ -55,6 +64,19 @@ function toDocument(row: typeof archiveDocumentsTable.$inferSelect) {
     description: row.description,
     uploadedAt: row.createdAt.toISOString(),
   };
+}
+
+function getDownloadName(row: typeof archiveDocumentsTable.$inferSelect): string {
+  if (/\.[a-z0-9]{2,5}$/i.test(row.originalName)) return row.originalName;
+  const extension =
+    row.mimeType === "application/pdf"
+      ? "pdf"
+      : row.mimeType.includes("word")
+        ? "docx"
+        : row.mimeType.includes("excel") || row.mimeType.includes("spreadsheet")
+          ? "xlsx"
+          : "";
+  return extension ? `${row.originalName}.${extension}` : row.originalName;
 }
 
 router.get("/archive", async (req, res) => {
@@ -104,7 +126,7 @@ router.post("/archive/documents", async (req, res) => {
   const input = parsed.data;
   const extension = input.originalName.split(".").pop()?.toLowerCase() ?? "";
   if (
-    !allowedExtensions.has(extension) ||
+    (!allowedExtensions.has(extension) && !allowedMimeTypes.has(input.mimeType)) ||
     input.size > maxFileSize ||
     !input.objectPath.startsWith("/objects/uploads/")
   ) {
@@ -143,6 +165,29 @@ router.get("/archive/documents/:id", async (req, res) => {
   res.json(GetArchiveDocumentResponse.parse(toDocument(row)));
 });
 
+router.patch("/archive/documents/:id", async (req, res) => {
+  if (!requireUser(req, res)) return;
+  const parsedParams = GetArchiveDocumentParams.safeParse(req.params);
+  const parsedBody = UpdateArchiveDocumentBody.safeParse(req.body);
+  if (!parsedParams.success || !parsedBody.success) {
+    res.status(400).json({ error: "Invalid document metadata" });
+    return;
+  }
+  const [row] = await db
+    .update(archiveDocumentsTable)
+    .set({
+      ...parsedBody.data,
+      documentDate: parsedBody.data.documentDate?.toISOString().slice(0, 10),
+    })
+    .where(eq(archiveDocumentsTable.id, parsedParams.data.id))
+    .returning();
+  if (!row) {
+    res.status(404).json({ error: "Document not found" });
+    return;
+  }
+  res.json(UpdateArchiveDocumentResponse.parse(toDocument(row)));
+});
+
 async function serveContent(req: Request, res: Response, download: boolean): Promise<void> {
   if (!requireUser(req, res)) return;
   const id = Number(req.params.id);
@@ -161,7 +206,7 @@ async function serveContent(req: Request, res: Response, download: boolean): Pro
     const disposition = download || row.mimeType !== "application/pdf" ? "attachment" : "inline";
     res.setHeader(
       "Content-Disposition",
-      `${disposition}; filename*=UTF-8''${encodeURIComponent(row.originalName)}`,
+      `${disposition}; filename*=UTF-8''${encodeURIComponent(getDownloadName(row))}`,
     );
     if (!response.body) {
       res.end();

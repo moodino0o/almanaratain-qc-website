@@ -110,6 +110,11 @@ export const LogoutBrowserSessionResponse = zod.void()
  */
 
 
+
+
+
+
+
 export const ExchangeMobileAuthorizationCodeBody = zod.object({
   "code": zod.string().min(1),
   "code_verifier": zod.string().min(1),
@@ -136,11 +141,18 @@ export const LogoutMobileSessionResponse = zod.object({
  */
 
 
+
+
+
 export const RequestUploadUrlBody = zod.object({
   "name": zod.string().min(1),
   "size": zod.number().min(1),
   "contentType": zod.string().min(1)
 })
+
+
+
+
 
 
 export const RequestUploadUrlResponse = zod.object({
@@ -207,6 +219,10 @@ export const ListArchiveResponse = zod.object({
  */
 
 
+
+
+
+
 export const createArchiveDocumentBodyDescriptionDefault = ``;
 
 export const CreateArchiveDocumentBody = zod.object({
@@ -252,12 +268,50 @@ export const GetArchiveDocumentResponse = zod.object({
   "uploadedAt": zod.coerce.date()
 })
 
+
+/**
+ * @summary Update archived document metadata
+ */
+export const UpdateArchiveDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+
+
+export const UpdateArchiveDocumentBody = zod.object({
+  "originalName": zod.string().min(1).optional(),
+  "category": zod.string().min(1).optional(),
+  "subcategory": zod.string().min(1).optional(),
+  "documentDate": zod.coerce.date().optional(),
+  "description": zod.string().optional()
+})
+
+export const UpdateArchiveDocumentResponse = zod.object({
+  "id": zod.number(),
+  "originalName": zod.string(),
+  "mimeType": zod.string(),
+  "size": zod.number(),
+  "category": zod.string(),
+  "subcategory": zod.string(),
+  "documentDate": zod.coerce.date(),
+  "description": zod.string(),
+  "uploadedAt": zod.coerce.date()
+})
+
+
 /**
  * @summary Retire an archived document and remove its stored file
  */
 export const RetireArchiveDocumentParams = zod.object({
   "id": zod.coerce.number()
 })
+
+export const RetireArchiveDocumentResponse = zod.void()
+
+
 /**
  * @summary Review or download an archived document
  */
@@ -300,6 +354,8 @@ export const GetReferenceDataResponse = zod.object({
  */
 
 
+
+
 export const CreateReferenceCategoryBody = zod.object({
   "key": zod.string().min(1),
   "label": zod.string().min(1)
@@ -323,6 +379,9 @@ export const CreateReferenceCategoryResponse = zod.object({
 export const UpdateReferenceCategoryParams = zod.object({
   "id": zod.coerce.number()
 })
+
+
+
 
 
 export const UpdateReferenceCategoryBody = zod.object({
@@ -360,6 +419,8 @@ export const CreateReferenceItemParams = zod.object({
 })
 
 
+
+
 export const CreateReferenceItemBody = zod.object({
   "value": zod.string().min(1)
 })
@@ -377,6 +438,8 @@ export const CreateReferenceItemResponse = zod.object({
 export const UpdateReferenceItemParams = zod.object({
   "id": zod.coerce.number()
 })
+
+
 
 
 export const UpdateReferenceItemBody = zod.object({
@@ -407,6 +470,7 @@ export const listRecordsQueryLimitDefault = 50;
 export const listRecordsQueryLimitMax = 100;
 
 
+
 export const ListRecordsQueryParams = zod.object({
   "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']).optional(),
   "search": zod.coerce.string().optional(),
@@ -433,6 +497,9 @@ export const ListRecordsResponse = zod.array(ListRecordsResponseItem)
 /**
  * @summary Create a quality control record
  */
+
+
+
 
 
 export const CreateRecordBody = zod.object({
@@ -558,4 +625,3 @@ export const GetReportResponse = zod.object({
 })
 
 
-export const RetireArchiveDocumentResponse = zod.void()

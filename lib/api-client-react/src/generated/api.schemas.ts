@@ -237,6 +237,17 @@ export interface ArchiveDocumentInput {
   description?: string;
 }
 
+export interface ArchiveDocumentUpdate {
+  /** @minLength 1 */
+  originalName?: string;
+  /** @minLength 1 */
+  category?: string;
+  /** @minLength 1 */
+  subcategory?: string;
+  documentDate?: string;
+  description?: string;
+}
+
 export interface ArchiveSubcategory {
   name: string;
   count: number;
@@ -286,3 +297,4 @@ search?: SearchParamParameter;
  */
 limit?: LimitParamParameter;
 };
+

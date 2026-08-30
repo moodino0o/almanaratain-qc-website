@@ -233,6 +233,31 @@ paths:
           description: Authentication required
         "404":
           description: Document not found
+    patch:
+      tags: [Archive]
+      operationId: updateArchiveDocument
+      summary: Update archived document metadata
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ArchiveDocumentUpdate"
+      responses:
+        "200":
+          description: Updated archived document
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArchiveDocument"
+        "400":
+          description: Invalid document metadata
+        "401":
+          description: Authentication required
+        "404":
+          description: Document not found
     delete:
       tags: [Archive]
       operationId: retireArchiveDocument
@@ -966,6 +991,23 @@ components:
         description:
           type: string
           default: ""
+    ArchiveDocumentUpdate:
+      type: object
+      properties:
+        originalName:
+          type: string
+          minLength: 1
+        category:
+          type: string
+          minLength: 1
+        subcategory:
+          type: string
+          minLength: 1
+        documentDate:
+          type: string
+          format: date
+        description:
+          type: string
     ArchiveFolder:
       type: object
       required: [name, count, subcategories]

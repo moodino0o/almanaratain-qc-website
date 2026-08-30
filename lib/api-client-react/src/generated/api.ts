@@ -22,6 +22,7 @@ import type {
 import type {
   ArchiveDocument,
   ArchiveDocumentInput,
+  ArchiveDocumentUpdate,
   ArchiveResponse,
   AuthUserEnvelope,
   BeginBrowserLoginParams,
@@ -1142,6 +1143,78 @@ export function useGetArchiveDocument<TData = Awaited<ReturnType<typeof getArchi
 
 
 
+
+export const getUpdateArchiveDocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/archive/documents/${id}`
+}
+
+/**
+ * @summary Update archived document metadata
+ */
+export const updateArchiveDocument = async (id: number,
+    archiveDocumentUpdate: ArchiveDocumentUpdate, options?: Parameters<typeof customFetch>[1]): Promise<ArchiveDocument> => {
+
+  return customFetch<ArchiveDocument>(getUpdateArchiveDocumentUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(archiveDocumentUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateArchiveDocumentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateArchiveDocument>>, TError,{id: number;data: BodyType<ArchiveDocumentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateArchiveDocument>>, TError,{id: number;data: BodyType<ArchiveDocumentUpdate>}, TContext> => {
+
+const mutationKey = ['updateArchiveDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateArchiveDocument>>, {id: number;data: BodyType<ArchiveDocumentUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateArchiveDocument(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateArchiveDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof updateArchiveDocument>>>
+    export type UpdateArchiveDocumentMutationBody = BodyType<ArchiveDocumentUpdate>
+    export type UpdateArchiveDocumentMutationError = ErrorType<void>
+
+    /**
+ * @summary Update archived document metadata
+ */
+export const useUpdateArchiveDocument = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateArchiveDocument>>, TError,{id: number;data: BodyType<ArchiveDocumentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateArchiveDocument>>,
+        TError,
+        {id: number;data: BodyType<ArchiveDocumentUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateArchiveDocumentMutationOptions(options));
+    }
 
 export const getRetireArchiveDocumentUrl = (id: number,) => {
 
