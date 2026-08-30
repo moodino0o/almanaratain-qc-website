@@ -60,7 +60,7 @@ type CubeResultRow = {
   height: string;
   dryWeight: string;
   wetWeight: string;
-  strength: string;
+  load: string;
 };
 
 type ReadyMixResultEntry = {
@@ -74,7 +74,7 @@ const createCubeResultRow = (): CubeResultRow => ({
   height: "100",
   dryWeight: "",
   wetWeight: "",
-  strength: "",
+  load: "",
 });
 
 const stringValue = (value: unknown) => (value == null ? "" : String(value));
@@ -108,7 +108,7 @@ const cubeRowFromSaved = (row: unknown): CubeResultRow => {
     height: stringValue(values.height) || "100",
     dryWeight: stringValue(values.dryWeight),
     wetWeight: stringValue(values.wetWeight),
-    strength: stringValue(values.strength ?? values.calculatedStrength),
+    load: stringValue(values.load),
   };
 };
 
@@ -239,15 +239,15 @@ export default function Reports() {
         const dimensions = [row.length, row.width, row.height].map(numberValue);
         const dryWeight = numberValue(row.dryWeight);
         const wetWeight = numberValue(row.wetWeight);
-        const strength = numberValue(row.strength);
+        const load = numberValue(row.load);
         if (
           dimensions.some((value) => value === null || value <= 0) ||
           dryWeight === null ||
           dryWeight < 0 ||
           wetWeight === null ||
           wetWeight < 0 ||
-          strength === null ||
-          strength < 0
+          load === null ||
+          load < 0
         ) {
           toast.error(`Complete all measurements for ${referenceNumber(entry.record)}, row ${rowIndex + 1}.`);
           return;
@@ -265,7 +265,6 @@ export default function Reports() {
         const newRows = entry.rows.map((row, index) => {
           const length = numberValue(row.length) ?? 100;
           const width = numberValue(row.width) ?? 100;
-          const strength = numberValue(row.strength) ?? 0;
           return {
             rowNo: retainedRows.length + index + 1,
             testAge: age,
@@ -274,7 +273,7 @@ export default function Reports() {
             height: numberValue(row.height) ?? 100,
             dryWeight: numberValue(row.dryWeight),
             wetWeight: numberValue(row.wetWeight),
-            load: (strength * length * width) / 1000,
+            load: numberValue(row.load) ?? 0,
           };
         });
         const update: QcRecordUpdate = {
@@ -655,7 +654,7 @@ export default function Reports() {
                               <th className="px-2 py-3 text-left font-semibold">Height (mm)</th>
                               <th className="px-2 py-3 text-left font-semibold">Dry Weight</th>
                               <th className="px-2 py-3 text-left font-semibold">Wet Weight</th>
-                              <th className="px-2 py-3 text-left font-semibold">Strength (N/mm²)</th>
+                              <th className="px-2 py-3 text-left font-semibold">Load (kN)</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -671,7 +670,7 @@ export default function Reports() {
                                   ["height", "Height"],
                                   ["dryWeight", "Dry weight"],
                                   ["wetWeight", "Wet weight"],
-                                  ["strength", "Strength"],
+                                  ["load", "Load"],
                                 ] as const).map(([key, label]) => (
                                   <td key={key} className="px-2 py-2">
                                     <Input
