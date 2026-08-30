@@ -2,12 +2,22 @@ import { useMemo, useState } from "react";
 import {
   DailyReadyMixReferenceType,
   TestType,
+  getGetDashboardQueryKey,
   getGetDailyReadyMixResultsQueryKey,
+  getGetRecordQueryKey,
+  getGetReportQueryKey,
+  getListRecordsQueryKey,
   useGetDailyReadyMixResults,
   useGetLookups,
   useListRecords,
+  useUpdateRecord,
 } from "@workspace/api-client-react";
-import type { GetDailyReadyMixResultsParams } from "@workspace/api-client-react";
+import type {
+  GetDailyReadyMixResultsParams,
+  QcRecord,
+  QcRecordUpdate,
+} from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -21,8 +31,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CalendarDays, ClipboardList, Filter, Search, SlidersHorizontal } from "lucide-react";
+import { CalendarDays, ClipboardList, Filter, Loader2, PlusCircle, Save, Search, SlidersHorizontal } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { toast } from "sonner";
 
 type ReferenceType = "site" | "plant";
 
@@ -43,12 +54,78 @@ function detailValue(details: Record<string, unknown>, keys: string[]) {
   return "";
 }
 
+type CubeResultRow = {
+  length: string;
+  width: string;
+  height: string;
+  dryWeight: string;
+  wetWeight: string;
+  strength: string;
+};
+
+type ReadyMixResultEntry = {
+  record: QcRecord;
+  rows: [CubeResultRow, CubeResultRow];
+};
+
+const createCubeResultRow = (): CubeResultRow => ({
+  length: "100",
+  width: "100",
+  height: "100",
+  dryWeight: "",
+  wetWeight: "",
+  strength: "",
+});
+
+const stringValue = (value: unknown) => (value == null ? "" : String(value));
+
+const numberValue = (value: unknown) => {
+  const parsed = Number.parseFloat(stringValue(value).replace(/,/g, ""));
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const rowAge = (row: unknown) => {
+  if (typeof row !== "object" || row === null) return null;
+  const value = (row as Record<string, unknown>).testAge ??
+    (row as Record<string, unknown>).cubeAge ??
+    (row as Record<string, unknown>).age;
+  const parsed = numberValue(value);
+  return parsed !== null && parsed >= 0 ? parsed : null;
+};
+
+const referenceNumber = (record: QcRecord) => {
+  const details = record.details as Record<string, unknown>;
+  return detailValue(details, ["referenceNumber"]) || record.recordNo;
+};
+
+const cubeRowFromSaved = (row: unknown): CubeResultRow => {
+  const values = typeof row === "object" && row !== null
+    ? row as Record<string, unknown>
+    : {};
+  return {
+    length: stringValue(values.length) || "100",
+    width: stringValue(values.width) || "100",
+    height: stringValue(values.height) || "100",
+    dryWeight: stringValue(values.dryWeight),
+    wetWeight: stringValue(values.wetWeight),
+    strength: stringValue(values.strength ?? values.calculatedStrength),
+  };
+};
+
 export default function Reports() {
+  const queryClient = useQueryClient();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [draftDate, setDraftDate] = useState(today);
   const [draftMixDesign, setDraftMixDesign] = useState("");
   const [draftReferenceType, setDraftReferenceType] = useState<ReferenceType>("site");
   const [filters, setFilters] = useState<GetDailyReadyMixResultsParams | null>(null);
+  const [isAddResultsOpen, setIsAddResultsOpen] = useState(false);
+  const [addResultsStep, setAddResultsStep] = useState<"setup" | "results">("setup");
+  const [castingDate, setCastingDate] = useState(today);
+  const [cubeAge, setCubeAge] = useState("28");
+  const [resultEntries, setResultEntries] = useState<ReadyMixResultEntry[]>([]);
+  const [isSavingResults, setIsSavingResults] = useState(false);
+  const updateRecord = useUpdateRecord();
   const queryParams = filters ?? {
     sampleDate: today(),
     referenceType: DailyReadyMixReferenceType.site,
@@ -58,7 +135,7 @@ export default function Reports() {
   const showMixSummaries = hasFilters && !selectedMixDesign;
 
   const { data: lookups, isLoading: lookupsLoading } = useGetLookups();
-  const { data: readyMixRecords } = useListRecords({
+  const { data: readyMixRecords, isLoading: readyMixRecordsLoading } = useListRecords({
     testType: TestType.Ready_Mix,
     limit: 100,
   });
@@ -82,6 +159,155 @@ export default function Reports() {
     }
     return [...values].sort((left, right) => left.localeCompare(right));
   }, [lookups?.mixStrengths, readyMixRecords]);
+
+  const recordsForCastingDate = useMemo(
+    () => (readyMixRecords ?? []).filter(
+      (record) => record.sampleDate.slice(0, 10) === castingDate,
+    ),
+    [castingDate, readyMixRecords],
+  );
+
+  const resetAddResults = () => {
+    setIsAddResultsOpen(false);
+    setAddResultsStep("setup");
+    setResultEntries([]);
+    setIsSavingResults(false);
+  };
+
+  const openAddResults = () => {
+    setCastingDate(filters?.sampleDate ?? today());
+    setCubeAge("28");
+    setAddResultsStep("setup");
+    setResultEntries([]);
+    setIsAddResultsOpen(true);
+  };
+
+  const showResultEntries = () => {
+    const age = numberValue(cubeAge);
+    if (!castingDate) {
+      toast.error("Choose the casting date.");
+      return;
+    }
+    if (age === null || !Number.isInteger(age) || age < 1 || age > 365) {
+      toast.error("Cube age must be a whole number of days between 1 and 365.");
+      return;
+    }
+
+    setResultEntries(
+      recordsForCastingDate.map((record) => {
+        const details = record.details as Record<string, unknown>;
+        const savedRows = Array.isArray(details.testRows) ? details.testRows : [];
+        const savedAgeRows = savedRows.filter((row) => rowAge(row) === age);
+        return {
+          record,
+          rows: [
+            cubeRowFromSaved(savedAgeRows[0]),
+            cubeRowFromSaved(savedAgeRows[1]),
+          ],
+        };
+      }),
+    );
+    setAddResultsStep("results");
+  };
+
+  const updateResultRow = (
+    recordId: number,
+    rowIndex: 0 | 1,
+    key: keyof CubeResultRow,
+    value: string,
+  ) => {
+    setResultEntries((previous) => previous.map((entry) => (
+      entry.record.id === recordId
+        ? {
+            ...entry,
+            rows: entry.rows.map((row, index) => (
+              index === rowIndex ? { ...row, [key]: value } : row
+            )) as [CubeResultRow, CubeResultRow],
+          }
+        : entry
+    )));
+  };
+
+  const saveResults = async () => {
+    const age = numberValue(cubeAge);
+    if (age === null || !Number.isInteger(age) || age < 1 || age > 365) {
+      toast.error("Cube age must be a whole number of days between 1 and 365.");
+      return;
+    }
+    for (const entry of resultEntries) {
+      for (const [rowIndex, row] of entry.rows.entries()) {
+        const dimensions = [row.length, row.width, row.height].map(numberValue);
+        const dryWeight = numberValue(row.dryWeight);
+        const wetWeight = numberValue(row.wetWeight);
+        const strength = numberValue(row.strength);
+        if (
+          dimensions.some((value) => value === null || value <= 0) ||
+          dryWeight === null ||
+          dryWeight < 0 ||
+          wetWeight === null ||
+          wetWeight < 0 ||
+          strength === null ||
+          strength < 0
+        ) {
+          toast.error(`Complete all measurements for ${referenceNumber(entry.record)}, row ${rowIndex + 1}.`);
+          return;
+        }
+      }
+    }
+
+    setIsSavingResults(true);
+    let savedCount = 0;
+    try {
+      for (const entry of resultEntries) {
+        const details = entry.record.details as Record<string, unknown>;
+        const existingRows = Array.isArray(details.testRows) ? details.testRows : [];
+        const retainedRows = existingRows.filter((row) => rowAge(row) !== age);
+        const newRows = entry.rows.map((row, index) => {
+          const length = numberValue(row.length) ?? 100;
+          const width = numberValue(row.width) ?? 100;
+          const strength = numberValue(row.strength) ?? 0;
+          return {
+            rowNo: retainedRows.length + index + 1,
+            testAge: age,
+            length,
+            width,
+            height: numberValue(row.height) ?? 100,
+            dryWeight: numberValue(row.dryWeight),
+            wetWeight: numberValue(row.wetWeight),
+            load: (strength * length * width) / 1000,
+          };
+        });
+        const update: QcRecordUpdate = {
+          details: {
+            ...details,
+            testRows: [...retainedRows, ...newRows],
+          },
+        };
+        await updateRecord.mutateAsync({ id: entry.record.id, data: update });
+        savedCount += 1;
+      }
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: getListRecordsQueryKey() }),
+        queryClient.invalidateQueries({ queryKey: getGetDashboardQueryKey() }),
+        queryClient.invalidateQueries({ queryKey: ["/api/daily-ready-mix-results"] }),
+        ...resultEntries.flatMap(({ record }) => [
+          queryClient.invalidateQueries({ queryKey: getGetRecordQueryKey(record.id) }),
+          queryClient.invalidateQueries({ queryKey: getGetReportQueryKey(record.id) }),
+        ]),
+      ]);
+      toast.success(`Cube results saved for ${savedCount} Ready Mix ${savedCount === 1 ? "record" : "records"}.`);
+      resetAddResults();
+    } catch {
+      toast.error(
+        savedCount
+          ? `Saved ${savedCount} record${savedCount === 1 ? "" : "s"}, but the remaining results could not be saved.`
+          : "Ready Mix cube results could not be saved. Please try again.",
+      );
+    } finally {
+      setIsSavingResults(false);
+    }
+  };
 
   const openFilters = () => {
     setDraftDate(filters?.sampleDate ?? today());
@@ -129,10 +355,16 @@ export default function Reports() {
             </div>
           </div>
         </div>
-        <Button onClick={openFilters} className="shrink-0">
-          <SlidersHorizontal className="mr-2 h-4 w-4" />
-          {hasFilters ? "Change filters" : "Choose results"}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={openAddResults} className="shrink-0">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Ready Mix cube results
+          </Button>
+          <Button onClick={openFilters} className="shrink-0">
+            <SlidersHorizontal className="mr-2 h-4 w-4" />
+            {hasFilters ? "Change filters" : "Choose results"}
+          </Button>
+        </div>
       </div>
 
       <Card className="border-t-4 border-t-primary">
@@ -316,6 +548,184 @@ export default function Reports() {
               Show results
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isAddResultsOpen}
+        onOpenChange={(open) => {
+          if (open) {
+            setIsAddResultsOpen(true);
+          } else if (!isSavingResults) {
+            resetAddResults();
+          }
+        }}
+      >
+        <DialogContent className={addResultsStep === "results" ? "max-w-7xl" : undefined}>
+          {addResultsStep === "setup" ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Add Ready Mix cube results</DialogTitle>
+                <DialogDescription>
+                  Choose the casting date and cube age to load every Ready Mix reference cast on that date.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-5 py-2 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="cube-results-casting-date">Casting date</Label>
+                  <Input
+                    id="cube-results-casting-date"
+                    type="date"
+                    value={castingDate}
+                    onChange={(event) => setCastingDate(event.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="cube-results-age">Cube age (days)</Label>
+                  <Input
+                    id="cube-results-age"
+                    type="number"
+                    min={1}
+                    max={365}
+                    step={1}
+                    value={cubeAge}
+                    onChange={(event) => setCubeAge(event.target.value)}
+                    placeholder="28"
+                  />
+                </div>
+              </div>
+              <p className="rounded-md border border-primary/20 bg-primary/[0.04] p-3 text-sm text-muted-foreground">
+                Two cube rows will be prepared for each matching reference. Length, width, and height start at 100 mm.
+              </p>
+              <DialogFooter>
+                <Button variant="outline" onClick={resetAddResults}>Cancel</Button>
+                <Button
+                  onClick={showResultEntries}
+                  disabled={!castingDate || readyMixRecordsLoading}
+                >
+                  {readyMixRecordsLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Loading records
+                    </>
+                  ) : (
+                    "Show references"
+                  )}
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle>Enter Ready Mix cube results</DialogTitle>
+                <DialogDescription>
+                  {formatDate(castingDate)} · {cubeAge}-day cubes · {resultEntries.length}{" "}
+                  {resultEntries.length === 1 ? "reference" : "references"}
+                </DialogDescription>
+              </DialogHeader>
+              {resultEntries.length === 0 ? (
+                <div className="flex min-h-[220px] flex-col items-center justify-center rounded-lg border border-dashed bg-muted/20 p-8 text-center">
+                  <Search className="mb-3 h-10 w-10 text-muted-foreground/40" />
+                  <p className="font-semibold">No Ready Mix records found</p>
+                  <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                    No Ready Mix reference numbers have a casting/sample date of {formatDate(castingDate)}.
+                    Choose another date to continue.
+                  </p>
+                </div>
+              ) : (
+                <div className="max-h-[58vh] space-y-4 overflow-y-auto pr-1">
+                  {resultEntries.map((entry) => (
+                    <Card key={entry.record.id} className="overflow-hidden border">
+                      <CardHeader className="border-b bg-muted/20 px-4 py-3">
+                        <CardTitle className="text-base">
+                          {referenceNumber(entry.record)}
+                        </CardTitle>
+                        <CardDescription>
+                          {entry.record.recordNo} · {entry.record.location} · {entry.record.material}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="overflow-x-auto p-0">
+                        <table className="min-w-[980px] w-full text-sm">
+                          <thead className="bg-muted/50">
+                            <tr className="border-b">
+                              <th className="w-20 px-3 py-3 text-left font-semibold">Cube</th>
+                              <th className="w-24 px-3 py-3 text-left font-semibold">Age (days)</th>
+                              <th className="px-2 py-3 text-left font-semibold">Length (mm)</th>
+                              <th className="px-2 py-3 text-left font-semibold">Width (mm)</th>
+                              <th className="px-2 py-3 text-left font-semibold">Height (mm)</th>
+                              <th className="px-2 py-3 text-left font-semibold">Dry Weight</th>
+                              <th className="px-2 py-3 text-left font-semibold">Wet Weight</th>
+                              <th className="px-2 py-3 text-left font-semibold">Strength (N/mm²)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {entry.rows.map((row, rowIndex) => (
+                              <tr key={`${entry.record.id}-${rowIndex}`} className="border-b last:border-b-0">
+                                <td className="px-3 py-2 font-semibold text-muted-foreground">
+                                  {rowIndex + 1}
+                                </td>
+                                <td className="px-3 py-2 font-medium">{cubeAge}</td>
+                                {([
+                                  ["length", "Length"],
+                                  ["width", "Width"],
+                                  ["height", "Height"],
+                                  ["dryWeight", "Dry weight"],
+                                  ["wetWeight", "Wet weight"],
+                                  ["strength", "Strength"],
+                                ] as const).map(([key, label]) => (
+                                  <td key={key} className="px-2 py-2">
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      step="any"
+                                      value={row[key]}
+                                      onChange={(event) => updateResultRow(
+                                        entry.record.id,
+                                        rowIndex as 0 | 1,
+                                        key,
+                                        event.target.value,
+                                      )}
+                                      aria-label={`${label} for ${referenceNumber(entry.record)}, row ${rowIndex + 1}`}
+                                      placeholder={key === "length" || key === "width" || key === "height" ? "100" : ""}
+                                    />
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+              <DialogFooter className="border-t pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setAddResultsStep("setup")}
+                  disabled={isSavingResults}
+                >
+                  Back
+                </Button>
+                <Button
+                  onClick={saveResults}
+                  disabled={!resultEntries.length || isSavingResults}
+                >
+                  {isSavingResults ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving results
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Save cube results
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>
