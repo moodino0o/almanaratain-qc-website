@@ -36,7 +36,9 @@ export default function Archive() {
   const [showEntry, setShowEntry] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [category, setCategory] = useState("");
+  const [newCategory, setNewCategory] = useState("");
   const [subcategory, setSubcategory] = useState("");
+  const [newSubcategory, setNewSubcategory] = useState("");
   const [documentDate, setDocumentDate] = useState(new Date().toISOString().slice(0, 10));
   const [description, setDescription] = useState("");
   const [search, setSearch] = useState("");
@@ -60,9 +62,14 @@ export default function Archive() {
     );
   }, [archive.data, search]);
 
+  const selectedCategory = archive.data?.categories.find((folder) => folder.name === category);
+  const subcategoryOptions = selectedCategory?.subcategories ?? [];
+  const enteredCategory = category === "__new__" ? newCategory.trim() : category.trim();
+  const enteredSubcategory = subcategory === "__new__" ? newSubcategory.trim() : subcategory.trim();
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (!file || !category.trim() || !subcategory.trim() || !documentDate) return;
+    if (!file || !enteredCategory || !enteredSubcategory || !documentDate) return;
     const extension = file.name.split(".").pop()?.toLowerCase();
     if (!extension || !["pdf", "doc", "docx", "xls", "xlsx"].includes(extension) || file.size > maxSize) {
       toast.error("Choose a PDF, Word, or Excel file up to 25 MB.");
@@ -72,9 +79,9 @@ export default function Archive() {
       setProgress(1);
       const signed = await requestUrl.mutateAsync({ data: { name: file.name, size: file.size, contentType: file.type || "application/octet-stream" } });
       await uploadFile(signed.uploadURL, file, setProgress);
-      await createDocument.mutateAsync({ data: { originalName: file.name, objectPath: signed.objectPath, mimeType: file.type || "application/octet-stream", size: file.size, category: category.trim(), subcategory: subcategory.trim(), documentDate, description: description.trim() } });
+       await createDocument.mutateAsync({ data: { originalName: file.name, objectPath: signed.objectPath, mimeType: file.type || "application/octet-stream", size: file.size, category: enteredCategory, subcategory: enteredSubcategory, documentDate, description: description.trim() } });
       toast.success("Document added to the archive.");
-      setFile(null); setDescription(""); setProgress(0); setShowEntry(false);
+       setFile(null); setCategory(""); setNewCategory(""); setSubcategory(""); setNewSubcategory(""); setDescription(""); setProgress(0); setShowEntry(false);
       if (fileRef.current) fileRef.current.value = "";
       await archive.refetch();
     } catch {
@@ -107,12 +114,12 @@ export default function Archive() {
     </div>
     {showEntry && <Card><CardHeader><CardTitle className="flex items-center gap-2"><Upload className="h-5 w-5" />Document data entry</CardTitle></CardHeader><CardContent><form onSubmit={submit} className="grid gap-4 md:grid-cols-2">
       <div className="space-y-2 md:col-span-2"><Label>File</Label><Input ref={fileRef} type="file" accept={accepted} onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></div>
-      <div className="space-y-2"><Label>Category</Label><Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Procedures" /></div>
-      <div className="space-y-2"><Label>Subcategory</Label><Input value={subcategory} onChange={(e) => setSubcategory(e.target.value)} placeholder="e.g. Ready Mix" /></div>
+       <div className="space-y-2"><Label>Category</Label><select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={category} onChange={(e) => { setCategory(e.target.value); setSubcategory(""); setNewSubcategory(""); }}><option value="">Choose a category</option>{archive.data?.categories.map((folder) => <option key={folder.name} value={folder.name}>{folder.name}</option>)}<option value="__new__">＋ New category</option></select>{category === "__new__" && <Input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="Enter new category name" />}</div>
+       <div className="space-y-2"><Label>Subcategory</Label><select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={subcategory} onChange={(e) => setSubcategory(e.target.value)} disabled={category === ""}><option value="">{category ? "Choose a subcategory" : "Choose a category first"}</option>{subcategoryOptions.map((sub) => <option key={sub.name} value={sub.name}>{sub.name}</option>)}<option value="__new__">＋ New subcategory</option></select>{subcategory === "__new__" && <Input value={newSubcategory} onChange={(e) => setNewSubcategory(e.target.value)} placeholder="Enter new subcategory name" />}</div>
       <div className="space-y-2"><Label>Document date</Label><Input type="date" value={documentDate} onChange={(e) => setDocumentDate(e.target.value)} /></div>
       <div className="space-y-2 md:col-span-2"><Label>Description</Label><Textarea value={description} onChange={(e) => setDescription(e.target.value)} /></div>
       {progress > 0 && <div className="md:col-span-2"><div className="h-2 overflow-hidden rounded bg-muted"><div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} /></div><p className="mt-1 text-xs text-muted-foreground">{progress}% uploaded</p></div>}
-      <Button type="submit" disabled={!file || !category.trim() || !subcategory.trim() || requestUrl.isPending || createDocument.isPending}>Save document</Button>
+       <Button type="submit" disabled={!file || !enteredCategory || !enteredSubcategory || requestUrl.isPending || createDocument.isPending}>Save document</Button>
     </form></CardContent></Card>}
     {!selectedFolder ? <div className="space-y-4">
       <Card><CardHeader><CardTitle>Search archive documents</CardTitle></CardHeader><CardContent><div className="relative"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by file name, category, subcategory, description, or date" /></div></CardContent></Card>
