@@ -219,8 +219,12 @@
 }
 
 .report-ready-mix-info .report-fields {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1.8mm 10mm;
+  grid-template-columns: 1fr;
+  gap: 1.6mm;
+}
+
+.report-ready-mix-info .report-field {
+  grid-template-columns: 42mm minmax(0, 1fr);
 }
 
 .report-ready-mix-results {

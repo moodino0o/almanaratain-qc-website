@@ -101,9 +101,17 @@ export default function Reports() {
   };
 
   const referenceLabel = filters?.referenceType === DailyReadyMixReferenceType.plant ? "Plant" : "Site";
+  const dailyResults = results ?? {
+    mixes: [],
+    records: [],
+    averageStrength: null,
+    minimumStrength: null,
+    maximumStrength: null,
+    strengthUnit: "N/mm²",
+  };
   const hasResultRows = showMixSummaries
-    ? Boolean(results?.mixes.length)
-    : Boolean(results?.records.length);
+    ? Boolean(dailyResults.mixes.length)
+    : Boolean(dailyResults.records.length);
 
   return (
     <div className="flex h-full flex-col gap-6">
@@ -194,7 +202,7 @@ export default function Reports() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {results.mixes.map((mix) => (
+                  {dailyResults.mixes.map((mix) => (
                     <TableRow key={mix.mixDesign}>
                       <TableCell className="font-semibold text-primary">{mix.mixDesign}</TableCell>
                       <TableCell className="text-right">{mix.recordCount}</TableCell>
@@ -221,7 +229,7 @@ export default function Reports() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {results.records.map((record) => (
+                  {dailyResults.records.map((record) => (
                     <TableRow key={record.recordId}>
                       <TableCell className="font-semibold text-primary">{record.recordNo}</TableCell>
                       <TableCell className="font-medium">{record.referenceNumber}</TableCell>
@@ -236,15 +244,15 @@ export default function Reports() {
                 <TableFooter>
                   <TableRow>
                     <TableCell colSpan={4}>Daily minimum</TableCell>
-                    <TableCell className="text-right">{formatStrength(results.minimumStrength, results.strengthUnit)}</TableCell>
+                    <TableCell className="text-right">{formatStrength(dailyResults.minimumStrength, dailyResults.strengthUnit)}</TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell colSpan={4}>Daily average</TableCell>
-                    <TableCell className="text-right">{formatStrength(results.averageStrength, results.strengthUnit)}</TableCell>
+                    <TableCell className="text-right">{formatStrength(dailyResults.averageStrength, dailyResults.strengthUnit)}</TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell colSpan={4}>Daily maximum</TableCell>
-                    <TableCell className="text-right">{formatStrength(results.maximumStrength, results.strengthUnit)}</TableCell>
+                    <TableCell className="text-right">{formatStrength(dailyResults.maximumStrength, dailyResults.strengthUnit)}</TableCell>
                   </TableRow>
                 </TableFooter>
               </Table>
