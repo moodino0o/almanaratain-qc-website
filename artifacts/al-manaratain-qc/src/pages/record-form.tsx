@@ -387,6 +387,8 @@ export default function RecordForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const requestedAction = submitAction.current;
+    submitAction.current = "save";
     if (!locationValue || !material || !testedBy) {
       toast.error("Please fill in all required fields.");
       return;
@@ -468,8 +470,7 @@ export default function RecordForm() {
       details: payloadDetails
     };
 
-    const shouldDuplicateAfterSave = isEditing && submitAction.current === "duplicate";
-    submitAction.current = "save";
+    const shouldDuplicateAfterSave = isEditing && requestedAction === "duplicate";
 
     if (isEditing && recordId > 0) {
       const updatePayload: QcRecordUpdate = payload;
@@ -1077,78 +1078,6 @@ export default function RecordForm() {
         </div>
       </form>
 
-      {!isEditing && (
-        <Dialog
-          open={isDuplicateOpen}
-          onOpenChange={(open) => {
-            if (!createRecord.isPending && !updateRecord.isPending) {
-              setIsDuplicateOpen(open);
-              if (!open) setDuplicateSourceId("");
-            }
-          }}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Duplicate an existing QC record</DialogTitle>
-              <DialogDescription>
-                Choose a saved record to copy into this new, editable form. The original record will not be changed.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-2 py-2">
-              <Label htmlFor="duplicate-source-record">Source record</Label>
-              {duplicateRecordsLoading ? (
-                <div className="flex h-10 items-center rounded-md border px-3 text-sm text-muted-foreground">
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Loading saved records...
-                </div>
-              ) : duplicateRecordsError ? (
-                <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-                  Saved records could not be loaded. Close this window and try again.
-                </p>
-              ) : !duplicateRecords?.length ? (
-                <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-                  No saved records are available to duplicate.
-                </p>
-              ) : (
-                <select
-                  id="duplicate-source-record"
-                  value={duplicateSourceId}
-                  onChange={(event) => setDuplicateSourceId(event.target.value)}
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="">Choose a record...</option>
-                  {duplicateRecords.map((record) => (
-                    <option key={record.id} value={record.id}>
-                      {record.recordNo} · {record.testType} · {record.material} · {record.location} · {record.sampleDate.slice(0, 10)}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setIsDuplicateOpen(false);
-                  setDuplicateSourceId("");
-                }}
-                disabled={createRecord.isPending || updateRecord.isPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                onClick={copyRecordIntoNewForm}
-                disabled={!duplicateSource || duplicateRecordsLoading || Boolean(duplicateRecordsError) || createRecord.isPending || updateRecord.isPending}
-              >
-                <Copy className="mr-2 h-4 w-4" />
-                Copy to new record
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
     </div>
   );
 }
