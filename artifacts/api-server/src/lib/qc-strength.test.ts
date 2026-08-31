@@ -1,7 +1,36 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import type { QcStrengthStandardRow } from "@workspace/db";
 import type { SieveStandardForEvaluation } from "./qc-strength";
-import { evaluateSieveRecord } from "./qc-strength";
+import { evaluateSieveRecord, evaluateStrengthRecord } from "./qc-strength";
+
+const blockStandard = (
+  overrides: Partial<QcStrengthStandardRow> = {},
+): QcStrengthStandardRow => ({
+  id: 1,
+  testType: "Blocks",
+  material: "Concrete Block",
+  blockType: "8'' Solid Block",
+  blockSize: "400 x 200 x 200",
+  bsStandard: "BS EN 771-3",
+  requiredStrength: "5",
+  strengthUnit: "N/mm²",
+  createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+  ...overrides,
+});
+
+const blockRecord = (
+  rows: Record<string, unknown>[],
+): Parameters<typeof evaluateStrengthRecord>[0] => ({
+  testType: "Blocks",
+  material: "Concrete Block",
+  details: {
+    blockType: "8'' Solid Block",
+    blockSize: "400 x 200 x 200",
+    testRows: rows,
+  },
+});
 
 const standard = (
   overrides: Partial<SieveStandardForEvaluation> = {},
@@ -209,4 +238,36 @@ test("keeps missing sieve rows in Review", () => {
   assert.equal(result.status, "Review");
   assert.equal(criterion(result).measuredValue, null);
   assert.equal(criterion(result).withinLimits, null);
+});
+
+test("evaluates block compliance using the average sample strength", () => {
+  const result = evaluateStrengthRecord(
+    blockRecord([
+      { rowNo: 1, length: 100, width: 100, load: 80 },
+      { rowNo: 2, length: 100, width: 100, load: 40 },
+    ]),
+    [blockStandard({ requiredStrength: "5" })],
+  );
+
+  assert.equal(result.status, "Passed");
+  assert.equal(result.evaluation.averageStrength, 6);
+  assert.equal(result.evaluation.minimumStrength, 4);
+  assert.equal(result.evaluation.maximumStrength, 8);
+  assert.equal(result.evaluation.reason, null);
+});
+
+test("fails block compliance when the average sample strength is below the standard", () => {
+  const result = evaluateStrengthRecord(
+    blockRecord([
+      { rowNo: 1, length: 100, width: 100, load: 60 },
+      { rowNo: 2, length: 100, width: 100, load: 40 },
+    ]),
+    [blockStandard({ requiredStrength: "5.1" })],
+  );
+
+  assert.equal(result.status, "Failed");
+  assert.equal(result.evaluation.averageStrength, 5);
+  assert.equal(result.evaluation.minimumStrength, 4);
+  assert.equal(result.evaluation.maximumStrength, 6);
+  assert.match(result.evaluation.reason ?? "", /average block strength/i);
 });

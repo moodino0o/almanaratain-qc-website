@@ -6,6 +6,9 @@ export type StrengthEvaluation = {
   status: StrengthEvaluationStatus;
   bsStandard: string | null;
   requiredStrength: number | null;
+  averageStrength: number | null;
+  minimumStrength: number | null;
+  maximumStrength: number | null;
   strengthUnit: string;
   reason: string | null;
 };
@@ -187,13 +190,20 @@ export function evaluateStrengthRecord(
           (row.row as Record<string, unknown>).age
         : null) === 28)
       : calculatedRows;
+  const measuredStrengths = evaluatedRows
+    .map((row) => row.calculatedStrength)
+    .filter((strength): strength is number => strength !== null);
+  const averageStrength = measuredStrengths.length
+    ? rounded(measuredStrengths.reduce((sum, strength) => sum + strength, 0) / measuredStrengths.length)
+    : null;
+  const minimumStrength = measuredStrengths.length ? Math.min(...measuredStrengths) : null;
+  const maximumStrength = measuredStrengths.length ? Math.max(...measuredStrengths) : null;
   const hasIncompleteMeasurements =
     evaluatedRows.length === 0 || evaluatedRows.some((row) => !row.complete);
-  const hasFailedMeasurement =
+  const averageBelowRequired =
     requiredStrength !== null &&
-    evaluatedRows.some(
-      (row) => row.calculatedStrength !== null && row.calculatedStrength < requiredStrength,
-    );
+    averageStrength !== null &&
+    averageStrength < requiredStrength;
 
   let status: StrengthEvaluationStatus = "Review";
   let reason: string | null =
@@ -207,9 +217,12 @@ export function evaluateStrengthRecord(
         : "No matching standard was configured for this material.";
   } else if (requiredStrength === null) {
     reason = "The configured minimum strength is invalid.";
-  } else if (hasFailedMeasurement) {
+  } else if (averageBelowRequired) {
     status = "Failed";
-    reason = "At least one measured specimen is below the configured minimum.";
+    reason =
+      record.testType === "Blocks"
+        ? "The average block strength is below the configured minimum."
+        : "The measured strength is below the configured minimum.";
   } else if (!hasIncompleteMeasurements) {
     status = "Passed";
     reason = null;
@@ -222,6 +235,9 @@ export function evaluateStrengthRecord(
       status,
       bsStandard: standard?.bsStandard ?? null,
       requiredStrength,
+      averageStrength,
+      minimumStrength,
+      maximumStrength,
       strengthUnit: standard?.strengthUnit || DEFAULT_STRENGTH_UNIT,
       reason,
     } satisfies StrengthEvaluation,

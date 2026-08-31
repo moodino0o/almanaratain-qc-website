@@ -77,6 +77,23 @@ function averageStrengthForAge(rows: unknown[], age: number) {
   return strengths.reduce((total, strength) => total + strength, 0) / strengths.length;
 }
 
+function strengthSummary(rows: unknown[]) {
+  const strengths = rows
+    .map(cubeRowStrength)
+    .filter((strength): strength is number => strength !== null);
+  if (!strengths.length) return { average: null, minimum: null, maximum: null };
+  return {
+    average: strengths.reduce((total, strength) => total + strength, 0) / strengths.length,
+    minimum: Math.min(...strengths),
+    maximum: Math.max(...strengths),
+  };
+}
+
+function formatStrengthMetric(value: unknown) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed.toFixed(2) : "—";
+}
+
 function formatAverageStrength(value: number | null) {
   if (value === null) return "—";
   return Number.isInteger(value) ? String(value) : value.toFixed(2);
@@ -265,6 +282,13 @@ function StrengthEvaluation({ value }: { value: unknown }) {
   return (
     <div className="space-y-1">
       <p className={`font-bold ${statusClass}`}>{status}</p>
+      {evaluation.averageStrength != null && (
+        <>
+          <p>Average strength: {formatStrengthMetric(evaluation.averageStrength)} {String(evaluation.strengthUnit ?? "N/mm²")}</p>
+          <p>Minimum strength: {formatStrengthMetric(evaluation.minimumStrength)} {String(evaluation.strengthUnit ?? "N/mm²")}</p>
+          <p>Maximum strength: {formatStrengthMetric(evaluation.maximumStrength)} {String(evaluation.strengthUnit ?? "N/mm²")}</p>
+        </>
+      )}
       <p>
         Minimum: {evaluation.requiredStrength == null
           ? "Not configured"
@@ -418,6 +442,11 @@ export default function RecordDetail() {
       ? [recordDetails]
       : [];
   const sieveRows = Array.isArray(recordDetails.sieveRows) ? recordDetails.sieveRows : [];
+  const strengthEvaluation = typeof recordDetails.strengthEvaluation === "object" &&
+    recordDetails.strengthEvaluation !== null
+    ? recordDetails.strengthEvaluation as Record<string, unknown>
+    : {};
+  const blockStrengthSummary = strengthSummary(specimenRows);
 
   const handleDelete = () => {
     if (!confirm("Are you sure you want to delete this record? This action cannot be undone.")) return;
@@ -538,8 +567,11 @@ export default function RecordDetail() {
             title="Block Test Result"
             entries={[
               ["Block No.", detailText(recordDetails, "blockNo", detailText(recordDetails, "blockNumber"))],
-              ["Strength (N/mm²)", detailText(recordDetails, "strength", detailText(recordDetails, "compressiveStrength"))],
+              ["Average Strength (N/mm²)", formatStrengthMetric(strengthEvaluation.averageStrength ?? blockStrengthSummary.average)],
+              ["Minimum Strength (N/mm²)", formatStrengthMetric(strengthEvaluation.minimumStrength ?? blockStrengthSummary.minimum)],
+              ["Maximum Strength (N/mm²)", formatStrengthMetric(strengthEvaluation.maximumStrength ?? blockStrengthSummary.maximum)],
               ["Shape Factor", detailText(recordDetails, "shapeFactor")],
+              ["Compliance", displayValue(strengthEvaluation.status ?? record.status)],
             ]}
           />
         </>

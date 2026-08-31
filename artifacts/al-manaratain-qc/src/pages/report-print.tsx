@@ -171,6 +171,20 @@ function averageStrengthForAge(rows: unknown[], age: number) {
   return strengths.reduce((total, strength) => total + strength, 0) / strengths.length;
 }
 
+function strengthSummary(rows: unknown[]) {
+  const strengths = rows
+    .map(cubeRowStrength)
+    .filter((strength): strength is number => strength !== null);
+  if (!strengths.length) {
+    return { average: null, minimum: null, maximum: null };
+  }
+  return {
+    average: strengths.reduce((total, strength) => total + strength, 0) / strengths.length,
+    minimum: Math.min(...strengths),
+    maximum: Math.max(...strengths),
+  };
+}
+
 function ReadyMixAverageStrengthTable({ rows }: { rows: unknown[] }) {
   const ages = [...new Set(
     rows
@@ -332,8 +346,19 @@ function StrengthStandardsTable({
   standards: StrengthStandard[];
   evaluation: ValueMap | null;
 }) {
+  const isBlocks = record.testType === "Blocks";
+  const blockType = detailValue(record.details, ["blockType"], "");
+  const blockSize = detailValue(record.details, ["blockSize"], "");
   const configuredStandards = standards
-    .filter((standard) => standard.testType === record.testType)
+    .filter((standard) =>
+      standard.testType === record.testType &&
+      matchesText(standard.material, record.material) &&
+      (!isBlocks ||
+        (Boolean(blockType) &&
+          Boolean(blockSize) &&
+          matchesText(standard.blockType, blockType) &&
+          matchesText(standard.blockSize, blockSize))),
+    )
     .sort((left, right) => left.id - right.id);
   const rows = configuredStandards.length
     ? configuredStandards
@@ -352,7 +377,6 @@ function StrengthStandardsTable({
 
   if (!rows.length) return null;
 
-  const isBlocks = record.testType === "Blocks";
   return (
     <div className="report-standard-block">
       <p className="report-centered-title">Standard Required Strength:</p>
@@ -708,6 +732,12 @@ function BlocksReport({
   const details = record.details;
   const evaluation = objectValue(details.strengthEvaluation);
   const testRows = Array.isArray(details.testRows) ? details.testRows : [];
+  const calculatedSummary = strengthSummary(testRows);
+  const strengthUnit = textValue(evaluation?.strengthUnit, "N/mm²");
+  const averageStrength = numericValue(evaluation?.averageStrength) ?? calculatedSummary.average;
+  const minimumStrength = numericValue(evaluation?.minimumStrength) ?? calculatedSummary.minimum;
+  const maximumStrength = numericValue(evaluation?.maximumStrength) ?? calculatedSummary.maximum;
+  const compliance = textValue(evaluation?.status, record.status);
   return (
     <>
       <div className="report-two-column">
@@ -727,9 +757,11 @@ function BlocksReport({
           <SectionHeading>Test Result</SectionHeading>
           <ReportFields
             entries={[
-              ["Strength", detailValue(details, ["strength", "compressiveStrength"])],
+              ["Average Strength", averageStrength === null ? "-" : `${formatNumber(averageStrength, 2)} ${strengthUnit}`],
+              ["Minimum Strength", minimumStrength === null ? "-" : `${formatNumber(minimumStrength, 2)} ${strengthUnit}`],
+              ["Maximum Strength", maximumStrength === null ? "-" : `${formatNumber(maximumStrength, 2)} ${strengthUnit}`],
               ["Shape Factor", detailValue(details, ["shapeFactor"])],
-              ["Evaluation", textValue(evaluation?.status ?? record.status)],
+              ["Compliance", compliance],
             ]}
           />
         </section>
@@ -745,7 +777,7 @@ function BlocksReport({
             entries={[
               ["Required Minimum", evaluation?.requiredStrength == null
                 ? "-"
-                : `${textValue(evaluation.requiredStrength)} ${textValue(evaluation.strengthUnit, "N/mm²")}`],
+                : `${textValue(evaluation.requiredStrength)} ${strengthUnit}`],
               ["Applicable BS", textValue(evaluation?.bsStandard)],
             ]}
           />
