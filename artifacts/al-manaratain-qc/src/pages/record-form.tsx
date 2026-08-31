@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useParams } from "wouter";
-import { getGetDashboardQueryKey, getGetLookupsQueryKey, getGetRecordQueryKey, getGetReferenceDataQueryKey, getListRecordsQueryKey, useCreateRecord, useCreateReferenceItem, useGetLookups, useGetReferenceData, useGetRecord, useListRecords, useListSieveStandards, useListStrengthStandards, useUpdateRecord, TestType, RecordStatus, QcRecordInput, QcRecordUpdate } from "@workspace/api-client-react";
+import { getGetDashboardQueryKey, getGetLookupsQueryKey, getGetRecordQueryKey, getGetReferenceDataQueryKey, getGetReportQueryKey, getListRecordsQueryKey, useCreateRecord, useCreateReferenceItem, useGetLookups, useGetReferenceData, useGetRecord, useListSieveStandards, useListStrengthStandards, useUpdateRecord, TestType, RecordStatus, QcRecordInput, QcRecordUpdate } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -16,21 +16,12 @@ import {
   calculateWaterAbsorption,
   createEmptyRow,
   prepareDetailsForForm,
-  prepareRecordForForm,
   sieveSizeNumber,
   stringValue,
   toFormRow,
   numericInputValue,
   type TestRow,
 } from "./record-form-utils";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 const REFERENCE_NUMBER_MAX_LENGTH = 32;
 
@@ -56,20 +47,11 @@ export default function RecordForm() {
   });
   const { data: strengthStandards } = useListStrengthStandards();
   const { data: sieveStandards } = useListSieveStandards();
-  const [isDuplicateOpen, setIsDuplicateOpen] = useState(false);
-  const [duplicateSourceId, setDuplicateSourceId] = useState("");
-  const { data: duplicateRecords, isLoading: duplicateRecordsLoading, isError: duplicateRecordsError } = useListRecords(
-    { limit: 100 },
-    {
-      query: {
-        enabled: !isEditing && isDuplicateOpen,
-        queryKey: getListRecordsQueryKey({ limit: 100 }),
-      },
-    },
-  );
   const createRecord = useCreateRecord();
   const updateRecord = useUpdateRecord();
   const initializedRecordId = useRef<number | null>(null);
+  const submitAction = useRef<"save" | "duplicate">("save");
+  const formRef = useRef<HTMLFormElement | null>(null);
 
   const [testType, setTestType] = useState<TestType>(TestType.Ready_Mix);
   const [sampleDate, setSampleDate] = useState(new Date().toISOString().slice(0, 10));
@@ -142,39 +124,6 @@ export default function RecordForm() {
     nextRowId.current = Math.max(savedRows.length + 1, 2);
     initializedRecordId.current = recordId;
   }, [existingRecord, isEditing, recordId]);
-
-  const duplicateSource = duplicateRecords?.find(
-    (record) => String(record.id) === duplicateSourceId,
-  );
-
-  const copyRecordIntoNewForm = () => {
-    if (!duplicateSource) {
-      toast.error("Choose a record to duplicate.");
-      return;
-    }
-
-    const formValues = prepareRecordForForm(duplicateSource);
-    setTestType(formValues.testType);
-    setSampleDate(formValues.sampleDate);
-    setLocationValue(formValues.location);
-    setMaterial(formValues.material);
-    setTestedBy(formValues.testedBy);
-    setRemarks(formValues.remarks);
-    setReferenceNumber(formValues.referenceNumber);
-    setCustomerName(formValues.customerName);
-    setCustomerLocation(formValues.customerLocation);
-    setMachine(formValues.machine);
-    setSelectedStrengthStandardId(formValues.selectedStrengthStandardId);
-    setDetails(formValues.details);
-    setTestRows(
-      formValues.testRows,
-    );
-    sieveContextKeyRef.current = `${formValues.testType}|${String(formValues.details.materialReferenceItemId ?? formValues.material)}`;
-    nextRowId.current = Math.max(formValues.testRows.length + 1, 2);
-    setDuplicateSourceId("");
-    setIsDuplicateOpen(false);
-    toast.success(`Copied ${duplicateSource.recordNo}. Review the values, then save as a new record.`);
-  };
 
   const handleDetailChange = (key: string, value: string) => {
     setDetails(prev => ({ ...prev, [key]: value }));
@@ -519,18 +468,46 @@ export default function RecordForm() {
       details: payloadDetails
     };
 
+    const shouldDuplicateAfterSave = isEditing && submitAction.current === "duplicate";
+    submitAction.current = "save";
+
     if (isEditing && recordId > 0) {
       const updatePayload: QcRecordUpdate = payload;
       updateRecord.mutate({ id: recordId, data: updatePayload }, {
         onSuccess: (updatedRecord) => {
-          toast.success(`Record ${updatedRecord.recordNo} has been updated.`);
           queryClient.invalidateQueries({ queryKey: getListRecordsQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetDashboardQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetRecordQueryKey(recordId) });
+          queryClient.invalidateQueries({ queryKey: getGetReportQueryKey(recordId) });
+          queryClient.invalidateQueries({ queryKey: ["/api/daily-ready-mix-results"] });
+
+          if (shouldDuplicateAfterSave) {
+            toast.success(`Record ${updatedRecord.recordNo} has been saved. Creating a copy...`);
+            createRecord.mutate({ data: payload }, {
+              onSuccess: (newRecord) => {
+                toast.success(`Created copy ${newRecord.recordNo}.`);
+                queryClient.invalidateQueries({ queryKey: getListRecordsQueryKey() });
+                queryClient.invalidateQueries({ queryKey: getGetDashboardQueryKey() });
+                queryClient.invalidateQueries({ queryKey: ["/api/daily-ready-mix-results"] });
+                setLocation(`/records/${newRecord.id}/edit`);
+              },
+              onError: () => {
+                toast.error("The record was saved, but its copy could not be created.");
+                setLocation(`/records/${updatedRecord.id}`);
+              },
+            });
+            return;
+          }
+
+          toast.success(`Record ${updatedRecord.recordNo} has been updated.`);
           setLocation(`/records/${updatedRecord.id}`);
         },
         onError: () => {
-          toast.error("Failed to update record. Please try again.");
+          toast.error(
+            shouldDuplicateAfterSave
+              ? "The record could not be saved, so no copy was created."
+              : "Failed to update record. Please try again.",
+          );
         },
       });
       return;
@@ -576,21 +553,25 @@ export default function RecordForm() {
             </p>
           </div>
         </div>
-        {!isEditing && (
+        {isEditing && (
           <Button
             type="button"
             variant="outline"
             className="shrink-0 self-start"
-            onClick={() => setIsDuplicateOpen(true)}
+            onClick={() => {
+              submitAction.current = "duplicate";
+              formRef.current?.requestSubmit();
+            }}
             disabled={createRecord.isPending || updateRecord.isPending}
           >
             <Copy className="mr-2 h-4 w-4" />
-            Duplicate existing record
+            Save & Duplicate
           </Button>
         )}
       </div>
 
       <form
+        ref={formRef}
         onSubmit={handleSubmit}
         onKeyDown={(event) => {
           if (event.key === "Enter" && event.target instanceof HTMLInputElement) {
