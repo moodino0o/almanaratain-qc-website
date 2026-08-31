@@ -13,12 +13,11 @@ import {
   useUpdateRecord,
 } from "@workspace/api-client-react";
 import type {
-  DailyReadyMixResult,
-  DailyReadyMixStrengthSummary,
   GetDailyReadyMixResultsParams,
   QcRecord,
   QcRecordUpdate,
 } from "@workspace/api-client-react";
+import { groupDailyResults } from "./reports-utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -114,105 +113,6 @@ const cubeRowFromSaved = (row: unknown): CubeResultRow => {
     load: stringValue(values.load),
   };
 };
-
-type GroupedDailyLocation = {
-  location: string;
-  recordCount: number;
-  sevenDay: DailyReadyMixStrengthSummary;
-  twentyEightDay: DailyReadyMixStrengthSummary;
-  strengthUnit: string;
-};
-
-type GroupedDailyMix = {
-  mixDesign: string;
-  recordCount: number;
-  sevenDay: DailyReadyMixStrengthSummary;
-  twentyEightDay: DailyReadyMixStrengthSummary;
-  strengthUnit: string;
-  locations: GroupedDailyLocation[];
-};
-
-type DailyStrengthAccumulator = {
-  recordCount: number;
-  sevenDay: number[];
-  twentyEightDay: number[];
-  strengthUnit: string;
-};
-
-const createDailyStrengthAccumulator = (): DailyStrengthAccumulator => ({
-  recordCount: 0,
-  sevenDay: [],
-  twentyEightDay: [],
-  strengthUnit: "N/mm²",
-});
-
-const summarizeDailyStrengths = (values: number[]): DailyReadyMixStrengthSummary => ({
-  averageStrength: values.length
-    ? values.reduce((sum, value) => sum + value, 0) / values.length
-    : null,
-  minimumStrength: values.length ? Math.min(...values) : null,
-  maximumStrength: values.length ? Math.max(...values) : null,
-});
-
-function groupDailyResults(records: DailyReadyMixResult[]): GroupedDailyMix[] {
-  const groups = new Map<string, DailyStrengthAccumulator & {
-    locations: Map<string, DailyStrengthAccumulator>;
-  }>();
-
-  for (const record of records) {
-    let group = groups.get(record.mixDesign);
-    if (!group) {
-      group = {
-        ...createDailyStrengthAccumulator(),
-        strengthUnit: record.strengthUnit,
-        locations: new Map(),
-      };
-      groups.set(record.mixDesign, group);
-    }
-    group.recordCount += 1;
-    if (record.sevenDay.averageStrength !== null) {
-      group.sevenDay.push(record.sevenDay.averageStrength);
-    }
-    if (record.twentyEightDay.averageStrength !== null) {
-      group.twentyEightDay.push(record.twentyEightDay.averageStrength);
-    }
-
-    let location = group.locations.get(record.location);
-    if (!location) {
-      location = {
-        ...createDailyStrengthAccumulator(),
-        strengthUnit: record.strengthUnit,
-      };
-      group.locations.set(record.location, location);
-    }
-    location.recordCount += 1;
-    if (record.sevenDay.averageStrength !== null) {
-      location.sevenDay.push(record.sevenDay.averageStrength);
-    }
-    if (record.twentyEightDay.averageStrength !== null) {
-      location.twentyEightDay.push(record.twentyEightDay.averageStrength);
-    }
-  }
-
-  return [...groups.entries()]
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([mixDesign, group]) => ({
-      mixDesign,
-      recordCount: group.recordCount,
-      sevenDay: summarizeDailyStrengths(group.sevenDay),
-      twentyEightDay: summarizeDailyStrengths(group.twentyEightDay),
-      strengthUnit: group.strengthUnit,
-      locations: [...group.locations.entries()]
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([location, summary]) => ({
-          location,
-          recordCount: summary.recordCount,
-          sevenDay: summarizeDailyStrengths(summary.sevenDay),
-          twentyEightDay: summarizeDailyStrengths(summary.twentyEightDay),
-          strengthUnit: summary.strengthUnit,
-        })),
-    }));
-}
 
 export default function Reports() {
   const queryClient = useQueryClient();
