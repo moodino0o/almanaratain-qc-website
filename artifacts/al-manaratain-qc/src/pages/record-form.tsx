@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useParams } from "wouter";
-import { useGetLookups, useGetReferenceData, useGetRecord, useCreateRecord, useUpdateRecord, useListRecords, useListSieveStandards, useListStrengthStandards, TestType, RecordStatus, QcRecordInput, QcRecordUpdate } from "@workspace/api-client-react";
+import { getGetDashboardQueryKey, getGetLookupsQueryKey, getGetRecordQueryKey, getGetReferenceDataQueryKey, getListRecordsQueryKey, useCreateRecord, useCreateReferenceItem, useGetLookups, useGetReferenceData, useGetRecord, useListRecords, useListSieveStandards, useListStrengthStandards, useUpdateRecord, TestType, RecordStatus, QcRecordInput, QcRecordUpdate } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient } from "@tanstack/react-query";
-import { getListRecordsQueryKey, getGetDashboardQueryKey, getGetRecordQueryKey } from "@workspace/api-client-react";
 import { Save, ArrowLeft, Copy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "wouter";
@@ -44,6 +43,7 @@ export default function RecordForm() {
   
   const { data: lookups, isLoading: lookupsLoading } = useGetLookups();
   const { data: referenceData } = useGetReferenceData();
+  const createReferenceItem = useCreateReferenceItem();
   const {
     data: existingRecord,
     isLoading: recordLoading,
@@ -88,6 +88,33 @@ export default function RecordForm() {
   const nextRowId = useRef(2);
   const rowInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
   const sieveContextKeyRef = useRef("");
+
+  const addReferenceDataItem = async (categoryKey: string, value: string) => {
+    const category = referenceData?.categories.find((item) => item.key === categoryKey);
+    if (!category) {
+      toast.error("This Reference Data category is not available.");
+      throw new Error(`Reference Data category "${categoryKey}" is not available.`);
+    }
+
+    try {
+      const createdItem = await createReferenceItem.mutateAsync({
+        categoryId: category.id,
+        data: { value },
+      });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: getGetReferenceDataQueryKey() }),
+        queryClient.invalidateQueries({ queryKey: getGetLookupsQueryKey() }),
+      ]);
+      toast.success(`Added “${createdItem.value}” to Reference Data.`);
+      return createdItem.value;
+    } catch {
+      toast.error("That value could not be added to Reference Data.");
+      throw new Error("Reference Data value could not be added.");
+    }
+  };
+
+  const createReferenceOption = (categoryKey?: string) =>
+    categoryKey ? (value: string) => addReferenceDataItem(categoryKey, value) : undefined;
 
   useEffect(() => {
     if (!isEditing || !existingRecord || initializedRecordId.current === recordId) return;
@@ -396,6 +423,19 @@ export default function RecordForm() {
     }
   };
 
+  const getMaterialReferenceCategory = () => {
+    switch (testType) {
+      case TestType.Ready_Mix:
+      case TestType.RMX_Trial:
+        return "mixStrengths";
+      case TestType.Blocks:
+      case TestType.Paving_Blocks:
+        return undefined;
+      default:
+        return "materials";
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!locationValue || !material || !testedBy) {
@@ -602,6 +642,7 @@ export default function RecordForm() {
                   onChange={setLocationValue}
                   options={lookups?.locations || []}
                   placeholder="Select or type location..."
+                  onCreateOption={createReferenceOption("locations")}
                 />
               </div>
 
@@ -612,6 +653,7 @@ export default function RecordForm() {
                   onChange={setMaterial}
                   options={getMaterialSuggestions()}
                   placeholder="Select or type material..."
+                  onCreateOption={createReferenceOption(getMaterialReferenceCategory())}
                 />
               </div>
 
@@ -646,6 +688,7 @@ export default function RecordForm() {
                   onChange={setTestedBy}
                   options={lookups?.employees || []}
                   placeholder="Select or type technician..."
+                  onCreateOption={createReferenceOption("employees")}
                 />
               </div>
 
@@ -670,6 +713,7 @@ export default function RecordForm() {
                       onChange={setCustomerName}
                       options={lookups?.customers || []}
                       placeholder="Select or type customer..."
+                      onCreateOption={createReferenceOption("customers")}
                     />
                   </div>
                   <div className="space-y-2">
@@ -679,6 +723,7 @@ export default function RecordForm() {
                       onChange={setCustomerLocation}
                       options={lookups?.customerLocations || []}
                       placeholder="Select or type location..."
+                      onCreateOption={createReferenceOption("customerLocations")}
                     />
                   </div>
                 </>
@@ -693,6 +738,7 @@ export default function RecordForm() {
                       onChange={(value) => handleDetailChange("blockType", value)}
                       options={lookups?.blockTypes || []}
                       placeholder="Select or type block type..."
+                      onCreateOption={createReferenceOption("blockTypes")}
                     />
                   </div>
                   <div className="space-y-2">
@@ -702,6 +748,7 @@ export default function RecordForm() {
                       onChange={(value) => handleDetailChange("blockSize", value)}
                       options={lookups?.blockSizes || []}
                       placeholder="Select or type block size..."
+                      onCreateOption={createReferenceOption("blockSizes")}
                     />
                   </div>
                   <div className="space-y-2">

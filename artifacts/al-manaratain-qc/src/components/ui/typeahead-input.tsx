@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +25,7 @@ export interface TypeaheadInputProps {
   placeholder?: string;
   emptyMessage?: string;
   className?: string;
+  onCreateOption?: (value: string) => Promise<string | void> | string | void;
 }
 
 export function TypeaheadInput({
@@ -34,10 +35,12 @@ export function TypeaheadInput({
   placeholder = "Select or type...",
   emptyMessage = "No matches found.",
   className,
+  onCreateOption,
 }: TypeaheadInputProps) {
   const [open, setOpen] = React.useState(false);
   const [inputValue, setInputValue] = React.useState(value);
   const [showAllOptions, setShowAllOptions] = React.useState(false);
+  const [isCreatingOption, setIsCreatingOption] = React.useState(false);
 
   // Sync internal input value with external value
   React.useEffect(() => {
@@ -58,6 +61,28 @@ export function TypeaheadInput({
     () => showAllOptions ? options : filterTypeaheadOptions(options, inputValue),
     [options, inputValue, showAllOptions],
   );
+  const trimmedInput = inputValue.trim();
+  const hasExactMatch = options.some(
+    (option) => option.trim().toLocaleLowerCase() === trimmedInput.toLocaleLowerCase(),
+  );
+  const canCreateOption = Boolean(onCreateOption && trimmedInput && !hasExactMatch);
+
+  const handleCreateOption = async () => {
+    if (!onCreateOption || !trimmedInput || hasExactMatch || isCreatingOption) return;
+    setIsCreatingOption(true);
+    try {
+      const createdValue = await onCreateOption(trimmedInput);
+      const nextValue = typeof createdValue === "string" && createdValue.trim()
+        ? createdValue.trim()
+        : trimmedInput;
+      setInputValue(nextValue);
+      onChange(nextValue);
+      setShowAllOptions(false);
+      setOpen(false);
+    } finally {
+      setIsCreatingOption(false);
+    }
+  };
 
   return (
     <div className={cn("relative w-full", className)}>
@@ -106,35 +131,55 @@ export function TypeaheadInput({
         >
           <Command shouldFilter={false}>
             <CommandList>
-              {filteredOptions.length === 0 ? (
+              {filteredOptions.length === 0 && !canCreateOption ? (
                 <div className="py-6 text-center text-sm text-muted-foreground">
                   {emptyMessage}
                 </div>
               ) : (
-                <CommandGroup>
-                  {filteredOptions.map((option) => (
-                    <CommandItem
-                      key={option}
-                      value={option}
-                      onSelect={() => {
-                        setInputValue(option);
-                        setShowAllOptions(false);
-                        onChange(option);
-                        setOpen(false);
-                      }}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          value.toLowerCase() === option.toLowerCase()
-                            ? "opacity-100"
-                            : "opacity-0"
+                <>
+                  {canCreateOption && (
+                    <CommandGroup heading="Reference Data">
+                      <CommandItem
+                        value={`add-${trimmedInput}`}
+                        onSelect={handleCreateOption}
+                        disabled={isCreatingOption}
+                      >
+                        {isCreatingOption ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Plus className="mr-2 h-4 w-4" />
                         )}
-                      />
-                      {option}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
+                        Add “{trimmedInput}” to Reference Data
+                      </CommandItem>
+                    </CommandGroup>
+                  )}
+                  {filteredOptions.length > 0 && (
+                    <CommandGroup>
+                      {filteredOptions.map((option) => (
+                        <CommandItem
+                          key={option}
+                          value={option}
+                          onSelect={() => {
+                            setInputValue(option);
+                            setShowAllOptions(false);
+                            onChange(option);
+                            setOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              value.toLowerCase() === option.toLowerCase()
+                                ? "opacity-100"
+                                : "opacity-0"
+                            )}
+                          />
+                          {option}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  )}
+                </>
               )}
             </CommandList>
           </Command>

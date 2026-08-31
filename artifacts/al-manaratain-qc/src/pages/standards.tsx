@@ -3,10 +3,13 @@ import { Link } from "wouter";
 import {
   getListSieveStandardsQueryKey,
   getListStrengthStandardsQueryKey,
+  getGetLookupsQueryKey,
+  getGetReferenceDataQueryKey,
   SieveStandard,
   StrengthStandard,
   TestType,
   useCreateSieveStandard,
+  useCreateReferenceItem,
   useCreateStrengthStandard,
   useDeleteSieveStandard,
   useDeleteStrengthStandard,
@@ -116,6 +119,7 @@ function StandardEditor({
   onSave,
   isSaving,
   lookups,
+  onCreateReferenceItem,
 }: {
   form: StandardForm;
   setForm: (value: StandardForm) => void;
@@ -123,6 +127,7 @@ function StandardEditor({
   onCancel: () => void;
   onSave: () => void;
   isSaving: boolean;
+  onCreateReferenceItem: (categoryKey: string, value: string) => Promise<string | void>;
   lookups?: {
     materials: string[];
     mixStrengths: string[];
@@ -176,6 +181,7 @@ function StandardEditor({
             onChange={(value) => setForm({ ...form, material: value })}
             options={materialOptions}
             placeholder="Select or type material..."
+            onCreateOption={(value) => onCreateReferenceItem("materials", value)}
           />
         </div>
         {form.testType === TestType.Blocks && (
@@ -187,6 +193,7 @@ function StandardEditor({
                 onChange={(value) => setForm({ ...form, blockType: value })}
                 options={lookups?.blockTypes ?? []}
                 placeholder="Select block type..."
+                onCreateOption={(value) => onCreateReferenceItem("blockTypes", value)}
               />
             </div>
             <div className="space-y-2">
@@ -196,6 +203,7 @@ function StandardEditor({
                 onChange={(value) => setForm({ ...form, blockSize: value })}
                 options={lookups?.blockSizes ?? []}
                 placeholder="Select block size..."
+                onCreateOption={(value) => onCreateReferenceItem("blockSizes", value)}
               />
             </div>
           </>
@@ -427,6 +435,7 @@ export default function Standards() {
   const updateStandard = useUpdateStrengthStandard();
   const deleteStandard = useDeleteStrengthStandard();
   const createSieveStandard = useCreateSieveStandard();
+  const createReferenceItem = useCreateReferenceItem();
   const updateSieveStandard = useUpdateSieveStandard();
   const deleteSieveStandard = useDeleteSieveStandard();
   const [editorOpen, setEditorOpen] = useState(false);
@@ -475,6 +484,30 @@ export default function Standards() {
         );
       },
     });
+  };
+
+  const addReferenceDataItem = async (categoryKey: string, value: string) => {
+    const category = referenceData?.categories.find((item) => item.key === categoryKey);
+    if (!category) {
+      toast.error("This Reference Data category is not available.");
+      throw new Error(`Reference Data category "${categoryKey}" is not available.`);
+    }
+
+    try {
+      const createdItem = await createReferenceItem.mutateAsync({
+        categoryId: category.id,
+        data: { value },
+      });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: getGetReferenceDataQueryKey() }),
+        queryClient.invalidateQueries({ queryKey: getGetLookupsQueryKey() }),
+      ]);
+      toast.success(`Added “${createdItem.value}” to Reference Data.`);
+      return createdItem.value;
+    } catch {
+      toast.error("That value could not be added to Reference Data.");
+      throw new Error("Reference Data value could not be added.");
+    }
   };
 
   const openCreate = () => {
@@ -670,6 +703,7 @@ export default function Standards() {
             blockTypes: lookups?.blockTypes ?? [],
             blockSizes: lookups?.blockSizes ?? [],
           }}
+          onCreateReferenceItem={addReferenceDataItem}
         />
       )}
       {sieveEditorOpen && (
