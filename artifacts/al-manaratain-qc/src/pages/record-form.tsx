@@ -277,6 +277,21 @@ export default function RecordForm() {
     matchingStrengthStandards.find((standard) => String(standard.id) === selectedStrengthStandardId) ??
     matchingStrengthStandards[0];
 
+  useEffect(() => {
+    if (testType !== TestType.Blocks) return;
+    const selectedStillMatches = matchingStrengthStandards.some(
+      (standard) => String(standard.id) === selectedStrengthStandardId,
+    );
+    const nextStandardId = selectedStillMatches
+      ? selectedStrengthStandardId
+      : matchingStrengthStandards[0]
+        ? String(matchingStrengthStandards[0].id)
+        : "";
+    if (nextStandardId !== selectedStrengthStandardId) {
+      setSelectedStrengthStandardId(nextStandardId);
+    }
+  }, [matchingStrengthStandards, selectedStrengthStandardId, testType]);
+
   const applicableSieveStandards = useMemo(() => {
     if (!usesSieveRows) return [];
     const materialReferenceItemId = Number(details.materialReferenceItemId);
