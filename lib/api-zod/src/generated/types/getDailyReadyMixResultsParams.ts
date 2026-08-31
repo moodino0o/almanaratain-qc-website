@@ -9,9 +9,9 @@ import type { DailyReadyMixReferenceType } from './dailyReadyMixReferenceType';
 
 export type GetDailyReadyMixResultsParams = {
 /**
- * Sample date in YYYY-MM-DD format
+ * Testing date in YYYY-MM-DD format
  */
-sampleDate: string;
+testingDate: string;
 mixDesign?: string;
 referenceType: DailyReadyMixReferenceType;
 };

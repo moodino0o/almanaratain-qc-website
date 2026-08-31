@@ -735,13 +735,17 @@ export const CreateRecordResponse = zod.object({
  * @summary Get daily Ready Mix strength results
  */
 export const GetDailyReadyMixResultsQueryParams = zod.object({
-  "sampleDate": zod.coerce.string(),
+  "testingDate": zod.coerce.string(),
   "mixDesign": zod.coerce.string().optional(),
   "referenceType": zod.enum(['site', 'plant'])
 })
 
+export const getDailyReadyMixResultsResponseRecordsItemCubeAgeMax = 365;
+
+
+
 export const GetDailyReadyMixResultsResponse = zod.object({
-  "sampleDate": zod.coerce.date(),
+  "testingDate": zod.coerce.date(),
   "mixDesign": zod.string().nullable(),
   "referenceType": zod.enum(['site', 'plant']),
   "mixes": zod.array(zod.object({
@@ -785,6 +789,7 @@ export const GetDailyReadyMixResultsResponse = zod.object({
   "mixDesign": zod.string(),
   "referenceNumber": zod.string(),
   "referenceType": zod.enum(['site', 'plant']),
+  "cubeAge": zod.number().min(1).max(getDailyReadyMixResultsResponseRecordsItemCubeAgeMax),
   "strengths": zod.array(zod.number()),
   "averageStrength": zod.number().nullable(),
   "minimumStrength": zod.number().nullable(),

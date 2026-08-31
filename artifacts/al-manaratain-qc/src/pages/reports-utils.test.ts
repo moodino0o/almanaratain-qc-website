@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { DailyReadyMixResult } from "@workspace/api-client-react";
-import { groupDailyResults, sortByReferenceNumber } from "./reports-utils";
+import { buildDailyStrengthRows, groupDailyResults, sortByReferenceNumber } from "./reports-utils";
 
 const record = ({
   id,
@@ -31,6 +31,7 @@ const record = ({
   mixDesign,
   referenceNumber: `S-${id}`,
   referenceType: "site",
+  cubeAge: 7,
   strengths: [],
   averageStrength: twentyEightDay,
   minimumStrength: twentyEightDay,
@@ -146,4 +147,42 @@ test("sorts Ready Mix references by H number, then S number", () => {
       .map((entry) => entry.referenceNumber),
     ["H.1", "H.2", "H.10", "S.2", "S.253"],
   );
+});
+
+test("builds one daily strength row per mix, plant, and cube age", () => {
+  const rows = buildDailyStrengthRows([
+    {
+      ...record({ id: 1, mixDesign: "25 N OPC", location: "HIDD", sevenDay: 30, twentyEightDay: null }),
+      cubeAge: 28,
+      strengths: [48, 52],
+    },
+    {
+      ...record({ id: 2, mixDesign: "20 N OPC", location: "MASA", sevenDay: null, twentyEightDay: 54 }),
+      cubeAge: 28,
+      strengths: [53, 55],
+    },
+    {
+      ...record({ id: 3, mixDesign: "20 N OPC", location: "MASA", sevenDay: 38, twentyEightDay: null }),
+      cubeAge: 7,
+      strengths: [37, 39],
+    },
+  ]);
+
+  assert.deepEqual(
+    rows.map(({ mixDesign, plant, cubeAge }) => ({ mixDesign, plant, cubeAge })),
+    [
+      { mixDesign: "20 N OPC", plant: "MASA", cubeAge: 7 },
+      { mixDesign: "20 N OPC", plant: "MASA", cubeAge: 28 },
+      { mixDesign: "25 N OPC", plant: "HIDD", cubeAge: 28 },
+    ],
+  );
+  assert.deepEqual(rows[0], {
+    mixDesign: "20 N OPC",
+    plant: "MASA",
+    cubeAge: 7,
+    averageStrength: 38,
+    minimumStrength: 37,
+    maximumStrength: 39,
+    strengthUnit: "N/mm²",
+  });
 });

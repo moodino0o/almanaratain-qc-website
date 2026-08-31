@@ -16,6 +16,11 @@ export interface DailyReadyMixResult {
   mixDesign: string;
   referenceNumber: string;
   referenceType: DailyReadyMixReferenceType;
+  /**
+     * @minimum 1
+     * @maximum 365
+     */
+  cubeAge: number;
   strengths: number[];
   /** @nullable */
   averageStrength: number | null;

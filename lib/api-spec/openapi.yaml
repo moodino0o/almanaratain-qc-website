@@ -582,12 +582,12 @@ paths:
       tags: [qc]
       summary: Get daily Ready Mix strength results
       parameters:
-        - name: sampleDate
+        - name: testingDate
           in: query
           required: true
           schema:
             type: string
-            description: Sample date in YYYY-MM-DD format
+            description: Testing date in YYYY-MM-DD format
         - name: mixDesign
           in: query
           required: false
@@ -1194,6 +1194,7 @@ components:
         - mixDesign
         - referenceNumber
         - referenceType
+        - cubeAge
         - strengths
         - averageStrength
         - minimumStrength
@@ -1217,6 +1218,10 @@ components:
           type: string
         referenceType:
           $ref: "#/components/schemas/DailyReadyMixReferenceType"
+        cubeAge:
+          type: number
+          minimum: 1
+          maximum: 365
         strengths:
           type: array
           items:
@@ -1283,7 +1288,7 @@ components:
     DailyReadyMixResults:
       type: object
       required:
-        - sampleDate
+        - testingDate
         - mixDesign
         - referenceType
         - mixes
@@ -1294,7 +1299,7 @@ components:
         - maximumStrength
         - strengthUnit
       properties:
-        sampleDate:
+        testingDate:
           type: string
           format: date
         mixDesign:

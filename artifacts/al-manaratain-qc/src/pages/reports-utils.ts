@@ -20,6 +20,63 @@ export type GroupedDailyMix = {
   locations: GroupedDailyLocation[];
 };
 
+export type DailyStrengthTableRow = {
+  mixDesign: string;
+  plant: string;
+  cubeAge: number;
+  averageStrength: number;
+  minimumStrength: number;
+  maximumStrength: number;
+  strengthUnit: string;
+};
+
+export function buildDailyStrengthRows(records: DailyReadyMixResult[]): DailyStrengthTableRow[] {
+  const groups = new Map<string, {
+    mixDesign: string;
+    plant: string;
+    cubeAge: number;
+    strengths: number[];
+    strengthUnit: string;
+  }>();
+
+  for (const record of records) {
+    const summary = record.cubeAge === 7 ? record.sevenDay : record.twentyEightDay;
+    const strengths = record.strengths.length
+      ? record.strengths
+      : summary.averageStrength === null
+        ? []
+        : [summary.averageStrength];
+    if (!strengths.length) continue;
+
+    const key = `${record.mixDesign}\u0000${record.location}\u0000${record.cubeAge}`;
+    const current = groups.get(key) ?? {
+      mixDesign: record.mixDesign,
+      plant: record.location,
+      cubeAge: record.cubeAge,
+      strengths: [],
+      strengthUnit: record.strengthUnit,
+    };
+    current.strengths.push(...strengths);
+    groups.set(key, current);
+  }
+
+  return [...groups.values()]
+    .map((group) => ({
+      mixDesign: group.mixDesign,
+      plant: group.plant,
+      cubeAge: group.cubeAge,
+      averageStrength: group.strengths.reduce((sum, value) => sum + value, 0) / group.strengths.length,
+      minimumStrength: Math.min(...group.strengths),
+      maximumStrength: Math.max(...group.strengths),
+      strengthUnit: group.strengthUnit,
+    }))
+    .sort((left, right) =>
+      left.mixDesign.localeCompare(right.mixDesign)
+      || left.plant.localeCompare(right.plant)
+      || left.cubeAge - right.cubeAge,
+    );
+}
+
 const referenceSortParts = (value: string) => {
   const normalized = value.trim().toLocaleUpperCase();
   const prefixRank = normalized.startsWith("H")

@@ -11,7 +11,7 @@ import type { DailyReadyMixReferenceType } from './dailyReadyMixReferenceType';
 import type { DailyReadyMixResult } from './dailyReadyMixResult';
 
 export interface DailyReadyMixResults {
-  sampleDate: Date;
+  testingDate: Date;
   /** @nullable */
   mixDesign: string | null;
   referenceType: DailyReadyMixReferenceType;

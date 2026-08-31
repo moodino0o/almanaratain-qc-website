@@ -77,6 +77,12 @@ import {
 
 const router: IRouter = Router();
 
+const addDaysToDate = (date: string, days: number) => {
+  const value = new Date(`${date}T00:00:00.000Z`);
+  value.setUTCDate(value.getUTCDate() + days);
+  return value.toISOString().slice(0, 10);
+};
+
 const REFERENCE_SEED = [
   { key: "factories", label: "Factories", values: ["HAFFERA", "HIDD", "AKER", "KHAMIS"] },
   { key: "plants", label: "Plants", values: ["COLUMBIA", "MASA", "HENKI I", "HENKI II", "LIEBHERR"] },
@@ -1003,24 +1009,21 @@ router.get("/daily-ready-mix-results", async (req, res): Promise<void> => {
     return;
   }
 
-  const { sampleDate, mixDesign, referenceType } = parsed.data;
+  const { testingDate, mixDesign, referenceType } = parsed.data;
   if (
-    !/^\d{4}-\d{2}-\d{2}$/.test(sampleDate) ||
-    Number.isNaN(Date.parse(`${sampleDate}T00:00:00.000Z`))
+    !/^\d{4}-\d{2}-\d{2}$/.test(testingDate) ||
+    Number.isNaN(Date.parse(`${testingDate}T00:00:00.000Z`))
   ) {
-    res.status(400).json({ error: "sampleDate must be a valid YYYY-MM-DD date" });
+    res.status(400).json({ error: "testingDate must be a valid YYYY-MM-DD date" });
     return;
   }
   const rows = await db
     .select()
     .from(qcRecordsTable)
     .where(
-      and(
-        eq(qcRecordsTable.testType, "Ready Mix"),
-        eq(qcRecordsTable.sampleDate, sampleDate),
-      ),
+      eq(qcRecordsTable.testType, "Ready Mix"),
     )
-    .orderBy(asc(qcRecordsTable.location), asc(qcRecordsTable.id));
+    .orderBy(asc(qcRecordsTable.sampleDate), asc(qcRecordsTable.location), asc(qcRecordsTable.id));
 
   const prefix = referenceType === "site" ? "S" : "H";
   const normalizedMixDesign = mixDesign?.trim().toLocaleLowerCase();
@@ -1033,13 +1036,20 @@ router.get("/daily-ready-mix-results", async (req, res): Promise<void> => {
     ) {
       return [];
     }
-    const strengths = readyMixStrengths(row.details);
-    const recordStrength =
-      strengths.length > 0
-        ? strengths.reduce((sum, value) => sum + value, 0) / strengths.length
-        : null;
     const sevenDay = summarizeStrengths(readyMixStrengthsForAge(row.details, 7));
     const twentyEightDay = summarizeStrengths(readyMixStrengthsForAge(row.details, 28));
+    const cubeAge = ([7, 28] as const).find((age) =>
+      addDaysToDate(row.sampleDate, age) === testingDate &&
+      (age === 7 ? sevenDay.averageStrength !== null : twentyEightDay.averageStrength !== null),
+    );
+    if (cubeAge === undefined) return [];
+
+    const strengths = cubeAge === 7
+      ? readyMixStrengthsForAge(row.details, 7)
+      : readyMixStrengthsForAge(row.details, 28);
+    const recordStrength = strengths.length
+      ? strengths.reduce((sum, value) => sum + value, 0) / strengths.length
+      : null;
     return [{
       recordId: row.id,
       recordNo: row.recordNo,
@@ -1048,6 +1058,7 @@ router.get("/daily-ready-mix-results", async (req, res): Promise<void> => {
       mixDesign: design,
       referenceNumber: reference,
       referenceType,
+      cubeAge,
       strengths,
       averageStrength: recordStrength,
       minimumStrength: recordStrength,
@@ -1128,7 +1139,7 @@ router.get("/daily-ready-mix-results", async (req, res): Promise<void> => {
 
   res.json(
     GetDailyReadyMixResultsResponse.parse({
-      sampleDate,
+       testingDate,
       mixDesign: mixDesign?.trim() || null,
       referenceType,
       mixes,

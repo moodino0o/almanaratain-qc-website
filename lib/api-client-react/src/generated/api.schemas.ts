@@ -308,6 +308,11 @@ export interface DailyReadyMixResult {
   mixDesign: string;
   referenceNumber: string;
   referenceType: DailyReadyMixReferenceType;
+  /**
+     * @minimum 1
+     * @maximum 365
+     */
+  cubeAge: number;
   strengths: number[];
   /** @nullable */
   averageStrength: number | null;
@@ -343,7 +348,7 @@ export interface DailyReadyMixLocationSummary {
 }
 
 export interface DailyReadyMixResults {
-  sampleDate: string;
+  testingDate: string;
   /** @nullable */
   mixDesign: string | null;
   referenceType: DailyReadyMixReferenceType;
@@ -514,9 +519,9 @@ limit?: LimitParamParameter;
 
 export type GetDailyReadyMixResultsParams = {
 /**
- * Sample date in YYYY-MM-DD format
+ * Testing date in YYYY-MM-DD format
  */
-sampleDate: string;
+testingDate: string;
 mixDesign?: string;
 referenceType: DailyReadyMixReferenceType;
 };
