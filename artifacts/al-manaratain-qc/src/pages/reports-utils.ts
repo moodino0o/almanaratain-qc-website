@@ -20,6 +20,35 @@ export type GroupedDailyMix = {
   locations: GroupedDailyLocation[];
 };
 
+const referenceSortParts = (value: string) => {
+  const normalized = value.trim().toLocaleUpperCase();
+  const prefixRank = normalized.startsWith("H")
+    ? 0
+    : normalized.startsWith("S")
+      ? 1
+      : 2;
+  const numberMatch = normalized.match(/\d+(?:[.,]\d+)?/);
+  const number = numberMatch
+    ? Number(numberMatch[0].replace(",", "."))
+    : Number.POSITIVE_INFINITY;
+
+  return { prefixRank, number, normalized };
+};
+
+export function sortByReferenceNumber<T>(
+  entries: T[],
+  getReferenceNumber: (entry: T) => string,
+): T[] {
+  return [...entries].sort((left, right) => {
+    const leftParts = referenceSortParts(getReferenceNumber(left));
+    const rightParts = referenceSortParts(getReferenceNumber(right));
+
+    return leftParts.prefixRank - rightParts.prefixRank
+      || leftParts.number - rightParts.number
+      || leftParts.normalized.localeCompare(rightParts.normalized, undefined, { numeric: true });
+  });
+}
+
 type DailyStrengthAccumulator = {
   recordCount: number;
   sevenDay: DailyReadyMixStrengthSummary[];

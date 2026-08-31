@@ -17,7 +17,7 @@ import type {
   QcRecord,
   QcRecordUpdate,
 } from "@workspace/api-client-react";
-import { groupDailyResults } from "./reports-utils";
+import { groupDailyResults, sortByReferenceNumber } from "./reports-utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -194,19 +194,21 @@ export default function Reports() {
       return;
     }
 
+    const entries: ReadyMixResultEntry[] = recordsForCastingDate.map((record) => {
+      const details = record.details as Record<string, unknown>;
+      const savedRows = Array.isArray(details.testRows) ? details.testRows : [];
+      const savedAgeRows = savedRows.filter((row) => rowAge(row) === age);
+      return {
+        record,
+        rows: [
+          cubeRowFromSaved(savedAgeRows[0]),
+          cubeRowFromSaved(savedAgeRows[1]),
+        ] as [CubeResultRow, CubeResultRow],
+      };
+    });
+
     setResultEntries(
-      recordsForCastingDate.map((record) => {
-        const details = record.details as Record<string, unknown>;
-        const savedRows = Array.isArray(details.testRows) ? details.testRows : [];
-        const savedAgeRows = savedRows.filter((row) => rowAge(row) === age);
-        return {
-          record,
-          rows: [
-            cubeRowFromSaved(savedAgeRows[0]),
-            cubeRowFromSaved(savedAgeRows[1]),
-          ],
-        };
-      }),
+      sortByReferenceNumber(entries, (entry) => referenceNumber(entry.record)),
     );
     setAddResultsStep("results");
   };
@@ -659,70 +661,72 @@ export default function Reports() {
                   </p>
                 </div>
               ) : (
-                <div className="max-h-[58vh] space-y-4 overflow-y-auto pr-1">
-                  {resultEntries.map((entry) => (
-                    <Card key={entry.record.id} className="overflow-hidden border">
-                         <CardHeader className="border-b bg-muted/20 px-4 py-3">
-                           <CardTitle className="text-base">
-                             {referenceNumber(entry.record)}
-                           </CardTitle>
-                           <CardDescription>
-                             {entry.record.recordNo} · {entry.record.location} · {entry.record.material}
-                           </CardDescription>
-                      </CardHeader>
-                      <CardContent className="overflow-x-auto p-0">
-                        <table className="min-w-[980px] w-full text-sm">
-                          <thead className="bg-muted/50">
-                            <tr className="border-b">
-                              <th className="w-20 px-3 py-3 text-left font-semibold">Cube</th>
-                              <th className="w-24 px-3 py-3 text-left font-semibold">Age (days)</th>
-                              <th className="px-2 py-3 text-left font-semibold">Length (mm)</th>
-                              <th className="px-2 py-3 text-left font-semibold">Width (mm)</th>
-                              <th className="px-2 py-3 text-left font-semibold">Height (mm)</th>
-                              <th className="px-2 py-3 text-left font-semibold">Dry Weight</th>
-                              <th className="px-2 py-3 text-left font-semibold">Wet Weight</th>
-                              <th className="px-2 py-3 text-left font-semibold">Load (kN)</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {entry.rows.map((row, rowIndex) => (
-                              <tr key={`${entry.record.id}-${rowIndex}`} className="border-b last:border-b-0">
-                                <td className="px-3 py-2 font-semibold text-muted-foreground">
-                                  {rowIndex + 1}
+                <div className="max-h-[58vh] overflow-y-auto pr-1">
+                  <Card className="overflow-hidden border">
+                    <CardContent className="overflow-x-auto p-0">
+                      <table className="min-w-[1160px] w-full text-sm">
+                        <thead className="bg-muted/50">
+                          <tr className="border-b">
+                            <th className="w-48 px-3 py-3 text-left font-semibold">Reference Number</th>
+                            <th className="w-20 px-3 py-3 text-left font-semibold">Cube</th>
+                            <th className="w-24 px-3 py-3 text-left font-semibold">Age (days)</th>
+                            <th className="px-2 py-3 text-left font-semibold">Length (mm)</th>
+                            <th className="px-2 py-3 text-left font-semibold">Width (mm)</th>
+                            <th className="px-2 py-3 text-left font-semibold">Height (mm)</th>
+                            <th className="px-2 py-3 text-left font-semibold">Dry Weight</th>
+                            <th className="px-2 py-3 text-left font-semibold">Wet Weight</th>
+                            <th className="px-2 py-3 text-left font-semibold">Load (kN)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {resultEntries.flatMap((entry) => entry.rows.map((row, rowIndex) => (
+                            <tr
+                              key={`${entry.record.id}-${rowIndex}`}
+                              className={`border-b ${rowIndex === 0 ? "border-t-2 border-t-primary/20" : ""}`}
+                            >
+                              {rowIndex === 0 && (
+                                <td rowSpan={entry.rows.length} className="align-top px-3 py-3 font-semibold">
+                                  <div>{referenceNumber(entry.record)}</div>
+                                  <div className="mt-1 text-xs font-normal text-muted-foreground">
+                                    {entry.record.recordNo} · {entry.record.location} · {entry.record.material}
+                                  </div>
                                 </td>
-                                <td className="px-3 py-2 font-medium">{cubeAge}</td>
-                                {([
-                                  ["length", "Length"],
-                                  ["width", "Width"],
-                                  ["height", "Height"],
-                                  ["dryWeight", "Dry weight"],
-                                  ["wetWeight", "Wet weight"],
-                                  ["load", "Load"],
-                                ] as const).map(([key, label]) => (
-                                  <td key={key} className="px-2 py-2">
-                                    <Input
-                                      type="number"
-                                      min={0}
-                                      step="any"
-                                      value={row[key]}
-                                      onChange={(event) => updateResultRow(
-                                        entry.record.id,
-                                        rowIndex as 0 | 1,
-                                        key,
-                                        event.target.value,
-                                      )}
-                                      aria-label={`${label} for ${referenceNumber(entry.record)}, row ${rowIndex + 1}`}
-                                      placeholder={key === "length" || key === "width" || key === "height" ? "100" : ""}
-                                    />
-                                  </td>
-                                ))}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </CardContent>
-                    </Card>
-                  ))}
+                              )}
+                              <td className="px-3 py-2 font-semibold text-muted-foreground">
+                                {rowIndex + 1}
+                              </td>
+                              <td className="px-3 py-2 font-medium">{cubeAge}</td>
+                              {([
+                                ["length", "Length"],
+                                ["width", "Width"],
+                                ["height", "Height"],
+                                ["dryWeight", "Dry weight"],
+                                ["wetWeight", "Wet weight"],
+                                ["load", "Load"],
+                              ] as const).map(([key, label]) => (
+                                <td key={key} className="px-2 py-2">
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    step="any"
+                                    value={row[key]}
+                                    onChange={(event) => updateResultRow(
+                                      entry.record.id,
+                                      rowIndex as 0 | 1,
+                                      key,
+                                      event.target.value,
+                                    )}
+                                    aria-label={`${label} for ${referenceNumber(entry.record)}, row ${rowIndex + 1}`}
+                                    placeholder={key === "length" || key === "width" || key === "height" ? "100" : ""}
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          )))}
+                        </tbody>
+                      </table>
+                    </CardContent>
+                  </Card>
                 </div>
               )}
               <DialogFooter className="border-t pt-4">

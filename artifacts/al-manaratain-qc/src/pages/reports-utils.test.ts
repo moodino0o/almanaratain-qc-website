@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { DailyReadyMixResult } from "@workspace/api-client-react";
-import { groupDailyResults } from "./reports-utils";
+import { groupDailyResults, sortByReferenceNumber } from "./reports-utils";
 
 const record = ({
   id,
@@ -130,4 +130,20 @@ test("keeps a single-mix filter in the same nested hierarchy", () => {
 
 test("returns no hierarchy for an empty result set", () => {
   assert.deepEqual(groupDailyResults([]), []);
+});
+
+test("sorts Ready Mix references by H number, then S number", () => {
+  const entries = [
+    { referenceNumber: "S.253" },
+    { referenceNumber: "H.10" },
+    { referenceNumber: "S.2" },
+    { referenceNumber: "H.2" },
+    { referenceNumber: "H.1" },
+  ];
+
+  assert.deepEqual(
+    sortByReferenceNumber(entries, (entry) => entry.referenceNumber)
+      .map((entry) => entry.referenceNumber),
+    ["H.1", "H.2", "H.10", "S.2", "S.253"],
+  );
 });
