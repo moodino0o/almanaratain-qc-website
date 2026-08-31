@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type KeyboardEvent } from "react";
 import {
   DailyReadyMixReferenceType,
   TestType,
@@ -112,6 +112,30 @@ const cubeRowFromSaved = (row: unknown): CubeResultRow => {
     wetWeight: stringValue(values.wetWeight),
     load: stringValue(values.load),
   };
+};
+
+const handleCubeInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+  if (event.key !== "Enter") return;
+
+  event.preventDefault();
+  const currentRow = event.currentTarget.closest<HTMLElement>("[data-cube-result-row]");
+  if (!currentRow) return;
+
+  const rows = Array.from(
+    document.querySelectorAll<HTMLElement>("[data-cube-result-row]"),
+  );
+  const currentRowIndex = rows.indexOf(currentRow);
+  if (currentRowIndex < 0) return;
+
+  const getNavigableInputs = (row: HTMLElement) =>
+    Array.from(row.querySelectorAll<HTMLInputElement>("[data-cube-navigation-input]"));
+  const currentRowInputs = getNavigableInputs(currentRow);
+  const currentInputIndex = currentRowInputs.indexOf(event.currentTarget);
+  const candidateInputs = [
+    ...currentRowInputs.slice(currentInputIndex + 1),
+    ...rows.slice(currentRowIndex + 1).flatMap(getNavigableInputs),
+  ];
+  candidateInputs.find((input) => input.value.trim() === "")?.focus();
 };
 
 export default function Reports() {
@@ -682,6 +706,7 @@ export default function Reports() {
                           {resultEntries.flatMap((entry) => entry.rows.map((row, rowIndex) => (
                             <tr
                               key={`${entry.record.id}-${rowIndex}`}
+                              data-cube-result-row
                               className={`border-b ${rowIndex === 0 ? "border-t-2 border-t-primary/20" : ""}`}
                             >
                               {rowIndex === 0 && (
@@ -710,6 +735,8 @@ export default function Reports() {
                                     min={0}
                                     step="any"
                                     value={row[key]}
+                                    onKeyDown={handleCubeInputKeyDown}
+                                    data-cube-navigation-input={key === "dryWeight" || key === "wetWeight" || key === "load" ? "true" : undefined}
                                     onChange={(event) => updateResultRow(
                                       entry.record.id,
                                       rowIndex as 0 | 1,
