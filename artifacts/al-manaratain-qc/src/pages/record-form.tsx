@@ -516,10 +516,16 @@ export default function RecordForm() {
 
     createRecord.mutate({ data: payload }, {
       onSuccess: (newRecord) => {
-        toast.success(`Record ${newRecord.recordNo} has been saved.`);
         queryClient.invalidateQueries({ queryKey: getListRecordsQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetDashboardQueryKey() });
-          queryClient.invalidateQueries({ queryKey: ["/api/daily-ready-mix-results"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/daily-ready-mix-results"] });
+
+        if (!isEditing && requestedAction === "duplicate") {
+          toast.success(`Record ${newRecord.recordNo} has been saved. The form is ready for the next record.`);
+          return;
+        }
+
+        toast.success(`Record ${newRecord.recordNo} has been saved.`);
         setLocation(`/records/${newRecord.id}`);
       },
       onError: () => {
@@ -554,21 +560,19 @@ export default function RecordForm() {
             </p>
           </div>
         </div>
-        {isEditing && (
-          <Button
-            type="button"
-            variant="outline"
-            className="shrink-0 self-start"
-            onClick={() => {
-              submitAction.current = "duplicate";
-              formRef.current?.requestSubmit();
-            }}
-            disabled={createRecord.isPending || updateRecord.isPending}
-          >
-            <Copy className="mr-2 h-4 w-4" />
-            Save & Duplicate
-          </Button>
-        )}
+        <Button
+          type="button"
+          variant="outline"
+          className="shrink-0 self-start"
+          onClick={() => {
+            submitAction.current = "duplicate";
+            formRef.current?.requestSubmit();
+          }}
+          disabled={createRecord.isPending || updateRecord.isPending}
+        >
+          <Copy className="mr-2 h-4 w-4" />
+          Save & Duplicate
+        </Button>
       </div>
 
       <form
