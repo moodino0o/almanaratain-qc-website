@@ -157,10 +157,12 @@ export const blockSizeMatches = (left: unknown, right: unknown) => {
   if (leftText && leftText === rightText) return true;
   const leftDimensions = blockDimensionsFromSize(left);
   const rightDimensions = blockDimensionsFromSize(right);
-  return Boolean(leftDimensions && rightDimensions) &&
+  if (!leftDimensions || !rightDimensions) return false;
+  return (
     leftDimensions.length === rightDimensions.length &&
     leftDimensions.width === rightDimensions.width &&
-    leftDimensions.height === rightDimensions.height;
+    leftDimensions.height === rightDimensions.height
+  );
 };
 
 export const blockMaterialMatches = (
