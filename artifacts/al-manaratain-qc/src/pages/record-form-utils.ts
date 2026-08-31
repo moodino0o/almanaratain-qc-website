@@ -135,6 +135,45 @@ export const blockDimensionsFromSize = (value: unknown): BlockDimensions | null 
   };
 };
 
+const normalizedBlockType = (value: unknown) => {
+  const text = stringValue(value)
+    .trim()
+    .toLocaleLowerCase()
+    .replace(/''/g, '"')
+    .replace(/\s+/g, " ");
+  if (/^(plain|lined|sandwich insulation) block$/.test(text)) return text;
+  const legacyType = text.match(
+    /^(?:4|6|8|12)\s*(?:"|inches?|in)?\s+(plain|lined|sandwich insulation)\s+block$/,
+  );
+  return legacyType ? `${legacyType[1]} block` : text;
+};
+
+export const blockTypeMatches = (left: unknown, right: unknown) =>
+  Boolean(normalizedBlockType(left)) && normalizedBlockType(left) === normalizedBlockType(right);
+
+export const blockSizeMatches = (left: unknown, right: unknown) => {
+  const leftText = stringValue(left).trim().toLocaleLowerCase().replace(/\s+/g, "");
+  const rightText = stringValue(right).trim().toLocaleLowerCase().replace(/\s+/g, "");
+  if (leftText && leftText === rightText) return true;
+  const leftDimensions = blockDimensionsFromSize(left);
+  const rightDimensions = blockDimensionsFromSize(right);
+  return Boolean(leftDimensions && rightDimensions) &&
+    leftDimensions.length === rightDimensions.length &&
+    leftDimensions.width === rightDimensions.width &&
+    leftDimensions.height === rightDimensions.height;
+};
+
+export const blockMaterialMatches = (
+  standardMaterial: unknown,
+  recordMaterial: unknown,
+  recordBlockType: unknown,
+) => {
+  const standard = stringValue(standardMaterial).trim().toLocaleLowerCase();
+  const record = stringValue(recordMaterial).trim().toLocaleLowerCase();
+  return standard === record ||
+    (standard === "concrete block" && blockTypeMatches(recordMaterial, recordBlockType));
+};
+
 export const toFormRow = (row: unknown, id: number): TestRow => {
   const values = typeof row === "object" && row !== null ? row as Record<string, unknown> : {};
   return {

@@ -113,6 +113,46 @@ export function blockDimensionsFromSize(value: unknown): BlockDimensions | null 
   };
 }
 
+function normalizedBlockType(value: unknown) {
+  const text = textValue(value)
+    ?.toLocaleLowerCase()
+    .replace(/''/g, '"')
+    .replace(/\s+/g, " ") ?? "";
+  if (/^(plain|lined|sandwich insulation) block$/.test(text)) return text;
+  const legacyType = text.match(
+    /^(?:4|6|8|12)\s*(?:"|inches?|in)?\s+(plain|lined|sandwich insulation)\s+block$/,
+  );
+  return legacyType ? `${legacyType[1]} block` : text;
+}
+
+function blockTypeMatches(left: unknown, right: unknown) {
+  return Boolean(normalizedBlockType(left)) &&
+    normalizedBlockType(left) === normalizedBlockType(right);
+}
+
+function blockSizeMatches(left: unknown, right: unknown) {
+  const leftText = normalizedText(left);
+  const rightText = normalizedText(right);
+  if (leftText && leftText === rightText) return true;
+  const leftDimensions = blockDimensionsFromSize(left);
+  const rightDimensions = blockDimensionsFromSize(right);
+  return Boolean(leftDimensions && rightDimensions) &&
+    leftDimensions.length === rightDimensions.length &&
+    leftDimensions.width === rightDimensions.width &&
+    leftDimensions.height === rightDimensions.height;
+}
+
+function blockMaterialMatches(
+  standardMaterial: unknown,
+  recordMaterial: unknown,
+  recordBlockType: unknown,
+) {
+  const standard = normalizedText(standardMaterial);
+  const record = normalizedText(recordMaterial);
+  return standard === record ||
+    (standard === "concrete block" && blockTypeMatches(recordMaterial, recordBlockType));
+}
+
 export function normalizeBlockDetails(details: Record<string, unknown>) {
   const rows = Array.isArray(details.testRows) ? details.testRows : null;
   const legacyBlockAge = rows
@@ -155,14 +195,18 @@ function standardMatchesRecord(
   const blockSize = textValue(record.details.blockSize);
   if (
     standard.testType !== record.testType ||
-    normalizedText(standard.material) !== normalizedText(record.material)
+    !blockMaterialMatches(
+      standard.material,
+      record.material,
+      blockType,
+    )
   ) {
     return false;
   }
   if (record.testType !== "Blocks") return true;
   return (
-    normalizedText(standard.blockType) === normalizedText(blockType) &&
-    normalizedText(standard.blockSize) === normalizedText(blockSize)
+    blockTypeMatches(standard.blockType, blockType) &&
+    blockSizeMatches(standard.blockSize, blockSize)
   );
 }
 

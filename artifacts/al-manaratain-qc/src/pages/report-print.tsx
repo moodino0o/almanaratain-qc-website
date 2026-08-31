@@ -12,6 +12,7 @@ import type {
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer } from "lucide-react";
+import { blockMaterialMatches, blockSizeMatches, blockTypeMatches } from "./record-form-utils";
 
 type DetailMap = QcRecord["details"];
 type ValueMap = Record<string, unknown>;
@@ -52,7 +53,13 @@ function matchesText(left: unknown, right: unknown) {
 function strengthStandardMatchesRecord(standard: StrengthStandard, record: QcRecord) {
   if (
     standard.testType !== record.testType ||
-    !matchesText(standard.material, record.material)
+    (record.testType === "Blocks"
+      ? !blockMaterialMatches(
+        standard.material,
+        record.material,
+        detailValue(record.details, ["blockType"], ""),
+      )
+      : !matchesText(standard.material, record.material))
   ) {
     return false;
   }
@@ -61,8 +68,8 @@ function strengthStandardMatchesRecord(standard: StrengthStandard, record: QcRec
   const blockSize = detailValue(record.details, ["blockSize"], "");
   return Boolean(blockType) &&
     Boolean(blockSize) &&
-    matchesText(standard.blockType, blockType) &&
-    matchesText(standard.blockSize, blockSize);
+    blockTypeMatches(standard.blockType, blockType) &&
+    blockSizeMatches(standard.blockSize, blockSize);
 }
 
 function formatNumber(value: number, digits = 1) {

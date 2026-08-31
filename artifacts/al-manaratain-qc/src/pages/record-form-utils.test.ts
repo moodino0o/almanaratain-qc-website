@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { RecordStatus, TestType, type QcRecord } from "@workspace/api-client-react";
-import { blockDimensionsFromSize, prepareRecordForForm } from "./record-form-utils";
+import {
+  blockDimensionsFromSize,
+  blockMaterialMatches,
+  blockSizeMatches,
+  blockTypeMatches,
+  prepareRecordForForm,
+} from "./record-form-utils";
 
 const baseRecord = (
   testType: QcRecord["testType"],
@@ -35,6 +41,12 @@ test("maps Block inch sizes to default dimensions", () => {
     width: "250",
     height: "200",
   });
+});
+
+test("matches legacy Block labels to canonical standards", () => {
+  assert.equal(blockTypeMatches('8" Plain Block', "Plain Block"), true);
+  assert.equal(blockSizeMatches("400*200*200", '8"'), true);
+  assert.equal(blockMaterialMatches("Concrete Block", '8" Plain Block', '8" Plain Block'), true);
 });
 
 test("copies Ready Mix fields, reference information, and cube rows", () => {

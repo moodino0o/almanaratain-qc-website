@@ -15,6 +15,9 @@ import { TypeaheadInput } from "@/components/ui/typeahead-input";
 import {
   calculateWaterAbsorption,
   blockDimensionsFromSize,
+  blockMaterialMatches,
+  blockSizeMatches,
+  blockTypeMatches,
   createEmptyRow,
   prepareDetailsForForm,
   sieveSizeNumber,
@@ -265,10 +268,12 @@ export default function RecordForm() {
     return (strengthStandards ?? [])
       .filter((standard) => (
         standard.testType === testType &&
-        standard.material.trim().toLocaleLowerCase() === normalizedMaterial &&
+        (testType === TestType.Blocks
+          ? blockMaterialMatches(standard.material, material, details.blockType)
+          : standard.material.trim().toLocaleLowerCase() === normalizedMaterial) &&
         (testType !== TestType.Blocks ||
-          (standard.blockType?.trim().toLocaleLowerCase() === String(details.blockType ?? "").trim().toLocaleLowerCase() &&
-            standard.blockSize?.trim().toLocaleLowerCase() === String(details.blockSize ?? "").trim().toLocaleLowerCase()))
+          (blockTypeMatches(standard.blockType, details.blockType) &&
+            blockSizeMatches(standard.blockSize, details.blockSize)))
       ))
       .sort((left, right) => left.id - right.id);
   }, [details.blockSize, details.blockType, material, strengthStandards, testType]);

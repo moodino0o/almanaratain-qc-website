@@ -106,6 +106,29 @@ test("normalizes Block age once and fills only missing dimensions", () => {
   ]);
 });
 
+test("matches legacy Block labels to canonical standards", () => {
+  const result = evaluateStrengthRecord(
+    {
+      testType: "Blocks",
+      material: '8" Plain Block',
+      details: {
+        blockType: '8" Plain Block',
+        blockSize: "400*200*200",
+        blockAge: 28,
+        testRows: [{ length: 400, width: 200, load: 800 }],
+      },
+    },
+    [blockStandard({
+      blockType: "Plain Block",
+      blockSize: '8"',
+      requiredStrength: "7.5",
+    })],
+  );
+
+  assert.equal(result.status, "Passed");
+  assert.equal((result.details.strengthEvaluation as Record<string, unknown>).requiredStrength, 7.5);
+});
+
 test("recomputes percentage standards from sample weight and returned amount", () => {
   const result = evaluateSieveRecord(
     record(),
