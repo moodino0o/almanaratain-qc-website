@@ -49,6 +49,22 @@ function matchesText(left: unknown, right: unknown) {
   return normalizedText(left) === normalizedText(right);
 }
 
+function strengthStandardMatchesRecord(standard: StrengthStandard, record: QcRecord) {
+  if (
+    standard.testType !== record.testType ||
+    !matchesText(standard.material, record.material)
+  ) {
+    return false;
+  }
+  if (record.testType !== "Blocks") return true;
+  const blockType = detailValue(record.details, ["blockType"], "");
+  const blockSize = detailValue(record.details, ["blockSize"], "");
+  return Boolean(blockType) &&
+    Boolean(blockSize) &&
+    matchesText(standard.blockType, blockType) &&
+    matchesText(standard.blockSize, blockSize);
+}
+
 function formatNumber(value: number, digits = 1) {
   return Number.isInteger(value) ? String(value) : value.toFixed(digits);
 }
@@ -347,18 +363,8 @@ function StrengthStandardsTable({
   evaluation: ValueMap | null;
 }) {
   const isBlocks = record.testType === "Blocks";
-  const blockType = detailValue(record.details, ["blockType"], "");
-  const blockSize = detailValue(record.details, ["blockSize"], "");
   const configuredStandards = standards
-    .filter((standard) =>
-      standard.testType === record.testType &&
-      matchesText(standard.material, record.material) &&
-      (!isBlocks ||
-        (Boolean(blockType) &&
-          Boolean(blockSize) &&
-          matchesText(standard.blockType, blockType) &&
-          matchesText(standard.blockSize, blockSize))),
-    )
+    .filter((standard) => strengthStandardMatchesRecord(standard, record))
     .sort((left, right) => left.id - right.id);
   const rows = configuredStandards.length
     ? configuredStandards
@@ -1002,11 +1008,7 @@ export default function ReportPrint() {
     )
     .sort((left, right) => left.id - right.id);
   const configuredStrengthStandard = strengthStandards
-    .filter(
-      (standard) =>
-        standard.testType === record.testType &&
-        matchesText(standard.material, record.material),
-    )
+    .filter((standard) => strengthStandardMatchesRecord(standard, record))
     .sort((left, right) => left.id - right.id)[0];
   const reportStrengthStandard =
     record.testType === "Ready Mix" ? activeStrengthStandard : configuredStrengthStandard;
