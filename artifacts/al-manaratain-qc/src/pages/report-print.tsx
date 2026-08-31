@@ -734,16 +734,23 @@ function ReadyMixReport({
   );
 }
 
-function RecordContextFields({ record }: { record: QcRecord }) {
+function RecordContextFields({
+  record,
+  includeSampleDate = true,
+}: {
+  record: QcRecord;
+  includeSampleDate?: boolean;
+}) {
+  const entries = [
+    ["Location", record.location],
+    ["Material", record.material],
+    ["Tested By", record.testedBy],
+  ] as [string, string][];
+  if (includeSampleDate) {
+    entries.unshift(["Sample Date", formatReportDate(record.sampleDate)]);
+  }
   return (
-    <ReportFields
-      entries={[
-        ["Sample Date", formatReportDate(record.sampleDate)],
-        ["Location", record.location],
-        ["Material", record.material],
-        ["Tested By", record.testedBy],
-      ]}
-    />
+    <ReportFields entries={entries} />
   );
 }
 
@@ -776,7 +783,7 @@ function BlocksReport({
               ["Block Size", detailValue(details, ["blockSize"])],
               ["Block No.", detailValue(details, ["blockNo", "blockNumber"])],
               ["Machine", detailValue(details, ["machine"])],
-              ["Casting Date (Sample Date)", formatReportDate(record.sampleDate)],
+              ["Casting Date", formatReportDate(record.sampleDate)],
               ["Testing Date", formatReportDate(testingDate)],
               ["Block Age", blockAge === null ? "-" : `${formatNumber(blockAge)} days`],
             ]}
@@ -799,7 +806,7 @@ function BlocksReport({
       <div className="report-two-column report-test-details">
         <section>
           <SectionHeading>Test Information</SectionHeading>
-          <RecordContextFields record={record} />
+          <RecordContextFields record={record} includeSampleDate={false} />
         </section>
         <section className="report-test-measures">
           <ReportFields
