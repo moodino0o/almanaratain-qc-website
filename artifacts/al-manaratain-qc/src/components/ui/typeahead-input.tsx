@@ -79,6 +79,9 @@ export function TypeaheadInput({
       onChange(nextValue);
       setShowAllOptions(false);
       setOpen(false);
+    } catch {
+      // The parent callback reports the specific creation error; keep the
+      // typed value and menu available so the user can correct or retry.
     } finally {
       setIsCreatingOption(false);
     }
