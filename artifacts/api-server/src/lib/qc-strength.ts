@@ -44,6 +44,12 @@ type RecordForStrength = {
   details: Record<string, unknown>;
 };
 
+export type BlockDimensions = {
+  length: number;
+  width: number;
+  height: number;
+};
+
 const AUTOMATED_TEST_TYPES = new Set(["Ready Mix", "Blocks"]);
 const DEFAULT_STRENGTH_UNIT = "N/mm²";
 
@@ -74,6 +80,71 @@ function normalizedText(value: unknown): string | null {
 function referenceId(value: unknown): number | null {
   const parsed = numericValue(value);
   return parsed !== null && Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+export function blockDimensionsFromSize(value: unknown): BlockDimensions | null {
+  const text = textValue(value);
+  if (!text) return null;
+
+  const dimensionParts = text.match(/\d+(?:\.\d+)?/g);
+  if (dimensionParts && /[*x×]/i.test(text) && dimensionParts.length >= 3) {
+    const dimensions = dimensionParts.slice(0, 3).map(Number);
+    if (dimensions.every((dimension) => Number.isFinite(dimension) && dimension > 0)) {
+      return {
+        length: dimensions[0],
+        width: dimensions[1],
+        height: dimensions[2],
+      };
+    }
+  }
+
+  const inchSize = text.match(/^(4|6|8|12)\s*(?:"|''|inches?|in)?$/i)?.[1];
+  if (!inchSize) return null;
+  const widthByInchSize: Record<string, number> = {
+    "4": 100,
+    "6": 150,
+    "8": 200,
+    "12": 250,
+  };
+  return {
+    length: 400,
+    width: widthByInchSize[inchSize],
+    height: 200,
+  };
+}
+
+export function normalizeBlockDetails(details: Record<string, unknown>) {
+  const rows = Array.isArray(details.testRows) ? details.testRows : null;
+  const legacyBlockAge = rows
+    ?.map((row) => (
+      typeof row === "object" && row !== null
+        ? textValue((row as Record<string, unknown>).sampleAge)
+        : null
+    ))
+    .find((value): value is string => value !== null) ?? null;
+  const blockAge = textValue(details.blockAge) ?? legacyBlockAge;
+  const dimensions = blockDimensionsFromSize(details.blockSize);
+
+  return {
+    ...details,
+    ...(blockAge ? { blockAge } : {}),
+    ...(rows
+      ? {
+          testRows: rows.map((row) => {
+            if (typeof row !== "object" || row === null) return row;
+            const values = { ...(row as Record<string, unknown>) };
+            delete values.sampleAge;
+            delete values.testAge;
+            if (dimensions) {
+              if (numericValue(values.length) === null) values.length = dimensions.length;
+              if (numericValue(values.width) === null) values.width = dimensions.width;
+              if (numericValue(values.height) === null) values.height = dimensions.height;
+            }
+            return values;
+          }),
+        }
+      : {}),
+  };
 }
 
 function standardMatchesRecord(
@@ -177,10 +248,13 @@ export function evaluateStrengthRecord(
     };
   }
 
-  const standard = matchingStandard(record, standards);
+  const normalizedDetails =
+    record.testType === "Blocks" ? normalizeBlockDetails(record.details) : record.details;
+  const normalizedRecord = { ...record, details: normalizedDetails };
+  const standard = matchingStandard(normalizedRecord, standards);
   const requiredStrength =
     standard === undefined ? null : numericValue(standard.requiredStrength);
-  const rows = Array.isArray(record.details.testRows) ? record.details.testRows : [];
+  const rows = Array.isArray(normalizedDetails.testRows) ? normalizedDetails.testRows : [];
   const calculatedRows = rows.map(calculateRow);
   const evaluatedRows =
     record.testType === "Ready Mix"
@@ -199,7 +273,10 @@ export function evaluateStrengthRecord(
   const minimumStrength = measuredStrengths.length ? Math.min(...measuredStrengths) : null;
   const maximumStrength = measuredStrengths.length ? Math.max(...measuredStrengths) : null;
   const hasIncompleteMeasurements =
-    evaluatedRows.length === 0 || evaluatedRows.some((row) => !row.complete);
+    evaluatedRows.length === 0 ||
+    evaluatedRows.some((row) => !row.complete) ||
+    (record.testType === "Blocks" &&
+      (dayAge(normalizedDetails.blockAge) === null || dayAge(normalizedDetails.blockAge)! <= 0));
   const averageBelowRequired =
     requiredStrength !== null &&
     averageStrength !== null &&
@@ -209,7 +286,7 @@ export function evaluateStrengthRecord(
   let reason: string | null =
     record.testType === "Ready Mix"
       ? "A complete 28-day cube result is required."
-      : "Complete specimen load and dimensions are required.";
+      : "Complete specimen load, dimensions, and Block age are required.";
   if (!standard) {
     reason =
       record.testType === "Blocks"
@@ -229,7 +306,7 @@ export function evaluateStrengthRecord(
   }
 
   const details = {
-    ...record.details,
+    ...normalizedDetails,
     testRows: calculatedRows.map((item) => item.row),
     strengthEvaluation: {
       status,

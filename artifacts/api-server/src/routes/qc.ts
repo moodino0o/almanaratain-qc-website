@@ -109,12 +109,30 @@ const REFERENCE_SEED = [
   {
     key: "blockTypes",
     label: "Block Types",
-    values: ["8'' Two Piston Block", "8'' Three Piston Block", "8'' Solid Block", "8'' Slotted Insulation Block"],
+    values: [
+      "Plain Block",
+      "Lined Block",
+      "Sandwich Insulation Block",
+      "8'' Two Piston Block",
+      "8'' Three Piston Block",
+      "8'' Solid Block",
+      "8'' Slotted Insulation Block",
+    ],
   },
   {
     key: "blockSizes",
     label: "Block Sizes",
-    values: ["200*200*80", "400*100*200", "400*150*200", "400*200*200", "400*250*200"],
+    values: [
+      '4"',
+      '6"',
+      '8"',
+      '12"',
+      "200*200*80",
+      "400*100*200",
+      "400*150*200",
+      "400*200*200",
+      "400*250*200",
+    ],
   },
   {
     key: "mixStrengths",
@@ -193,15 +211,41 @@ const READY_MIX_DEFAULT_DESIGNS = [
   "50 N SRC Ice",
 ] as const;
 
+const BLOCK_DEFAULT_STANDARDS = [
+  { blockType: "Plain Block", blockSize: '4"', requiredStrength: "7.5" },
+  { blockType: "Plain Block", blockSize: '6"', requiredStrength: "7.5" },
+  { blockType: "Plain Block", blockSize: '8"', requiredStrength: "7.5" },
+  { blockType: "Plain Block", blockSize: '12"', requiredStrength: "7.5" },
+  { blockType: "Lined Block", blockSize: '8"', requiredStrength: "7.5" },
+  { blockType: "Sandwich Insulation Block", blockSize: '8"', requiredStrength: "5" },
+  { blockType: "Sandwich Insulation Block", blockSize: '12"', requiredStrength: "5" },
+] as const;
+
+const strengthStandardKey = (value: {
+  testType: string;
+  material: string;
+  blockType: string | null;
+  blockSize: string | null;
+}) =>
+  [
+    value.testType,
+    value.material,
+    value.blockType ?? "",
+    value.blockSize ?? "",
+  ]
+    .map((part) => part.trim().toLocaleLowerCase())
+    .join("|");
+
 async function ensureDefaultStrengthStandards() {
   if (!strengthSeedPromise) {
     strengthSeedPromise = (async () => {
       const existing = await db
         .select()
         .from(qcStrengthStandardsTable)
-        .where(eq(qcStrengthStandardsTable.testType, "Ready Mix"));
+        .where(inArray(qcStrengthStandardsTable.testType, ["Ready Mix", "Blocks"]));
       const existingMaterials = new Set(existing.map((row) => row.material.trim().toLocaleLowerCase()));
       let insertedDefault = false;
+      const existingKeys = new Set(existing.map((row) => strengthStandardKey(row)));
       for (const material of READY_MIX_DEFAULT_DESIGNS) {
         if (existingMaterials.has(material.toLocaleLowerCase())) continue;
         const grade = Number.parseInt(material, 10);
@@ -217,8 +261,28 @@ async function ensureDefaultStrengthStandards() {
         existingMaterials.add(material.toLocaleLowerCase());
         insertedDefault = true;
       }
+      for (const standard of BLOCK_DEFAULT_STANDARDS) {
+        const key = strengthStandardKey({
+          testType: "Blocks",
+          material: "Concrete Block",
+          blockType: standard.blockType,
+          blockSize: standard.blockSize,
+        });
+        if (existingKeys.has(key)) continue;
+        await db.insert(qcStrengthStandardsTable).values({
+          testType: "Blocks",
+          material: "Concrete Block",
+          blockType: standard.blockType,
+          blockSize: standard.blockSize,
+          bsStandard: "BS EN 771-3",
+          requiredStrength: standard.requiredStrength,
+          strengthUnit: "N/mm²",
+        });
+        existingKeys.add(key);
+        insertedDefault = true;
+      }
       if (insertedDefault || existing.length > 0) {
-        await refreshStrengthEvaluations(["Ready Mix"]);
+        await refreshStrengthEvaluations(["Ready Mix", "Blocks"]);
       }
     })().catch((error) => {
       strengthSeedPromise = null;

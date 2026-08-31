@@ -2,3 +2,4 @@
 - [Reference-data seeding](reference-data-seeding.md) — startup seed reconciliation must add missing categories and items to existing databases instead of returning early.
 - [OpenAPI query dates](openapi-query-dates.md) — date query parameters need string validation because generated Zod query schemas do not coerce them to Date.
 - [OpenAPI Zod compatibility](openapi-zod-compatibility.md) — avoid integer schemas when the pinned generator emits unsupported `z.int()` calls.
+- [Block defaults compatibility](block-defaults-compatibility.md) — new Block defaults use canonical material/type/size labels while legacy labels and dimensions remain readable.

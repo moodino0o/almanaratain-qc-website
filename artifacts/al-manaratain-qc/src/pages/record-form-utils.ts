@@ -35,6 +35,12 @@ export type RecordFormValues = {
   testRows: TestRow[];
 };
 
+export type BlockDimensions = {
+  length: string;
+  width: string;
+  height: string;
+};
+
 const NUMERIC_DETAIL_KEYS = [
   "slump",
   "temperature",
@@ -96,6 +102,37 @@ export const calculateWaterAbsorption = (dryWeight: unknown, wetWeight: unknown)
 export const sieveSizeNumber = (value: string) => {
   const parsed = Number(numericInputValue(value));
   return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
+};
+
+export const blockDimensionsFromSize = (value: unknown): BlockDimensions | null => {
+  const text = stringValue(value).trim();
+  if (!text) return null;
+
+  const dimensionParts = text.match(/\d+(?:\.\d+)?/g);
+  if (dimensionParts && /[*x×]/i.test(text) && dimensionParts.length >= 3) {
+    const dimensions = dimensionParts.slice(0, 3);
+    if (dimensions.every((dimension) => Number(dimension) > 0)) {
+      return {
+        length: dimensions[0],
+        width: dimensions[1],
+        height: dimensions[2],
+      };
+    }
+  }
+
+  const inchSize = text.match(/^(4|6|8|12)\s*(?:"|''|inches?|in)?$/i)?.[1];
+  if (!inchSize) return null;
+  const widthByInchSize: Record<string, string> = {
+    "4": "100",
+    "6": "150",
+    "8": "200",
+    "12": "250",
+  };
+  return {
+    length: "400",
+    width: widthByInchSize[inchSize],
+    height: "200",
+  };
 };
 
 export const toFormRow = (row: unknown, id: number): TestRow => {

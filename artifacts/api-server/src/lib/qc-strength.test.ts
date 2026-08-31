@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { QcStrengthStandardRow } from "@workspace/db";
 import type { SieveStandardForEvaluation } from "./qc-strength";
-import { evaluateSieveRecord, evaluateStrengthRecord } from "./qc-strength";
+import {
+  blockDimensionsFromSize,
+  evaluateSieveRecord,
+  evaluateStrengthRecord,
+  normalizeBlockDetails,
+} from "./qc-strength";
 
 const blockStandard = (
   overrides: Partial<QcStrengthStandardRow> = {},
@@ -28,6 +33,7 @@ const blockRecord = (
   details: {
     blockType: "8'' Solid Block",
     blockSize: "400 x 200 x 200",
+    blockAge: 28,
     testRows: rows,
   },
 });
@@ -75,6 +81,30 @@ const record = (
 
 const criterion = (result: ReturnType<typeof evaluateSieveRecord>) =>
   result.evaluation.criteria[0];
+
+test("maps inch Block sizes to the existing specimen dimensions", () => {
+  assert.deepEqual(blockDimensionsFromSize('4"'), { length: 400, width: 100, height: 200 });
+  assert.deepEqual(blockDimensionsFromSize('6"'), { length: 400, width: 150, height: 200 });
+  assert.deepEqual(blockDimensionsFromSize('8"'), { length: 400, width: 200, height: 200 });
+  assert.deepEqual(blockDimensionsFromSize('12"'), { length: 400, width: 250, height: 200 });
+  assert.deepEqual(blockDimensionsFromSize("400*150*200"), { length: 400, width: 150, height: 200 });
+});
+
+test("normalizes Block age once and fills only missing dimensions", () => {
+  const details = normalizeBlockDetails({
+    blockSize: '8"',
+    testRows: [
+      { rowNo: 1, sampleAge: 28, length: "", width: "", height: "", load: 800 },
+      { rowNo: 2, sampleAge: 28, length: 410, width: 205, height: 200, load: 820 },
+    ],
+  });
+
+  assert.equal(details.blockAge, "28");
+  assert.deepEqual(details.testRows, [
+    { rowNo: 1, length: 400, width: 200, height: 200, load: 800 },
+    { rowNo: 2, length: 410, width: 205, height: 200, load: 820 },
+  ]);
+});
 
 test("recomputes percentage standards from sample weight and returned amount", () => {
   const result = evaluateSieveRecord(

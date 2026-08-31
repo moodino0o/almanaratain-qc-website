@@ -83,6 +83,13 @@ function formatReportDate(value: string | undefined | null) {
     .replace(/ /g, "-");
 }
 
+function addDaysToDate(value: string, days: number) {
+  const date = new Date(`${value.slice(0, 10)}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) return null;
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString();
+}
+
 function numericStrength(value: string) {
   const number = Number.parseFloat(value);
   return Number.isFinite(number) ? number : null;
@@ -201,6 +208,16 @@ function strengthSummary(rows: unknown[]) {
   };
 }
 
+function blockAgeFromRecord(details: DetailMap, rows: unknown[]) {
+  const configuredAge = numericValue(details.blockAge);
+  if (configuredAge !== null && configuredAge > 0) return configuredAge;
+  for (const row of rows) {
+    const age = cubeRowAge(row);
+    if (age !== null && age > 0) return age;
+  }
+  return null;
+}
+
 function ReadyMixAverageStrengthTable({ rows }: { rows: unknown[] }) {
   const ages = [...new Set(
     rows
@@ -240,9 +257,11 @@ function ReadyMixAverageStrengthTable({ rows }: { rows: unknown[] }) {
 function SpecimenRowsTable({
   rows,
   ageLabel,
+  showAge = true,
 }: {
   rows: unknown[];
   ageLabel: string;
+  showAge?: boolean;
 }) {
   if (!hasSpecimenMeasurements(rows)) return null;
   return (
@@ -252,7 +271,7 @@ function SpecimenRowsTable({
         <thead>
           <tr>
             <th>No.</th>
-            <th>{ageLabel}</th>
+            {showAge && <th>{ageLabel}</th>}
             <th>Length (mm)</th>
             <th>Width (mm)</th>
             <th>Height (mm)</th>
@@ -272,7 +291,7 @@ function SpecimenRowsTable({
             return (
               <tr key={index}>
                 <td>{textValue(values.rowNo, String(index + 1))}</td>
-                <td>{textValue(values.testAge || values.sampleAge)}</td>
+                {showAge && <td>{textValue(values.testAge || values.sampleAge)}</td>}
                 <td>{textValue(values.length)}</td>
                 <td>{textValue(values.width)}</td>
                 <td>{textValue(values.height)}</td>
@@ -738,6 +757,8 @@ function BlocksReport({
   const details = record.details;
   const evaluation = objectValue(details.strengthEvaluation);
   const testRows = Array.isArray(details.testRows) ? details.testRows : [];
+  const blockAge = blockAgeFromRecord(details, testRows);
+  const testingDate = blockAge === null ? null : addDaysToDate(record.sampleDate, blockAge);
   const calculatedSummary = strengthSummary(testRows);
   const strengthUnit = textValue(evaluation?.strengthUnit, "N/mm²");
   const averageStrength = numericValue(evaluation?.averageStrength) ?? calculatedSummary.average;
@@ -752,10 +773,12 @@ function BlocksReport({
           <ReportFields
             entries={[
               ["Block Type", detailValue(details, ["blockType"], record.material)],
-              ["Block Size (mm)", detailValue(details, ["blockSize"])],
+              ["Block Size", detailValue(details, ["blockSize"])],
               ["Block No.", detailValue(details, ["blockNo", "blockNumber"])],
               ["Machine", detailValue(details, ["machine"])],
-              ["Sample Date", formatReportDate(record.sampleDate)],
+              ["Casting Date (Sample Date)", formatReportDate(record.sampleDate)],
+              ["Testing Date", formatReportDate(testingDate)],
+              ["Block Age", blockAge === null ? "-" : `${formatNumber(blockAge)} days`],
             ]}
           />
         </section>
@@ -790,7 +813,7 @@ function BlocksReport({
         </section>
       </div>
 
-      <SpecimenRowsTable rows={testRows} ageLabel="Sample Age" />
+      <SpecimenRowsTable rows={testRows} ageLabel="Sample Age" showAge={false} />
       <StrengthStandardsTable record={record} standards={standards} evaluation={evaluation} />
     </>
   );

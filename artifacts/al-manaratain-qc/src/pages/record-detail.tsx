@@ -173,10 +173,12 @@ function MeasurementTable({
 function TestRowsTable({
   rows,
   includeAbsorption,
+  includeAge = true,
   sortByAge = false,
 }: {
   rows: unknown[];
   includeAbsorption: boolean;
+  includeAge?: boolean;
   sortByAge?: boolean;
 }) {
   const displayRows = sortByAge ? sortCubeRowsByAge(rows) : rows;
@@ -186,7 +188,7 @@ function TestRowsTable({
         <thead className="bg-muted/30">
           <tr className="border-b">
             <th className="p-2 text-left">No.</th>
-            <th className="p-2 text-left">Age</th>
+            {includeAge && <th className="p-2 text-left">Age</th>}
             <th className="p-2 text-left">Length (mm)</th>
             <th className="p-2 text-left">Width (mm)</th>
             <th className="p-2 text-left">Height (mm)</th>
@@ -208,7 +210,7 @@ function TestRowsTable({
                 <td className="p-2 font-semibold">
                   {sortByAge ? index + 1 : displayValue(values.rowNo, String(index + 1))}
                 </td>
-                <td className="p-2">{displayValue(values.testAge ?? values.sampleAge)}</td>
+                {includeAge && <td className="p-2">{displayValue(values.testAge ?? values.sampleAge)}</td>}
                 <td className="p-2">{displayValue(values.length)}</td>
                 <td className="p-2">{displayValue(values.width)}</td>
                 <td className="p-2">{displayValue(values.height)}</td>
@@ -404,7 +406,8 @@ export default function RecordDetail() {
   if (record.testType === "Blocks" || record.testType === "Paving Blocks") {
     summaryEntries.push(
       ["Block Type", detailText(recordDetails, "blockType", record.material)],
-      ["Block Size (mm)", detailText(recordDetails, "blockSize")],
+      ["Block Size", detailText(recordDetails, "blockSize")],
+      ["Block Age (days)", detailText(recordDetails, "blockAge")],
       ["Machine", detailText(recordDetails, "machine")],
     );
   }
@@ -559,7 +562,7 @@ export default function RecordDetail() {
             </CardHeader>
             <CardContent className="p-0">
               {specimenRows.length > 0
-                ? <TestRowsTable rows={specimenRows} includeAbsorption={false} />
+                 ? <TestRowsTable rows={specimenRows} includeAbsorption={false} includeAge={false} />
                 : <p className="p-6 text-center text-muted-foreground">No specimen measurements recorded.</p>}
             </CardContent>
           </Card>

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { RecordStatus, TestType, type QcRecord } from "@workspace/api-client-react";
-import { prepareRecordForForm } from "./record-form-utils";
+import { blockDimensionsFromSize, prepareRecordForForm } from "./record-form-utils";
 
 const baseRecord = (
   testType: QcRecord["testType"],
@@ -17,6 +17,24 @@ const baseRecord = (
   testedBy: "ADEL ABBAS EBRAHIM",
   remarks: "Keep this remark",
   details,
+});
+
+test("maps Block inch sizes to default dimensions", () => {
+  assert.deepEqual(blockDimensionsFromSize('4"'), {
+    length: "400",
+    width: "100",
+    height: "200",
+  });
+  assert.deepEqual(blockDimensionsFromSize('8"'), {
+    length: "400",
+    width: "200",
+    height: "200",
+  });
+  assert.deepEqual(blockDimensionsFromSize('12"'), {
+    length: "400",
+    width: "250",
+    height: "200",
+  });
 });
 
 test("copies Ready Mix fields, reference information, and cube rows", () => {

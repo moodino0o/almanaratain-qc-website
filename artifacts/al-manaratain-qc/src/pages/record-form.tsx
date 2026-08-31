@@ -14,6 +14,7 @@ import { Link } from "wouter";
 import { TypeaheadInput } from "@/components/ui/typeahead-input";
 import {
   calculateWaterAbsorption,
+  blockDimensionsFromSize,
   createEmptyRow,
   prepareDetailsForForm,
   sieveSizeNumber,
@@ -59,6 +60,7 @@ export default function RecordForm() {
   const [material, setMaterial] = useState("");
   const [testedBy, setTestedBy] = useState("");
   const [machine, setMachine] = useState("");
+  const [blockAge, setBlockAge] = useState("");
   const [referenceNumber, setReferenceNumber] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerLocation, setCustomerLocation] = useState("");
@@ -70,6 +72,7 @@ export default function RecordForm() {
   const nextRowId = useRef(2);
   const rowInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
   const sieveContextKeyRef = useRef("");
+  const previousBlockSizeRef = useRef("");
 
   const addReferenceDataItem = async (categoryKey: string, value: string) => {
     const category = referenceData?.categories.find((item) => item.key === categoryKey);
@@ -113,6 +116,13 @@ export default function RecordForm() {
     setCustomerName(stringValue(savedDetails.customerName));
     setCustomerLocation(stringValue(savedDetails.customerLocation));
     setMachine(stringValue(savedDetails.machine));
+    const legacyBlockAgeRow = savedRows.find(
+      (row) => typeof row === "object" && row !== null && "sampleAge" in row,
+    );
+    const legacyBlockAge = legacyBlockAgeRow && typeof legacyBlockAgeRow === "object"
+      ? (legacyBlockAgeRow as Record<string, unknown>).sampleAge
+      : "";
+    setBlockAge(numericInputValue(savedDetails.blockAge ?? legacyBlockAge));
     setSelectedStrengthStandardId(stringValue(savedDetails.strengthStandardId));
     setDetails(savedDetails);
     setTestRows(
@@ -132,6 +142,44 @@ export default function RecordForm() {
   const usesTestRows = testType === TestType.Ready_Mix || testType === TestType.Blocks;
   const usesSieveRows = testType === TestType.Sand_Sieve || testType === TestType.Aggregate_Sieve;
   const sieveMassUnit = "g";
+  const blockDimensions = blockDimensionsFromSize(details.blockSize);
+
+  useEffect(() => {
+    if (testType !== TestType.Blocks) {
+      previousBlockSizeRef.current = "";
+      return;
+    }
+
+    const nextBlockSize = String(details.blockSize ?? "").trim();
+    const nextDimensions = blockDimensionsFromSize(nextBlockSize);
+    const previousDimensions = blockDimensionsFromSize(previousBlockSizeRef.current);
+    previousBlockSizeRef.current = nextBlockSize;
+    if (!nextDimensions) return;
+
+    setTestRows((previousRows) =>
+      previousRows.map((row) => {
+        const matchesPreviousDefaults = previousDimensions &&
+          row.length === String(previousDimensions.length) &&
+          row.width === String(previousDimensions.width) &&
+          row.height === String(previousDimensions.height);
+        const hasDimensions = Boolean(row.length || row.width || row.height);
+        if (hasDimensions && !matchesPreviousDefaults) {
+          return {
+            ...row,
+            length: row.length || String(nextDimensions.length),
+            width: row.width || String(nextDimensions.width),
+            height: row.height || String(nextDimensions.height),
+          };
+        }
+        return {
+          ...row,
+          length: String(nextDimensions.length),
+          width: String(nextDimensions.width),
+          height: String(nextDimensions.height),
+        };
+      }),
+    );
+  }, [details.blockSize, testType]);
 
   const materialReferenceItems = useMemo(
     () => referenceData?.categories.find((category) => category.key === "materials")?.items ?? [],
@@ -400,6 +448,13 @@ export default function RecordForm() {
       toast.error(`Reference Number must be ${REFERENCE_NUMBER_MAX_LENGTH} characters or fewer.`);
       return;
     }
+    if (
+      testType === TestType.Blocks &&
+      (!blockAge.trim() || !Number.isFinite(Number(blockAge)) || Number(blockAge) <= 0)
+    ) {
+      toast.error("Please enter a valid Block age in days.");
+      return;
+    }
 
     let payloadDetails: Record<string, unknown> = { ...details };
 
@@ -437,6 +492,7 @@ export default function RecordForm() {
     }
     if (testType === TestType.Blocks) {
       payloadDetails.machine = machine;
+      payloadDetails.blockAge = blockAge.trim();
     }
 
     if (usesTestRows) {
@@ -444,10 +500,10 @@ export default function RecordForm() {
         rowNo: index + 1,
         ...(testType === TestType.Ready_Mix
           ? { testAge: row.testAge }
-          : { sampleAge: row.sampleAge }),
-        length: row.length,
-        width: row.width,
-        height: row.height,
+          : {}),
+        length: row.length || (testType === TestType.Blocks ? blockDimensions?.length : ""),
+        width: row.width || (testType === TestType.Blocks ? blockDimensions?.width : ""),
+        height: row.height || (testType === TestType.Blocks ? blockDimensions?.height : ""),
         dryWeight: row.dryWeight,
         wetWeight: row.wetWeight,
         ...(testType === TestType.Ready_Mix
@@ -745,6 +801,16 @@ export default function RecordForm() {
                       placeholder="Enter block machine"
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label>Block Age (days) <span className="text-destructive">*</span></Label>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      value={blockAge}
+                      onChange={(event) => setBlockAge(event.target.value)}
+                      placeholder="e.g. 28"
+                    />
+                  </div>
                 </>
               )}
             </CardContent>
@@ -816,7 +882,9 @@ export default function RecordForm() {
                     <div className="rounded-md border border-primary/20 bg-primary/[0.04] px-4 py-3 text-sm">
                       {applicableStandard ? (
                         <span>
-                           Automatic evaluation: 28-day cubes are compared with{" "}
+                          Automatic evaluation: {testType === TestType.Blocks
+                            ? "the average Block sample strength is compared with"
+                            : "28-day cubes are compared with"}{" "}
                           <strong>{applicableStandard.requiredStrength} {applicableStandard.strengthUnit}</strong>{" "}
                           under <strong>{applicableStandard.bsStandard}</strong>.
                         </span>
@@ -854,9 +922,7 @@ export default function RecordForm() {
                             <th className="px-3 py-3 text-left font-semibold">Sieve / Pore Size</th>
                           ) : testType === TestType.Ready_Mix ? (
                             <th className="px-3 py-3 text-left font-semibold">Test Age</th>
-                          ) : (
-                            <th className="px-3 py-3 text-left font-semibold">Sample Age</th>
-                          )}
+                          ) : null}
                           {usesSieveRows ? (
                             <>
                               <th className="px-3 py-3 text-left font-semibold">Standard</th>
@@ -942,7 +1008,8 @@ export default function RecordForm() {
                               </>
                             ) : (
                             <>
-                            <td className="px-2 py-2">
+                            {testType === TestType.Ready_Mix && (
+                              <td className="px-2 py-2">
                               <Input
                                 ref={element => {
                                   rowInputRefs.current[row.id] = element;
@@ -956,6 +1023,7 @@ export default function RecordForm() {
                                 aria-label={`${testType === TestType.Ready_Mix ? "Test" : "Sample"} age for row ${rowIndex + 1}`}
                               />
                             </td>
+                            )}
                             {(["length", "width", "height", "dryWeight", "wetWeight"] as const).map(key => (
                               <td key={key} className="px-2 py-2">
                                 <Input
@@ -964,7 +1032,13 @@ export default function RecordForm() {
                                   value={row[key]}
                                   onChange={event => updateTestRow(rowIndex, key, event.target.value)}
                                   onKeyDown={event => handleTestRowKeyDown(event, rowIndex)}
-                                  placeholder={key === "dryWeight" || key === "wetWeight" ? "kg" : "mm"}
+                                   placeholder={
+                                     testType === TestType.Blocks && ["length", "width", "height"].includes(key)
+                                       ? "Auto from size"
+                                       : key === "dryWeight" || key === "wetWeight"
+                                         ? "kg"
+                                         : "mm"
+                                   }
                                   aria-label={`${key} for row ${rowIndex + 1}`}
                                 />
                               </td>
