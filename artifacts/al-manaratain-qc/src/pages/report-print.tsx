@@ -109,6 +109,18 @@ function numericValue(value: unknown) {
   return Number.isFinite(number) ? number : null;
 }
 
+function hasSieveSize(value: unknown) {
+  return typeof value === "string"
+    ? value.trim().length > 0
+    : value !== null && value !== undefined;
+}
+
+function hasSieveEntry(value: unknown) {
+  return typeof value === "string"
+    ? value.trim().length > 0
+    : value !== null && value !== undefined;
+}
+
 function calculatedDensity(values: ValueMap) {
   const storedDensity = numericValue(values.density ?? values.densityKgM3);
   if (storedDensity !== null) return formatNumber(storedDensity);
@@ -317,7 +329,16 @@ function SpecimenRowsTable({
 }
 
 function SieveRowsTable({ rows }: { rows: unknown[] }) {
-  if (!rows.length) return null;
+  const visibleRows = rows.filter((row) => {
+    const values = typeof row === "object" && row !== null
+      ? row as Record<string, unknown> : {};
+    return hasSieveSize(values.sieveSize) && [
+      values.amountReturned,
+      values.passingAmount,
+      values.passingPercentage,
+    ].some(hasSieveEntry);
+  });
+  if (!visibleRows.length) return null;
   return (
     <div className="report-specimen-block">
       <p className="report-centered-title">Sieve Measurements:</p>
@@ -332,12 +353,12 @@ function SieveRowsTable({ rows }: { rows: unknown[] }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, index) => {
+          {visibleRows.map((row, index) => {
             const values = typeof row === "object" && row !== null
               ? row as Record<string, unknown> : {};
             return (
               <tr key={index}>
-                <td>{textValue(values.rowNo, String(index + 1))}</td>
+                <td>{index + 1}</td>
                 <td>{textValue(values.sieveSize)}</td>
                 <td>{textValue(values.amountReturned)}</td>
                 <td>{textValue(values.passingAmount)}</td>
@@ -354,7 +375,12 @@ function SieveRowsTable({ rows }: { rows: unknown[] }) {
 function SieveEvaluationTable({ value }: { value: unknown }) {
   if (typeof value !== "object" || value === null) return null;
   const evaluation = value as Record<string, unknown>;
-  const criteria = Array.isArray(evaluation.criteria) ? evaluation.criteria : [];
+  const criteria = (Array.isArray(evaluation.criteria) ? evaluation.criteria : []).filter((criterion) => {
+    const item = typeof criterion === "object" && criterion !== null
+      ? criterion as Record<string, unknown> : {};
+    return hasSieveSize(item.sieveSize);
+  });
+  if (!criteria.length) return null;
   return (
     <div className="report-evaluation-block">
       <p className="report-centered-title">
@@ -550,7 +576,8 @@ function SieveStandardsTable({
     .filter(
       (standard) =>
         standard.testType === record.testType &&
-        matchesText(standard.material, record.material),
+        matchesText(standard.material, record.material) &&
+        hasSieveSize(standard.sieveSize),
     )
     .sort((left, right) => left.id - right.id);
 
