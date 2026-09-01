@@ -7,7 +7,6 @@ import {
 } from "@workspace/api-client-react";
 import type {
   QcRecord,
-  SieveStandard,
   StrengthStandard,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -565,55 +564,6 @@ function ReadyMixComplianceBlock({
   );
 }
 
-function SieveStandardsTable({
-  standards,
-  record,
-}: {
-  standards: SieveStandard[];
-  record: QcRecord;
-}) {
-  const matchingStandards = standards
-    .filter(
-      (standard) =>
-        standard.testType === record.testType &&
-        matchesText(standard.material, record.material) &&
-        hasSieveSize(standard.sieveSize),
-    )
-    .sort((left, right) => left.id - right.id);
-
-  if (!matchingStandards.length) return null;
-
-  return (
-    <div className="report-standard-block report-sieve-standard-block">
-      <p className="report-centered-title">
-        Applicable Sieve Standard: {matchingStandards[0].standardReference}
-      </p>
-      <table className="report-table report-strength-table">
-        <thead>
-          <tr>
-            <th>SIEVE / PORE SIZE</th>
-            <th>LIMIT</th>
-            <th>MEASUREMENT</th>
-          </tr>
-        </thead>
-        <tbody>
-          {matchingStandards.map((standard) => (
-            <tr key={standard.id}>
-              <td>{standard.sieveSize}</td>
-              <td>
-                {standard.minimum == null ? "—" : formatNumber(standard.minimum)} to{" "}
-                {standard.maximum == null ? "—" : formatNumber(standard.maximum)}{" "}
-                {standard.unit}
-              </td>
-              <td>{standard.measurementType === "amount" ? "Amount" : "Percentage"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 function ReportField({ label, value }: { label: string; value: string }) {
   return (
     <div className="report-field">
@@ -862,10 +812,8 @@ function BlocksReport({
 
 function SieveReport({
   record,
-  standards,
 }: {
   record: QcRecord;
-  standards: SieveStandard[];
 }) {
   const details = record.details;
   const sieveRows = Array.isArray(details.sieveRows) ? details.sieveRows : [];
@@ -910,7 +858,6 @@ function SieveReport({
       </div>
 
       <SieveRowsTable rows={sieveRows} />
-      <SieveStandardsTable standards={standards} record={record} />
       {evaluation && (
         <SieveEvaluationTable value={evaluation} />
       )}
@@ -1149,7 +1096,7 @@ export default function ReportPrint() {
         ) : record.testType === "Blocks" ? (
           <BlocksReport record={record} standards={strengthStandards} />
         ) : record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve" ? (
-          <SieveReport record={record} standards={sieveStandards} />
+          <SieveReport record={record} />
         ) : record.testType === "Paving Blocks" ? (
           <PavingBlocksReport record={record} standards={strengthStandards} />
         ) : record.testType === "Water" ? (
