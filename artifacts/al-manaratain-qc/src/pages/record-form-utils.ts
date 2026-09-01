@@ -84,17 +84,26 @@ export const numericInputValue = (value: unknown) => {
   return match?.[0] ?? "";
 };
 
+export const calculateSieveSampleWeight = (
+  rows: Array<Pick<TestRow, "amountReturned">>,
+) => {
+  let sampleWeight = 0;
+  for (const row of rows) {
+    const amountReturnedText = numericInputValue(row.amountReturned);
+    const amountReturned = Number(amountReturnedText);
+    if (amountReturnedText && Number.isFinite(amountReturned) && amountReturned >= 0) {
+      sampleWeight += amountReturned;
+    }
+  }
+  return sampleWeight;
+};
+
 export const calculateSieveResults = (
   rows: Array<Pick<TestRow, "amountReturned">>,
-  sampleWeightValue: unknown,
 ) => {
-  const sampleWeightText = numericInputValue(sampleWeightValue);
-  const sampleWeight = Number(sampleWeightText);
+  const sampleWeight = calculateSieveSampleWeight(rows);
   let cumulativeReturned = 0;
-  let measurementsValid =
-    Boolean(sampleWeightText) &&
-    Number.isFinite(sampleWeight) &&
-    sampleWeight > 0;
+  let measurementsValid = Number.isFinite(sampleWeight) && sampleWeight > 0;
 
   return rows.map((row) => {
     const amountReturnedText = numericInputValue(row.amountReturned);

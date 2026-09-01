@@ -19,6 +19,7 @@ import {
   blockSizeMatches,
   blockTypeMatches,
   createEmptyRow,
+  calculateSieveSampleWeight,
   calculateSieveResults,
   prepareDetailsForForm,
   sieveSizeNumber,
@@ -129,11 +130,17 @@ export default function RecordForm() {
     setBlockAge(numericInputValue(savedDetails.blockAge ?? legacyBlockAge));
     setSelectedStrengthStandardId(stringValue(savedDetails.strengthStandardId));
     setDetails(savedDetails);
-    setTestRows(
-      savedRows.length
-        ? savedRows.map((row, index) => toFormRow(row, index + 1))
-        : [createEmptyRow(1)],
-    );
+    const loadedRows = savedRows.length
+      ? savedRows.map((row, index) => toFormRow(row, index + 1))
+      : [createEmptyRow(1)];
+    const calculatedRows = existingRecord.testType === TestType.Sand_Sieve ||
+      existingRecord.testType === TestType.Aggregate_Sieve
+      ? calculateSieveResults(loadedRows)
+      : [];
+    setTestRows(loadedRows.map((row, index) => ({
+      ...row,
+      ...(calculatedRows[index] ?? {}),
+    })));
     sieveContextKeyRef.current = `${existingRecord.testType}|${String(savedDetails.materialReferenceItemId ?? existingRecord.material)}`;
     nextRowId.current = Math.max(savedRows.length + 1, 2);
     initializedRecordId.current = recordId;
@@ -144,16 +151,13 @@ export default function RecordForm() {
 
   const handleDetailChange = (key: string, value: string) => {
     setDetails(prev => ({ ...prev, [key]: value }));
-    if (key === "sampleWeight" && usesSieveRows) {
-      setTestRows((previousRows) => previousRows.map((row, index) => ({
-        ...row,
-        ...calculateSieveResults(previousRows, value)[index],
-      })));
-    }
   };
 
   const sieveMassUnit = "g";
   const blockDimensions = blockDimensionsFromSize(details.blockSize);
+  const calculatedSieveSampleWeight = usesSieveRows
+    ? calculateSieveSampleWeight(testRows)
+    : null;
 
   useEffect(() => {
     if (testType !== TestType.Blocks) {
@@ -476,7 +480,8 @@ export default function RecordForm() {
       if (materialReferenceItemId) {
         payloadDetails.materialReferenceItemId = materialReferenceItemId;
       }
-      const calculatedRows = calculateSieveResults(testRows, details.sampleWeight);
+      const calculatedRows = calculateSieveResults(testRows);
+      payloadDetails.sampleWeight = calculatedSieveSampleWeight;
       payloadDetails.sieveRows = testRows.map(({ id: _id, ...row }, index) => {
         const calculated = calculatedRows[index];
         return {
@@ -865,14 +870,35 @@ export default function RecordForm() {
                   <div className="mb-3">
                     <h3 className="font-semibold text-foreground">Sample Weights</h3>
                     <p className="text-xs text-muted-foreground">
-                      Record the total sample weight and the measured dry and wet weights.
+                      {usesSieveRows
+                        ? "Sample weight is calculated from the retained amounts entered below."
+                        : "Record the total sample weight and the measured dry and wet weights."}
                     </p>
                   </div>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    {usesSieveRows && (
+                      <div className="space-y-2">
+                        <Label>Calculated Sample Weight (g)</Label>
+                        <div className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground">
+                          {(calculatedSieveSampleWeight ?? 0).toFixed(2)}
+                        </div>
+                      </div>
+                    )}
+                    {!usesSieveRows && (
+                      <div className="space-y-2">
+                        <Label>Sample Weight (kg)</Label>
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          value={String(details.sampleWeight ?? "")}
+                          onChange={(event) => handleDetailChange("sampleWeight", event.target.value)}
+                          placeholder="Enter weight"
+                        />
+                      </div>
+                    )}
                     {[
-                           ["sampleWeight", `Sample Weight (${usesSieveRows ? sieveMassUnit : "kg"})`],
-                           ["dryWeight", `Dry Weight (${usesSieveRows ? sieveMassUnit : "kg"})`],
-                           ["wetWeight", `Wet Weight (${usesSieveRows ? sieveMassUnit : "kg"})`],
+                      ["dryWeight", `Dry Weight (${usesSieveRows ? sieveMassUnit : "kg"})`],
+                      ["wetWeight", `Wet Weight (${usesSieveRows ? sieveMassUnit : "kg"})`],
                     ].map(([key, label]) => (
                       <div key={key} className="space-y-2">
                         <Label>{label}</Label>
@@ -1001,7 +1027,6 @@ export default function RecordForm() {
                                         ));
                                         const calculatedRows = calculateSieveResults(
                                           nextRows,
-                                          details.sampleWeight,
                                         );
                                         return nextRows.map((candidate, index) => ({
                                           ...candidate,

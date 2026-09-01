@@ -6,6 +6,7 @@ import {
   blockMaterialMatches,
   blockSizeMatches,
   blockTypeMatches,
+  calculateSieveSampleWeight,
   calculateSieveResults,
   prepareRecordForForm,
 } from "./record-form-utils";
@@ -58,15 +59,26 @@ test("calculates sieve passing mass from cumulative retained amounts", () => {
       { amountReturned: "1.2" },
       { amountReturned: "9" },
     ],
-    "300",
   );
 
   assert.deepEqual(results, [
     { passingAmount: "", passingPercentage: "" },
-    { passingAmount: "300.00", passingPercentage: "100.00" },
-    { passingAmount: "298.80", passingPercentage: "99.60" },
-    { passingAmount: "289.80", passingPercentage: "96.60" },
+    { passingAmount: "10.20", passingPercentage: "100.00" },
+    { passingAmount: "9.00", passingPercentage: "88.24" },
+    { passingAmount: "0.00", passingPercentage: "0.00" },
   ]);
+});
+
+test("calculates sieve sample weight from entered retained amounts", () => {
+  assert.equal(
+    calculateSieveSampleWeight([
+      { amountReturned: "" },
+      { amountReturned: "0" },
+      { amountReturned: "1.2" },
+      { amountReturned: "9" },
+    ]),
+    10.2,
+  );
 });
 
 test("copies Ready Mix fields, reference information, and cube rows", () => {

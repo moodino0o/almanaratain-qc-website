@@ -400,7 +400,15 @@ export function evaluateSieveRecord(
   const sourceRows = Array.isArray(record.details.sieveRows)
     ? record.details.sieveRows
     : [];
-  const sampleWeight = numericValue(record.details.sampleWeight);
+  const sampleWeight = rounded(
+    sourceRows.reduce((total, row) => {
+      if (typeof row !== "object" || row === null) return total;
+      const amountReturned = numericValue((row as Record<string, unknown>).amountReturned);
+      return amountReturned !== null && amountReturned >= 0
+        ? total + amountReturned
+        : total;
+    }, 0),
+  );
   let cumulativeReturned = 0;
   let measurementsValid = sampleWeight !== null && sampleWeight > 0;
   const rows: Array<Record<string, unknown>> = sourceRows.map((row, index) => {
@@ -508,6 +516,7 @@ export function evaluateSieveRecord(
 
   const details = {
     ...record.details,
+    sampleWeight,
     sieveRows: rows,
     sieveEvaluation: {
       type: "sieve" as const,

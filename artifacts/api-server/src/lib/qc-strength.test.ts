@@ -64,7 +64,7 @@ const record = (
   material: "Sand",
   details: {
     materialReferenceItemId: 10,
-    sampleWeight: 100,
+    sampleWeight: 999,
     sieveRows: [
       {
         rowNo: 1,
@@ -73,6 +73,12 @@ const record = (
         amountReturned: 40,
         passingAmount: 999,
         passingPercentage: 999,
+      },
+      {
+        rowNo: 2,
+        sieveSize: "2.36 mm",
+        sieveSizeReferenceItemId: 21,
+        amountReturned: 60,
       },
     ],
     ...details,
@@ -170,6 +176,12 @@ test("calculates passing mass from cumulative retained amounts", () => {
           sieveSizeReferenceItemId: 22,
           amountReturned: 9,
         },
+        {
+          rowNo: 5,
+          sieveSize: "0.063 mm",
+          sieveSizeReferenceItemId: 23,
+          amountReturned: 289.8,
+        },
       ],
     }),
     [standard()],
@@ -177,12 +189,13 @@ test("calculates passing mass from cumulative retained amounts", () => {
 
   assert.deepEqual(
     result.details.sieveRows.map((row) => row.passingAmount),
-    [undefined, 300, 298.8, 289.8],
+    [undefined, 300, 298.8, 289.8, 0],
   );
   assert.deepEqual(
     result.details.sieveRows.map((row) => row.passingPercentage),
-    [undefined, 100, 99.6, 96.6],
+    [undefined, 100, 99.6, 96.6, 0],
   );
+  assert.equal(result.details.sampleWeight, 300);
 });
 
 test("recomputes amount standards using the same passing mass", () => {
@@ -196,6 +209,12 @@ test("recomputes amount standards using the same passing mass", () => {
           amountReturned: 37.25,
           passingAmount: 1,
           passingPercentage: 1,
+        },
+        {
+          rowNo: 2,
+          sieveSize: "2.36 mm",
+          sieveSizeReferenceItemId: 21,
+          amountReturned: 62.75,
         },
       ],
     }),
@@ -211,7 +230,15 @@ test("recomputes amount standards using the same passing mass", () => {
 
 test("keeps the result in Review when sample weight is zero", () => {
   const result = evaluateSieveRecord(
-    record({ sampleWeight: 0 }),
+    record({
+      sampleWeight: 0,
+      sieveRows: [{
+        rowNo: 1,
+        sieveSize: "5 mm",
+        sieveSizeReferenceItemId: 20,
+        amountReturned: "",
+      }],
+    }),
     [standard({ minimum: "0", maximum: "100" })],
   );
 
@@ -222,9 +249,17 @@ test("keeps the result in Review when sample weight is zero", () => {
   assert.equal("passingPercentage" in result.details.sieveRows[0], false);
 });
 
-test("keeps the result in Review when sample weight is missing", () => {
+test("keeps the result in Review when no sieve amounts are entered", () => {
   const result = evaluateSieveRecord(
-    record({ sampleWeight: "" }),
+    record({
+      sampleWeight: "",
+      sieveRows: [{
+        rowNo: 1,
+        sieveSize: "5 mm",
+        sieveSizeReferenceItemId: 20,
+        amountReturned: "",
+      }],
+    }),
     [standard({ minimum: "0", maximum: "100" })],
   );
 
@@ -256,7 +291,7 @@ test("keeps the result in Review when returned amount is missing", () => {
   assert.equal("passingPercentage" in result.details.sieveRows[0], false);
 });
 
-test("keeps the result in Review when returned amount exceeds sample weight", () => {
+test("keeps the result in Review when a sieve amount is invalid", () => {
   const result = evaluateSieveRecord(
     record({
       sieveRows: [
@@ -264,7 +299,7 @@ test("keeps the result in Review when returned amount exceeds sample weight", ()
           rowNo: 1,
           sieveSize: "5 mm",
           sieveSizeReferenceItemId: 20,
-          amountReturned: 101,
+          amountReturned: "not a number",
         },
       ],
     }),
@@ -304,6 +339,12 @@ test("ignores reference-only sieve rows when configured criteria pass", () => {
           sieveSizeReferenceItemId: 21,
           amountReturned: "",
         },
+        {
+          rowNo: 3,
+          sieveSize: "1.18 mm",
+          sieveSizeReferenceItemId: 22,
+          amountReturned: 60,
+        },
       ],
     }),
     [standard({ minimum: "60", maximum: "60" })],
@@ -311,7 +352,7 @@ test("ignores reference-only sieve rows when configured criteria pass", () => {
 
   assert.equal(result.status, "Passed");
   assert.equal(result.evaluation.criteria.length, 1);
-  assert.equal(result.details.sieveRows.length, 2);
+  assert.equal(result.details.sieveRows.length, 3);
 });
 
 test("keeps unmatched materials in Review", () => {
