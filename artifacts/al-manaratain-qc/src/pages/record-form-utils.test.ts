@@ -53,6 +53,7 @@ test("matches legacy Block labels to canonical standards", () => {
 test("calculates sieve passing mass from cumulative retained amounts", () => {
   const results = calculateSieveResults(
     [
+      { amountReturned: "" },
       { amountReturned: "0" },
       { amountReturned: "1.2" },
       { amountReturned: "9" },
@@ -61,6 +62,7 @@ test("calculates sieve passing mass from cumulative retained amounts", () => {
   );
 
   assert.deepEqual(results, [
+    { passingAmount: "", passingPercentage: "" },
     { passingAmount: "300.00", passingPercentage: "100.00" },
     { passingAmount: "298.80", passingPercentage: "99.60" },
     { passingAmount: "289.80", passingPercentage: "96.60" },

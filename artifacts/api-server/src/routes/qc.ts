@@ -282,7 +282,7 @@ async function ensureDefaultStrengthStandards() {
         insertedDefault = true;
       }
       if (insertedDefault || existing.length > 0) {
-        await refreshStrengthEvaluations(["Ready Mix", "Blocks"]);
+        await refreshRecordEvaluations(["Ready Mix", "Blocks"]);
       }
     })().catch((error) => {
       strengthSeedPromise = null;
@@ -367,11 +367,12 @@ const toRecord = (row: typeof qcRecordsTable.$inferSelect) => ({
   createdAt: row.createdAt.toISOString(),
 });
 
-async function refreshStrengthEvaluations(testTypes: string[]) {
+async function refreshRecordEvaluations(testTypes: string[]) {
   const uniqueTestTypes = [...new Set(testTypes)];
   if (!uniqueTestTypes.length) return;
-  const [standards, records] = await Promise.all([
+  const [strengthStandards, sieveStandards, records] = await Promise.all([
     db.select().from(qcStrengthStandardsTable),
+    loadSieveStandards(),
     db
       .select()
       .from(qcRecordsTable)
@@ -379,14 +380,15 @@ async function refreshStrengthEvaluations(testTypes: string[]) {
   ]);
 
   for (const record of records) {
-    const evaluated = evaluateStrengthRecord(
-      {
-        testType: record.testType,
-        material: record.material,
-        details: record.details as Record<string, unknown>,
-      },
-      standards,
-    );
+    const candidate = {
+      testType: record.testType,
+      material: record.material,
+      details: record.details as Record<string, unknown>,
+    };
+    const evaluated =
+      record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve"
+        ? evaluateSieveRecord(candidate, sieveStandards)
+        : evaluateStrengthRecord(candidate, strengthStandards);
     if (evaluated.status === undefined) continue;
     await db
       .update(qcRecordsTable)
@@ -776,7 +778,7 @@ router.post("/strength-standards", async (req, res): Promise<void> => {
     res.status(500).json({ error: "Unable to create strength standard" });
     return;
   }
-  await refreshStrengthEvaluations([standard.testType]);
+  await refreshRecordEvaluations([standard.testType]);
   res.status(201).json(CreateStrengthStandardResponse.parse(toStrengthStandard(standard)));
 });
 
@@ -825,7 +827,7 @@ router.patch("/strength-standards/:id", async (req, res): Promise<void> => {
     .where(eq(qcStrengthStandardsTable.id, params.data.id))
     .returning();
   if (!standard) return;
-  await refreshStrengthEvaluations([existing.testType, standard.testType]);
+  await refreshRecordEvaluations([existing.testType, standard.testType]);
   res.json(UpdateStrengthStandardResponse.parse(toStrengthStandard(standard)));
 });
 
@@ -848,7 +850,7 @@ router.delete("/strength-standards/:id", async (req, res): Promise<void> => {
     .where(eq(qcStrengthStandardsTable.id, params.data.id))
     .returning();
   if (!standard) return;
-  await refreshStrengthEvaluations([existing.testType]);
+  await refreshRecordEvaluations([existing.testType]);
   res.sendStatus(204);
 });
 
@@ -1037,7 +1039,7 @@ router.get("/records", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  await refreshStrengthEvaluations(["Ready Mix", "Blocks"]);
+  await refreshRecordEvaluations(["Ready Mix", "Blocks"]);
 
   const filters = [];
   if (parsed.data.testType) {
@@ -1283,7 +1285,7 @@ router.get("/records/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Record not found" });
     return;
   }
-  await refreshStrengthEvaluations([record.testType]);
+  await refreshRecordEvaluations([record.testType]);
   const [currentRecord] = await db
     .select()
     .from(qcRecordsTable)
@@ -1376,7 +1378,7 @@ router.get("/reports/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Record not found" });
     return;
   }
-  await refreshStrengthEvaluations([record.testType]);
+  await refreshRecordEvaluations([record.testType]);
   const [currentRecord] = await db
     .select()
     .from(qcRecordsTable)

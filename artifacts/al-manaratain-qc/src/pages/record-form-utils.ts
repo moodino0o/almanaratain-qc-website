@@ -99,9 +99,11 @@ export const calculateSieveResults = (
   return rows.map((row) => {
     const amountReturnedText = numericInputValue(row.amountReturned);
     const amountReturned = Number(amountReturnedText);
+    if (!amountReturnedText) {
+      return { passingAmount: "", passingPercentage: "" };
+    }
     if (
       !measurementsValid ||
-      !amountReturnedText ||
       !Number.isFinite(amountReturned) ||
       amountReturned < 0
     ) {

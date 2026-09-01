@@ -409,6 +409,22 @@ export function evaluateSieveRecord(
         ? { ...(row as Record<string, unknown>) }
         : {};
     const amountReturned = numericValue(values.amountReturned);
+    const {
+      amountReturned: _existingAmountReturned,
+      passingAmount: _existingPassingAmount,
+      passingPercentage: _existingPassingPercentage,
+      ...sourceValues
+    } = values;
+    const hasAmountEntry =
+      values.amountReturned !== null &&
+      values.amountReturned !== undefined &&
+      String(values.amountReturned).trim().length > 0;
+    if (!hasAmountEntry) {
+      return {
+        ...sourceValues,
+        rowNo: referenceId(values.rowNo) ?? index + 1,
+      };
+    }
     let passingAmount: number | null = null;
     if (
       measurementsValid &&
@@ -428,12 +444,6 @@ export function evaluateSieveRecord(
       passingAmount !== null && sampleWeight !== null
         ? rounded((passingAmount / sampleWeight) * 100)
         : null;
-    const {
-      amountReturned: _existingAmountReturned,
-      passingAmount: _existingPassingAmount,
-      passingPercentage: _existingPassingPercentage,
-      ...sourceValues
-    } = values;
     return {
       ...sourceValues,
       rowNo: referenceId(values.rowNo) ?? index + 1,
