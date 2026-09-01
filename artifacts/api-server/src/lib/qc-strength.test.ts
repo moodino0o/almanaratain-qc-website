@@ -142,6 +142,44 @@ test("recomputes percentage standards from sample weight and returned amount", (
   assert.equal(result.details.sieveRows[0].passingPercentage, 60);
 });
 
+test("calculates passing mass from cumulative retained amounts", () => {
+  const result = evaluateSieveRecord(
+    record({
+      sampleWeight: 300,
+      sieveRows: [
+        {
+          rowNo: 1,
+          sieveSize: "5 mm",
+          sieveSizeReferenceItemId: 20,
+          amountReturned: 0,
+        },
+        {
+          rowNo: 2,
+          sieveSize: "2.36 mm",
+          sieveSizeReferenceItemId: 21,
+          amountReturned: 1.2,
+        },
+        {
+          rowNo: 3,
+          sieveSize: "1.18 mm",
+          sieveSizeReferenceItemId: 22,
+          amountReturned: 9,
+        },
+      ],
+    }),
+    [standard()],
+  );
+
+  assert.deepEqual(
+    result.details.sieveRows.map((row) => row.passingAmount),
+    [300, 298.8, 289.8],
+  );
+  assert.deepEqual(
+    result.details.sieveRows.map((row) => row.passingPercentage),
+    [100, 99.6, 96.6],
+  );
+});
+
 test("recomputes amount standards using the same passing mass", () => {
   const result = evaluateSieveRecord(
     record({

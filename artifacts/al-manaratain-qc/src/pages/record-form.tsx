@@ -19,6 +19,7 @@ import {
   blockSizeMatches,
   blockTypeMatches,
   createEmptyRow,
+  calculateSieveResults,
   prepareDetailsForForm,
   sieveSizeNumber,
   stringValue,
@@ -138,12 +139,19 @@ export default function RecordForm() {
     initializedRecordId.current = recordId;
   }, [existingRecord, isEditing, recordId]);
 
-  const handleDetailChange = (key: string, value: string) => {
-    setDetails(prev => ({ ...prev, [key]: value }));
-  };
-
   const usesTestRows = testType === TestType.Ready_Mix || testType === TestType.Blocks;
   const usesSieveRows = testType === TestType.Sand_Sieve || testType === TestType.Aggregate_Sieve;
+
+  const handleDetailChange = (key: string, value: string) => {
+    setDetails(prev => ({ ...prev, [key]: value }));
+    if (key === "sampleWeight" && usesSieveRows) {
+      setTestRows((previousRows) => previousRows.map((row, index) => ({
+        ...row,
+        ...calculateSieveResults(previousRows, value)[index],
+      })));
+    }
+  };
+
   const sieveMassUnit = "g";
   const blockDimensions = blockDimensionsFromSize(details.blockSize);
 
@@ -402,23 +410,6 @@ export default function RecordForm() {
     return ((load * 1000) / (length * width)).toFixed(2);
   };
 
-  const calculateSieveResult = (row: Pick<TestRow, "amountReturned">) => {
-    const sampleWeight = Number(details.sampleWeight);
-    const amountReturned = Number(row.amountReturned);
-    if (
-      !Number.isFinite(sampleWeight) ||
-      sampleWeight <= 0 ||
-      !Number.isFinite(amountReturned)
-    ) {
-      return { passingAmount: "", passingPercentage: "" };
-    }
-    const passingAmount = sampleWeight - amountReturned;
-    return {
-      passingAmount: passingAmount.toFixed(2),
-      passingPercentage: ((passingAmount / sampleWeight) * 100).toFixed(2),
-    };
-  };
-
   const getMaterialSuggestions = () => {
     if (!lookups) return [];
     switch (testType) {
@@ -485,8 +476,9 @@ export default function RecordForm() {
       if (materialReferenceItemId) {
         payloadDetails.materialReferenceItemId = materialReferenceItemId;
       }
+      const calculatedRows = calculateSieveResults(testRows, details.sampleWeight);
       payloadDetails.sieveRows = testRows.map(({ id: _id, ...row }, index) => {
-        const calculated = calculateSieveResult(row);
+        const calculated = calculatedRows[index];
         return {
           rowNo: index + 1,
           sieveSize: row.sieveSize,
@@ -494,8 +486,8 @@ export default function RecordForm() {
             sieveSizeReferenceItems.find((item) => item.value === row.sieveSize)?.id ??
             null,
            ...(row.amountReturned.trim() ? { amountReturned: row.amountReturned } : {}),
-          passingAmount: calculated.passingAmount || row.passingAmount,
-          passingPercentage: calculated.passingPercentage || row.passingPercentage,
+          ...(calculated.passingAmount ? { passingAmount: calculated.passingAmount } : {}),
+          ...(calculated.passingPercentage ? { passingPercentage: calculated.passingPercentage } : {}),
         };
       });
     }
@@ -1003,12 +995,19 @@ export default function RecordForm() {
                                     value={row.amountReturned}
                                     onChange={event => {
                                       const nextRow = { ...row, amountReturned: event.target.value };
-                                      const result = calculateSieveResult(nextRow);
-                                      setTestRows((previous) => previous.map((candidate, index) => (
-                                        index === rowIndex
-                                          ? { ...nextRow, ...result }
-                                          : candidate
-                                      )));
+                                      setTestRows((previous) => {
+                                        const nextRows = previous.map((candidate, index) => (
+                                          index === rowIndex ? nextRow : candidate
+                                        ));
+                                        const calculatedRows = calculateSieveResults(
+                                          nextRows,
+                                          details.sampleWeight,
+                                        );
+                                        return nextRows.map((candidate, index) => ({
+                                          ...candidate,
+                                          ...calculatedRows[index],
+                                        }));
+                                      });
                                     }}
                                      placeholder="Optional"
                                      aria-required="false"

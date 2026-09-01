@@ -6,6 +6,7 @@ import {
   blockMaterialMatches,
   blockSizeMatches,
   blockTypeMatches,
+  calculateSieveResults,
   prepareRecordForForm,
 } from "./record-form-utils";
 
@@ -47,6 +48,23 @@ test("matches legacy Block labels to canonical standards", () => {
   assert.equal(blockTypeMatches('8" Plain Block', "Plain Block"), true);
   assert.equal(blockSizeMatches("400*200*200", '8"'), true);
   assert.equal(blockMaterialMatches("Concrete Block", '8" Plain Block', '8" Plain Block'), true);
+});
+
+test("calculates sieve passing mass from cumulative retained amounts", () => {
+  const results = calculateSieveResults(
+    [
+      { amountReturned: "0" },
+      { amountReturned: "1.2" },
+      { amountReturned: "9" },
+    ],
+    "300",
+  );
+
+  assert.deepEqual(results, [
+    { passingAmount: "300.00", passingPercentage: "100.00" },
+    { passingAmount: "298.80", passingPercentage: "99.60" },
+    { passingAmount: "289.80", passingPercentage: "96.60" },
+  ]);
 });
 
 test("copies Ready Mix fields, reference information, and cube rows", () => {

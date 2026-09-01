@@ -401,21 +401,29 @@ export function evaluateSieveRecord(
     ? record.details.sieveRows
     : [];
   const sampleWeight = numericValue(record.details.sampleWeight);
+  let cumulativeReturned = 0;
+  let measurementsValid = sampleWeight !== null && sampleWeight > 0;
   const rows: Array<Record<string, unknown>> = sourceRows.map((row, index) => {
     const values =
       typeof row === "object" && row !== null
         ? { ...(row as Record<string, unknown>) }
         : {};
     const amountReturned = numericValue(values.amountReturned);
-    const canCalculatePassing =
-      sampleWeight !== null &&
-      sampleWeight > 0 &&
+    let passingAmount: number | null = null;
+    if (
+      measurementsValid &&
       amountReturned !== null &&
-      amountReturned >= 0 &&
-      amountReturned <= sampleWeight;
-    const passingAmount = canCalculatePassing
-      ? rounded(sampleWeight - amountReturned)
-      : null;
+      amountReturned >= 0
+    ) {
+      cumulativeReturned += amountReturned;
+      if (sampleWeight !== null && cumulativeReturned <= sampleWeight) {
+        passingAmount = rounded(sampleWeight - cumulativeReturned);
+      } else {
+        measurementsValid = false;
+      }
+    } else {
+      measurementsValid = false;
+    }
     const passingPercentage =
       passingAmount !== null && sampleWeight !== null
         ? rounded((passingAmount / sampleWeight) * 100)

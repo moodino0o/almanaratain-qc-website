@@ -84,6 +84,45 @@ export const numericInputValue = (value: unknown) => {
   return match?.[0] ?? "";
 };
 
+export const calculateSieveResults = (
+  rows: Array<Pick<TestRow, "amountReturned">>,
+  sampleWeightValue: unknown,
+) => {
+  const sampleWeightText = numericInputValue(sampleWeightValue);
+  const sampleWeight = Number(sampleWeightText);
+  let cumulativeReturned = 0;
+  let measurementsValid =
+    Boolean(sampleWeightText) &&
+    Number.isFinite(sampleWeight) &&
+    sampleWeight > 0;
+
+  return rows.map((row) => {
+    const amountReturnedText = numericInputValue(row.amountReturned);
+    const amountReturned = Number(amountReturnedText);
+    if (
+      !measurementsValid ||
+      !amountReturnedText ||
+      !Number.isFinite(amountReturned) ||
+      amountReturned < 0
+    ) {
+      measurementsValid = false;
+      return { passingAmount: "", passingPercentage: "" };
+    }
+
+    cumulativeReturned += amountReturned;
+    if (cumulativeReturned > sampleWeight) {
+      measurementsValid = false;
+      return { passingAmount: "", passingPercentage: "" };
+    }
+
+    const passingAmount = sampleWeight - cumulativeReturned;
+    return {
+      passingAmount: passingAmount.toFixed(2),
+      passingPercentage: ((passingAmount / sampleWeight) * 100).toFixed(2),
+    };
+  });
+};
+
 export const calculateWaterAbsorption = (dryWeight: unknown, wetWeight: unknown) => {
   const dry = Number(numericInputValue(dryWeight));
   const wet = Number(numericInputValue(wetWeight));
