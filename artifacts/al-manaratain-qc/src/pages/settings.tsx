@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { 
   useGetReferenceData, 
   useCreateReferenceCategory, 
@@ -45,6 +45,229 @@ function getCategoryIcon(key: string) {
   if (k.includes("block")) return <Building2 className="w-5 h-5" />;
   if (k.includes("material") || k.includes("mix")) return <Package className="w-5 h-5" />;
   return <Database className="w-5 h-5" />;
+}
+
+interface EmployeeAccessEntry {
+  id: number;
+  employeeId: string;
+  name: string;
+  active: boolean;
+}
+
+async function getEmployeeError(response: Response): Promise<string> {
+  const body = await response.json().catch(() => null) as { error?: string } | null;
+  return body?.error ?? "The employee directory request failed.";
+}
+
+function EmployeeAccessCard() {
+  const [employees, setEmployees] = useState<EmployeeAccessEntry[]>([]);
+  const [name, setName] = useState("");
+  const [employeeId, setEmployeeId] = useState("");
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editEmployeeId, setEditEmployeeId] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const loadEmployees = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/employees", { credentials: "include" });
+      if (!response.ok) throw new Error(await getEmployeeError(response));
+      const body = await response.json() as { employees: EmployeeAccessEntry[] };
+      setEmployees(body.employees);
+      setError("");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to load employees.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadEmployees();
+  }, []);
+
+  const createEmployee = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!name.trim() || !employeeId.trim()) return;
+    setIsSaving(true);
+    try {
+      const response = await fetch("/api/employees", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name, employeeId }),
+      });
+      if (!response.ok) throw new Error(await getEmployeeError(response));
+      setName("");
+      setEmployeeId("");
+      toast.success("Employee added");
+      await loadEmployees();
+    } catch (cause) {
+      toast.error(cause instanceof Error ? cause.message : "Unable to add employee.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const saveEmployee = async (id: number) => {
+    if (!editName.trim() || !editEmployeeId.trim()) return;
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/employees/${id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name: editName, employeeId: editEmployeeId }),
+      });
+      if (!response.ok) throw new Error(await getEmployeeError(response));
+      setEditingId(null);
+      toast.success("Employee updated");
+      await loadEmployees();
+    } catch (cause) {
+      toast.error(cause instanceof Error ? cause.message : "Unable to update employee.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const setEmployeeActive = async (employee: EmployeeAccessEntry) => {
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/employees/${employee.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ active: !employee.active }),
+      });
+      if (!response.ok) throw new Error(await getEmployeeError(response));
+      toast.success(employee.active ? "Employee access disabled" : "Employee access enabled");
+      await loadEmployees();
+    } catch (cause) {
+      toast.error(cause instanceof Error ? cause.message : "Unable to change employee access.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const deleteEmployee = async (employee: EmployeeAccessEntry) => {
+    if (!window.confirm(`Remove ${employee.name} (${employee.employeeId}) from site access?`)) return;
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/employees/${employee.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error(await getEmployeeError(response));
+      toast.success("Employee removed");
+      await loadEmployees();
+    } catch (cause) {
+      toast.error(cause instanceof Error ? cause.message : "Unable to remove employee.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <Card className="shrink-0 border-primary/20 shadow-sm">
+      <CardHeader className="border-b border-border/50 bg-primary/[0.03]">
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Users className="h-5 w-5 text-primary" />
+          Employee Access
+        </CardTitle>
+        <CardDescription>
+          Add the employee names and IDs that are allowed to enter the QC system.
+          Disabled employees cannot log in.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4 p-4">
+        <form className="grid gap-3 md:grid-cols-[1fr_180px_auto]" onSubmit={createEmployee}>
+          <Input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Employee name"
+            aria-label="Employee name"
+            disabled={isSaving}
+          />
+          <Input
+            value={employeeId}
+            onChange={(event) => setEmployeeId(event.target.value)}
+            placeholder="Employee ID"
+            aria-label="Employee ID"
+            inputMode="numeric"
+            disabled={isSaving}
+          />
+          <Button type="submit" disabled={isSaving || !name.trim() || !employeeId.trim()}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add employee
+          </Button>
+        </form>
+
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading employee access...</p>
+        ) : employees.length === 0 ? (
+          <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+            No employees are registered yet.
+          </p>
+        ) : (
+          <div className="divide-y rounded-md border">
+            {employees.map((employee) => (
+              <div key={employee.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between">
+                {editingId === employee.id ? (
+                  <div className="grid flex-1 gap-2 sm:grid-cols-[1fr_160px]">
+                    <Input value={editName} onChange={(event) => setEditName(event.target.value)} aria-label="Edit employee name" />
+                    <Input value={editEmployeeId} onChange={(event) => setEditEmployeeId(event.target.value)} aria-label="Edit employee ID" inputMode="numeric" />
+                  </div>
+                ) : (
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{employee.name}</p>
+                    <p className="text-sm text-muted-foreground">ID: {employee.employeeId}</p>
+                  </div>
+                )}
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  <Badge variant={employee.active ? "default" : "secondary"}>
+                    {employee.active ? "Active" : "Disabled"}
+                  </Badge>
+                  {editingId === employee.id ? (
+                    <>
+                      <Button size="sm" onClick={() => void saveEmployee(employee.id)} disabled={isSaving}>Save</Button>
+                      <Button size="sm" variant="outline" onClick={() => setEditingId(null)} disabled={isSaving}>Cancel</Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setEditingId(employee.id);
+                          setEditName(employee.name);
+                          setEditEmployeeId(employee.employeeId);
+                        }}
+                        disabled={isSaving}
+                      >
+                        <Edit2 className="mr-1.5 h-3.5 w-3.5" />
+                        Edit
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => void setEmployeeActive(employee)} disabled={isSaving}>
+                        {employee.active ? "Disable" : "Enable"}
+                      </Button>
+                      <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => void deleteEmployee(employee)} disabled={isSaving}>
+                        <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                        Remove
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 // Category Card Component
@@ -384,6 +607,7 @@ export default function Settings() {
 
   return (
     <div className="space-y-6 flex flex-col h-[calc(100vh-8rem)]">
+      <EmployeeAccessCard />
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">

@@ -1,14 +1,50 @@
-const REGISTERED_EMPLOYEE_IDS = new Set(["62925", "29102", "35716"]);
+import { and, asc, eq } from "drizzle-orm";
+import { db, employeeDirectoryTable } from "@workspace/db";
 
 export function normalizeEmployeeId(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-export function isRegisteredEmployeeId(value: unknown): boolean {
-  return REGISTERED_EMPLOYEE_IDS.has(normalizeEmployeeId(value));
+export async function getActiveEmployee(value: unknown) {
+  const employeeId = normalizeEmployeeId(value);
+  if (!employeeId) return null;
+
+  const [employee] = await db
+    .select()
+    .from(employeeDirectoryTable)
+    .where(and(
+      eq(employeeDirectoryTable.employeeId, employeeId),
+      eq(employeeDirectoryTable.active, true),
+    ))
+    .limit(1);
+  return employee ?? null;
+}
+
+export async function isRegisteredEmployeeId(value: unknown): Promise<boolean> {
+  return Boolean(await getActiveEmployee(value));
 }
 
 export function isEmployeeSessionId(value: unknown): boolean {
   return typeof value === "string" && value.startsWith("employee:") &&
-    isRegisteredEmployeeId(value.slice("employee:".length));
+    Boolean(normalizeEmployeeId(value.slice("employee:".length)));
+}
+
+export async function isActiveEmployeeSessionId(value: unknown): Promise<boolean> {
+  return isEmployeeSessionId(value) &&
+    await isRegisteredEmployeeId(String(value).slice("employee:".length));
+}
+
+export async function ensureEmployeeDirectorySeed(): Promise<void> {
+  const [existing] = await db
+    .select({ id: employeeDirectoryTable.id })
+    .from(employeeDirectoryTable)
+    .orderBy(asc(employeeDirectoryTable.id))
+    .limit(1);
+  if (existing) return;
+
+  await db.insert(employeeDirectoryTable).values([
+    { employeeId: "62925", name: "Employee 62925", active: true },
+    { employeeId: "29102", name: "Employee 29102", active: true },
+    { employeeId: "35716", name: "Employee 35716", active: true },
+  ]);
 }

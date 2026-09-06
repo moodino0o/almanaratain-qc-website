@@ -19,7 +19,7 @@ import {
   SESSION_TTL,
   type SessionData,
 } from '../lib/auth';
-import { isRegisteredEmployeeId, normalizeEmployeeId } from '../lib/employee-access';
+import { getActiveEmployee, normalizeEmployeeId } from '../lib/employee-access';
 
 const OIDC_COOKIE_TTL = 10 * 60 * 1000;
 
@@ -133,7 +133,8 @@ router.get('/auth/user', (req: Request, res: Response) => {
 
 router.post('/employee-login', async (req: Request, res: Response) => {
   const employeeId = normalizeEmployeeId(req.body?.employeeId);
-  if (!isRegisteredEmployeeId(employeeId)) {
+  const employee = await getActiveEmployee(employeeId);
+  if (!employee) {
     res.status(401).json({ error: 'This employee ID is not registered.' });
     return;
   }
@@ -144,15 +145,15 @@ router.post('/employee-login', async (req: Request, res: Response) => {
     .values({
       id: userId,
       email: null,
-      firstName: 'Employee',
-      lastName: employeeId,
+      firstName: employee.name,
+      lastName: null,
       profileImageUrl: null,
     })
     .onConflictDoUpdate({
       target: usersTable.id,
       set: {
-        firstName: 'Employee',
-        lastName: employeeId,
+        firstName: employee.name,
+        lastName: null,
         updatedAt: new Date(),
       },
     })
