@@ -36,6 +36,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 function getCategoryIcon(key: string) {
   const k = key.toLowerCase();
@@ -606,39 +607,60 @@ export default function Settings() {
   const categories = referenceData?.categories || [];
 
   return (
-    <div className="space-y-6 flex flex-col h-[calc(100vh-8rem)]">
-      <EmployeeAccessCard />
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
-            <Settings2 className="w-8 h-8 text-primary" /> Reference Data
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm">Manage Master Data: locations, materials, mix designs, and personnel.</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <Badge variant="outline" className="text-muted-foreground hidden md:inline-flex">System Administrator</Badge>
-          <Button onClick={() => setIsAddCategoryOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" /> New Category
-          </Button>
-        </div>
+    <div className="flex h-[calc(100vh-8rem)] flex-col gap-6">
+      <div className="shrink-0">
+        <h1 className="flex items-center gap-3 text-3xl font-bold tracking-tight text-foreground">
+          <Settings2 className="h-8 w-8 text-primary" /> Settings
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">Manage employee access and the master data used throughout quality control.</p>
       </div>
 
-      {categories.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-12 text-center">
-          <div className="bg-muted p-4 rounded-full mb-4">
-            <Database className="h-8 w-8 text-muted-foreground" />
+      <Tabs defaultValue="reference-data" className="flex min-h-0 flex-1 flex-col">
+        <TabsList className="grid h-auto w-full max-w-xl shrink-0 grid-cols-2">
+          <TabsTrigger value="reference-data" className="gap-2 py-2.5">
+            <Database className="h-4 w-4" /> Reference Data
+          </TabsTrigger>
+          <TabsTrigger value="employee-access" className="gap-2 py-2.5">
+            <Users className="h-4 w-4" /> Employee Access
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="employee-access" className="mt-4 min-h-0 flex-1 overflow-y-auto">
+          <EmployeeAccessCard />
+        </TabsContent>
+
+        <TabsContent value="reference-data" className="mt-4 flex min-h-0 flex-1 flex-col">
+          <div className="flex shrink-0 flex-col justify-between gap-4 sm:flex-row sm:items-center">
+            <div>
+              <h2 className="text-xl font-semibold tracking-tight text-foreground">Reference Data</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Manage locations, materials, mix designs, and personnel.</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <Badge variant="outline" className="hidden text-muted-foreground md:inline-flex">System Administrator</Badge>
+              <Button onClick={() => setIsAddCategoryOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" /> New Category
+              </Button>
+            </div>
           </div>
-          <h3 className="text-lg font-semibold mb-2">No Reference Data Found</h3>
-          <p className="text-muted-foreground mb-6 max-w-sm">Create categories to manage the lookup values used throughout the application.</p>
-          <Button onClick={() => setIsAddCategoryOpen(true)}>Create First Category</Button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 flex-1 min-h-0 overflow-y-auto pb-8">
-          {categories.map((category) => (
-            <CategoryCard key={category.id} category={category} />
-          ))}
-        </div>
-      )}
+
+          {categories.length === 0 ? (
+            <div className="flex flex-1 flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 text-center">
+              <div className="mb-4 rounded-full bg-muted p-4">
+                <Database className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="mb-2 text-lg font-semibold">No Reference Data Found</h3>
+              <p className="mb-6 max-w-sm text-muted-foreground">Create categories to manage the lookup values used throughout the application.</p>
+              <Button onClick={() => setIsAddCategoryOpen(true)}>Create First Category</Button>
+            </div>
+          ) : (
+            <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 overflow-y-auto pb-8 pt-4 md:grid-cols-2 lg:grid-cols-3">
+              {categories.map((category) => (
+                <CategoryCard key={category.id} category={category} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Add Category Dialog */}
       <Dialog open={isAddCategoryOpen} onOpenChange={setIsAddCategoryOpen}>
