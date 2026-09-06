@@ -4,11 +4,13 @@ import qcRouter from "./qc";
 import authRouter from "./auth";
 import storageRouter from "./storage";
 import archiveRouter from "./archive";
+import { requireAuthenticated } from "../middlewares/requireAuthenticated";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(authRouter);
+router.use(requireAuthenticated);
 router.use(storageRouter);
 router.use(archiveRouter);
 router.use(qcRouter);

@@ -1,0 +1,14 @@
+import type { NextFunction, Request, Response } from "express";
+
+export function requireAuthenticated(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Authentication required." });
+    return;
+  }
+
+  next();
+}

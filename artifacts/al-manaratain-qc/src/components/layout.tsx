@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
+import { useAuth } from "@workspace/replit-auth-web";
 import { ClipboardList, LayoutDashboard, Settings, FileText, Beaker, Archive, FileCheck2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -9,6 +10,7 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const [location] = useLocation();
+  const { user, logout } = useAuth();
 
   const navItems = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -59,16 +61,27 @@ export function Layout({ children }: LayoutProps) {
           })}
         </div>
 
-        <div className="p-4 border-t border-border">
+        <div className="border-t border-border p-4">
           <div className="flex items-center gap-3 px-3 py-2">
             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-              QC
+              {(user?.firstName?.[0] ?? user?.email?.[0] ?? "E").toUpperCase()}
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-medium">Control Room</span>
-              <span className="text-xs text-muted-foreground">Lab & Production</span>
+              <span className="truncate text-sm font-medium">
+                {[user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Registered employee"}
+              </span>
+              <span className="max-w-[170px] truncate text-xs text-muted-foreground">
+                {user?.email ?? "Employee account"}
+              </span>
             </div>
           </div>
+          <button
+            type="button"
+            onClick={logout}
+            className="mt-2 w-full rounded-md px-3 py-2 text-left text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            Log out
+          </button>
         </div>
       </aside>
 

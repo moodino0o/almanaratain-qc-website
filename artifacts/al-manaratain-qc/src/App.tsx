@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useAuth } from '@workspace/replit-auth-web';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from 'sonner';
 import { TooltipProvider } from '@radix-ui/react-tooltip';
@@ -21,6 +22,7 @@ import ReportPrint from '@/pages/report-print';
 import Settings from '@/pages/settings';
 import Standards from '@/pages/standards';
 import Archive from '@/pages/archive';
+import Login from '@/pages/login';
 
 const queryClient = new QueryClient();
 
@@ -67,11 +69,21 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
 }
 
 function App() {
+  const auth = useAuth();
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL?.replace(/\/$/, '') || ''}>
-          <Router />
+          {auth.isLoading ? (
+            <div className="flex min-h-screen items-center justify-center bg-muted/30 text-sm text-muted-foreground">
+              Checking employee access…
+            </div>
+          ) : auth.isAuthenticated ? (
+            <Router />
+          ) : (
+            <Login onLogin={auth.login} />
+          )}
         </WouterRouter>
         <Toaster position="bottom-right" richColors />
       </TooltipProvider>
