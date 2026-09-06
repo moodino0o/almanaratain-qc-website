@@ -2,6 +2,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, employeeDirectoryTable } from "@workspace/db";
 import { normalizeEmployeeId } from "../lib/employee-access";
+import { requireAdministrator } from "../middlewares/requireAuthenticated";
 
 const router: IRouter = Router();
 
@@ -20,7 +21,7 @@ function validName(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0 && value.trim().length <= 255;
 }
 
-router.get("/employees", async (_req, res): Promise<void> => {
+router.get("/employees", requireAdministrator, async (_req, res): Promise<void> => {
   const employees = await db
     .select()
     .from(employeeDirectoryTable)
@@ -28,7 +29,7 @@ router.get("/employees", async (_req, res): Promise<void> => {
   res.json({ employees: employees.map(employeeResponse) });
 });
 
-router.post("/employees", async (req: Request, res: Response): Promise<void> => {
+router.post("/employees", requireAdministrator, async (req: Request, res: Response): Promise<void> => {
   const employeeId = normalizeEmployeeId(req.body?.employeeId);
   const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
 
@@ -54,7 +55,7 @@ router.post("/employees", async (req: Request, res: Response): Promise<void> => 
   res.status(201).json({ employee: employeeResponse(employee) });
 });
 
-router.patch("/employees/:id", async (req: Request, res: Response): Promise<void> => {
+router.patch("/employees/:id", requireAdministrator, async (req: Request, res: Response): Promise<void> => {
   const id = Number(req.params.id);
   const employeeId = req.body?.employeeId === undefined
     ? undefined
@@ -115,7 +116,7 @@ router.patch("/employees/:id", async (req: Request, res: Response): Promise<void
   res.json({ employee: employeeResponse(employee) });
 });
 
-router.delete("/employees/:id", async (req: Request, res: Response): Promise<void> => {
+router.delete("/employees/:id", requireAdministrator, async (req: Request, res: Response): Promise<void> => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) {
     res.status(400).json({ error: "Invalid employee ID." });

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, type FormEvent } from "react";
 import { 
   useGetReferenceData, 
   useCreateReferenceCategory, 
@@ -9,9 +9,15 @@ import {
   useDeleteReferenceItem,
   getGetReferenceDataQueryKey,
   getGetLookupsQueryKey,
+  getGetEmployeeAccessQueryKey,
+  useGetEmployeeAccess,
+  useCreateEmployeeAccess,
+  useUpdateEmployeeAccess,
+  EmployeeAccess,
   ReferenceCategory,
   ReferenceItem
 } from "@workspace/api-client-react";
+import { useAuth } from "@workspace/replit-auth-web";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
   Settings2, Building2, Users, Package, MapPin, Truck, Plus, Trash2, Edit2, 
-  Database, Check, X, Search, MoreVertical 
+  Database, Check, X, Search, MoreVertical, UserPlus, ShieldAlert, Mail
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -48,6 +54,14 @@ function getCategoryIcon(key: string) {
   return <Database className="w-5 h-5" />;
 }
 
+function formatAccessDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
 interface EmployeeAccessEntry {
   id: number;
   employeeId: string;
@@ -60,7 +74,7 @@ async function getEmployeeError(response: Response): Promise<string> {
   return body?.error ?? "The employee directory request failed.";
 }
 
-function EmployeeAccessCard() {
+function EmployeeAccessCard({ isAdmin }: { isAdmin: boolean }) {
   const [employees, setEmployees] = useState<EmployeeAccessEntry[]>([]);
   const [name, setName] = useState("");
   const [employeeId, setEmployeeId] = useState("");
@@ -70,6 +84,8 @@ function EmployeeAccessCard() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
+
+  if (!isAdmin) return null;
 
   const loadEmployees = async () => {
     setIsLoading(true);
@@ -559,6 +575,7 @@ function CategoryCard({ category }: { category: ReferenceCategory }) {
 
 export default function Settings() {
   const queryClient = useQueryClient();
+  const { isAdmin } = useAuth();
   const { data: referenceData, isLoading, isError, refetch } = useGetReferenceData();
   const createCategory = useCreateReferenceCategory();
 
@@ -626,7 +643,8 @@ export default function Settings() {
         </TabsList>
 
         <TabsContent value="employee-access" className="mt-4 min-h-0 flex-1 overflow-y-auto">
-          <EmployeeAccessCard />
+          <EmployeeAccessCard isAdmin={isAdmin} />
+          <EmployeeAccessSection isAdmin={isAdmin} />
         </TabsContent>
 
         <TabsContent value="reference-data" className="mt-4 flex min-h-0 flex-1 flex-col">
@@ -703,4 +721,281 @@ export default function Settings() {
       </Dialog>
     </div>
   );
+}
+function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
+  const queryClient = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [employeeId, setEmployeeId] = useState("");
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [employeeToDeactivate, setEmployeeToDeactivate] = useState<EmployeeAccess | null>(null);
+  const { data, isLoading, isError, error, refetch } = useGetEmployeeAccess({
+    query: { enabled: isAdmin, queryKey: getGetEmployeeAccessQueryKey() },
+  });
+  const createEmployee = useCreateEmployeeAccess();
+  const updateEmployee = useUpdateEmployeeAccess();
+
+  if (!isAdmin) return null;
+
+  const employees = data?.employees ?? [];
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredEmployees = employees.filter((employee) =>
+    [employee.employeeId, employee.displayName].some((value) =>
+      value.toLowerCase().includes(normalizedSearch),
+    ),
+  );
+  const activeCount = employees.filter((employee) => employee.active).length;
+
+  const invalidateAccess = () => {
+    queryClient.invalidateQueries({ queryKey: getGetEmployeeAccessQueryKey() });
+  };
+
+  const handleAddEmployee = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const normalizedEmployeeId = employeeId.trim();
+    if (!/^\d+$/.test(normalizedEmployeeId)) {
+      toast.error("Enter a valid registered employee ID");
+      return;
+    }
+
+    createEmployee.mutate(
+      { data: { employeeId: normalizedEmployeeId } },
+      {
+        onSuccess: () => {
+          toast.success("Employee access added");
+          setEmployeeId("");
+          setIsAddOpen(false);
+          invalidateAccess();
+        },
+        onError: () => toast.error("Could not update employee access. Try again."),
+      },
+    );
+  };
+
+  const updateAccess = (employee: EmployeeAccess, active: boolean) => {
+    updateEmployee.mutate(
+      { id: employee.id, data: { active } },
+      {
+        onSuccess: () => {
+          toast.success(active ? "Access activated" : "Access deactivated");
+          setEmployeeToDeactivate(null);
+          invalidateAccess();
+        },
+        onError: () => toast.error("Could not update employee access. Try again."),
+      },
+    );
+  };
+
+  return (
+    <section className="space-y-4">
+      <div>
+        <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-foreground">
+          <UserPlus className="h-6 w-6 text-primary" /> Employee access
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Control which registered employee IDs can sign in to the quality control system.
+        </p>
+      </div>
+
+      {isError ? (
+        <Card className="border-destructive/30 bg-destructive/5">
+          <CardContent className="flex flex-col items-center justify-center gap-4 p-8 text-center">
+            {errorStatus(error) === 403 ? (
+              <>
+                <ShieldAlert className="h-9 w-9 text-destructive" />
+                <div>
+                  <h3 className="text-lg font-semibold">Administrator access required</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Employee access is controlled by the server and is only available to authorized administrators.
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <Mail className="h-9 w-9 text-destructive" />
+                <div>
+                  <h3 className="text-lg font-semibold">Employee access could not be loaded</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">Check the connection and try again.</p>
+                </div>
+                <Button variant="outline" onClick={() => refetch()}>Try again</Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader className="gap-4 border-b sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle className="text-base">Approved employees</CardTitle>
+              <CardDescription>
+                {activeCount} active {activeCount === 1 ? "employee" : "employees"} of {employees.length}
+              </CardDescription>
+            </div>
+            <Button className="w-full sm:w-auto" onClick={() => setIsAddOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" /> Add employee
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-4 p-4 sm:p-6">
+            <Input
+              aria-label="Search employees"
+              placeholder="Search by name or employee ID"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              className="max-w-md"
+            />
+            {isLoading ? (
+              <div className="space-y-3" aria-label="Loading employee access">
+                {[1, 2, 3].map((item) => (
+                  <div key={item} className="h-16 animate-pulse rounded-md bg-muted" />
+                ))}
+              </div>
+            ) : filteredEmployees.length === 0 ? (
+              <div className="rounded-lg border border-dashed p-8 text-center">
+                <Users className="mx-auto h-8 w-8 text-muted-foreground" />
+                <h3 className="mt-3 font-semibold">
+                  {employees.length === 0 ? "No employee access entries yet" : "No matching employees"}
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {employees.length === 0
+                    ? "Add a registered employee ID to allow an employee to sign in."
+                    : "Try a different name or employee ID search."}
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
+                        <th className="pb-3 pr-4 font-medium">Employee</th>
+                        <th className="pb-3 pr-4 font-medium">Status</th>
+                        <th className="pb-3 pr-4 font-medium">Added</th>
+                        <th className="pb-3 pr-4 font-medium">Last updated</th>
+                        <th className="pb-3 text-right font-medium">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredEmployees.map((employee) => (
+                        <tr key={employee.id} className="border-b last:border-0">
+                          <td className="py-4 pr-4">
+                            <div className="font-medium">{employee.displayName}</div>
+                            <div className="text-xs text-muted-foreground">ID: {employee.employeeId}</div>
+                          </td>
+                          <td className="py-4 pr-4">
+                            <Badge variant={employee.active ? "default" : "secondary"}>
+                              {employee.active ? "Active" : "Inactive"}
+                            </Badge>
+                          </td>
+                          <td className="whitespace-nowrap py-4 pr-4 text-muted-foreground">{formatAccessDate(employee.createdAt)}</td>
+                          <td className="whitespace-nowrap py-4 pr-4 text-muted-foreground">{formatAccessDate(employee.updatedAt)}</td>
+                          <td className="py-4 text-right">
+                            {employee.active ? (
+                              <Button variant="outline" size="sm" onClick={() => setEmployeeToDeactivate(employee)}>
+                                Deactivate access
+                              </Button>
+                            ) : (
+                              <Button variant="outline" size="sm" onClick={() => updateAccess(employee, true)} disabled={updateEmployee.isPending}>
+                                Activate access
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="space-y-3 md:hidden">
+                  {filteredEmployees.map((employee) => (
+                    <div key={employee.id} className="rounded-lg border p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate font-medium">{employee.displayName}</div>
+                          <div className="truncate text-xs text-muted-foreground">ID: {employee.employeeId}</div>
+                        </div>
+                        <Badge variant={employee.active ? "default" : "secondary"}>
+                          {employee.active ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-muted-foreground">
+                        <div><span className="block font-medium text-foreground">Added</span>{formatAccessDate(employee.createdAt)}</div>
+                        <div><span className="block font-medium text-foreground">Updated</span>{formatAccessDate(employee.updatedAt)}</div>
+                      </div>
+                      {employee.active ? (
+                        <Button className="mt-4 w-full" variant="outline" onClick={() => setEmployeeToDeactivate(employee)}>
+                          Deactivate access
+                        </Button>
+                      ) : (
+                        <Button className="mt-4 w-full" variant="outline" onClick={() => updateAccess(employee, true)} disabled={updateEmployee.isPending}>
+                          Activate access
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-md">
+          <form onSubmit={handleAddEmployee}>
+            <DialogHeader>
+              <DialogTitle>Add employee access</DialogTitle>
+              <DialogDescription>
+                Enter a registered employee ID to grant access. The employee will use the existing login flow.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2 py-4">
+              <label htmlFor="employee-id" className="text-sm font-medium">Employee ID</label>
+              <Input
+                id="employee-id"
+                inputMode="numeric"
+                placeholder="Enter employee ID"
+                value={employeeId}
+                onChange={(event) => setEmployeeId(event.target.value)}
+                autoFocus
+                required
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={createEmployee.isPending}>Add access</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={employeeToDeactivate !== null}
+        onOpenChange={(open) => { if (!open) setEmployeeToDeactivate(null); }}
+      >
+        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Deactivate access for employee ID {employeeToDeactivate?.employeeId}?</DialogTitle>
+            <DialogDescription>
+              They will no longer be able to sign in to the quality control system.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEmployeeToDeactivate(null)}>Keep active</Button>
+            <Button
+              variant="destructive"
+              onClick={() => employeeToDeactivate && updateAccess(employeeToDeactivate, false)}
+              disabled={updateEmployee.isPending}
+            >
+              Deactivate access
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </section>
+  );
+}
+
+function errorStatus(error: unknown): number | undefined {
+  return typeof error === "object" && error !== null && "status" in error &&
+    typeof error.status === "number"
+    ? error.status
+    : undefined;
 }

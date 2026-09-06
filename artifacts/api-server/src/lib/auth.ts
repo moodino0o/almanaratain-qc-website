@@ -1,31 +1,18 @@
 import crypto from 'crypto';
 import type { AuthUser } from '@workspace/api-zod';
-import { db, sessionsTable } from '@workspace/db';
+import { db, employeeAccessTable, sessionsTable } from '@workspace/db';
 import { eq } from 'drizzle-orm';
 import { type Request, type Response } from 'express';
-import * as client from 'openid-client';
 
-export const ISSUER_URL = process.env.ISSUER_URL ?? 'https://replit.com/oidc';
 export const SESSION_COOKIE = 'sid';
 export const SESSION_TTL = 7 * 24 * 60 * 60 * 1000;
+export const ADMIN_EMPLOYEE_IDS_ENV = 'QC_ADMIN_EMPLOYEE_IDS';
 
 export interface SessionData {
   user: AuthUser;
   access_token: string;
   refresh_token?: string;
   expires_at?: number;
-}
-
-let oidcConfig: client.Configuration | null = null;
-
-export async function getOidcConfig(): Promise<client.Configuration> {
-  if (!oidcConfig) {
-    oidcConfig = await client.discovery(
-      new URL(ISSUER_URL),
-      process.env.REPL_ID!,
-    );
-  }
-  return oidcConfig;
 }
 
 export async function createSession(data: SessionData): Promise<string> {
@@ -80,4 +67,56 @@ export function getSessionId(req: Request): string | undefined {
     return authHeader.slice(7);
   }
   return req.cookies?.[SESSION_COOKIE];
+}
+
+export function normalizeEmployeeId(value: string | null | undefined): string | null {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
+}
+
+export function getEmployeeIdFromUser(user: AuthUser | null | undefined): string | null {
+  const id = user?.id;
+  return id?.startsWith('employee:') ? normalizeEmployeeId(id.slice(9)) : null;
+}
+
+export function getConfiguredAdminEmployeeIds(): Set<string> {
+  return new Set(
+    (process.env[ADMIN_EMPLOYEE_IDS_ENV] ?? '')
+      .split(',')
+      .map((employeeId) => normalizeEmployeeId(employeeId))
+      .filter((employeeId): employeeId is string => Boolean(employeeId)),
+  );
+}
+
+export function isConfiguredAdministrator(
+  user: AuthUser | null | undefined,
+): boolean {
+  const employeeId = getEmployeeIdFromUser(user);
+  return employeeId ? getConfiguredAdminEmployeeIds().has(employeeId) : false;
+}
+
+export async function hasApprovedEmployeeAccess(
+  user: AuthUser | null | undefined,
+): Promise<boolean> {
+  const employeeId = getEmployeeIdFromUser(user);
+  if (!employeeId) return false;
+
+  const [entry] = await db
+    .select({ active: employeeAccessTable.active })
+    .from(employeeAccessTable)
+    .where(eq(employeeAccessTable.employeeId, employeeId));
+
+  return entry?.active === true;
+}
+
+export async function ensureConfiguredAdminAccess(
+  employeeId: string | null | undefined,
+): Promise<void> {
+  const normalized = normalizeEmployeeId(employeeId);
+  if (!normalized || !getConfiguredAdminEmployeeIds().has(normalized)) return;
+
+  await db
+    .insert(employeeAccessTable)
+    .values({ employeeId: normalized, active: true })
+    .onConflictDoNothing({ target: employeeAccessTable.employeeId });
 }

@@ -28,6 +28,10 @@ import type {
   BeginBrowserLoginParams,
   DailyReadyMixResults,
   Dashboard,
+  EmployeeAccess,
+  EmployeeAccessInput,
+  EmployeeAccessList,
+  EmployeeAccessUpdate,
   GetDailyReadyMixResultsParams,
   HealthStatus,
   ListRecordsParams,
@@ -391,6 +395,226 @@ export function useGetCurrentAuthUser<TData = Awaited<ReturnType<typeof getCurre
 
 
 
+
+export const getGetEmployeeAccessUrl = () => {
+
+
+
+
+  return `/api/auth/employee-access`
+}
+
+/**
+ * @summary List approved employee access entries
+ */
+export const getEmployeeAccess = async ( options?: Parameters<typeof customFetch>[1]): Promise<EmployeeAccessList> => {
+
+  return customFetch<EmployeeAccessList>(getGetEmployeeAccessUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEmployeeAccessQueryKey = () => {
+    return [
+    `/api/auth/employee-access`
+    ] as const;
+    }
+
+
+export const getGetEmployeeAccessQueryOptions = <TData = Awaited<ReturnType<typeof getEmployeeAccess>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEmployeeAccess>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEmployeeAccessQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEmployeeAccess>>> = ({ signal }) => getEmployeeAccess({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEmployeeAccess>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetEmployeeAccessQueryResult = NonNullable<Awaited<ReturnType<typeof getEmployeeAccess>>>
+export type GetEmployeeAccessQueryError = ErrorType<void>
+
+
+/**
+ * @summary List approved employee access entries
+ */
+
+export function useGetEmployeeAccess<TData = Awaited<ReturnType<typeof getEmployeeAccess>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEmployeeAccess>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetEmployeeAccessQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateEmployeeAccessUrl = () => {
+
+
+
+
+  return `/api/auth/employee-access`
+}
+
+/**
+ * @summary Add a registered employee ID to the approved access list
+ */
+export const createEmployeeAccess = async (employeeAccessInput: EmployeeAccessInput, options?: Parameters<typeof customFetch>[1]): Promise<EmployeeAccess> => {
+
+  return customFetch<EmployeeAccess>(getCreateEmployeeAccessUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(employeeAccessInput)
+  }
+);}
+
+
+
+
+
+export const getCreateEmployeeAccessMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createEmployeeAccess>>, TError,{data: BodyType<EmployeeAccessInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createEmployeeAccess>>, TError,{data: BodyType<EmployeeAccessInput>}, TContext> => {
+
+const mutationKey = ['createEmployeeAccess'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createEmployeeAccess>>, {data: BodyType<EmployeeAccessInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createEmployeeAccess(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateEmployeeAccessMutationResult = NonNullable<Awaited<ReturnType<typeof createEmployeeAccess>>>
+    export type CreateEmployeeAccessMutationBody = BodyType<EmployeeAccessInput>
+    export type CreateEmployeeAccessMutationError = ErrorType<void>
+
+    /**
+ * @summary Add a registered employee ID to the approved access list
+ */
+export const useCreateEmployeeAccess = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createEmployeeAccess>>, TError,{data: BodyType<EmployeeAccessInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createEmployeeAccess>>,
+        TError,
+        {data: BodyType<EmployeeAccessInput>},
+        TContext
+      > => {
+      return useMutation(getCreateEmployeeAccessMutationOptions(options));
+    }
+
+export const getUpdateEmployeeAccessUrl = (id: number,) => {
+
+
+
+
+  return `/api/auth/employee-access/${id}`
+}
+
+/**
+ * @summary Activate or deactivate an employee access entry
+ */
+export const updateEmployeeAccess = async (id: number,
+    employeeAccessUpdate: EmployeeAccessUpdate, options?: Parameters<typeof customFetch>[1]): Promise<EmployeeAccess> => {
+
+  return customFetch<EmployeeAccess>(getUpdateEmployeeAccessUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(employeeAccessUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateEmployeeAccessMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEmployeeAccess>>, TError,{id: number;data: BodyType<EmployeeAccessUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateEmployeeAccess>>, TError,{id: number;data: BodyType<EmployeeAccessUpdate>}, TContext> => {
+
+const mutationKey = ['updateEmployeeAccess'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateEmployeeAccess>>, {id: number;data: BodyType<EmployeeAccessUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateEmployeeAccess(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateEmployeeAccessMutationResult = NonNullable<Awaited<ReturnType<typeof updateEmployeeAccess>>>
+    export type UpdateEmployeeAccessMutationBody = BodyType<EmployeeAccessUpdate>
+    export type UpdateEmployeeAccessMutationError = ErrorType<void>
+
+    /**
+ * @summary Activate or deactivate an employee access entry
+ */
+export const useUpdateEmployeeAccess = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEmployeeAccess>>, TError,{id: number;data: BodyType<EmployeeAccessUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateEmployeeAccess>>,
+        TError,
+        {id: number;data: BodyType<EmployeeAccessUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateEmployeeAccessMutationOptions(options));
+    }
 
 export const getBeginBrowserLoginUrl = (params?: BeginBrowserLoginParams,) => {
   const normalizedParams = new URLSearchParams();

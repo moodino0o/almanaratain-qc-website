@@ -11,6 +11,7 @@ A browser-based laboratory and production quality-control system with structured
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - Required env: `DATABASE_URL` — Postgres connection string
 - Optional env: `ARCHIVE_MANAGER_EMAILS` — comma-separated, case-insensitive email allowlist for archive retirement
+- Optional env: `QC_ADMIN_EMPLOYEE_IDS` — comma-separated registered employee ID allowlist for QC employee access administration
 
 ## Stack
 

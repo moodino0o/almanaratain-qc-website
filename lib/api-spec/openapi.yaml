@@ -68,6 +68,77 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthUserEnvelope"
+  /auth/employee-access:
+    get:
+      tags: [Auth]
+      operationId: getEmployeeAccess
+      summary: List approved employee access entries
+      responses:
+        "200":
+          description: Approved employee access entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeAccessList"
+        "401":
+          description: Authentication required
+        "403":
+          description: Administrator access required
+    post:
+      tags: [Auth]
+      operationId: createEmployeeAccess
+      summary: Add a registered employee ID to the approved access list
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeAccessInput"
+      responses:
+        "201":
+          description: Employee access entry added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeAccess"
+        "400":
+          description: Invalid employee ID
+        "401":
+          description: Authentication required
+        "403":
+          description: Administrator access required
+  /auth/employee-access/{id}:
+    patch:
+      tags: [Auth]
+      operationId: updateEmployeeAccess
+      summary: Activate or deactivate an employee access entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeAccessUpdate"
+      responses:
+        "200":
+          description: Employee access entry updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeAccess"
+        "400":
+          description: Invalid employee access update
+        "401":
+          description: Authentication required
+        "403":
+          description: Administrator access required
+        "404":
+          description: Employee access entry not found
   /login:
     get:
       tags: [Auth]
@@ -1342,12 +1413,54 @@ components:
           type: ["string", "null"]
     AuthUserEnvelope:
       type: object
-      required: [user]
+      required: [user, accessAllowed, isAdmin]
       properties:
         user:
           oneOf:
             - $ref: "#/components/schemas/AuthUser"
             - type: "null"
+        accessAllowed:
+          type: boolean
+        isAdmin:
+          type: boolean
+    EmployeeAccess:
+      type: object
+      required: [id, employeeId, displayName, active, createdAt, updatedAt]
+      properties:
+        id:
+          type: number
+        employeeId:
+          type: string
+        displayName:
+          type: string
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    EmployeeAccessList:
+      type: object
+      required: [employees]
+      properties:
+        employees:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmployeeAccess"
+    EmployeeAccessInput:
+      type: object
+      required: [employeeId]
+      properties:
+        employeeId:
+          type: string
+    EmployeeAccessUpdate:
+      type: object
+      required: [active]
+      properties:
+        active:
+          type: boolean
     MobileTokenExchangeRequest:
       type: object
       required: [code, code_verifier, redirect_uri, state]

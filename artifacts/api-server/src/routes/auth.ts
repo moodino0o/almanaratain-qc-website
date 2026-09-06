@@ -1,36 +1,39 @@
 import {
-  ExchangeMobileAuthorizationCodeBody,
-  ExchangeMobileAuthorizationCodeResponse,
+  CreateEmployeeAccessBody,
+  CreateEmployeeAccessResponse,
   GetCurrentAuthUserResponse,
+  GetEmployeeAccessResponse,
   LogoutMobileSessionResponse,
+  UpdateEmployeeAccessBody,
+  UpdateEmployeeAccessParams,
+  UpdateEmployeeAccessResponse,
 } from '@workspace/api-zod';
-import { db, usersTable } from '@workspace/db';
+import { db, employeeAccessTable, usersTable } from '@workspace/db';
+import { asc, desc, eq, sql } from 'drizzle-orm';
 import { Router, type IRouter, type Request, type Response } from 'express';
-import * as oidc from 'openid-client';
 
 import {
   clearSession,
   createSession,
   deleteSession,
-  getOidcConfig,
+  ensureConfiguredAdminAccess,
   getSessionId,
-  ISSUER_URL,
+  hasApprovedEmployeeAccess,
+  isConfiguredAdministrator,
   SESSION_COOKIE,
   SESSION_TTL,
   type SessionData,
 } from '../lib/auth';
-import { getActiveEmployee, normalizeEmployeeId } from '../lib/employee-access';
-
-const OIDC_COOKIE_TTL = 10 * 60 * 1000;
+import {
+  getActiveEmployee,
+  normalizeEmployeeId,
+} from '../lib/employee-access';
+import {
+  requireAdministrator,
+  requireAuthenticated,
+} from '../middlewares/requireAuthenticated';
 
 const router: IRouter = Router();
-
-function getOrigin(req: Request): string {
-  const proto = req.headers['x-forwarded-proto'] || 'https';
-  const host =
-    req.headers['x-forwarded-host'] || req.headers['host'] || 'localhost';
-  return `${proto}://${host}`;
-}
 
 function setSessionCookie(res: Response, sid: string) {
   res.cookie(SESSION_COOKIE, sid, {
@@ -39,16 +42,6 @@ function setSessionCookie(res: Response, sid: string) {
     sameSite: 'lax',
     path: '/',
     maxAge: SESSION_TTL,
-  });
-}
-
-function setOidcCookie(res: Response, name: string, value: string) {
-  res.cookie(name, value, {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'lax',
-    path: '/',
-    maxAge: OIDC_COOKIE_TTL,
   });
 }
 
@@ -63,72 +56,20 @@ function getSafeReturnTo(value: unknown): string {
   return value;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
-function getErrorStatus(
-  value: Record<string, unknown>,
-): number | string | undefined {
-  if (typeof value.status === 'number' || typeof value.status === 'string') {
-    return value.status;
-  }
-  if (
-    typeof value.statusCode === 'number' ||
-    typeof value.statusCode === 'string'
-  ) {
-    return value.statusCode;
-  }
-  return undefined;
-}
-
-function getSafeErrorMetadata(error: unknown) {
-  if (!isRecord(error)) {
-    return { errorName: typeof error };
-  }
-
-  const errorStatus = getErrorStatus(error);
-  const causeStatus = isRecord(error.cause)
-    ? getErrorStatus(error.cause)
-    : undefined;
-
-  return {
-    errorName: error instanceof Error ? error.name : 'Error',
-    errorStatus: errorStatus ?? causeStatus,
-  };
-}
-
-async function upsertUser(claims: Record<string, unknown>) {
-  const userData = {
-    id: claims.sub as string,
-    email: (claims.email as string) || null,
-    firstName: (claims.first_name as string) || null,
-    lastName: (claims.last_name as string) || null,
-    profileImageUrl: (claims.profile_image_url || claims.picture) as
-      | string
-      | null,
-  };
-
-  const [user] = await db
-    .insert(usersTable)
-    .values(userData)
-    .onConflictDoUpdate({
-      target: usersTable.id,
-      set: {
-        ...userData,
-        updatedAt: new Date(),
-      },
-    })
-    .returning();
-  return user;
-}
-
 router.get('/auth/user', (req: Request, res: Response) => {
-  res.json(
-    GetCurrentAuthUserResponse.parse({
-      user: req.isAuthenticated() ? req.user : null,
-    }),
-  );
+  void (async () => {
+    const user = req.isAuthenticated() ? req.user : null;
+    const accessAllowed = user ? await hasApprovedEmployeeAccess(user) : false;
+    res.json(
+      GetCurrentAuthUserResponse.parse({
+        user,
+        accessAllowed,
+        isAdmin: user ? isConfiguredAdministrator(user) : false,
+      }),
+    );
+  })().catch(() => {
+    res.status(500).json({ error: 'Unable to verify employee access.' });
+  });
 });
 
 router.post('/employee-login', async (req: Request, res: Response) => {
@@ -159,6 +100,8 @@ router.post('/employee-login', async (req: Request, res: Response) => {
     })
     .returning();
 
+  await ensureConfiguredAdminAccess(employeeId);
+
   const sessionData: SessionData = {
     user: {
       id: dbUser.id,
@@ -180,17 +123,13 @@ router.get('/login', (_req: Request, res: Response) => {
   res.status(410).json({ error: 'Employee ID login is required.' });
 });
 
-// Query params are not validated because the OIDC provider may include
-// parameters not expressed in the schema.
 router.get('/callback', (_req: Request, res: Response) => {
   res.status(410).json({ error: 'Employee ID login is required.' });
 });
 
 router.get('/logout', async (req: Request, res: Response) => {
   const returnTo = getSafeReturnTo(req.query.returnTo);
-
-  const sid = getSessionId(req);
-  await clearSession(res, sid);
+  await clearSession(res, getSessionId(req));
   res.redirect(returnTo);
 });
 
@@ -200,10 +139,142 @@ router.post('/mobile-auth/token-exchange', (_req: Request, res: Response) => {
 
 router.post('/mobile-auth/logout', async (req: Request, res: Response) => {
   const sid = getSessionId(req);
-  if (sid) {
-    await deleteSession(sid);
-  }
+  if (sid) await deleteSession(sid);
   res.json(LogoutMobileSessionResponse.parse({ success: true }));
 });
+
+function employeeAccessResponse(
+  entry: typeof employeeAccessTable.$inferSelect,
+  displayName: string | null,
+) {
+  return {
+    id: entry.id,
+    employeeId: entry.employeeId,
+    displayName: displayName || `Employee ${entry.employeeId}`,
+    active: entry.active,
+    createdAt: entry.createdAt,
+    updatedAt: entry.updatedAt,
+  };
+}
+
+router.get(
+  '/auth/employee-access',
+  requireAuthenticated,
+  requireAdministrator,
+  async (_req: Request, res: Response) => {
+    const rows = await db
+      .select({
+        entry: employeeAccessTable,
+        firstName: usersTable.firstName,
+        lastName: usersTable.lastName,
+      })
+      .from(employeeAccessTable)
+      .leftJoin(
+        usersTable,
+        eq(
+          usersTable.id,
+          sql<string>`'employee:' || ${employeeAccessTable.employeeId}`,
+        ),
+      )
+      .orderBy(desc(employeeAccessTable.active), asc(employeeAccessTable.employeeId));
+
+    res.json(
+      GetEmployeeAccessResponse.parse({
+        employees: rows.map(({ entry, firstName, lastName }) =>
+          employeeAccessResponse(
+            entry,
+            [firstName, lastName].filter(Boolean).join(' ') || null,
+          ),
+        ),
+      }),
+    );
+  },
+);
+
+router.post(
+  '/auth/employee-access',
+  requireAuthenticated,
+  requireAdministrator,
+  async (req: Request, res: Response) => {
+    const parsed = CreateEmployeeAccessBody.safeParse(req.body);
+    const employeeId = parsed.success
+      ? normalizeEmployeeId(parsed.data.employeeId)
+      : '';
+    const employee = employeeId ? await getActiveEmployee(employeeId) : null;
+    if (!employeeId || !employee) {
+      res.status(400).json({ error: 'A registered employee ID is required.' });
+      return;
+    }
+
+    const [entry] = await db
+      .insert(employeeAccessTable)
+      .values({ employeeId, active: true })
+      .onConflictDoUpdate({
+        target: employeeAccessTable.employeeId,
+        set: { active: true, updatedAt: new Date() },
+      })
+      .returning();
+
+    const [user] = await db
+      .select({
+        firstName: usersTable.firstName,
+        lastName: usersTable.lastName,
+      })
+      .from(usersTable)
+      .where(eq(usersTable.id, `employee:${entry.employeeId}`));
+
+    res.status(201).json(
+      CreateEmployeeAccessResponse.parse(
+        employeeAccessResponse(
+          entry,
+          [user?.firstName, user?.lastName].filter(Boolean).join(' ') ||
+            employee.name ||
+            null,
+        ),
+      ),
+    );
+  },
+);
+
+router.patch(
+  '/auth/employee-access/:id',
+  requireAuthenticated,
+  requireAdministrator,
+  async (req: Request, res: Response) => {
+    const parsedParams = UpdateEmployeeAccessParams.safeParse(req.params);
+    const parsedBody = UpdateEmployeeAccessBody.safeParse(req.body);
+    if (!parsedParams.success || !parsedBody.success) {
+      res.status(400).json({ error: 'Invalid employee access update.' });
+      return;
+    }
+
+    const [entry] = await db
+      .update(employeeAccessTable)
+      .set({ active: parsedBody.data.active, updatedAt: new Date() })
+      .where(eq(employeeAccessTable.id, parsedParams.data.id))
+      .returning();
+    if (!entry) {
+      res.status(404).json({ error: 'Employee access entry not found.' });
+      return;
+    }
+
+    const [user] = await db
+      .select({
+        firstName: usersTable.firstName,
+        lastName: usersTable.lastName,
+      })
+      .from(usersTable)
+      .where(eq(usersTable.id, `employee:${entry.employeeId}`));
+
+    res.json(
+      UpdateEmployeeAccessResponse.parse(
+        employeeAccessResponse(
+          entry,
+          [user?.firstName, user?.lastName].filter(Boolean).join(' ') || null,
+        ),
+      ),
+    );
+  },
+);
 
 export default router;

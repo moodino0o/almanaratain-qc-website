@@ -4,3 +4,4 @@
 - [OpenAPI Zod compatibility](openapi-zod-compatibility.md) — avoid integer schemas when the pinned generator emits unsupported `z.int()` calls.
 - [Block defaults compatibility](block-defaults-compatibility.md) — new Block defaults use canonical material/type/size labels while legacy labels and dimensions remain readable.
 - [Sieve passing calculation](sieve-passing-calculation.md) — passing mass subtracts cumulative retained amounts; blank reference-only rows are skipped.
+- [Employee access identity](employee-access-identity.md) — the active login directory uses registered employee IDs, so approvals and administrator allowlists must key off IDs rather than email.

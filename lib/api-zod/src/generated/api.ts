@@ -76,7 +76,62 @@ export const GetCurrentAuthUserResponse = zod.object({
   "firstName": zod.string().nullable(),
   "lastName": zod.string().nullable(),
   "profileImageUrl": zod.string().nullable()
-}),zod.null()])
+}),zod.null()]),
+  "accessAllowed": zod.boolean(),
+  "isAdmin": zod.boolean()
+})
+
+
+/**
+ * @summary List approved employee access entries
+ */
+export const GetEmployeeAccessResponse = zod.object({
+  "employees": zod.array(zod.object({
+  "id": zod.number(),
+  "employeeId": zod.string(),
+  "displayName": zod.string(),
+  "active": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Add a registered employee ID to the approved access list
+ */
+export const CreateEmployeeAccessBody = zod.object({
+  "employeeId": zod.string()
+})
+
+export const CreateEmployeeAccessResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.string(),
+  "displayName": zod.string(),
+  "active": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Activate or deactivate an employee access entry
+ */
+export const UpdateEmployeeAccessParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateEmployeeAccessBody = zod.object({
+  "active": zod.boolean()
+})
+
+export const UpdateEmployeeAccessResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.string(),
+  "displayName": zod.string(),
+  "active": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
 })
 
 

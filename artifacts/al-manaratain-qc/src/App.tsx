@@ -23,6 +23,8 @@ import Settings from '@/pages/settings';
 import Standards from '@/pages/standards';
 import Archive from '@/pages/archive';
 import Login from '@/pages/login';
+import { Button } from '@/components/ui/button';
+import { ShieldAlert } from 'lucide-react';
 
 const queryClient = new QueryClient();
 
@@ -68,6 +70,41 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
   return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>;
 }
 
+function AccessDenied({
+  email,
+  onLogout,
+}: {
+  email: string | null | undefined;
+  onLogout: () => void;
+}) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-10">
+      <section className="w-full max-w-md rounded-2xl border bg-card p-8 text-center shadow-sm sm:p-10">
+        <img
+          src="/al-manaratain-logo.webp"
+          alt="Al Manaratain"
+          className="mx-auto mb-8 h-12 object-contain"
+        />
+        <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+          <ShieldAlert className="h-7 w-7" aria-hidden="true" />
+        </div>
+        <p className="mb-2 text-sm font-semibold uppercase tracking-[0.18em] text-destructive">
+          Access denied
+        </p>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          Employee access has not been approved
+        </h1>
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">
+          {email ? `${email} is authenticated, but it is not on the active QC employee access list.` : 'Your account is authenticated, but it is not on the active QC employee access list.'}
+          {' '}Contact a QC administrator to request access.
+        </p>
+        <Button className="mt-8 w-full" variant="outline" onClick={onLogout}>
+          Log out
+        </Button>
+      </section>
+    </main>
+  );
+}
 function App() {
   const auth = useAuth();
   async function loginWithEmployeeId(employeeId: string): Promise<string | null> {
@@ -97,6 +134,8 @@ function App() {
             <div className="flex min-h-screen items-center justify-center bg-muted/30 text-sm text-muted-foreground">
               Checking employee access…
             </div>
+          ) : auth.isAuthenticated && auth.isAccessDenied ? (
+            <AccessDenied email={auth.user?.email} onLogout={auth.logout} />
           ) : auth.isAuthenticated ? (
             <Router />
           ) : (

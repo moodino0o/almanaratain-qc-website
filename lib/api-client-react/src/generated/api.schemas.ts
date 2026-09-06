@@ -378,6 +378,29 @@ export interface AuthUser {
 
 export interface AuthUserEnvelope {
   user: AuthUser | null;
+  accessAllowed: boolean;
+  isAdmin: boolean;
+}
+
+export interface EmployeeAccess {
+  id: number;
+  employeeId: string;
+  displayName: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EmployeeAccessList {
+  employees: EmployeeAccess[];
+}
+
+export interface EmployeeAccessInput {
+  employeeId: string;
+}
+
+export interface EmployeeAccessUpdate {
+  active: boolean;
 }
 
 export interface MobileTokenExchangeRequest {
