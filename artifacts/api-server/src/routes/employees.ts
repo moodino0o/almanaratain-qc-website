@@ -1,6 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import { Router, type IRouter, type Request, type Response } from "express";
-import { db, employeeDirectoryTable } from "@workspace/db";
+import { db, employeeAccessTable, employeeDirectoryTable } from "@workspace/db";
 import { normalizeEmployeeId } from "../lib/employee-access";
 import { requireAdministrator } from "../middlewares/requireAuthenticated";
 
@@ -52,6 +52,13 @@ router.post("/employees", requireAdministrator, async (req: Request, res: Respon
     .insert(employeeDirectoryTable)
     .values({ employeeId, name, active: true })
     .returning();
+  await db
+    .insert(employeeAccessTable)
+    .values({ employeeId, active: true })
+    .onConflictDoUpdate({
+      target: employeeAccessTable.employeeId,
+      set: { active: true, updatedAt: new Date() },
+    });
   res.status(201).json({ employee: employeeResponse(employee) });
 });
 
@@ -99,6 +106,16 @@ router.patch("/employees/:id", requireAdministrator, async (req: Request, res: R
     }
   }
 
+  const [current] = await db
+    .select()
+    .from(employeeDirectoryTable)
+    .where(eq(employeeDirectoryTable.id, id))
+    .limit(1);
+  if (!current) {
+    res.status(404).json({ error: "Employee not found." });
+    return;
+  }
+
   const [employee] = await db
     .update(employeeDirectoryTable)
     .set({
@@ -109,9 +126,24 @@ router.patch("/employees/:id", requireAdministrator, async (req: Request, res: R
     })
     .where(eq(employeeDirectoryTable.id, id))
     .returning();
-  if (!employee) {
-    res.status(404).json({ error: "Employee not found." });
-    return;
+  if (employeeId !== undefined && employeeId !== current.employeeId) {
+    await db
+      .update(employeeAccessTable)
+      .set({ employeeId, updatedAt: new Date() })
+      .where(eq(employeeAccessTable.employeeId, current.employeeId));
+  }
+  if (active !== undefined) {
+    const [access] = await db
+      .update(employeeAccessTable)
+      .set({ active, updatedAt: new Date() })
+      .where(eq(employeeAccessTable.employeeId, employee.employeeId))
+      .returning({ id: employeeAccessTable.id });
+    if (!access && active) {
+      await db
+        .insert(employeeAccessTable)
+        .values({ employeeId: employee.employeeId, active: true })
+        .onConflictDoNothing({ target: employeeAccessTable.employeeId });
+    }
   }
   res.json({ employee: employeeResponse(employee) });
 });
@@ -126,11 +158,14 @@ router.delete("/employees/:id", requireAdministrator, async (req: Request, res: 
   const [deleted] = await db
     .delete(employeeDirectoryTable)
     .where(eq(employeeDirectoryTable.id, id))
-    .returning({ id: employeeDirectoryTable.id });
+    .returning({ employeeId: employeeDirectoryTable.employeeId });
   if (!deleted) {
     res.status(404).json({ error: "Employee not found." });
     return;
   }
+  await db
+    .delete(employeeAccessTable)
+    .where(eq(employeeAccessTable.employeeId, deleted.employeeId));
   res.status(204).send();
 });
 
