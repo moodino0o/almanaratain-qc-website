@@ -10,6 +10,7 @@ import {
   updateSession,
   type SessionData,
 } from '../lib/auth';
+import { isEmployeeSessionId } from '../lib/employee-access';
 
 declare global {
   namespace Express {
@@ -67,7 +68,7 @@ export async function authMiddleware(
   }
 
   const session = await getSession(sid);
-  if (!session?.user?.id) {
+  if (!session?.user?.id || !isEmployeeSessionId(session.user.id)) {
     await clearSession(res, sid);
     next();
     return;

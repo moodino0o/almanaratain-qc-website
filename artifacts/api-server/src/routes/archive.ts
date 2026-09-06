@@ -34,6 +34,15 @@ function getArchiveManagerEmails(): Set<string> {
   );
 }
 
+function getArchiveManagerEmployeeIds(): Set<string> {
+  return new Set(
+    (process.env.ARCHIVE_MANAGER_EMPLOYEE_IDS ?? "")
+      .split(",")
+      .map((employeeId) => employeeId.trim())
+      .filter(Boolean),
+  );
+}
+
 function requireUser(req: Request, res: Response): boolean {
   if (!req.isAuthenticated()) {
     res.status(401).json({ error: "Authentication required" });
@@ -45,7 +54,14 @@ function requireUser(req: Request, res: Response): boolean {
 function requireArchiveManager(req: Request, res: Response): boolean {
   if (!requireUser(req, res)) return false;
   const email = req.user?.email?.trim().toLowerCase();
-  if (!email || !getArchiveManagerEmails().has(email)) {
+  const employeeId = req.user?.id?.startsWith("employee:")
+    ? req.user.id.slice("employee:".length)
+    : "";
+  const emailAllowed = Boolean(email && getArchiveManagerEmails().has(email));
+  const employeeIdAllowed = Boolean(
+    employeeId && getArchiveManagerEmployeeIds().has(employeeId),
+  );
+  if (!emailAllowed && !employeeIdAllowed) {
     res.status(403).json({ error: "Archive manager access required" });
     return false;
   }

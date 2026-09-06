@@ -70,6 +70,24 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
 
 function App() {
   const auth = useAuth();
+  async function loginWithEmployeeId(employeeId: string): Promise<string | null> {
+    try {
+      const response = await fetch("/api/employee-login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ employeeId }),
+      });
+      const body = await response.json().catch(() => null) as { error?: string } | null;
+      if (!response.ok) {
+        return body?.error ?? "Unable to log in with that employee ID.";
+      }
+      window.location.reload();
+      return null;
+    } catch {
+      return "Unable to reach the login service. Please try again.";
+    }
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -82,7 +100,7 @@ function App() {
           ) : auth.isAuthenticated ? (
             <Router />
           ) : (
-            <Login onLogin={auth.login} />
+            <Login onLogin={loginWithEmployeeId} />
           )}
         </WouterRouter>
         <Toaster position="bottom-right" richColors />
