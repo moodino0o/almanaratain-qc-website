@@ -1425,7 +1425,7 @@ components:
           type: boolean
     EmployeeAccess:
       type: object
-      required: [id, employeeId, displayName, active, createdAt, updatedAt]
+      required: [id, employeeId, displayName, active, administrator, createdAt, updatedAt]
       properties:
         id:
           type: number
@@ -1434,6 +1434,8 @@ components:
         displayName:
           type: string
         active:
+          type: boolean
+        administrator:
           type: boolean
         createdAt:
           type: string
@@ -1457,9 +1459,11 @@ components:
           type: string
     EmployeeAccessUpdate:
       type: object
-      required: [active]
+      required: []
       properties:
         active:
+          type: boolean
+        administrator:
           type: boolean
     MobileTokenExchangeRequest:
       type: object

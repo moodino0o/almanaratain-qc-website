@@ -7,5 +7,6 @@
  */
 
 export interface EmployeeAccessUpdate {
-  active: boolean;
+  active?: boolean;
+  administrator?: boolean;
 }

@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import type { AuthUser } from '@workspace/api-zod';
 import { db, employeeAccessTable, sessionsTable } from '@workspace/db';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { type Request, type Response } from 'express';
 
 export const SESSION_COOKIE = 'sid';
@@ -88,11 +88,21 @@ export function getConfiguredAdminEmployeeIds(): Set<string> {
   );
 }
 
-export function isConfiguredAdministrator(
+export async function isConfiguredAdministrator(
   user: AuthUser | null | undefined,
-): boolean {
+): Promise<boolean> {
   const employeeId = getEmployeeIdFromUser(user);
-  return employeeId ? getConfiguredAdminEmployeeIds().has(employeeId) : false;
+  if (!employeeId) return false;
+  if (getConfiguredAdminEmployeeIds().has(employeeId)) return true;
+
+  const [entry] = await db
+    .select({ administrator: employeeAccessTable.administrator })
+    .from(employeeAccessTable)
+    .where(and(
+      eq(employeeAccessTable.employeeId, employeeId),
+      eq(employeeAccessTable.active, true),
+    ));
+  return entry?.administrator === true;
 }
 
 export async function hasApprovedEmployeeAccess(
@@ -117,6 +127,9 @@ export async function ensureConfiguredAdminAccess(
 
   await db
     .insert(employeeAccessTable)
-    .values({ employeeId: normalized, active: true })
-    .onConflictDoNothing({ target: employeeAccessTable.employeeId });
+    .values({ employeeId: normalized, active: true, administrator: true })
+    .onConflictDoUpdate({
+      target: employeeAccessTable.employeeId,
+      set: { active: true, administrator: true, updatedAt: new Date() },
+    });
 }

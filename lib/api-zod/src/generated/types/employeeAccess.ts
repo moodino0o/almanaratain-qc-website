@@ -11,6 +11,7 @@ export interface EmployeeAccess {
   employeeId: string;
   displayName: string;
   active: boolean;
+  administrator: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

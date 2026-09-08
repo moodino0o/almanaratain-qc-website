@@ -44,6 +44,7 @@ export const employeeAccessTable = pgTable(
     id: serial('id').primaryKey(),
     employeeId: varchar('employee_id').notNull().unique(),
     active: boolean('active').notNull().default(true),
+    administrator: boolean('administrator').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

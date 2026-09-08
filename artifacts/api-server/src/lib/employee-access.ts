@@ -56,7 +56,7 @@ export async function ensureEmployeeDirectorySeed(): Promise<void> {
   for (const employee of employees) {
     await db
       .insert(employeeAccessTable)
-      .values({ employeeId: employee.employeeId, active: true })
+      .values({ employeeId: employee.employeeId, active: true, administrator: false })
       .onConflictDoNothing({ target: employeeAccessTable.employeeId });
   }
 }

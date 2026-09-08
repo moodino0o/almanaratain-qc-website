@@ -9,7 +9,7 @@ import {
   UpdateEmployeeAccessResponse,
 } from '@workspace/api-zod';
 import { db, employeeAccessTable, usersTable } from '@workspace/db';
-import { asc, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import { Router, type IRouter, type Request, type Response } from 'express';
 
 import {
@@ -64,7 +64,7 @@ router.get('/auth/user', (req: Request, res: Response) => {
       GetCurrentAuthUserResponse.parse({
         user,
         accessAllowed,
-        isAdmin: user ? isConfiguredAdministrator(user) : false,
+        isAdmin: user ? await isConfiguredAdministrator(user) : false,
       }),
     );
   })().catch(() => {
@@ -152,6 +152,7 @@ function employeeAccessResponse(
     employeeId: entry.employeeId,
     displayName: displayName || `Employee ${entry.employeeId}`,
     active: entry.active,
+    administrator: entry.administrator,
     createdAt: entry.createdAt,
     updatedAt: entry.updatedAt,
   };
@@ -243,14 +244,59 @@ router.patch(
   async (req: Request, res: Response) => {
     const parsedParams = UpdateEmployeeAccessParams.safeParse(req.params);
     const parsedBody = UpdateEmployeeAccessBody.safeParse(req.body);
-    if (!parsedParams.success || !parsedBody.success) {
+    if (
+      !parsedParams.success ||
+      !parsedBody.success ||
+      (parsedBody.data.active === undefined && parsedBody.data.administrator === undefined)
+    ) {
       res.status(400).json({ error: 'Invalid employee access update.' });
       return;
     }
 
+    const [currentEntry] = await db
+      .select()
+      .from(employeeAccessTable)
+      .where(eq(employeeAccessTable.id, parsedParams.data.id));
+    if (!currentEntry) {
+      res.status(404).json({ error: 'Employee access entry not found.' });
+      return;
+    }
+
+    if (parsedBody.data.administrator === false && currentEntry.administrator) {
+      const [{ count }] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(employeeAccessTable)
+        .where(and(
+          eq(employeeAccessTable.active, true),
+          eq(employeeAccessTable.administrator, true),
+        ));
+      if (Number(count) <= 1) {
+        res.status(400).json({ error: 'At least one active administrator must remain.' });
+        return;
+      }
+    }
+
+    if (parsedBody.data.active === false && currentEntry.active && currentEntry.administrator) {
+      const [{ count }] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(employeeAccessTable)
+        .where(and(
+          eq(employeeAccessTable.active, true),
+          eq(employeeAccessTable.administrator, true),
+        ));
+      if (Number(count) <= 1) {
+        res.status(400).json({ error: 'At least one active administrator must remain.' });
+        return;
+      }
+    }
+
     const [entry] = await db
       .update(employeeAccessTable)
-      .set({ active: parsedBody.data.active, updatedAt: new Date() })
+      .set({
+        ...(parsedBody.data.active === undefined ? {} : { active: parsedBody.data.active }),
+        ...(parsedBody.data.administrator === undefined ? {} : { administrator: parsedBody.data.administrator }),
+        updatedAt: new Date(),
+      })
       .where(eq(employeeAccessTable.id, parsedParams.data.id))
       .returning();
     if (!entry) {

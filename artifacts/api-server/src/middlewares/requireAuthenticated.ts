@@ -38,7 +38,7 @@ export async function requireAdministrator(
     return;
   }
 
-  if (!isConfiguredAdministrator(req.user)) {
+  if (!(await isConfiguredAdministrator(req.user))) {
     res.status(403).json({
       code: "ADMINISTRATOR_ACCESS_REQUIRED",
       error: "Administrator access is required.",

@@ -387,6 +387,7 @@ export interface EmployeeAccess {
   employeeId: string;
   displayName: string;
   active: boolean;
+  administrator: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -400,7 +401,8 @@ export interface EmployeeAccessInput {
 }
 
 export interface EmployeeAccessUpdate {
-  active: boolean;
+  active?: boolean;
+  administrator?: boolean;
 }
 
 export interface MobileTokenExchangeRequest {

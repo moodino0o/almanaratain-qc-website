@@ -103,8 +103,12 @@ function EmployeeAccessCard({ isAdmin }: { isAdmin: boolean }) {
   };
 
   useEffect(() => {
-    void loadEmployees();
-  }, []);
+    if (isAdmin) {
+      void loadEmployees();
+    } else {
+      setIsLoading(false);
+    }
+  }, [isAdmin]);
 
   const createEmployee = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -868,6 +872,7 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
                       <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
                         <th className="pb-3 pr-4 font-medium">Employee</th>
                         <th className="pb-3 pr-4 font-medium">Status</th>
+                        <th className="pb-3 pr-4 font-medium">Role</th>
                         <th className="pb-3 pr-4 font-medium">Added</th>
                         <th className="pb-3 pr-4 font-medium">Last updated</th>
                         <th className="pb-3 text-right font-medium">Action</th>
@@ -885,18 +890,42 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
                               {employee.active ? "Active" : "Inactive"}
                             </Badge>
                           </td>
+                          <td className="py-4 pr-4">
+                            <Badge variant={employee.administrator ? "outline" : "secondary"}>
+                              {employee.administrator ? "Administrator" : "Employee"}
+                            </Badge>
+                          </td>
                           <td className="whitespace-nowrap py-4 pr-4 text-muted-foreground">{formatAccessDate(employee.createdAt)}</td>
                           <td className="whitespace-nowrap py-4 pr-4 text-muted-foreground">{formatAccessDate(employee.updatedAt)}</td>
                           <td className="py-4 text-right">
-                            {employee.active ? (
-                              <Button variant="outline" size="sm" onClick={() => setEmployeeToDeactivate(employee)}>
-                                Deactivate access
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => updateEmployee.mutate(
+                                  { id: employee.id, data: { administrator: !employee.administrator } },
+                                  {
+                                    onSuccess: () => {
+                                      toast.success(employee.administrator ? "Administrator role removed" : "Administrator role granted");
+                                      invalidateAccess();
+                                    },
+                                    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not update administrator role."),
+                                  },
+                                )}
+                                disabled={updateEmployee.isPending}
+                              >
+                                {employee.administrator ? "Remove admin" : "Make admin"}
                               </Button>
-                            ) : (
-                              <Button variant="outline" size="sm" onClick={() => updateAccess(employee, true)} disabled={updateEmployee.isPending}>
-                                Activate access
-                              </Button>
-                            )}
+                              {employee.active ? (
+                                <Button variant="outline" size="sm" onClick={() => setEmployeeToDeactivate(employee)}>
+                                  Deactivate access
+                                </Button>
+                              ) : (
+                                <Button variant="outline" size="sm" onClick={() => updateAccess(employee, true)} disabled={updateEmployee.isPending}>
+                                  Activate access
+                                </Button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -919,15 +948,37 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
                         <div><span className="block font-medium text-foreground">Added</span>{formatAccessDate(employee.createdAt)}</div>
                         <div><span className="block font-medium text-foreground">Updated</span>{formatAccessDate(employee.updatedAt)}</div>
                       </div>
-                      {employee.active ? (
-                        <Button className="mt-4 w-full" variant="outline" onClick={() => setEmployeeToDeactivate(employee)}>
-                          Deactivate access
+                      <Badge className="mt-4" variant={employee.administrator ? "outline" : "secondary"}>
+                        {employee.administrator ? "Administrator" : "Employee"}
+                      </Badge>
+                      <div className="mt-3 grid gap-2">
+                        <Button
+                          className="w-full"
+                          variant="outline"
+                          onClick={() => updateEmployee.mutate(
+                            { id: employee.id, data: { administrator: !employee.administrator } },
+                            {
+                              onSuccess: () => {
+                                toast.success(employee.administrator ? "Administrator role removed" : "Administrator role granted");
+                                invalidateAccess();
+                              },
+                              onError: (error) => toast.error(error instanceof Error ? error.message : "Could not update administrator role."),
+                            },
+                          )}
+                          disabled={updateEmployee.isPending}
+                        >
+                          {employee.administrator ? "Remove administrator role" : "Grant administrator role"}
                         </Button>
-                      ) : (
-                        <Button className="mt-4 w-full" variant="outline" onClick={() => updateAccess(employee, true)} disabled={updateEmployee.isPending}>
-                          Activate access
-                        </Button>
-                      )}
+                        {employee.active ? (
+                          <Button className="w-full" variant="outline" onClick={() => setEmployeeToDeactivate(employee)}>
+                            Deactivate access
+                          </Button>
+                        ) : (
+                          <Button className="w-full" variant="outline" onClick={() => updateAccess(employee, true)} disabled={updateEmployee.isPending}>
+                            Activate access
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
