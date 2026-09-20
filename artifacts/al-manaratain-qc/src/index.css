@@ -121,6 +121,28 @@
     transparent;
 }
 
+.complaint-register-scroll {
+  max-height: min(70vh, 760px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.complaint-register-table {
+  border-collapse: collapse;
+  overflow-wrap: anywhere;
+}
+
+.complaint-register-table th,
+.complaint-register-table td {
+  padding: 0.55rem 0.45rem;
+  vertical-align: top;
+}
+
+.complaint-register-table th {
+  white-space: normal;
+}
+
 .complaint-kicker {
   color: hsl(var(--primary));
   font-size: 0.7rem;
