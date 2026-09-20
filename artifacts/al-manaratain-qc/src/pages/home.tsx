@@ -39,24 +39,36 @@ function MetricCard({
   tone: "neutral" | "success" | "warning" | "danger";
 }) {
   const toneClasses = {
-    neutral: "border-slate-200 bg-card text-slate-700",
-    success: "border-emerald-200 bg-emerald-50/40 text-emerald-800",
-    warning: "border-amber-200 bg-amber-50/45 text-amber-800",
-    danger: "border-rose-200 bg-rose-50/45 text-rose-800",
+    neutral: "border-border bg-card",
+    success: "border-border bg-card",
+    warning: "border-border bg-card",
+    danger: "border-border bg-card",
   };
   const iconClasses = {
-    neutral: "bg-slate-100 text-slate-600",
-    success: "bg-emerald-100 text-emerald-700",
-    warning: "bg-amber-100 text-amber-700",
-    danger: "bg-rose-100 text-rose-700",
+    neutral: "bg-muted text-muted-foreground",
+    success: "bg-success/10 text-success",
+    warning: "bg-warning/10 text-warning",
+    danger: "bg-destructive/10 text-destructive",
+  };
+  const labelClasses = {
+    neutral: "text-muted-foreground",
+    success: "text-success",
+    warning: "text-warning",
+    danger: "text-destructive",
+  };
+  const valueClasses = {
+    neutral: "text-foreground",
+    success: "text-success",
+    warning: "text-warning",
+    danger: "text-destructive",
   };
 
   return (
     <Card className={`overflow-hidden border shadow-none ${toneClasses[tone]}`}>
       <CardContent className="flex items-start justify-between gap-3 p-5">
         <div className="min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
-          <p className="mt-2 text-3xl font-bold tracking-tight text-foreground">{value.toLocaleString()}</p>
+          <p className={`text-[11px] font-bold uppercase tracking-[0.14em] ${labelClasses[tone]}`}>{label}</p>
+          <p className={`mt-2 text-3xl font-bold tracking-tight ${valueClasses[tone]}`}>{value.toLocaleString()}</p>
           <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
         </div>
         <span className={`rounded-lg p-2.5 ${iconClasses[tone]}`}>
@@ -119,9 +131,9 @@ export default function Home() {
 
   if (dashboardQuery.isError || !dashboard) {
     return (
-      <Card className="mx-auto mt-10 max-w-lg border-rose-200 text-center">
+      <Card className="mx-auto mt-10 max-w-lg border-destructive/30 text-center">
         <CardContent className="space-y-4 p-10">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-rose-100 text-rose-700">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
             <AlertTriangle className="h-6 w-6" />
           </div>
           <div>
@@ -179,17 +191,17 @@ export default function Home() {
             <p className="mt-4 text-2xl font-bold">{dashboard.totalComplaints.toLocaleString()}</p>
             <p className="mt-1 text-xs font-medium text-muted-foreground">Total complaints</p>
           </Link>
-          <Link href="/complaints" className="group rounded-lg border border-border bg-card p-4 transition-colors hover:border-amber-300 hover:bg-amber-50/30">
+          <Link href="/complaints" className="group rounded-lg border border-border bg-card p-4 transition-colors hover:border-warning/40 hover:bg-warning/5">
             <div className="flex items-center justify-between">
-              <span className="rounded-md bg-amber-100 p-2 text-amber-700"><Clock3 className="h-4 w-4" /></span>
+              <span className="rounded-md bg-warning/10 p-2 text-warning"><Clock3 className="h-4 w-4" /></span>
               <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
             </div>
             <p className="mt-4 text-2xl font-bold">{dashboard.openComplaints.toLocaleString()}</p>
             <p className="mt-1 text-xs font-medium text-muted-foreground">Open complaints</p>
           </Link>
-          <Link href="/complaints" className="group rounded-lg border border-border bg-card p-4 transition-colors hover:border-emerald-300 hover:bg-emerald-50/30">
+          <Link href="/complaints" className="group rounded-lg border border-border bg-card p-4 transition-colors hover:border-success/40 hover:bg-success/5">
             <div className="flex items-center justify-between">
-              <span className="rounded-md bg-emerald-100 p-2 text-emerald-700"><CheckCircle2 className="h-4 w-4" /></span>
+              <span className="rounded-md bg-success/10 p-2 text-success"><CheckCircle2 className="h-4 w-4" /></span>
               <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
             </div>
             <p className="mt-4 text-2xl font-bold">{dashboard.solvedComplaints.toLocaleString()}</p>
