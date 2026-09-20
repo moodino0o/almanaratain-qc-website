@@ -16,8 +16,14 @@ test("classifies inch-sized materials as Block", () => {
 test("classifies 60mm and 80mm materials as Paving", () => {
   assert.equal(complaintCategory("SEBAGO 60MM BUFF EDGE"), "Paving");
   assert.equal(complaintCategory("80 mm Grey"), "Paving");
+  assert.equal(complaintCategory("Buff paving edge"), "Paving");
+});
+
+test("classifies materials containing sand as Sand", () => {
+  assert.equal(complaintCategory("Double Washed Sand"), "Sand");
+  assert.equal(complaintCategory("Fine SAND"), "Sand");
 });
 
 test("leaves unmatched materials as Other", () => {
-  assert.equal(complaintCategory("Double Washed Sand"), "Other");
+  assert.equal(complaintCategory("Crusher Dust"), "Other");
 });
