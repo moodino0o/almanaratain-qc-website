@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@workspace/replit-auth-web";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { complaintCategory, type ComplaintCategory } from "./complaints-utils";
 
 function displayDate(value: string) {
   const date = new Date(value);
@@ -21,13 +22,14 @@ function escapeCsv(value: unknown) {
 }
 
 function exportComplaints(rows: Complaint[]) {
-  const header = ["Complaint No.", "Customer", "Delivery date", "Complaint type", "Material type", "Details", "Solution", "Recommendation", "Picture count", "Picture names", "Created", "Updated"];
+  const header = ["Complaint No.", "Customer", "Delivery date", "Complaint type", "Material type", "Category", "Details", "Solution", "Recommendation", "Picture count", "Picture names", "Created", "Updated"];
   const lines = rows.map((complaint) => [
     complaint.complaintNo,
     complaint.customerName,
     complaint.deliveryDate,
     complaint.complaintType,
     complaint.materialType,
+    complaintCategory(complaint.materialType),
     complaint.details,
     complaint.solution,
     complaint.recommendation,
@@ -59,6 +61,7 @@ export default function Complaints() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [materialFilter, setMaterialFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState<ComplaintCategory | "all">("all");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const complaints = complaintsQuery.data ?? [];
@@ -67,15 +70,17 @@ export default function Complaints() {
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return complaints.filter((complaint) => {
-      const searchable = `${complaint.complaintNo} ${complaint.customerName} ${complaint.complaintType} ${complaint.materialType} ${complaint.details} ${complaint.deliveryDate} ${displayDate(complaint.deliveryDate)}`.toLowerCase();
+      const category = complaintCategory(complaint.materialType);
+      const searchable = `${complaint.complaintNo} ${complaint.customerName} ${complaint.complaintType} ${complaint.materialType} ${category} ${complaint.details} ${complaint.deliveryDate} ${displayDate(complaint.deliveryDate)}`.toLowerCase();
       return (!term || searchable.includes(term)) &&
         (typeFilter === "all" || complaint.complaintType === typeFilter) &&
         (materialFilter === "all" || complaint.materialType === materialFilter) &&
+        (categoryFilter === "all" || complaintCategory(complaint.materialType) === categoryFilter) &&
         (statusFilter === "all" || complaint.status === statusFilter) &&
         (!fromDate || complaint.deliveryDate >= fromDate) &&
         (!toDate || complaint.deliveryDate <= toDate);
     });
-  }, [complaints, fromDate, materialFilter, search, statusFilter, toDate, typeFilter]);
+  }, [categoryFilter, complaints, fromDate, materialFilter, search, statusFilter, toDate, typeFilter]);
 
   async function markComplete(id: number) {
     try {
@@ -118,10 +123,11 @@ export default function Complaints() {
 
        <Card>
         <CardHeader className="border-b bg-muted/25 pb-4"><CardTitle className="text-base">Find a complaint</CardTitle></CardHeader>
-         <CardContent className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_180px_180px_160px_160px_160px]">
+         <CardContent className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_180px_180px_150px_150px_150px_150px]">
            <label className="relative"><span className="sr-only">Search complaints, including dates</span><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search number, customer, material, details, or date" /></label>
           <label><span className="sr-only">Filter complaint type</span><select className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}><option value="all">All complaint types</option>{typeOptions.map((item) => <option key={item}>{item}</option>)}</select></label>
           <label><span className="sr-only">Filter material type</span><select className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={materialFilter} onChange={(event) => setMaterialFilter(event.target.value)}><option value="all">All materials</option>{materialOptions.map((item) => <option key={item}>{item}</option>)}</select></label>
+           <label><span className="sr-only">Filter product category</span><select className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value as ComplaintCategory | "all")}><option value="all">All categories</option><option value="Ready Mix">Ready Mix</option><option value="Block">Block</option><option value="Paving">Paving</option><option value="Other">Other</option></select></label>
            <label><span className="sr-only">Filter complaint status</span><select className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">All statuses</option><option value="open">Open / uncompleted</option><option value="complete">Complete / closed</option></select></label>
            <label className="space-y-1"><span className="text-xs font-medium text-muted-foreground">From date</span><Input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} aria-label="Filter complaints from date" /></label>
            <label className="space-y-1"><span className="text-xs font-medium text-muted-foreground">To date</span><Input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} aria-label="Filter complaints to date" /></label>
@@ -129,8 +135,8 @@ export default function Complaints() {
       </Card>
 
       <Card className="overflow-hidden">
-        <CardHeader className="flex flex-row items-center justify-between border-b bg-card pb-4"><div><CardTitle className="text-base">Complaint register</CardTitle><p className="mt-1 text-sm text-muted-foreground">{filtered.length} loaded record{filtered.length === 1 ? "" : "s"}</p></div><Badge variant="outline">QC controlled</Badge></CardHeader>
-           {filtered.length === 0 ? <CardContent className="flex flex-col items-center justify-center gap-3 p-14 text-center"><div className="rounded-full bg-muted p-4"><FileWarning className="h-7 w-7 text-muted-foreground" /></div><h2 className="text-lg font-semibold">{complaints.length ? "No complaints match those filters" : "No complaints recorded yet"}</h2><p className="max-w-md text-sm text-muted-foreground">{complaints.length ? "Try a broader search or clear one of the filters." : "No complaints have been recorded yet."}</p>{!complaints.length && canEditComplaints && <Button asChild><Link href="/complaints/new">Create first complaint</Link></Button>}</CardContent> : <div className="overflow-x-auto"><table className="w-full min-w-[1180px] text-sm"><thead className="bg-muted/40 text-left text-xs uppercase tracking-wider text-muted-foreground"><tr><th className="px-4 py-3">Complaint</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Customer</th><th className="px-4 py-3">Delivery</th><th className="px-4 py-3">Classification</th><th className="px-4 py-3">Details</th><th className="px-4 py-3">Follow-through</th><th className="px-4 py-3 text-right">Action</th></tr></thead><tbody className="divide-y">{filtered.map((complaint) => <tr key={complaint.id} className="align-top transition-colors hover:bg-muted/20"><td className="px-4 py-4"><Link href={`/complaints/${complaint.id}`} className="font-semibold text-primary hover:underline">{complaint.complaintNo}</Link><p className="mt-1 text-xs text-muted-foreground">Updated {displayDate(complaint.updatedAt)}</p></td><td className="px-4 py-4"><Badge variant={complaint.status === "complete" ? "success" : "secondary"}>{complaint.status === "complete" ? "Complete" : "Open"}</Badge>{canEditComplaints && complaint.status === "open" && <Button type="button" variant="outline" size="sm" className="mt-2 whitespace-nowrap" disabled={updateComplaint.isPending} onClick={() => void markComplete(complaint.id)}><CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />Mark complete</Button>}</td><td className="px-4 py-4 font-medium">{complaint.customerName}</td><td className="whitespace-nowrap px-4 py-4 text-muted-foreground">{displayDate(complaint.deliveryDate)}</td><td className="px-4 py-4"><p className="font-medium">{complaint.complaintType}</p><p className="mt-1 text-xs text-muted-foreground">{complaint.materialType}</p></td><td className="max-w-[260px] px-4 py-4 text-muted-foreground"><p className="line-clamp-2">{complaint.details}</p></td><td className="px-4 py-4"><div className="flex flex-wrap gap-1.5"><Badge variant={complaint.solution.trim() ? "success" : "secondary"}>Solution: {availability(complaint.solution)}</Badge><Badge variant={complaint.recommendation.trim() ? "success" : "secondary"}>Recommendation: {availability(complaint.recommendation)}</Badge><span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><ShieldCheck className="h-3.5 w-3.5" />{complaint.picturePaths.length} picture{complaint.picturePaths.length === 1 ? "" : "s"}</span></div></td><td className="px-4 py-4 text-right"><Button asChild variant="ghost" size="sm"><Link href={`/complaints/${complaint.id}`}>Review <ArrowUpRight className="ml-1.5 h-4 w-4" /></Link></Button></td></tr>)}</tbody></table></div>}
+         <CardHeader className="flex flex-row items-center justify-between border-b bg-card pb-4"><div><CardTitle className="text-base">Complaint register</CardTitle><p className="mt-1 text-sm text-muted-foreground">{filtered.length} loaded record{filtered.length === 1 ? "" : "s"}</p></div><Badge variant="outline">QC controlled</Badge></CardHeader>
+           {filtered.length === 0 ? <CardContent className="flex flex-col items-center justify-center gap-3 p-14 text-center"><div className="rounded-full bg-muted p-4"><FileWarning className="h-7 w-7 text-muted-foreground" /></div><h2 className="text-lg font-semibold">{complaints.length ? "No complaints match those filters" : "No complaints recorded yet"}</h2><p className="max-w-md text-sm text-muted-foreground">{complaints.length ? "Try a broader search or clear one of the filters." : "No complaints have been recorded yet."}</p>{!complaints.length && canEditComplaints && <Button asChild><Link href="/complaints/new">Create first complaint</Link></Button>}</CardContent> : <div className="overflow-x-auto"><table className="w-full min-w-[1180px] text-sm"><thead className="bg-muted/40 text-left text-xs uppercase tracking-wider text-muted-foreground"><tr><th className="px-4 py-3">Complaint</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Customer</th><th className="px-4 py-3">Delivery</th><th className="px-4 py-3">Classification</th><th className="px-4 py-3">Details</th><th className="px-4 py-3">Follow-through</th><th className="px-4 py-3 text-right">Action</th></tr></thead><tbody className="divide-y">{filtered.map((complaint) => <tr key={complaint.id} className="align-top transition-colors hover:bg-muted/20"><td className="px-4 py-4"><Link href={`/complaints/${complaint.id}`} className="font-semibold text-primary hover:underline">{complaint.complaintNo}</Link><p className="mt-1 text-xs text-muted-foreground">Updated {displayDate(complaint.updatedAt)}</p></td><td className="px-4 py-4"><Badge variant={complaint.status === "complete" ? "success" : "secondary"}>{complaint.status === "complete" ? "Complete" : "Open"}</Badge>{canEditComplaints && complaint.status === "open" && <Button type="button" variant="outline" size="sm" className="mt-2 whitespace-nowrap" disabled={updateComplaint.isPending} onClick={() => void markComplete(complaint.id)}><CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />Mark complete</Button>}</td><td className="px-4 py-4 font-medium">{complaint.customerName}</td><td className="whitespace-nowrap px-4 py-4 text-muted-foreground">{displayDate(complaint.deliveryDate)}</td><td className="px-4 py-4"><p className="font-medium">{complaint.complaintType}</p><div className="mt-1 flex flex-wrap items-center gap-1.5"><p className="text-xs text-muted-foreground">{complaint.materialType}</p><Badge variant="outline">{complaintCategory(complaint.materialType)}</Badge></div></td><td className="max-w-[260px] px-4 py-4 text-muted-foreground"><p className="line-clamp-2">{complaint.details}</p></td><td className="px-4 py-4"><div className="flex flex-wrap gap-1.5"><Badge variant={complaint.solution.trim() ? "success" : "secondary"}>Solution: {availability(complaint.solution)}</Badge><Badge variant={complaint.recommendation.trim() ? "success" : "secondary"}>Recommendation: {availability(complaint.recommendation)}</Badge><span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><ShieldCheck className="h-3.5 w-3.5" />{complaint.picturePaths.length} picture{complaint.picturePaths.length === 1 ? "" : "s"}</span></div></td><td className="px-4 py-4 text-right"><Button asChild variant="ghost" size="sm"><Link href={`/complaints/${complaint.id}`}>Review <ArrowUpRight className="ml-1.5 h-4 w-4" /></Link></Button></td></tr>)}</tbody></table></div>}
       </Card>
     </div>
   );
