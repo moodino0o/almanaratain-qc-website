@@ -396,7 +396,7 @@ function CategoryCard({ category }: { category: ReferenceCategory }) {
 
   return (
     <>
-      <Card className="flex flex-col h-full border shadow-sm">
+      <Card className="mb-6 break-inside-avoid flex flex-col border shadow-sm">
         <CardHeader className="shrink-0 border-b border-border/50 bg-muted/20 p-3">
           <div className="flex items-center justify-between gap-2">
             <button
@@ -712,7 +712,7 @@ export default function Settings() {
               <Button onClick={() => setIsAddCategoryOpen(true)}>Create First Category</Button>
             </div>
           ) : (
-            <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 overflow-y-auto pb-8 pt-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="min-h-0 flex-1 columns-1 gap-6 overflow-y-auto pb-8 pt-4 md:columns-2 lg:columns-3">
               {categories.map((category) => (
                 <CategoryCard key={category.id} category={category} />
               ))}
