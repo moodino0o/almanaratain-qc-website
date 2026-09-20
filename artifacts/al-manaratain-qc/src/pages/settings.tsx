@@ -1051,11 +1051,11 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
                           <td className="text-muted-foreground">{formatAccessDate(employee.createdAt)}</td>
                           <td className="text-muted-foreground">{formatAccessDate(employee.updatedAt)}</td>
                           <td className="text-right">
-                            <div className="flex flex-wrap justify-end gap-1">
+                            <div className="employee-access-actions grid grid-cols-2 gap-1">
                               <Button
                                 variant="outline"
                                  size="sm"
-                                 className="h-8 whitespace-normal px-2 text-[10px]"
+                                 className="h-8 w-full whitespace-normal px-2 text-[10px]"
                                 onClick={() => {
                                   setEmployeeForPassword(employee);
                                   setPassword("");
@@ -1068,7 +1068,7 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
                               </Button>
                               <select
                                 aria-label={`Role for ${employee.displayName}`}
-                                 className="h-8 min-w-0 max-w-full rounded-md border border-input bg-background px-1.5 text-[10px]"
+                                 className="h-8 min-w-0 w-full rounded-md border border-input bg-background px-1.5 text-[10px]"
                                 value={employee.role}
                                 onChange={(event) => updateRole(employee, event.target.value as UserRole)}
                                 disabled={updateEmployee.isPending}
@@ -1078,18 +1078,18 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
                                 ))}
                               </select>
                               {employee.active ? (
-                                <Button variant="outline" size="sm" onClick={() => setEmployeeToDeactivate(employee)}>
+                                 <Button variant="outline" size="sm" className="h-8 w-full whitespace-normal px-2 text-[10px]" onClick={() => setEmployeeToDeactivate(employee)}>
                                   Deactivate access
                                 </Button>
                               ) : (
-                                <Button variant="outline" size="sm" onClick={() => updateAccess(employee, true)} disabled={updateEmployee.isPending}>
+                                 <Button variant="outline" size="sm" className="h-8 w-full whitespace-normal px-2 text-[10px]" onClick={() => updateAccess(employee, true)} disabled={updateEmployee.isPending}>
                                   Activate access
                                 </Button>
                               )}
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-destructive hover:text-destructive"
+                                 className="h-8 w-full whitespace-normal px-2 text-[10px] text-destructive hover:text-destructive"
                                 onClick={() => setEmployeeToDelete(employee)}
                                 disabled={deleteEmployee.isPending}
                               >
