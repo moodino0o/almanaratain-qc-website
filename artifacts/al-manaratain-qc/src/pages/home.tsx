@@ -1,6 +1,12 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { useGetDashboard, useListRecords } from "@workspace/api-client-react";
+import {
+  getListComplaintsQueryKey,
+  getListRecordsQueryKey,
+  useGetDashboard,
+  useListComplaints,
+  useListRecords,
+} from "@workspace/api-client-react";
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -114,7 +120,17 @@ function StatusBadge({ status }: { status: string }) {
 export default function Home() {
   const dashboardQuery = useGetDashboard();
   const [recordSearch, setRecordSearch] = useState("");
-  const recordsQuery = useListRecords({ search: recordSearch || undefined });
+  const searchTerm = recordSearch.trim();
+  const recordsSearchParams = { search: searchTerm || undefined, limit: 100 };
+  const complaintsSearchParams = { search: searchTerm || undefined };
+  const recordsQuery = useListRecords(
+    recordsSearchParams,
+    { query: { enabled: Boolean(searchTerm), queryKey: getListRecordsQueryKey(recordsSearchParams) } },
+  );
+  const complaintsQuery = useListComplaints(
+    complaintsSearchParams,
+    { query: { enabled: Boolean(searchTerm), queryKey: getListComplaintsQueryKey(complaintsSearchParams) } },
+  );
   const dashboard = dashboardQuery.data;
 
   if (dashboardQuery.isLoading) {
@@ -168,6 +184,8 @@ export default function Home() {
   const passRate =
     (dashboard.passedRecords / Math.max(dashboard.totalRecords, 1)) * 100;
   const records = recordsQuery.data ?? [];
+  const complaints = complaintsQuery.data ?? [];
+  const searchLoading = recordsQuery.isLoading || complaintsQuery.isLoading;
   const complaintChartData = [
     {
       name: "Open",
@@ -349,11 +367,11 @@ export default function Home() {
 
       <Card className="border-t-4 border-t-primary shadow-none">
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Search className="h-4 w-4 text-primary" /> Find a QC record
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Search className="h-4 w-4 text-primary" /> Search reports and complaints
           </CardTitle>
           <CardDescription>
-            Search by customer, location, mix design, or reference number.
+              Search by customer, location, material, reference number, complaint number, or complaint details.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -363,53 +381,89 @@ export default function Home() {
               className="h-11 pl-9"
               value={recordSearch}
               onChange={(event) => setRecordSearch(event.target.value)}
-              placeholder="Start typing to search the QC register…"
+              placeholder="Search all reports and complaints…"
             />
           </div>
         </CardContent>
       </Card>
 
-      {recordSearch && (
+      {searchTerm && (
         <Card className="shadow-none">
           <CardHeader className="border-b bg-muted/20 py-4">
-            <CardTitle className="text-base">Matching QC records</CardTitle>
+            <CardTitle className="text-base">Search results</CardTitle>
             <CardDescription>
-              {recordsQuery.isLoading
-                ? "Searching the register…"
-                : `${records.length} result${records.length === 1 ? "" : "s"}`}
+              {searchLoading
+                ? "Searching reports and complaints…"
+                : `${records.length} report${records.length === 1 ? "" : "s"} · ${complaints.length} complaint${complaints.length === 1 ? "" : "s"}`}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 p-3">
-            {!recordsQuery.isLoading &&
-              records.slice(0, 8).map((record) => {
-                const details = record.details as Record<string, unknown>;
-                return (
-                  <Link
-                    key={record.id}
-                    href={`/records/${record.id}`}
-                    className="flex items-center gap-3 rounded-md border border-transparent p-3 transition-colors hover:border-border hover:bg-muted/40"
-                  >
-                    <span className="min-w-0 flex-1 truncate font-semibold text-primary">
-                      {String(details.referenceNumber || record.recordNo)}
-                    </span>
-                    <span className="hidden truncate text-sm text-muted-foreground sm:block">
-                      {record.testType} · {record.material}
-                    </span>
-                    <span className="hidden text-xs text-muted-foreground md:block">
-                      {record.location}
-                    </span>
-                    <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  </Link>
-                );
-              })}
-            {!recordsQuery.isLoading && records.length === 0 && (
-              <div className="flex flex-col items-center gap-2 p-7 text-center">
-                <ClipboardCheck className="h-7 w-7 text-muted-foreground" />
-                <p className="text-sm font-medium">No matching records</p>
-                <p className="text-xs text-muted-foreground">
-                  Try a reference number, customer, or location.
-                </p>
+            {!searchLoading && (recordsQuery.isError || complaintsQuery.isError) && (
+              <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+                Some search results could not be loaded. Try the search again.
               </div>
+            )}
+            {!searchLoading && (
+              <>
+                <section className="space-y-2">
+                  <div className="flex items-center gap-2 border-b pb-2 text-sm font-semibold">
+                    <ClipboardCheck className="h-4 w-4 text-primary" /> QC reports ({records.length})
+                  </div>
+                  {records.map((record) => {
+                    const details = record.details as Record<string, unknown>;
+                    return (
+                      <Link
+                        key={`record-${record.id}`}
+                        href={`/reports/${record.id}`}
+                        className="flex items-center gap-3 rounded-md border border-transparent p-3 transition-colors hover:border-border hover:bg-muted/40"
+                      >
+                        <span className="min-w-0 flex-1 truncate font-semibold text-primary">
+                          {String(details.referenceNumber || record.recordNo)}
+                        </span>
+                        <span className="hidden truncate text-sm text-muted-foreground sm:block">
+                          {record.testType} · {record.material}
+                        </span>
+                        <span className="hidden text-xs text-muted-foreground md:block">
+                          {record.location}
+                        </span>
+                        <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      </Link>
+                    );
+                  })}
+                  {records.length === 0 && (
+                    <p className="px-3 py-4 text-sm text-muted-foreground">No matching QC reports.</p>
+                  )}
+                </section>
+                <section className="space-y-2">
+                  <div className="flex items-center gap-2 border-b pb-2 text-sm font-semibold">
+                    <MessageSquareWarning className="h-4 w-4 text-primary" /> Complaints ({complaints.length})
+                  </div>
+                  {complaints.map((complaint) => (
+                    <Link
+                      key={`complaint-${complaint.id}`}
+                      href={`/complaints/${complaint.id}`}
+                      className="flex items-center gap-3 rounded-md border border-transparent p-3 transition-colors hover:border-border hover:bg-muted/40"
+                    >
+                      <span className="min-w-0 flex-1 truncate font-semibold text-primary">
+                        {complaint.complaintNo}
+                      </span>
+                      <span className="hidden truncate text-sm text-muted-foreground sm:block">
+                        {complaint.customerName} · {complaint.materialType}
+                      </span>
+                      <span className="hidden text-xs text-muted-foreground md:block">
+                        {complaint.complaintType}
+                      </span>
+                      <Badge variant={complaint.status === "complete" ? "success" : "warning"}>
+                        {complaint.status === "complete" ? "Complete" : "Open"}
+                      </Badge>
+                      <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    </Link>
+                  ))}
+                  {complaints.length === 0 && (
+                    <p className="px-3 py-4 text-sm text-muted-foreground">No matching complaints.</p>
+                  )}
+                </section>
+              </>
             )}
           </CardContent>
         </Card>
