@@ -19,7 +19,7 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const [location] = useLocation();
-  const { user, logout } = useAuth();
+  const { user, role, logout } = useAuth();
 
   const navItems = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -28,7 +28,9 @@ export function Layout({ children }: LayoutProps) {
     { href: "/reports", label: "Reports", icon: FileText },
     { href: "/archive", label: "Archive", icon: Archive },
     { href: "/standards", label: "Standards", icon: FileCheck2 },
-    { href: "/settings", label: "Settings", icon: Settings },
+    ...(role === "administrator"
+      ? [{ href: "/settings", label: "Settings", icon: Settings }]
+      : []),
   ];
 
   return (

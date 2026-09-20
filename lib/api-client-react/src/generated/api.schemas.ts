@@ -435,10 +435,21 @@ export interface AuthUser {
   profileImageUrl: string | null;
 }
 
+export type UserRole = typeof UserRole[keyof typeof UserRole];
+
+
+export const UserRole = {
+  technician: 'technician',
+  managerial: 'managerial',
+  administrator: 'administrator',
+  visitor: 'visitor',
+} as const;
+
 export interface AuthUserEnvelope {
   user: AuthUser | null;
   accessAllowed: boolean;
   isAdmin: boolean;
+  role: UserRole | null;
 }
 
 export interface EmployeeAccess {
@@ -447,6 +458,7 @@ export interface EmployeeAccess {
   displayName: string;
   active: boolean;
   administrator: boolean;
+  role: UserRole;
   passwordSet?: boolean;
   createdAt: string;
   updatedAt: string;
@@ -458,11 +470,13 @@ export interface EmployeeAccessList {
 
 export interface EmployeeAccessInput {
   employeeId: string;
+  role?: UserRole;
 }
 
 export interface EmployeeAccessUpdate {
   active?: boolean;
   administrator?: boolean;
+  role?: UserRole;
   /**
      * @minLength 8
      * @maxLength 128
@@ -492,6 +506,14 @@ export const LogoutSuccessValue = {
 } as const;
 export type LogoutSuccess = typeof LogoutSuccessValue;
 
+export type UploadUrlRequestPurpose = typeof UploadUrlRequestPurpose[keyof typeof UploadUrlRequestPurpose];
+
+
+export const UploadUrlRequestPurpose = {
+  complaint: 'complaint',
+  archive: 'archive',
+} as const;
+
 export interface UploadUrlRequest {
   /** @minLength 1 */
   name: string;
@@ -499,6 +521,7 @@ export interface UploadUrlRequest {
   size: number;
   /** @minLength 1 */
   contentType: string;
+  purpose: UploadUrlRequestPurpose;
 }
 
 export interface UploadUrlResponse {

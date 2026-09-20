@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { UserRole } from './userRole';
 
 export interface EmployeeAccess {
   id: number;
@@ -12,6 +13,7 @@ export interface EmployeeAccess {
   displayName: string;
   active: boolean;
   administrator: boolean;
+  role: UserRole;
   passwordSet?: boolean;
   createdAt: Date;
   updatedAt: Date;

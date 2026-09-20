@@ -66,6 +66,10 @@ import {
   UpdateSieveStandardResponse,
 } from "@workspace/api-zod";
 import {
+  requireAdministrator,
+  requireQcEditor,
+} from "../middlewares/requireAuthenticated";
+import {
   evaluateSieveRecord,
   evaluateStrengthRecord,
   type SieveStandardForEvaluation,
@@ -599,7 +603,7 @@ router.get("/reference-data", async (_req, res): Promise<void> => {
   res.json(GetReferenceDataResponse.parse({ categories: await listReferenceData() }));
 });
 
-router.post("/reference-data/categories", async (req, res): Promise<void> => {
+router.post("/reference-data/categories", requireAdministrator, async (req, res): Promise<void> => {
   const body = CreateReferenceCategoryBody.safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: body.error.message });
@@ -628,7 +632,7 @@ router.post("/reference-data/categories", async (req, res): Promise<void> => {
   }
 });
 
-router.patch("/reference-data/categories/:id", async (req, res): Promise<void> => {
+router.patch("/reference-data/categories/:id", requireAdministrator, async (req, res): Promise<void> => {
   const params = UpdateReferenceCategoryParams.safeParse(req.params);
   const body = UpdateReferenceCategoryBody.safeParse(req.body);
   if (!params.success) {
@@ -661,7 +665,7 @@ router.patch("/reference-data/categories/:id", async (req, res): Promise<void> =
   }
 });
 
-router.delete("/reference-data/categories/:id", async (req, res): Promise<void> => {
+router.delete("/reference-data/categories/:id", requireAdministrator, async (req, res): Promise<void> => {
   const params = DeleteReferenceCategoryParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -678,7 +682,7 @@ router.delete("/reference-data/categories/:id", async (req, res): Promise<void> 
   res.sendStatus(204);
 });
 
-router.post("/reference-data/categories/:categoryId/items", async (req, res): Promise<void> => {
+router.post("/reference-data/categories/:categoryId/items", requireAdministrator, async (req, res): Promise<void> => {
   const params = CreateReferenceItemParams.safeParse(req.params);
   const body = CreateReferenceItemBody.safeParse(req.body);
   if (!params.success) {
@@ -712,7 +716,7 @@ router.post("/reference-data/categories/:categoryId/items", async (req, res): Pr
   }
 });
 
-router.patch("/reference-data/items/:id", async (req, res): Promise<void> => {
+router.patch("/reference-data/items/:id", requireAdministrator, async (req, res): Promise<void> => {
   const params = UpdateReferenceItemParams.safeParse(req.params);
   const body = UpdateReferenceItemBody.safeParse(req.body);
   if (!params.success) {
@@ -739,7 +743,7 @@ router.patch("/reference-data/items/:id", async (req, res): Promise<void> => {
   }
 });
 
-router.delete("/reference-data/items/:id", async (req, res): Promise<void> => {
+router.delete("/reference-data/items/:id", requireAdministrator, async (req, res): Promise<void> => {
   const params = DeleteReferenceItemParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -771,7 +775,7 @@ router.get("/strength-standards", async (_req, res): Promise<void> => {
   res.json(ListStrengthStandardsResponse.parse(standards.map(toStrengthStandard)));
 });
 
-router.post("/strength-standards", async (req, res): Promise<void> => {
+router.post("/strength-standards", requireAdministrator, async (req, res): Promise<void> => {
   const body = CreateStrengthStandardBody.safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: body.error.message });
@@ -799,7 +803,7 @@ router.post("/strength-standards", async (req, res): Promise<void> => {
   res.status(201).json(CreateStrengthStandardResponse.parse(toStrengthStandard(standard)));
 });
 
-router.patch("/strength-standards/:id", async (req, res): Promise<void> => {
+router.patch("/strength-standards/:id", requireAdministrator, async (req, res): Promise<void> => {
   const params = UpdateStrengthStandardParams.safeParse(req.params);
   const body = UpdateStrengthStandardBody.safeParse(req.body);
   if (!params.success) {
@@ -848,7 +852,7 @@ router.patch("/strength-standards/:id", async (req, res): Promise<void> => {
   res.json(UpdateStrengthStandardResponse.parse(toStrengthStandard(standard)));
 });
 
-router.delete("/strength-standards/:id", async (req, res): Promise<void> => {
+router.delete("/strength-standards/:id", requireAdministrator, async (req, res): Promise<void> => {
   const params = DeleteStrengthStandardParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -903,7 +907,7 @@ router.get("/sieve-standards", async (_req, res): Promise<void> => {
   res.json(ListSieveStandardsResponse.parse(await listSieveStandards()));
 });
 
-router.post("/sieve-standards", async (req, res): Promise<void> => {
+router.post("/sieve-standards", requireAdministrator, async (req, res): Promise<void> => {
   const body = CreateSieveStandardBody.safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: body.error.message });
@@ -952,7 +956,7 @@ router.post("/sieve-standards", async (req, res): Promise<void> => {
   }
 });
 
-router.patch("/sieve-standards/:id", async (req, res): Promise<void> => {
+router.patch("/sieve-standards/:id", requireAdministrator, async (req, res): Promise<void> => {
   const params = UpdateSieveStandardParams.safeParse(req.params);
   const body = UpdateSieveStandardBody.safeParse(req.body);
   if (!params.success) {
@@ -1033,7 +1037,7 @@ router.patch("/sieve-standards/:id", async (req, res): Promise<void> => {
   }
 });
 
-router.delete("/sieve-standards/:id", async (req, res): Promise<void> => {
+router.delete("/sieve-standards/:id", requireAdministrator, async (req, res): Promise<void> => {
   const params = DeleteSieveStandardParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -1236,7 +1240,7 @@ router.get("/daily-ready-mix-results", async (req, res): Promise<void> => {
   );
 });
 
-router.post("/records", async (req, res): Promise<void> => {
+router.post("/records", requireQcEditor, async (req, res): Promise<void> => {
   const parsed = CreateRecordBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -1310,7 +1314,7 @@ router.get("/records/:id", async (req, res): Promise<void> => {
   res.json(GetRecordResponse.parse(toRecord(currentRecord ?? record)));
 });
 
-router.patch("/records/:id", async (req, res): Promise<void> => {
+router.patch("/records/:id", requireQcEditor, async (req, res): Promise<void> => {
   const params = UpdateRecordParams.safeParse(req.params);
   const body = UpdateRecordBody.safeParse(req.body);
   if (!params.success) {
@@ -1364,7 +1368,7 @@ router.patch("/records/:id", async (req, res): Promise<void> => {
   res.json(UpdateRecordResponse.parse(toRecord(record)));
 });
 
-router.delete("/records/:id", async (req, res): Promise<void> => {
+router.delete("/records/:id", requireQcEditor, async (req, res): Promise<void> => {
   const parsed = DeleteRecordParams.safeParse(req.params);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });

@@ -21,6 +21,7 @@ import {
   useUpdateStrengthStandard,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@workspace/replit-auth-web";
 import {
   ArrowLeft,
   Check,
@@ -720,6 +721,8 @@ function StrengthStandardsFolder({
 
 export default function Standards() {
   const queryClient = useQueryClient();
+  const { role } = useAuth();
+  const canEditStandards = role === "administrator";
   const {
     data: strengthStandards,
     isLoading: strengthLoading,
@@ -1069,7 +1072,7 @@ export default function Standards() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {!editorOpen && !sieveEditorOpen && (
+          {canEditStandards && !editorOpen && !sieveEditorOpen && (
             <>
                <Button variant="outline" onClick={openSieveCreate}>
                 <Plus className="mr-2 h-4 w-4" /> Add sieve standard
@@ -1184,7 +1187,8 @@ export default function Standards() {
                   [folder.key]: !current[folder.key],
                 }))
               }
-              onAdd={() => {
+               onAdd={() => {
+                 if (!canEditStandards) return;
                 setStandardView("strength");
                 setEditing(null);
                 setForm({
@@ -1197,8 +1201,8 @@ export default function Standards() {
                 setEditorOpen(true);
                 setSieveEditorOpen(false);
               }}
-              onEdit={openEdit}
-              onDelete={handleDelete}
+               onEdit={canEditStandards ? openEdit : () => undefined}
+               onDelete={canEditStandards ? handleDelete : () => undefined}
             />
           ))
         )}
@@ -1296,15 +1300,15 @@ export default function Standards() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-1">
-                          <Button
+                           {canEditStandards && <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => openSieveEdit(standards)}
                             aria-label={`Edit ${representative.standardReference}`}
                           >
                             <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
+                           </Button>}
+                           {canEditStandards && <Button
                             variant="ghost"
                             size="icon"
                             className="text-destructive"
@@ -1312,7 +1316,7 @@ export default function Standards() {
                             aria-label={`Delete ${representative.standardReference}`}
                           >
                             <Trash2 className="h-4 w-4" />
-                          </Button>
+                           </Button>}
                         </div>
                       </td>
                     </tr>
@@ -1330,9 +1334,9 @@ export default function Standards() {
                   accepted passing range for each material.
                 </p>
               </div>
-              <Button onClick={openSieveCreate}>
+               {canEditStandards && <Button onClick={openSieveCreate}>
                 <Plus className="mr-2 h-4 w-4" /> Add first sieve standard
-              </Button>
+               </Button>}
             </div>
           )}
         </CardContent>

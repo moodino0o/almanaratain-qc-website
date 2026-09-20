@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { AuthUser } from '@workspace/api-client-react';
+import type { AuthUser, UserRole } from '@workspace/api-client-react';
 
 export type { AuthUser };
+export type { UserRole };
 
 interface AuthState {
   user: AuthUser | null;
@@ -9,6 +10,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isAccessDenied: boolean;
   isAdmin: boolean;
+  role: UserRole | null;
   login: () => void;
   logout: () => void;
 }
@@ -22,6 +24,7 @@ export function useAuth(): AuthState {
   const [isLoading, setIsLoading] = useState(true);
   const [isAccessDenied, setIsAccessDenied] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [role, setRole] = useState<UserRole | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -33,6 +36,7 @@ export function useAuth(): AuthState {
           user: AuthUser | null;
           accessAllowed: boolean;
           isAdmin: boolean;
+          role: UserRole | null;
         }>;
       })
       .then((data) => {
@@ -40,6 +44,7 @@ export function useAuth(): AuthState {
           setUser(data.user ?? null);
           setIsAccessDenied(Boolean(data.user && data.accessAllowed === false));
           setIsAdmin(Boolean(data.user && data.isAdmin));
+          setRole(data.user ? data.role : null);
           setIsLoading(false);
         }
       })
@@ -48,6 +53,7 @@ export function useAuth(): AuthState {
           setUser(null);
           setIsAccessDenied(false);
           setIsAdmin(false);
+          setRole(null);
           setIsLoading(false);
         }
       });
@@ -73,6 +79,7 @@ export function useAuth(): AuthState {
     isAuthenticated: !!user,
     isAccessDenied,
     isAdmin,
+    role,
     login,
     logout,
   };

@@ -5,3 +5,4 @@
 - [Block defaults compatibility](block-defaults-compatibility.md) — new Block defaults use canonical material/type/size labels while legacy labels and dimensions remain readable.
 - [Sieve passing calculation](sieve-passing-calculation.md) — passing mass subtracts cumulative retained amounts; blank reference-only rows are skipped.
 - [Employee access identity](employee-access-identity.md) — the active login directory uses registered employee IDs, so approvals and administrator allowlists must key off IDs rather than email.
+- [Employee role authorization](employee-role-authorization.md) — enforce role permissions on the server and keep legacy administrator flags and configured allowlists effective.

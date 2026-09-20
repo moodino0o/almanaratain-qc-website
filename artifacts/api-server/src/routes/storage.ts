@@ -10,6 +10,8 @@ import {
   ObjectNotFoundError,
   ObjectStorageService,
 } from '../lib/objectStorage';
+import { getEmployeeRole } from '../lib/auth';
+import { requireAuthenticated } from '../middlewares/requireAuthenticated';
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -37,6 +39,7 @@ function hasAuthenticatedSession(
  */
 router.post(
   '/storage/uploads/request-url',
+  requireAuthenticated,
   async (req: Request, res: Response) => {
     if (!hasAuthenticatedSession(req)) {
       res.status(401).json({ error: 'Unauthorized' });
@@ -47,6 +50,15 @@ router.post(
     const parsed = RequestUploadUrlBody.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: 'Missing or invalid required fields' });
+      return;
+    }
+    const role = await getEmployeeRole(req.user);
+    const allowed =
+      parsed.data.purpose === 'archive'
+        ? role === 'administrator'
+        : role === 'managerial' || role === 'administrator';
+    if (!allowed) {
+      res.status(403).json({ error: 'Your role does not allow this upload.' });
       return;
     }
 

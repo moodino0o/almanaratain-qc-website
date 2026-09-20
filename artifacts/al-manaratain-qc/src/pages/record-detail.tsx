@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
 import { CheckCircle2, AlertTriangle, XCircle, ArrowLeft, Printer, Trash2, Edit2, Check, X } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@workspace/replit-auth-web";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListRecordsQueryKey, getGetDashboardQueryKey, getGetRecordQueryKey } from "@workspace/api-client-react";
 import { useState } from "react";
@@ -358,6 +359,8 @@ function SieveEvaluation({ value }: { value: unknown }) {
 
 export default function RecordDetail() {
   const { id } = useParams();
+  const { role } = useAuth();
+  const canEditQc = role === "technician" || role === "managerial" || role === "administrator";
   const recordId = Number(id);
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
@@ -494,13 +497,15 @@ export default function RecordDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            href={`/records/${recordId}/edit`}
-            className="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-4 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            <Edit2 className="w-4 h-4 mr-2" />
-            Edit
-          </Link>
+          {canEditQc && (
+            <Link
+              href={`/records/${recordId}/edit`}
+              className="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-4 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+            >
+              <Edit2 className="w-4 h-4 mr-2" />
+              Edit
+            </Link>
+          )}
           <Link
             href={`/reports/${recordId}`}
             className="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-4 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
@@ -508,10 +513,12 @@ export default function RecordDetail() {
             <Printer className="w-4 h-4 mr-2" />
             Print
           </Link>
-          <Button variant="outline" onClick={handleDelete} disabled={isDeleting} className="text-destructive hover:bg-destructive hover:text-white border-destructive/20">
-            <Trash2 className="w-4 h-4 mr-2" />
-            Delete
-          </Button>
+          {canEditQc && (
+            <Button variant="outline" onClick={handleDelete} disabled={isDeleting} className="text-destructive hover:bg-destructive hover:text-white border-destructive/20">
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete
+            </Button>
+          )}
         </div>
       </div>
 
@@ -697,7 +704,7 @@ export default function RecordDetail() {
         </CardContent>
       </Card>
 
-      {!isStrengthEvaluated && !isSieveEvaluated && (
+       {canEditQc && !isStrengthEvaluated && !isSieveEvaluated && (
         <Card>
           <CardHeader>
             <CardTitle>Quality Review</CardTitle>

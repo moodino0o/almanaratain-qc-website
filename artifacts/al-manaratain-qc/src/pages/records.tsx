@@ -9,8 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { CheckCircle2, AlertTriangle, XCircle, Search, Plus, Filter, Printer } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { useAuth } from "@workspace/replit-auth-web";
 
 export default function Records() {
+  const { role } = useAuth();
+  const canEditQc = role === "technician" || role === "managerial" || role === "administrator";
   const [search, setSearch] = useState("");
   const [testType, setTestType] = useState<TestType | "All">("All");
 
@@ -35,10 +38,12 @@ export default function Records() {
           <h1 className="text-3xl font-bold tracking-tight text-foreground">QC Register</h1>
           <p className="text-muted-foreground mt-1 text-sm">Comprehensive searchable list of all quality control tests.</p>
         </div>
-        <Link href="/records/new" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary text-primary-foreground shadow hover:bg-primary/90 h-10 px-6">
-          <Plus className="w-4 h-4 mr-2" />
-          New Record
-        </Link>
+         {canEditQc && (
+           <Link href="/records/new" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary text-primary-foreground shadow hover:bg-primary/90 h-10 px-6">
+             <Plus className="w-4 h-4 mr-2" />
+             New Record
+           </Link>
+         )}
       </div>
 
       <Card className="flex-1 flex flex-col min-h-0 border-t-4 border-t-primary">

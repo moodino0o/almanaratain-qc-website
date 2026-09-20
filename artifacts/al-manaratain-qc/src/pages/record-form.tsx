@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient } from "@tanstack/react-query";
 import { Save, ArrowLeft, Copy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@workspace/replit-auth-web";
 import { Link } from "wouter";
 import { TypeaheadInput } from "@/components/ui/typeahead-input";
 import {
@@ -36,6 +37,9 @@ export default function RecordForm() {
   const { id } = useParams();
   const recordId = id ? Number(id) : 0;
   const isEditing = Number.isInteger(recordId) && recordId > 0;
+  const { role } = useAuth();
+  const canEditQc = role === "technician" || role === "managerial" || role === "administrator";
+  const canEditReferenceData = role === "administrator";
   const queryClient = useQueryClient();
   
   const { data: lookups, isLoading: lookupsLoading } = useGetLookups();
@@ -104,7 +108,9 @@ export default function RecordForm() {
   };
 
   const createReferenceOption = (categoryKey?: string) =>
-    categoryKey ? (value: string) => addReferenceDataItem(categoryKey, value) : undefined;
+    canEditReferenceData && categoryKey
+      ? (value: string) => addReferenceDataItem(categoryKey, value)
+      : undefined;
 
   useEffect(() => {
     if (!isEditing || !existingRecord || initializedRecordId.current === recordId) return;
@@ -609,6 +615,21 @@ export default function RecordForm() {
 
   if (lookupsLoading || (isEditing && recordLoading)) {
     return <div className="p-8 text-center text-muted-foreground">Loading form data...</div>;
+  }
+  if (!canEditQc) {
+    return (
+      <Card className="mx-auto mt-12 max-w-lg text-center">
+        <CardContent className="space-y-3 p-10">
+          <h1 className="text-lg font-semibold">View-only access</h1>
+          <p className="text-sm text-muted-foreground">
+            Your access role can view QC records but cannot add or change them.
+          </p>
+          <Button asChild variant="outline">
+            <Link href={isEditing ? `/records/${recordId}` : "/records"}>Back to QC Register</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
   }
 
   if (isEditing && (recordError || !existingRecord)) {

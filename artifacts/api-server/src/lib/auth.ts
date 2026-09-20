@@ -4,6 +4,14 @@ import { db, employeeAccessTable, sessionsTable } from '@workspace/db';
 import { and, eq } from 'drizzle-orm';
 import { type Request, type Response } from 'express';
 
+export const EMPLOYEE_ROLES = [
+  'technician',
+  'managerial',
+  'administrator',
+  'visitor',
+] as const;
+export type EmployeeRole = (typeof EMPLOYEE_ROLES)[number];
+
 export const SESSION_COOKIE = 'sid';
 export const SESSION_TTL = 7 * 24 * 60 * 60 * 1000;
 export const ADMIN_EMPLOYEE_IDS_ENV = 'QC_ADMIN_EMPLOYEE_IDS';
@@ -96,13 +104,39 @@ export async function isConfiguredAdministrator(
   if (getConfiguredAdminEmployeeIds().has(employeeId)) return true;
 
   const [entry] = await db
-    .select({ administrator: employeeAccessTable.administrator })
+    .select({
+      administrator: employeeAccessTable.administrator,
+      role: employeeAccessTable.role,
+    })
     .from(employeeAccessTable)
     .where(and(
       eq(employeeAccessTable.employeeId, employeeId),
       eq(employeeAccessTable.active, true),
     ));
-  return entry?.administrator === true;
+  return entry?.administrator === true || entry?.role === 'administrator';
+}
+
+export async function getEmployeeRole(
+  user: AuthUser | null | undefined,
+): Promise<EmployeeRole | null> {
+  const employeeId = getEmployeeIdFromUser(user);
+  if (!employeeId) return null;
+  if (getConfiguredAdminEmployeeIds().has(employeeId)) return 'administrator';
+
+  const [entry] = await db
+    .select({
+      active: employeeAccessTable.active,
+      administrator: employeeAccessTable.administrator,
+      role: employeeAccessTable.role,
+    })
+    .from(employeeAccessTable)
+    .where(eq(employeeAccessTable.employeeId, employeeId));
+
+  if (!entry?.active) return null;
+  if (entry.administrator || entry.role === 'administrator') return 'administrator';
+  return EMPLOYEE_ROLES.includes(entry.role as EmployeeRole)
+    ? (entry.role as EmployeeRole)
+    : 'technician';
 }
 
 export async function hasApprovedEmployeeAccess(
@@ -112,7 +146,11 @@ export async function hasApprovedEmployeeAccess(
   if (!employeeId) return false;
 
   const [entry] = await db
-    .select({ active: employeeAccessTable.active })
+    .select({
+      active: employeeAccessTable.active,
+      administrator: employeeAccessTable.administrator,
+      role: employeeAccessTable.role,
+    })
     .from(employeeAccessTable)
     .where(eq(employeeAccessTable.employeeId, employeeId));
 
@@ -127,9 +165,19 @@ export async function ensureConfiguredAdminAccess(
 
   await db
     .insert(employeeAccessTable)
-    .values({ employeeId: normalized, active: true, administrator: true })
+    .values({
+      employeeId: normalized,
+      active: true,
+      administrator: true,
+      role: 'administrator',
+    })
     .onConflictDoUpdate({
       target: employeeAccessTable.employeeId,
-      set: { active: true, administrator: true, updatedAt: new Date() },
+      set: {
+        active: true,
+        administrator: true,
+        role: 'administrator',
+        updatedAt: new Date(),
+      },
     });
 }

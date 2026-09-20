@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { useAuth } from "@workspace/replit-auth-web";
 
 const maxPictureSize = 10 * 1024 * 1024;
 
@@ -24,6 +25,9 @@ function uploadFile(url: string, file: File) {
 }
 
 export default function ComplaintForm() {
+  const { role } = useAuth();
+  const canEditComplaints = role === "managerial" || role === "administrator";
+  const canEditReferenceData = role === "administrator";
   const { id } = useParams();
   const isNew = !id || id === "new";
   const complaintId = Number(id);
@@ -105,7 +109,7 @@ export default function ComplaintForm() {
           toast.error(`${file.name} must be an image smaller than 10 MB.`);
           continue;
         }
-        const signed = await requestUrl.mutateAsync({ data: { name: file.name, size: file.size, contentType: file.type || "application/octet-stream" } });
+        const signed = await requestUrl.mutateAsync({ data: { name: file.name, size: file.size, contentType: file.type || "application/octet-stream", purpose: "complaint" } });
         await uploadFile(signed.uploadURL, file);
         uploaded.push({ objectPath: signed.objectPath, originalName: file.name, mimeType: file.type, size: file.size });
       }
@@ -148,6 +152,7 @@ export default function ComplaintForm() {
 
   if (!isNew && detailQuery.isLoading) return <div className="space-y-4"><div className="h-8 w-64 animate-pulse rounded bg-muted" /><div className="h-96 animate-pulse rounded-xl bg-muted" /></div>;
   if (!isNew && (detailQuery.isError || !detailQuery.data)) return <Card className="mx-auto mt-10 max-w-lg text-center"><CardContent className="space-y-4 p-10"><h1 className="text-lg font-semibold">Complaint could not be loaded</h1><Button asChild variant="outline"><Link href="/complaints">Back to complaints</Link></Button></CardContent></Card>;
+  if (!canEditComplaints) return <Card className="mx-auto mt-12 max-w-lg text-center"><CardContent className="space-y-3 p-10"><h1 className="text-lg font-semibold">View-only access</h1><p className="text-sm text-muted-foreground">Your access role can view complaints but cannot add or change them.</p><Button asChild variant="outline"><Link href={isNew ? "/complaints" : `/complaints/${complaintId}`}>Back to Complaints</Link></Button></CardContent></Card>;
 
   return (
     <div className="complaint-page mx-auto max-w-4xl space-y-6 pb-12">
@@ -156,8 +161,8 @@ export default function ComplaintForm() {
         <Card><CardHeader className="border-b bg-muted/20"><CardTitle className="text-base">Complaint identity</CardTitle></CardHeader><CardContent className="grid gap-5 p-5 md:grid-cols-2">
           <div className="space-y-2"><Label htmlFor="customer">Customer name <span className="text-destructive">*</span></Label><Input id="customer" value={customerName} onChange={(event) => setCustomerName(event.target.value)} required placeholder="Customer or account name" /></div>
           <div className="space-y-2"><Label htmlFor="delivery">Delivery date <span className="text-destructive">*</span></Label><Input id="delivery" type="date" value={deliveryDate} onChange={(event) => setDeliveryDate(event.target.value)} required /></div>
-          <div className="space-y-2"><Label htmlFor="complaintType">Complaint type <span className="text-destructive">*</span></Label><select id="complaintType" className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={complaintType} onChange={(event) => setComplaintType(event.target.value)} required><option value="">Choose complaint type</option>{typeOptions.map((item) => <option key={item}>{item}</option>)}<option value="__custom__">Custom value</option></select>{complaintType === "__custom__" && <div className="flex gap-2"><Input value={customType} onChange={(event) => setCustomType(event.target.value)} placeholder="Type a complaint type" required /><Button type="button" variant="outline" size="icon" title="Add to reference data" onClick={() => void addReference(typeCategory?.id, customType)} disabled={!customType.trim() || createReferenceItem.isPending}><Plus className="h-4 w-4" /></Button></div>}</div>
-          <div className="space-y-2"><Label htmlFor="materialType">Material type <span className="text-destructive">*</span></Label><select id="materialType" className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={materialType} onChange={(event) => setMaterialType(event.target.value)} required><option value="">Choose material type</option>{materialOptions.map((item) => <option key={item}>{item}</option>)}<option value="__custom__">Custom value</option></select>{materialType === "__custom__" && <div className="flex gap-2"><Input value={customMaterial} onChange={(event) => setCustomMaterial(event.target.value)} placeholder="Type a material type" required /><Button type="button" variant="outline" size="icon" title="Add to reference data" onClick={() => void addReference(materialCategory?.id, customMaterial)} disabled={!customMaterial.trim() || createReferenceItem.isPending}><Plus className="h-4 w-4" /></Button></div>}</div>
+          <div className="space-y-2"><Label htmlFor="complaintType">Complaint type <span className="text-destructive">*</span></Label><select id="complaintType" className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={complaintType} onChange={(event) => setComplaintType(event.target.value)} required><option value="">Choose complaint type</option>{typeOptions.map((item) => <option key={item}>{item}</option>)}<option value="__custom__">Custom value</option></select>{complaintType === "__custom__" && <div className="flex gap-2"><Input value={customType} onChange={(event) => setCustomType(event.target.value)} placeholder="Type a complaint type" required />{canEditReferenceData && <Button type="button" variant="outline" size="icon" title="Add to reference data" onClick={() => void addReference(typeCategory?.id, customType)} disabled={!customType.trim() || createReferenceItem.isPending}><Plus className="h-4 w-4" /></Button>}</div>}</div>
+          <div className="space-y-2"><Label htmlFor="materialType">Material type <span className="text-destructive">*</span></Label><select id="materialType" className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={materialType} onChange={(event) => setMaterialType(event.target.value)} required><option value="">Choose material type</option>{materialOptions.map((item) => <option key={item}>{item}</option>)}<option value="__custom__">Custom value</option></select>{materialType === "__custom__" && <div className="flex gap-2"><Input value={customMaterial} onChange={(event) => setCustomMaterial(event.target.value)} placeholder="Type a material type" required />{canEditReferenceData && <Button type="button" variant="outline" size="icon" title="Add to reference data" onClick={() => void addReference(materialCategory?.id, customMaterial)} disabled={!customMaterial.trim() || createReferenceItem.isPending}><Plus className="h-4 w-4" /></Button>}</div>}</div>
         </CardContent></Card>
         <Card><CardHeader className="border-b bg-muted/20"><CardTitle className="text-base">Complaint review</CardTitle></CardHeader><CardContent className="space-y-5 p-5">
           <div className="space-y-2"><Label htmlFor="details">Complaint details <span className="text-destructive">*</span></Label><Textarea id="details" value={details} onChange={(event) => setDetails(event.target.value)} required rows={6} placeholder="Describe what was reported, observed, and when it was raised." /></div>

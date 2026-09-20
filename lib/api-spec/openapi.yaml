@@ -1656,9 +1656,12 @@ components:
           type: ["string", "null"]
         profileImageUrl:
           type: ["string", "null"]
+    UserRole:
+      type: string
+      enum: [technician, managerial, administrator, visitor]
     AuthUserEnvelope:
       type: object
-      required: [user, accessAllowed, isAdmin]
+      required: [user, accessAllowed, isAdmin, role]
       properties:
         user:
           oneOf:
@@ -1668,9 +1671,13 @@ components:
           type: boolean
         isAdmin:
           type: boolean
+        role:
+          oneOf:
+            - $ref: "#/components/schemas/UserRole"
+            - type: "null"
     EmployeeAccess:
       type: object
-      required: [id, employeeId, displayName, active, administrator, createdAt, updatedAt]
+      required: [id, employeeId, displayName, active, administrator, role, createdAt, updatedAt]
       properties:
         id:
           type: number
@@ -1682,6 +1689,8 @@ components:
           type: boolean
         administrator:
           type: boolean
+        role:
+          $ref: "#/components/schemas/UserRole"
         passwordSet:
           type: boolean
         createdAt:
@@ -1704,6 +1713,8 @@ components:
       properties:
         employeeId:
           type: string
+        role:
+          $ref: "#/components/schemas/UserRole"
     EmployeeAccessUpdate:
       type: object
       required: []
@@ -1712,6 +1723,8 @@ components:
           type: boolean
         administrator:
           type: boolean
+        role:
+          $ref: "#/components/schemas/UserRole"
         password:
           type: string
           minLength: 8
@@ -1750,7 +1763,7 @@ components:
           const: true
     UploadUrlRequest:
       type: object
-      required: [name, size, contentType]
+      required: [name, size, contentType, purpose]
       properties:
         name:
           type: string
@@ -1761,6 +1774,9 @@ components:
         contentType:
           type: string
           minLength: 1
+        purpose:
+          type: string
+          enum: [complaint, archive]
     UploadUrlResponse:
       type: object
       required: [uploadURL, objectPath, metadata]

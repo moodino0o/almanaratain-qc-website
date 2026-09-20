@@ -12,6 +12,8 @@ import { archiveDocumentsTable, db } from "@workspace/db";
 import { desc, eq } from "drizzle-orm";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { ObjectNotFoundError, ObjectStorageService } from "../lib/objectStorage";
+import { requireAdministrator } from "../middlewares/requireAuthenticated";
+import { isConfiguredAdministrator } from "../lib/auth";
 
 const router: IRouter = Router();
 const storage = new ObjectStorageService();
@@ -51,8 +53,12 @@ function requireUser(req: Request, res: Response): boolean {
   return true;
 }
 
-function requireArchiveManager(req: Request, res: Response): boolean {
+async function requireArchiveManager(req: Request, res: Response): Promise<boolean> {
   if (!requireUser(req, res)) return false;
+  if (!(await isConfiguredAdministrator(req.user))) {
+    res.status(403).json({ error: "Administrator access required" });
+    return false;
+  }
   const email = req.user?.email?.trim().toLowerCase();
   const employeeId = req.user?.id?.startsWith("employee:")
     ? req.user.id.slice("employee:".length)
@@ -133,7 +139,7 @@ router.get("/archive", async (req, res) => {
   );
 });
 
-router.post("/archive/documents", async (req, res) => {
+router.post("/archive/documents", requireAdministrator, async (req, res) => {
   if (!requireUser(req, res)) return;
   const parsed = CreateArchiveDocumentBody.safeParse(req.body);
   if (!parsed.success) {
@@ -183,7 +189,7 @@ router.get("/archive/documents/:id", async (req, res) => {
   res.json(GetArchiveDocumentResponse.parse(toDocument(row)));
 });
 
-router.patch("/archive/documents/:id", async (req, res) => {
+router.patch("/archive/documents/:id", requireAdministrator, async (req, res) => {
   if (!requireUser(req, res)) return;
   const parsedParams = GetArchiveDocumentParams.safeParse(req.params);
   const parsedBody = UpdateArchiveDocumentBody.safeParse(req.body);
@@ -247,7 +253,7 @@ router.get("/archive/documents/:id/content", (req, res) => serveContent(req, res
 router.get("/archive/documents/:id/download", (req, res) => serveContent(req, res, true));
 
 router.delete("/archive/documents/:id", async (req, res) => {
-  if (!requireArchiveManager(req, res)) return;
+  if (!(await requireArchiveManager(req, res))) return;
   const parsedParams = GetArchiveDocumentParams.safeParse(req.params);
   if (!parsedParams.success) {
     res.status(400).json({ error: "Invalid document id" });

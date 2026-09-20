@@ -5,10 +5,12 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { UserRole } from './userRole';
 
 export interface EmployeeAccessUpdate {
   active?: boolean;
   administrator?: boolean;
+  role?: UserRole;
   /**
      * @minLength 8
      * @maxLength 128

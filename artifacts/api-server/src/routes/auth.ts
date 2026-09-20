@@ -19,11 +19,13 @@ import {
   createSession,
   deleteSession,
   ensureConfiguredAdminAccess,
+  getEmployeeRole,
   getSessionId,
   hasApprovedEmployeeAccess,
   isConfiguredAdministrator,
   SESSION_COOKIE,
   SESSION_TTL,
+  type EmployeeRole,
   type SessionData,
 } from '../lib/auth';
 import {
@@ -72,6 +74,7 @@ router.get('/auth/user', (req: Request, res: Response) => {
         user,
         accessAllowed,
         isAdmin: user ? await isConfiguredAdministrator(user) : false,
+        role: user ? await getEmployeeRole(user) : null,
       }),
     );
   })().catch(() => {
@@ -157,12 +160,19 @@ function employeeAccessResponse(
   displayName: string | null,
   passwordSet: boolean,
 ) {
+  const role: EmployeeRole =
+    entry.administrator || entry.role === 'administrator'
+      ? 'administrator'
+      : entry.role === 'managerial' || entry.role === 'visitor'
+        ? entry.role
+        : 'technician';
   return {
     id: entry.id,
     employeeId: entry.employeeId,
     displayName: displayName || `Employee ${entry.employeeId}`,
     active: entry.active,
     administrator: entry.administrator,
+    role,
     passwordSet,
     createdAt: entry.createdAt,
     updatedAt: entry.updatedAt,
@@ -218,6 +228,7 @@ router.post(
     const employeeId = parsed.success
       ? normalizeEmployeeId(parsed.data.employeeId)
       : '';
+    const role = parsed.success ? parsed.data.role ?? 'technician' : 'technician';
     const employee = employeeId ? await getActiveEmployee(employeeId) : null;
     if (!employeeId || !employee) {
       res.status(400).json({ error: 'A registered employee ID is required.' });
@@ -226,10 +237,20 @@ router.post(
 
     const [entry] = await db
       .insert(employeeAccessTable)
-      .values({ employeeId, active: true })
+      .values({
+        employeeId,
+        active: true,
+        administrator: role === 'administrator',
+        role,
+      })
       .onConflictDoUpdate({
         target: employeeAccessTable.employeeId,
-        set: { active: true, updatedAt: new Date() },
+        set: {
+          active: true,
+          administrator: role === 'administrator',
+          role,
+          updatedAt: new Date(),
+        },
       })
       .returning();
 
@@ -267,6 +288,7 @@ router.patch(
       !parsedBody.success ||
       (parsedBody.data.active === undefined &&
         parsedBody.data.administrator === undefined &&
+        parsedBody.data.role === undefined &&
         parsedBody.data.password === undefined)
     ) {
       res.status(400).json({ error: 'Invalid employee access update.' });
@@ -282,13 +304,23 @@ router.patch(
       return;
     }
 
-    if (parsedBody.data.administrator === false && currentEntry.administrator) {
+    const currentIsAdministrator =
+      currentEntry.administrator || currentEntry.role === 'administrator';
+    const requestedRole = parsedBody.data.role;
+    const roleWillBeAdministrator =
+      requestedRole !== undefined
+        ? requestedRole === 'administrator'
+        : parsedBody.data.administrator !== undefined
+          ? parsedBody.data.administrator
+          : currentIsAdministrator;
+
+    if (!roleWillBeAdministrator && currentIsAdministrator) {
       const [{ count }] = await db
         .select({ count: sql<number>`count(*)` })
         .from(employeeAccessTable)
         .where(and(
           eq(employeeAccessTable.active, true),
-          eq(employeeAccessTable.administrator, true),
+          sql`(${employeeAccessTable.administrator} = true OR ${employeeAccessTable.role} = 'administrator')`,
         ));
       if (Number(count) <= 1) {
         res.status(400).json({ error: 'At least one active administrator must remain.' });
@@ -296,13 +328,13 @@ router.patch(
       }
     }
 
-    if (parsedBody.data.active === false && currentEntry.active && currentEntry.administrator) {
+    if (parsedBody.data.active === false && currentEntry.active && currentIsAdministrator) {
       const [{ count }] = await db
         .select({ count: sql<number>`count(*)` })
         .from(employeeAccessTable)
         .where(and(
           eq(employeeAccessTable.active, true),
-          eq(employeeAccessTable.administrator, true),
+          sql`(${employeeAccessTable.administrator} = true OR ${employeeAccessTable.role} = 'administrator')`,
         ));
       if (Number(count) <= 1) {
         res.status(400).json({ error: 'At least one active administrator must remain.' });
@@ -314,7 +346,12 @@ router.patch(
       .update(employeeAccessTable)
       .set({
         ...(parsedBody.data.active === undefined ? {} : { active: parsedBody.data.active }),
-        ...(parsedBody.data.administrator === undefined ? {} : { administrator: parsedBody.data.administrator }),
+        ...(requestedRole === undefined && parsedBody.data.administrator === undefined
+          ? {}
+          : {
+              administrator: roleWillBeAdministrator,
+              role: requestedRole ?? (roleWillBeAdministrator ? 'administrator' : 'technician'),
+            }),
         updatedAt: new Date(),
       })
       .where(eq(employeeAccessTable.id, parsedParams.data.id))
@@ -379,13 +416,16 @@ router.delete(
       return;
     }
 
-    if (currentEntry.active && currentEntry.administrator) {
+    if (
+      currentEntry.active &&
+      (currentEntry.administrator || currentEntry.role === 'administrator')
+    ) {
       const [{ count }] = await db
         .select({ count: sql<number>`count(*)` })
         .from(employeeAccessTable)
         .where(and(
           eq(employeeAccessTable.active, true),
-          eq(employeeAccessTable.administrator, true),
+          sql`(${employeeAccessTable.administrator} = true OR ${employeeAccessTable.role} = 'administrator')`,
         ));
       if (Number(count) <= 1) {
         res.status(400).json({ error: 'At least one active administrator must remain.' });

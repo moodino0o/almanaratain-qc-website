@@ -15,6 +15,7 @@ import {
   useDeleteEmployeeAccess,
   useUpdateEmployeeAccess,
   EmployeeAccess,
+  UserRole,
   ReferenceCategory,
   ReferenceItem
 } from "@workspace/api-client-react";
@@ -62,6 +63,17 @@ function formatAccessDate(value: string) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+}
+
+const employeeRoleOptions: Array<{ value: UserRole; label: string }> = [
+  { value: "technician", label: "Technician" },
+  { value: "managerial", label: "Managerial" },
+  { value: "administrator", label: "Administrator" },
+  { value: "visitor", label: "Visitor" },
+];
+
+function employeeRoleLabel(role: UserRole) {
+  return employeeRoleOptions.find((option) => option.value === role)?.label ?? "Technician";
 }
 interface EmployeeAccessEntry {
   id: number;
@@ -626,6 +638,19 @@ export default function Settings() {
   const [newCategoryKey, setNewCategoryKey] = useState("");
   const [newCategoryLabel, setNewCategoryLabel] = useState("");
 
+  if (!isAdmin) {
+    return (
+      <Card className="mx-auto mt-12 max-w-lg text-center">
+        <CardContent className="space-y-3 p-10">
+          <h1 className="text-lg font-semibold">Administrator access required</h1>
+          <p className="text-sm text-muted-foreground">
+            Settings and employee access are only available to administrators.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const handleCreateCategory = () => {
     if (!newCategoryKey.trim() || !newCategoryLabel.trim()) {
       toast.error("Key and Label are required");
@@ -769,6 +794,7 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
   const [search, setSearch] = useState("");
   const [employeeId, setEmployeeId] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [newEmployeeRole, setNewEmployeeRole] = useState<UserRole>("technician");
   const [employeeToDeactivate, setEmployeeToDeactivate] = useState<EmployeeAccess | null>(null);
   const [employeeToDelete, setEmployeeToDelete] = useState<EmployeeAccess | null>(null);
   const [employeeForPassword, setEmployeeForPassword] = useState<EmployeeAccess | null>(null);
@@ -805,11 +831,12 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
     }
 
     createEmployee.mutate(
-      { data: { employeeId: normalizedEmployeeId } },
+       { data: { employeeId: normalizedEmployeeId, role: newEmployeeRole } },
       {
         onSuccess: () => {
           toast.success("Employee access added");
           setEmployeeId("");
+          setNewEmployeeRole("technician");
           setIsAddOpen(false);
           invalidateAccess();
         },
@@ -828,6 +855,20 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
           invalidateAccess();
         },
         onError: () => toast.error("Could not update employee access. Try again."),
+      },
+    );
+  };
+
+  const updateRole = (employee: EmployeeAccess, role: UserRole) => {
+    updateEmployee.mutate(
+      { id: employee.id, data: { role } },
+      {
+        onSuccess: () => {
+          toast.success(`${employeeRoleLabel(role)} access assigned`);
+          invalidateAccess();
+        },
+        onError: (error) =>
+          toast.error(error instanceof Error ? error.message : "Could not update employee role."),
       },
     );
   };
@@ -986,8 +1027,8 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
                             </Badge>
                           </td>
                           <td className="py-4 pr-4">
-                            <Badge variant={employee.administrator ? "outline" : "secondary"}>
-                              {employee.administrator ? "Administrator" : "Employee"}
+                            <Badge variant={employee.role === "administrator" ? "outline" : "secondary"}>
+                              {employeeRoleLabel(employee.role)}
                             </Badge>
                           </td>
                           <td className="py-4 pr-4">
@@ -1012,23 +1053,17 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
                                 <KeyRound className="mr-1.5 h-3.5 w-3.5" />
                                 {employee.passwordSet ? "Change password" : "Set password"}
                               </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => updateEmployee.mutate(
-                                  { id: employee.id, data: { administrator: !employee.administrator } },
-                                  {
-                                    onSuccess: () => {
-                                      toast.success(employee.administrator ? "Administrator role removed" : "Administrator role granted");
-                                      invalidateAccess();
-                                    },
-                                    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not update administrator role."),
-                                  },
-                                )}
+                              <select
+                                aria-label={`Role for ${employee.displayName}`}
+                                className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                                value={employee.role}
+                                onChange={(event) => updateRole(employee, event.target.value as UserRole)}
                                 disabled={updateEmployee.isPending}
                               >
-                                {employee.administrator ? "Remove admin" : "Make admin"}
-                              </Button>
+                                {employeeRoleOptions.map((option) => (
+                                  <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
+                              </select>
                               {employee.active ? (
                                 <Button variant="outline" size="sm" onClick={() => setEmployeeToDeactivate(employee)}>
                                   Deactivate access
@@ -1071,8 +1106,8 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
                         <div><span className="block font-medium text-foreground">Added</span>{formatAccessDate(employee.createdAt)}</div>
                         <div><span className="block font-medium text-foreground">Updated</span>{formatAccessDate(employee.updatedAt)}</div>
                       </div>
-                      <Badge className="mt-4" variant={employee.administrator ? "outline" : "secondary"}>
-                        {employee.administrator ? "Administrator" : "Employee"}
+                       <Badge className="mt-4" variant={employee.role === "administrator" ? "outline" : "secondary"}>
+                         {employeeRoleLabel(employee.role)}
                       </Badge>
                       <Badge className="ml-2 mt-4" variant={employee.passwordSet ? "outline" : "secondary"}>
                         {employee.passwordSet ? "Password set" : "Password not set"}
@@ -1091,23 +1126,20 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
                           <KeyRound className="mr-2 h-4 w-4" />
                           {employee.passwordSet ? "Change password" : "Set password"}
                         </Button>
-                        <Button
-                          className="w-full"
-                          variant="outline"
-                          onClick={() => updateEmployee.mutate(
-                            { id: employee.id, data: { administrator: !employee.administrator } },
-                            {
-                              onSuccess: () => {
-                                toast.success(employee.administrator ? "Administrator role removed" : "Administrator role granted");
-                                invalidateAccess();
-                              },
-                              onError: (error) => toast.error(error instanceof Error ? error.message : "Could not update administrator role."),
-                            },
-                          )}
-                          disabled={updateEmployee.isPending}
-                        >
-                          {employee.administrator ? "Remove administrator role" : "Grant administrator role"}
-                        </Button>
+                        <label className="space-y-1 text-left text-sm font-medium">
+                          Role
+                          <select
+                            aria-label={`Role for ${employee.displayName}`}
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                            value={employee.role}
+                            onChange={(event) => updateRole(employee, event.target.value as UserRole)}
+                            disabled={updateEmployee.isPending}
+                          >
+                            {employeeRoleOptions.map((option) => (
+                              <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                          </select>
+                        </label>
                         {employee.active ? (
                           <Button className="w-full" variant="outline" onClick={() => setEmployeeToDeactivate(employee)}>
                             Deactivate access
@@ -1156,6 +1188,19 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
                 autoFocus
                 required
               />
+            </div>
+            <div className="space-y-2 pb-4">
+              <label htmlFor="employee-role" className="text-sm font-medium">Access role</label>
+              <select
+                id="employee-role"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={newEmployeeRole}
+                onChange={(event) => setNewEmployeeRole(event.target.value as UserRole)}
+              >
+                {employeeRoleOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>

@@ -81,7 +81,8 @@ export const GetCurrentAuthUserResponse = zod.object({
   "profileImageUrl": zod.string().nullable()
 }),zod.null()]),
   "accessAllowed": zod.boolean(),
-  "isAdmin": zod.boolean()
+  "isAdmin": zod.boolean(),
+  "role": zod.union([zod.enum(['technician', 'managerial', 'administrator', 'visitor']),zod.null()])
 })
 
 
@@ -95,6 +96,7 @@ export const GetEmployeeAccessResponse = zod.object({
   "displayName": zod.string(),
   "active": zod.boolean(),
   "administrator": zod.boolean(),
+  "role": zod.enum(['technician', 'managerial', 'administrator', 'visitor']),
   "passwordSet": zod.boolean().optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -106,7 +108,8 @@ export const GetEmployeeAccessResponse = zod.object({
  * @summary Add a registered employee ID to the approved access list
  */
 export const CreateEmployeeAccessBody = zod.object({
-  "employeeId": zod.string()
+  "employeeId": zod.string(),
+  "role": zod.enum(['technician', 'managerial', 'administrator', 'visitor']).optional()
 })
 
 export const CreateEmployeeAccessResponse = zod.object({
@@ -115,6 +118,7 @@ export const CreateEmployeeAccessResponse = zod.object({
   "displayName": zod.string(),
   "active": zod.boolean(),
   "administrator": zod.boolean(),
+  "role": zod.enum(['technician', 'managerial', 'administrator', 'visitor']),
   "passwordSet": zod.boolean().optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -136,6 +140,7 @@ export const updateEmployeeAccessBodyPasswordMax = 128;
 export const UpdateEmployeeAccessBody = zod.object({
   "active": zod.boolean().optional(),
   "administrator": zod.boolean().optional(),
+  "role": zod.enum(['technician', 'managerial', 'administrator', 'visitor']).optional(),
   "password": zod.string().min(updateEmployeeAccessBodyPasswordMin).max(updateEmployeeAccessBodyPasswordMax).optional()
 })
 
@@ -145,6 +150,7 @@ export const UpdateEmployeeAccessResponse = zod.object({
   "displayName": zod.string(),
   "active": zod.boolean(),
   "administrator": zod.boolean(),
+  "role": zod.enum(['technician', 'managerial', 'administrator', 'visitor']),
   "passwordSet": zod.boolean().optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -229,7 +235,8 @@ export const LogoutMobileSessionResponse = zod.object({
 export const RequestUploadUrlBody = zod.object({
   "name": zod.string().min(1),
   "size": zod.number().min(1),
-  "contentType": zod.string().min(1)
+  "contentType": zod.string().min(1),
+  "purpose": zod.enum(['complaint', 'archive'])
 })
 
 
@@ -243,7 +250,8 @@ export const RequestUploadUrlResponse = zod.object({
   "metadata": zod.object({
   "name": zod.string().min(1),
   "size": zod.number().min(1),
-  "contentType": zod.string().min(1)
+  "contentType": zod.string().min(1),
+  "purpose": zod.enum(['complaint', 'archive'])
 })
 })
 

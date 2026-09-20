@@ -72,4 +72,6 @@ export * from './testType';
 export * from './testTypeParamParameter';
 export * from './typeCount';
 export * from './uploadUrlRequest';
+export * from './uploadUrlRequestPurpose';
 export * from './uploadUrlResponse';
+export * from './userRole';

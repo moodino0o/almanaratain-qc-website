@@ -6,9 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { AuthUser } from './authUser';
+import type { UserRole } from './userRole';
 
 export interface AuthUserEnvelope {
   user: AuthUser | null;
   accessAllowed: boolean;
   isAdmin: boolean;
+  role: UserRole | null;
 }

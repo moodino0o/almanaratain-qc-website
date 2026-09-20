@@ -15,6 +15,7 @@ import {
 import { complaintsTable, db } from "@workspace/db";
 import { Router, type IRouter } from "express";
 import { getEmployeeIdFromUser } from "../lib/auth";
+import { requireComplaintEditor } from "../middlewares/requireAuthenticated";
 
 const router: IRouter = Router();
 
@@ -73,7 +74,7 @@ router.get("/complaints", async (req, res): Promise<void> => {
   res.json(ListComplaintsResponse.parse(rows.map(toComplaint)));
 });
 
-router.post("/complaints", async (req, res): Promise<void> => {
+router.post("/complaints", requireComplaintEditor, async (req, res): Promise<void> => {
   const parsed = CreateComplaintBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -121,7 +122,7 @@ router.get("/complaints/:id", async (req, res): Promise<void> => {
   res.json(GetComplaintResponse.parse(toComplaint(row)));
 });
 
-router.patch("/complaints/:id", async (req, res): Promise<void> => {
+router.patch("/complaints/:id", requireComplaintEditor, async (req, res): Promise<void> => {
   const params = UpdateComplaintParams.safeParse(req.params);
   const parsed = UpdateComplaintBody.safeParse(req.body);
   if (!params.success || !parsed.success) {
@@ -177,7 +178,7 @@ router.patch("/complaints/:id", async (req, res): Promise<void> => {
   res.json(UpdateComplaintResponse.parse(toComplaint(row)));
 });
 
-router.delete("/complaints/:id", async (req, res): Promise<void> => {
+router.delete("/complaints/:id", requireComplaintEditor, async (req, res): Promise<void> => {
   const parsed = DeleteComplaintParams.safeParse(req.params);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
