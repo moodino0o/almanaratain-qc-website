@@ -24,7 +24,7 @@ export function Layout({ children }: LayoutProps) {
   const navItems = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
     { href: "/records", label: "QC Register", icon: ClipboardList },
-    { href: "/complaints", label: "Complaints", icon: FileWarning },
+    ...(role === "technician" ? [] : [{ href: "/complaints", label: "Complaints", icon: FileWarning }]),
     { href: "/reports", label: "Reports", icon: FileText },
     { href: "/archive", label: "Archive", icon: Archive },
     { href: "/standards", label: "Standards", icon: FileCheck2 },

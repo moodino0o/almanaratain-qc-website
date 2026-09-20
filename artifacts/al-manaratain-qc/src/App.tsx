@@ -38,7 +38,9 @@ function PrintLayout({ children }: { children: ReactNode }) {
 
 function Router() {
   const [location] = useLocation();
-  const isPrint = location.match(/^\/reports\/\d+$/) || location.match(/^\/complaints\/\d+\/print$/);
+  const { role } = useAuth();
+  const canViewComplaints = role !== "technician";
+  const isPrint = location.match(/^\/reports\/\d+$/) || (canViewComplaints && location.match(/^\/complaints\/\d+\/print$/));
 
   return (
     <RoutedErrorBoundary>
@@ -58,10 +60,10 @@ function Router() {
             <Route path="/records/new" component={RecordForm} />
             <Route path="/records/:id/edit" component={RecordForm} />
             <Route path="/records/:id" component={RecordDetail} />
-            <Route path="/complaints" component={Complaints} />
-            <Route path="/complaints/new" component={ComplaintForm} />
-            <Route path="/complaints/:id/edit" component={ComplaintForm} />
-            <Route path="/complaints/:id" component={ComplaintDetail} />
+            {canViewComplaints && <Route path="/complaints" component={Complaints} />}
+            {canViewComplaints && <Route path="/complaints/new" component={ComplaintForm} />}
+            {canViewComplaints && <Route path="/complaints/:id/edit" component={ComplaintForm} />}
+            {canViewComplaints && <Route path="/complaints/:id" component={ComplaintDetail} />}
             <Route path="/reports" component={Reports} />
             <Route path="/settings" component={Settings} />
             <Route path="/standards" component={Standards} />

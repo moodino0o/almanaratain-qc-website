@@ -49,6 +49,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDate } from "@/lib/utils";
+import { useAuth } from "@workspace/replit-auth-web";
 
 function StatusSummary({
   label,
@@ -118,6 +119,8 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function Home() {
+  const { role } = useAuth();
+  const canViewComplaints = role !== "technician";
   const dashboardQuery = useGetDashboard();
   const [recordSearch, setRecordSearch] = useState("");
   const searchTerm = recordSearch.trim();
@@ -129,7 +132,7 @@ export default function Home() {
   );
   const complaintsQuery = useListComplaints(
     complaintsSearchParams,
-    { query: { enabled: Boolean(searchTerm), queryKey: getListComplaintsQueryKey(complaintsSearchParams) } },
+    { query: { enabled: Boolean(searchTerm) && canViewComplaints, queryKey: getListComplaintsQueryKey(complaintsSearchParams) } },
   );
   const dashboard = dashboardQuery.data;
 
@@ -184,8 +187,8 @@ export default function Home() {
   const passRate =
     (dashboard.passedRecords / Math.max(dashboard.totalRecords, 1)) * 100;
   const records = recordsQuery.data ?? [];
-  const complaints = complaintsQuery.data ?? [];
-  const searchLoading = recordsQuery.isLoading || complaintsQuery.isLoading;
+  const complaints = canViewComplaints ? complaintsQuery.data ?? [] : [];
+  const searchLoading = recordsQuery.isLoading || (canViewComplaints && complaintsQuery.isLoading);
   const complaintChartData = [
     {
       name: "Open",
@@ -216,11 +219,11 @@ export default function Home() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline">
+          {canViewComplaints && <Button asChild variant="outline">
             <Link href="/complaints/new">
               <MessageSquareWarning className="mr-2 h-4 w-4" /> New complaint
             </Link>
-          </Button>
+          </Button>}
           <Button asChild>
             <Link href="/records/new">
               <Plus className="mr-2 h-4 w-4" /> New QC record
@@ -229,8 +232,8 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="grid items-start gap-6 md:grid-cols-[minmax(220px,0.72fr)_minmax(0,1.28fr)]">
-        <Card className="shadow-none">
+      <div className={canViewComplaints ? "grid items-start gap-6 md:grid-cols-[minmax(220px,0.72fr)_minmax(0,1.28fr)]" : "grid items-start gap-6"}>
+        {canViewComplaints && <Card className="shadow-none">
           <CardHeader className="border-b bg-card px-4 pb-4">
             <div>
               <CardTitle id="complaints-heading" className="text-base">
@@ -303,7 +306,7 @@ export default function Home() {
               </div>
             )}
           </CardContent>
-        </Card>
+        </Card>}
 
         <Card className="shadow-none">
           <CardHeader className="border-b bg-card pb-4">
@@ -367,11 +370,13 @@ export default function Home() {
 
       <Card className="border-t-4 border-t-primary shadow-none">
         <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Search className="h-4 w-4 text-primary" /> Search reports and complaints
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Search className="h-4 w-4 text-primary" /> Search {canViewComplaints ? "reports and complaints" : "QC reports"}
           </CardTitle>
           <CardDescription>
-              Search by customer, location, material, reference number, complaint number, or complaint details.
+              {canViewComplaints
+                ? "Search by customer, location, material, reference number, complaint number, or complaint details."
+                : "Search by customer, location, material, or reference number."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -381,7 +386,7 @@ export default function Home() {
               className="h-11 pl-9"
               value={recordSearch}
               onChange={(event) => setRecordSearch(event.target.value)}
-              placeholder="Search all reports and complaints…"
+              placeholder={canViewComplaints ? "Search all reports and complaints…" : "Search QC reports…"}
             />
           </div>
         </CardContent>
@@ -394,18 +399,20 @@ export default function Home() {
             <CardDescription>
               {searchLoading
                 ? "Searching reports and complaints…"
-                : `${records.length} report${records.length === 1 ? "" : "s"} · ${complaints.length} complaint${complaints.length === 1 ? "" : "s"}`}
+                : canViewComplaints
+                  ? `${records.length} report${records.length === 1 ? "" : "s"} · ${complaints.length} complaint${complaints.length === 1 ? "" : "s"}`
+                  : `${records.length} report${records.length === 1 ? "" : "s"}`}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 p-3">
-            {!searchLoading && (recordsQuery.isError || complaintsQuery.isError) && (
+            {!searchLoading && (recordsQuery.isError || (canViewComplaints && complaintsQuery.isError)) && (
               <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
                 Some search results could not be loaded. Try the search again.
               </div>
             )}
             {!searchLoading && (
               <>
-                <section className="space-y-2">
+                {canViewComplaints && <section className="space-y-2">
                   <div className="flex items-center gap-2 border-b pb-2 text-sm font-semibold">
                     <ClipboardCheck className="h-4 w-4 text-primary" /> QC reports ({records.length})
                   </div>
@@ -433,7 +440,7 @@ export default function Home() {
                   {records.length === 0 && (
                     <p className="px-3 py-4 text-sm text-muted-foreground">No matching QC reports.</p>
                   )}
-                </section>
+                </section>}
                 <section className="space-y-2">
                   <div className="flex items-center gap-2 border-b pb-2 text-sm font-semibold">
                     <MessageSquareWarning className="h-4 w-4 text-primary" /> Complaints ({complaints.length})
