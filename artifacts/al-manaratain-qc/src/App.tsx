@@ -107,13 +107,13 @@ function AccessDenied({
 }
 function App() {
   const auth = useAuth();
-  async function loginWithEmployeeId(employeeId: string): Promise<string | null> {
+  async function loginWithEmployeeId(employeeId: string, password: string): Promise<string | null> {
     try {
       const response = await fetch("/api/employee-login", {
         method: "POST",
         headers: { "content-type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ employeeId }),
+        body: JSON.stringify({ employeeId, password }),
       });
       const body = await response.json().catch(() => null) as { error?: string } | null;
       if (!response.ok) {

@@ -9,6 +9,7 @@ import {
   UpdateEmployeeAccessResponse,
 } from '@workspace/api-zod';
 import { db, employeeAccessTable, usersTable } from '@workspace/db';
+import { employeeDirectoryTable } from '@workspace/db';
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import { Router, type IRouter, type Request, type Response } from 'express';
 
@@ -28,6 +29,11 @@ import {
   getActiveEmployee,
   normalizeEmployeeId,
 } from '../lib/employee-access';
+import {
+  hashEmployeePassword,
+  isValidEmployeePassword,
+  verifyEmployeePassword,
+} from '../lib/employee-password';
 import {
   requireAdministrator,
   requireAuthenticated,
@@ -74,9 +80,11 @@ router.get('/auth/user', (req: Request, res: Response) => {
 
 router.post('/employee-login', async (req: Request, res: Response) => {
   const employeeId = normalizeEmployeeId(req.body?.employeeId);
+  const password = typeof req.body?.password === 'string' ? req.body.password : '';
   const employee = await getActiveEmployee(employeeId);
-  if (!employee) {
-    res.status(401).json({ error: 'This employee ID is not registered.' });
+  if (!employee || !isValidEmployeePassword(password) ||
+      !(await verifyEmployeePassword(password, employee.passwordHash))) {
+    res.status(401).json({ error: 'Invalid employee ID or password.' });
     return;
   }
 
@@ -146,6 +154,7 @@ router.post('/mobile-auth/logout', async (req: Request, res: Response) => {
 function employeeAccessResponse(
   entry: typeof employeeAccessTable.$inferSelect,
   displayName: string | null,
+  passwordSet: boolean,
 ) {
   return {
     id: entry.id,
@@ -153,6 +162,7 @@ function employeeAccessResponse(
     displayName: displayName || `Employee ${entry.employeeId}`,
     active: entry.active,
     administrator: entry.administrator,
+    passwordSet,
     createdAt: entry.createdAt,
     updatedAt: entry.updatedAt,
   };
@@ -168,8 +178,13 @@ router.get(
         entry: employeeAccessTable,
         firstName: usersTable.firstName,
         lastName: usersTable.lastName,
+        passwordHash: employeeDirectoryTable.passwordHash,
       })
       .from(employeeAccessTable)
+      .leftJoin(
+        employeeDirectoryTable,
+        eq(employeeDirectoryTable.employeeId, employeeAccessTable.employeeId),
+      )
       .leftJoin(
         usersTable,
         eq(
@@ -185,6 +200,7 @@ router.get(
           employeeAccessResponse(
             entry,
             [firstName, lastName].filter(Boolean).join(' ') || null,
+            Boolean(passwordHash),
           ),
         ),
       }),
@@ -231,6 +247,7 @@ router.post(
           [user?.firstName, user?.lastName].filter(Boolean).join(' ') ||
             employee.name ||
             null,
+          Boolean(employee.passwordHash),
         ),
       ),
     );
@@ -312,11 +329,27 @@ router.patch(
       .from(usersTable)
       .where(eq(usersTable.id, `employee:${entry.employeeId}`));
 
+    if (parsedBody.data.password !== undefined) {
+      await db
+        .update(employeeDirectoryTable)
+        .set({
+          passwordHash: await hashEmployeePassword(parsedBody.data.password),
+          updatedAt: new Date(),
+        })
+        .where(eq(employeeDirectoryTable.employeeId, entry.employeeId));
+    }
+
+    const [directoryEmployee] = await db
+      .select({ passwordHash: employeeDirectoryTable.passwordHash })
+      .from(employeeDirectoryTable)
+      .where(eq(employeeDirectoryTable.employeeId, entry.employeeId));
+
     res.json(
       UpdateEmployeeAccessResponse.parse(
         employeeAccessResponse(
           entry,
           [user?.firstName, user?.lastName].filter(Boolean).join(' ') || null,
+          Boolean(directoryEmployee?.passwordHash),
         ),
       ),
     );

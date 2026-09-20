@@ -5,11 +5,12 @@ import { Label } from "@/components/ui/label";
 import { useState } from "react";
 
 interface LoginProps {
-  onLogin: (employeeId: string) => Promise<string | null>;
+  onLogin: (employeeId: string, password: string) => Promise<string | null>;
 }
 
 export default function Login({ onLogin }: LoginProps) {
   const [employeeId, setEmployeeId] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -17,7 +18,7 @@ export default function Login({ onLogin }: LoginProps) {
     event.preventDefault();
     setError("");
     setIsSubmitting(true);
-    const message = await onLogin(employeeId);
+    const message = await onLogin(employeeId, password);
     if (message) setError(message);
     setIsSubmitting(false);
   }
@@ -54,6 +55,20 @@ export default function Login({ onLogin }: LoginProps) {
               onChange={(event) => setEmployeeId(event.target.value)}
               placeholder="Enter employee ID"
               required
+              disabled={isSubmitting}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="employee-password">Password</Label>
+            <Input
+              id="employee-password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="Enter password"
+              required
+              minLength={8}
               disabled={isSubmitting}
             />
           </div>

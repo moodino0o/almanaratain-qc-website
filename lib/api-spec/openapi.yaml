@@ -1437,6 +1437,8 @@ components:
           type: boolean
         administrator:
           type: boolean
+        passwordSet:
+          type: boolean
         createdAt:
           type: string
           format: date-time
@@ -1465,6 +1467,10 @@ components:
           type: boolean
         administrator:
           type: boolean
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
     MobileTokenExchangeRequest:
       type: object
       required: [code, code_verifier, redirect_uri, state]
