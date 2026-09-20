@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { eq } from "drizzle-orm";
 import { db, complaintsTable } from "@workspace/db";
 
 type SourceRow = {
@@ -11,6 +12,7 @@ type SourceRow = {
   departmentNotes: string;
   qcNotes: string;
   stepsTaken: string;
+  currentStatus: string;
 };
 
 function clean(value: string | null | undefined): string {
@@ -36,7 +38,7 @@ async function main() {
       details: clean(row.salesNotes),
       solution: clean(row.qcNotes),
       recommendation,
-      status: "open",
+      status: /resolved\s*-\s*positive/i.test(row.currentStatus) ? "complete" : "open",
       picturePaths: [],
       createdBy: null,
     };
@@ -52,7 +54,16 @@ async function main() {
     await db.insert(complaintsTable).values(pending.slice(index, index + 100));
   }
 
-  console.log(`sourceRows=${rows.length} existing=${existing.length} inserted=${pending.length}`);
+  for (const value of values) {
+    await db
+      .update(complaintsTable)
+      .set({ status: value.status })
+      .where(eq(complaintsTable.complaintNo, value.complaintNo));
+  }
+
+  console.log(
+    `sourceRows=${rows.length} existing=${existing.length} inserted=${pending.length} statusesSynced=${values.length}`,
+  );
   await db.$client.end();
 }
 
