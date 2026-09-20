@@ -153,6 +153,42 @@
   color: hsl(var(--foreground));
 }
 
+.complaint-print-header {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr 1fr;
+  align-items: center;
+  gap: 8mm;
+  min-height: 19mm;
+  border-bottom: 2px solid hsl(var(--foreground));
+  padding-bottom: 5mm;
+}
+
+.complaint-print-company {
+  max-width: 45mm;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.complaint-print-logo {
+  width: 48mm;
+  max-height: 16mm;
+  justify-self: center;
+  object-fit: contain;
+}
+
+.complaint-print-title {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1.5mm;
+  text-align: right;
+}
+
+.complaint-print-title strong {
+  font-size: 12px;
+}
+
 .complaint-print-table {
   width: 100%;
   border-collapse: collapse;

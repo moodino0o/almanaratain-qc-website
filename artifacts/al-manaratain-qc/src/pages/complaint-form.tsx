@@ -156,6 +156,13 @@ export default function ComplaintForm() {
 
   return (
     <div className="complaint-page mx-auto max-w-4xl space-y-6 pb-12">
+       <div className="flex items-center gap-4 rounded-xl border bg-card p-4 shadow-sm">
+         <img src="/al-manaratain-logo.webp" alt="Al Manaratain" className="h-14 w-auto object-contain" />
+         <div>
+           <p className="text-sm font-bold uppercase tracking-[0.18em] text-primary">AL MANARATAIN</p>
+           <p className="mt-1 text-sm text-muted-foreground">Al Manaratain Company &amp; Ali Shaab Group W.L.L</p>
+         </div>
+       </div>
       <div className="flex items-start gap-3"><Link href={isNew ? "/complaints" : `/complaints/${complaintId}`} className="mt-1 rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"><ArrowLeft className="h-5 w-5" /></Link><div><p className="complaint-kicker">{isNew ? "New record" : "Amend controlled record"}</p><h1 className="mt-1 text-3xl font-bold tracking-tight">{isNew ? "Record a complaint" : "Edit complaint"}</h1><p className="mt-2 text-sm text-muted-foreground">Capture the customer concern, delivery context, response, and evidence in one official record.</p></div></div>
       <form onSubmit={submit} className="space-y-5">
         <Card><CardHeader className="border-b bg-muted/20"><CardTitle className="text-base">Complaint identity</CardTitle></CardHeader><CardContent className="grid gap-5 p-5 md:grid-cols-2">
