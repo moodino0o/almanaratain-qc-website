@@ -24,9 +24,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Check,
+  ChevronDown,
   Edit2,
   FileCheck2,
   FlaskConical,
+  Folder,
+  FolderOpen,
   Plus,
   Trash2,
   X,
@@ -180,7 +183,7 @@ function StandardEditor({
         <div className="flex items-start justify-between gap-4">
           <div>
             <CardTitle>
-              {editing ? "Edit strength rule" : "Add strength rule"}
+              {editing ? "Edit strength standard" : "Add strength standard"}
             </CardTitle>
             <CardDescription>
               Set the minimum compressive strength used when Ready Mix or Blocks
@@ -369,7 +372,7 @@ function SieveEditor({
         <div className="flex items-start justify-between gap-4">
           <div>
             <CardTitle>
-              {editing ? "Edit sieve rule" : "Add sieve rule"}
+              {editing ? "Edit sieve standard" : "Add sieve standard"}
             </CardTitle>
             <CardDescription>
               Add each sieve or pore-size limit that belongs to this material
@@ -445,7 +448,7 @@ function SieveEditor({
                 Acceptance limits
               </h3>
               <p className="text-xs text-muted-foreground">
-                Add one row for each sieve or pore size in this rule.
+                Add one row for each sieve or pore size in this standard.
               </p>
             </div>
             <Button type="button" variant="outline" onClick={addCriterion}>
@@ -587,6 +590,134 @@ function SieveEditor({
   );
 }
 
+type StrengthFolderKey = "readyMix" | "blocks";
+
+function StrengthStandardsFolder({
+  label,
+  standards,
+  expanded,
+  onToggle,
+  onAdd,
+  onEdit,
+  onDelete,
+}: {
+  label: string;
+  standards: StrengthStandard[];
+  expanded: boolean;
+  onToggle: () => void;
+  onAdd: () => void;
+  onEdit: (standard: StrengthStandard) => void;
+  onDelete: (standard: StrengthStandard) => void;
+}) {
+  return (
+    <Card className="border-border shadow-sm">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        className="flex w-full items-center justify-between gap-4 rounded-lg px-4 py-3 text-left transition-colors hover:bg-muted/40"
+      >
+        <span className="flex min-w-0 items-center gap-3">
+          {expanded ? (
+            <FolderOpen className="h-5 w-5 shrink-0 text-foreground" />
+          ) : (
+            <Folder className="h-5 w-5 shrink-0 text-foreground" />
+          )}
+          <span className="min-w-0">
+            <span className="block truncate font-semibold text-foreground">
+              {label}
+            </span>
+            <span className="block text-xs text-muted-foreground">
+              {standards.length}{" "}
+              {standards.length === 1 ? "standard" : "standards"}
+            </span>
+          </span>
+        </span>
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${
+            expanded ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+
+      {expanded && (
+        <div className="border-t border-border">
+          {standards.length ? (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[820px] text-xs sm:text-sm">
+                <thead className="bg-muted/40 text-left text-foreground">
+                  <tr className="border-b">
+                    <th className="px-4 py-3 font-semibold">Test Type</th>
+                    <th className="px-4 py-3 font-semibold">Material / Mix</th>
+                    <th className="px-4 py-3 font-semibold">Block Type</th>
+                    <th className="px-4 py-3 font-semibold">Block Size</th>
+                    <th className="px-4 py-3 font-semibold">BS Standard</th>
+                    <th className="px-4 py-3 font-semibold">Minimum</th>
+                    <th className="px-4 py-3 text-right font-semibold">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {standards.map((standard) => (
+                    <tr key={standard.id} className="border-b last:border-b-0">
+                      <td className="px-4 py-3 font-medium">
+                        {standard.testType}
+                      </td>
+                      <td className="px-4 py-3">{standard.material}</td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {standard.blockType || "—"}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {standard.blockSize || "—"}
+                      </td>
+                      <td className="px-4 py-3">{standard.bsStandard}</td>
+                      <td className="px-4 py-3 font-semibold">
+                        {standard.requiredStrength} {standard.strengthUnit}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onEdit(standard)}
+                            aria-label={`Edit ${standard.bsStandard}`}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive"
+                            onClick={() => onDelete(standard)}
+                            aria-label={`Delete ${standard.bsStandard}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-3 p-8 text-center">
+              <Folder className="h-8 w-8 text-muted-foreground/60" />
+              <p className="text-sm text-muted-foreground">
+                No standards in this folder yet.
+              </p>
+              <Button variant="outline" size="sm" onClick={onAdd}>
+                <Plus className="mr-2 h-4 w-4" /> Add standard
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 export default function Standards() {
   const queryClient = useQueryClient();
   const {
@@ -621,6 +752,9 @@ export default function Standards() {
   const [standardView, setStandardView] = useState<"strength" | "sieve">(
     "strength",
   );
+  const [expandedStrengthFolders, setExpandedStrengthFolders] = useState<
+    Record<StrengthFolderKey, boolean>
+  >({ readyMix: false, blocks: false });
 
   const materialItems = useMemo(
     () =>
@@ -650,6 +784,27 @@ export default function Standards() {
       representative: standards[0],
     }));
   }, [sieveStandards]);
+  const strengthFolders = useMemo(
+    () => [
+      {
+        key: "readyMix" as const,
+        label: "Ready Mix standards",
+        standards:
+          strengthStandards?.filter(
+            (standard) => standard.testType === TestType.Ready_Mix,
+          ) ?? [],
+      },
+      {
+        key: "blocks" as const,
+        label: "Blocks standards",
+        standards:
+          strengthStandards?.filter(
+            (standard) => standard.testType === TestType.Blocks,
+          ) ?? [],
+      },
+    ],
+    [strengthStandards],
+  );
 
   const invalidateStandards = () => {
     queryClient.invalidateQueries({
@@ -765,6 +920,10 @@ export default function Standards() {
           editing ? "Strength standard updated." : "Strength standard added.",
         );
         setEditorOpen(false);
+        setExpandedStrengthFolders((current) => ({
+          ...current,
+          [data.testType === TestType.Blocks ? "blocks" : "readyMix"]: true,
+        }));
         invalidateStandards();
       },
       onError: () => toast.error("Unable to save the strength standard."),
@@ -912,11 +1071,11 @@ export default function Standards() {
         <div className="flex flex-wrap gap-2">
           {!editorOpen && !sieveEditorOpen && (
             <>
-              <Button variant="outline" onClick={openSieveCreate}>
-                <Plus className="mr-2 h-4 w-4" /> Add sieve rule
+               <Button variant="outline" onClick={openSieveCreate}>
+                <Plus className="mr-2 h-4 w-4" /> Add sieve standard
               </Button>
               <Button onClick={openCreate}>
-                <Plus className="mr-2 h-4 w-4" /> Add strength rule
+                <Plus className="mr-2 h-4 w-4" /> Add strength standard
               </Button>
             </>
           )}
@@ -971,7 +1130,7 @@ export default function Standards() {
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          Strength rules
+          Strength standards
           <span className="ml-1.5 text-xs text-muted-foreground">
             ({strengthStandards?.length ?? 0})
           </span>
@@ -987,120 +1146,63 @@ export default function Standards() {
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          Sieve rules
+          Sieve standards
           <span className="ml-1.5 text-xs text-muted-foreground">
             ({sieveGroups.length})
           </span>
         </button>
       </div>
 
-      <Card
-        className={`border-border shadow-sm ${
-          standardView === "strength" ? "" : "hidden"
-        }`}
-      >
-        <CardHeader className="border-b border-border/70 bg-muted/40">
-          <div className="flex items-start gap-3">
-            <div className="rounded-md bg-card p-2 text-foreground">
-              <FileCheck2 className="h-5 w-5" />
-            </div>
-            <div>
-              <CardTitle className="text-foreground">Strength rules</CardTitle>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          {strengthLoading ? (
-            <div className="p-12 text-center text-muted-foreground">
+      <div className={standardView === "strength" ? "space-y-3" : "hidden"}>
+        {strengthLoading ? (
+          <Card className="border-border shadow-sm">
+            <CardContent className="p-12 text-center text-muted-foreground">
               Loading strength standards...
-            </div>
-          ) : strengthError ? (
-            <div className="flex flex-col items-center gap-3 p-12 text-center">
+            </CardContent>
+          </Card>
+        ) : strengthError ? (
+          <Card className="border-border shadow-sm">
+            <CardContent className="flex flex-col items-center gap-3 p-12 text-center">
               <p className="text-sm text-destructive">
                 Strength standards could not be loaded.
               </p>
               <Button variant="outline" onClick={() => refetchStrength()}>
                 Try Again
               </Button>
-            </div>
-          ) : strengthStandards?.length ? (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[820px] text-xs sm:text-sm">
-                <thead className="bg-muted/40 text-left text-foreground">
-                  <tr className="border-y">
-                    <th className="px-4 py-3 font-semibold">Test Type</th>
-                    <th className="px-4 py-3 font-semibold">Material / Mix</th>
-                    <th className="px-4 py-3 font-semibold">Block Type</th>
-                    <th className="px-4 py-3 font-semibold">Block Size</th>
-                    <th className="px-4 py-3 font-semibold">BS Standard</th>
-                    <th className="px-4 py-3 font-semibold">Minimum</th>
-                    <th className="px-4 py-3 text-right font-semibold">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {strengthStandards.map((standard) => (
-                    <tr key={standard.id} className="border-b last:border-b-0">
-                      <td className="px-4 py-3 font-medium">
-                        {standard.testType}
-                      </td>
-                      <td className="px-4 py-3">{standard.material}</td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {standard.blockType || "—"}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {standard.blockSize || "—"}
-                      </td>
-                      <td className="px-4 py-3">{standard.bsStandard}</td>
-                      <td className="px-4 py-3 font-semibold">
-                        {standard.requiredStrength} {standard.strengthUnit}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openEdit(standard)}
-                            aria-label={`Edit ${standard.bsStandard}`}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive"
-                            onClick={() => handleDelete(standard)}
-                            aria-label={`Delete ${standard.bsStandard}`}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-3 p-12 text-center">
-              <FileCheck2 className="h-10 w-10 text-muted-foreground/50" />
-              <div>
-                <h3 className="font-semibold">
-                  No strength standards configured
-                </h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Add the approved minimums for Ready Mix mixes and block
-                  products.
-                </p>
-              </div>
-              <Button onClick={openCreate}>
-                <Plus className="mr-2 h-4 w-4" /> Add first strength rule
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        ) : (
+          strengthFolders.map((folder) => (
+            <StrengthStandardsFolder
+              key={folder.key}
+              label={folder.label}
+              standards={folder.standards}
+              expanded={expandedStrengthFolders[folder.key]}
+              onToggle={() =>
+                setExpandedStrengthFolders((current) => ({
+                  ...current,
+                  [folder.key]: !current[folder.key],
+                }))
+              }
+              onAdd={() => {
+                setStandardView("strength");
+                setEditing(null);
+                setForm({
+                  ...emptyForm,
+                  testType:
+                    folder.key === "blocks"
+                      ? TestType.Blocks
+                      : TestType.Ready_Mix,
+                });
+                setEditorOpen(true);
+                setSieveEditorOpen(false);
+              }}
+              onEdit={openEdit}
+              onDelete={handleDelete}
+            />
+          ))
+        )}
+      </div>
 
       <Card
         className={`border-border shadow-sm ${
@@ -1113,7 +1215,7 @@ export default function Standards() {
               <FlaskConical className="h-5 w-5" />
             </div>
             <div>
-              <CardTitle className="text-foreground">Sieve rules</CardTitle>
+              <CardTitle className="text-foreground">Sieve standards</CardTitle>
             </div>
           </div>
         </CardHeader>
@@ -1229,7 +1331,7 @@ export default function Standards() {
                 </p>
               </div>
               <Button onClick={openSieveCreate}>
-                <Plus className="mr-2 h-4 w-4" /> Add first sieve rule
+                <Plus className="mr-2 h-4 w-4" /> Add first sieve standard
               </Button>
             </div>
           )}
