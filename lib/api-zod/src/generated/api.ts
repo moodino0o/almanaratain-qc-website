@@ -152,6 +152,16 @@ export const UpdateEmployeeAccessResponse = zod.object({
 
 
 /**
+ * @summary Remove an employee access entry
+ */
+export const DeleteEmployeeAccessParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteEmployeeAccessResponse = zod.void()
+
+
+/**
  * @summary Start the browser login flow
  */
 export const BeginBrowserLoginQueryParams = zod.object({

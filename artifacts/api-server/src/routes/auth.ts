@@ -1,6 +1,7 @@
 import {
   CreateEmployeeAccessBody,
   CreateEmployeeAccessResponse,
+  DeleteEmployeeAccessParams,
   GetCurrentAuthUserResponse,
   GetEmployeeAccessResponse,
   LogoutMobileSessionResponse,
@@ -355,6 +356,47 @@ router.patch(
         ),
       ),
     );
+  },
+);
+
+router.delete(
+  '/auth/employee-access/:id',
+  requireAuthenticated,
+  requireAdministrator,
+  async (req: Request, res: Response) => {
+    const parsedParams = DeleteEmployeeAccessParams.safeParse(req.params);
+    if (!parsedParams.success) {
+      res.status(400).json({ error: 'Invalid employee access entry.' });
+      return;
+    }
+
+    const [currentEntry] = await db
+      .select()
+      .from(employeeAccessTable)
+      .where(eq(employeeAccessTable.id, parsedParams.data.id));
+    if (!currentEntry) {
+      res.status(404).json({ error: 'Employee access entry not found.' });
+      return;
+    }
+
+    if (currentEntry.active && currentEntry.administrator) {
+      const [{ count }] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(employeeAccessTable)
+        .where(and(
+          eq(employeeAccessTable.active, true),
+          eq(employeeAccessTable.administrator, true),
+        ));
+      if (Number(count) <= 1) {
+        res.status(400).json({ error: 'At least one active administrator must remain.' });
+        return;
+      }
+    }
+
+    await db
+      .delete(employeeAccessTable)
+      .where(eq(employeeAccessTable.id, parsedParams.data.id));
+    res.status(204).send();
   },
 );
 

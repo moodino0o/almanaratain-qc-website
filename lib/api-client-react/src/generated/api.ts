@@ -620,6 +620,77 @@ export const useUpdateEmployeeAccess = <TError = ErrorType<void>,
       return useMutation(getUpdateEmployeeAccessMutationOptions(options));
     }
 
+export const getDeleteEmployeeAccessUrl = (id: number,) => {
+
+
+
+
+  return `/api/auth/employee-access/${id}`
+}
+
+/**
+ * @summary Remove an employee access entry
+ */
+export const deleteEmployeeAccess = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteEmployeeAccessUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteEmployeeAccessMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteEmployeeAccess>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteEmployeeAccess>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteEmployeeAccess'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteEmployeeAccess>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteEmployeeAccess(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteEmployeeAccessMutationResult = NonNullable<Awaited<ReturnType<typeof deleteEmployeeAccess>>>
+
+    export type DeleteEmployeeAccessMutationError = ErrorType<void>
+
+    /**
+ * @summary Remove an employee access entry
+ */
+export const useDeleteEmployeeAccess = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteEmployeeAccess>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteEmployeeAccess>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteEmployeeAccessMutationOptions(options));
+    }
+
 export const getBeginBrowserLoginUrl = (params?: BeginBrowserLoginParams,) => {
   const normalizedParams = new URLSearchParams();
 

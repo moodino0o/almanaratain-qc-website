@@ -139,6 +139,27 @@ paths:
           description: Administrator access required
         "404":
           description: Employee access entry not found
+    delete:
+      tags: [Auth]
+      operationId: deleteEmployeeAccess
+      summary: Remove an employee access entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Employee access entry removed
+        "400":
+          description: Invalid employee access entry or administrator safeguard
+        "401":
+          description: Authentication required
+        "403":
+          description: Administrator access required
+        "404":
+          description: Employee access entry not found
   /login:
     get:
       tags: [Auth]

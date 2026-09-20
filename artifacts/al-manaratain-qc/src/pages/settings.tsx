@@ -12,6 +12,7 @@ import {
   getGetEmployeeAccessQueryKey,
   useGetEmployeeAccess,
   useCreateEmployeeAccess,
+  useDeleteEmployeeAccess,
   useUpdateEmployeeAccess,
   EmployeeAccess,
   ReferenceCategory,
@@ -769,6 +770,7 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
   const [employeeId, setEmployeeId] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [employeeToDeactivate, setEmployeeToDeactivate] = useState<EmployeeAccess | null>(null);
+  const [employeeToDelete, setEmployeeToDelete] = useState<EmployeeAccess | null>(null);
   const [employeeForPassword, setEmployeeForPassword] = useState<EmployeeAccess | null>(null);
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
@@ -776,6 +778,7 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
     query: { enabled: isAdmin, queryKey: getGetEmployeeAccessQueryKey() },
   });
   const createEmployee = useCreateEmployeeAccess();
+  const deleteEmployee = useDeleteEmployeeAccess();
   const updateEmployee = useUpdateEmployeeAccess();
 
   if (!isAdmin) return null;
@@ -825,6 +828,26 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
           invalidateAccess();
         },
         onError: () => toast.error("Could not update employee access. Try again."),
+      },
+    );
+  };
+
+  const handleDeleteEmployee = () => {
+    if (!employeeToDelete) return;
+    deleteEmployee.mutate(
+      { id: employeeToDelete.id },
+      {
+        onSuccess: () => {
+          toast.success("Employee access deleted");
+          setEmployeeToDelete(null);
+          invalidateAccess();
+        },
+        onError: (error) =>
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Could not delete employee access. Try again.",
+          ),
       },
     );
   };
@@ -1015,6 +1038,16 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
                                   Activate access
                                 </Button>
                               )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => setEmployeeToDelete(employee)}
+                                disabled={deleteEmployee.isPending}
+                              >
+                                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                                Delete
+                              </Button>
                             </div>
                           </td>
                         </tr>
@@ -1084,6 +1117,15 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
                             Activate access
                           </Button>
                         )}
+                        <Button
+                          className="w-full"
+                          variant="ghost"
+                          onClick={() => setEmployeeToDelete(employee)}
+                          disabled={deleteEmployee.isPending}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete employee access
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -1193,6 +1235,33 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
               disabled={updateEmployee.isPending}
             >
               Deactivate access
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={employeeToDelete !== null}
+        onOpenChange={(open) => { if (!open) setEmployeeToDelete(null); }}
+      >
+        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete access for employee ID {employeeToDelete?.employeeId}?</DialogTitle>
+            <DialogDescription>
+              This removes the employee from the approved access list. They can be added again later if needed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEmployeeToDelete(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteEmployee}
+              disabled={deleteEmployee.isPending}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {deleteEmployee.isPending ? "Deleting..." : "Delete access"}
             </Button>
           </DialogFooter>
         </DialogContent>
