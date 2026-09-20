@@ -21,13 +21,34 @@ import {
   useUpdateStrengthStandard,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Check, Edit2, FileCheck2, FlaskConical, Plus, Trash2, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  Edit2,
+  FileCheck2,
+  FlaskConical,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { TypeaheadInput } from "@/components/ui/typeahead-input";
 
 type AutomatedTestType = "Ready Mix" | "Blocks";
@@ -73,13 +94,15 @@ const emptySieveForm: SieveForm = {
   testType: TestType.Sand_Sieve,
   materialReferenceItemId: "",
   standardReference: "",
-  criteria: [{
-    sieveSizeReferenceItemId: "",
-    minimum: "",
-    maximum: "",
-    measurementType: "percentage",
-    unit: "%",
-  }],
+  criteria: [
+    {
+      sieveSizeReferenceItemId: "",
+      minimum: "",
+      maximum: "",
+      measurementType: "percentage",
+      unit: "%",
+    },
+  ],
 };
 
 function formFromStandard(standard: StrengthStandard): StandardForm {
@@ -127,7 +150,10 @@ function StandardEditor({
   onCancel: () => void;
   onSave: () => void;
   isSaving: boolean;
-  onCreateReferenceItem: (categoryKey: string, value: string) => Promise<string | void>;
+  onCreateReferenceItem: (
+    categoryKey: string,
+    value: string,
+  ) => Promise<string | void>;
   lookups?: {
     materials: string[];
     mixStrengths: string[];
@@ -136,38 +162,58 @@ function StandardEditor({
   };
 }) {
   const materialOptions = useMemo(
-    () => Array.from(new Set([
-      ...(lookups?.materials ?? []),
-      ...(form.testType === TestType.Ready_Mix ? lookups?.mixStrengths ?? [] : []),
-    ])),
+    () =>
+      Array.from(
+        new Set([
+          ...(lookups?.materials ?? []),
+          ...(form.testType === TestType.Ready_Mix
+            ? (lookups?.mixStrengths ?? [])
+            : []),
+        ]),
+      ),
     [form.testType, lookups],
   );
 
   return (
-    <Card className="border-amber-500/40 bg-amber-50/70 text-foreground dark:bg-amber-950/20">
-      <CardHeader>
+    <Card className="border-primary/20 bg-card text-foreground shadow-sm">
+      <CardHeader className="border-b border-border/70 bg-primary/[0.03]">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <CardTitle>{editing ? "Edit Strength Standard" : "Add Strength Standard"}</CardTitle>
+            <CardTitle>
+              {editing ? "Edit strength rule" : "Add strength rule"}
+            </CardTitle>
             <CardDescription>
-              Configure the minimum compressive strength used when Ready Mix or Blocks records are evaluated.
+              Set the minimum compressive strength used when Ready Mix or Blocks
+              records are checked.
             </CardDescription>
           </div>
-          <Button variant="ghost" size="icon" onClick={onCancel} aria-label="Close editor">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onCancel}
+            aria-label="Close editor"
+          >
             <X className="h-4 w-4" />
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <CardContent className="grid grid-cols-1 gap-4 pt-5 md:grid-cols-2">
         <div className="space-y-2">
           <Label>Test Type</Label>
           <Select
             value={form.testType}
             onValueChange={(value: StandardForm["testType"]) =>
-              setForm({ ...form, testType: value, blockType: "", blockSize: "" })
+              setForm({
+                ...form,
+                testType: value,
+                blockType: "",
+                blockSize: "",
+              })
             }
           >
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value={TestType.Ready_Mix}>Ready Mix</SelectItem>
               <SelectItem value={TestType.Blocks}>Blocks</SelectItem>
@@ -175,13 +221,15 @@ function StandardEditor({
           </Select>
         </div>
         <div className="space-y-2">
-          <Label>Material / Mix Design</Label>
+          <Label>Material or mix design</Label>
           <TypeaheadInput
             value={form.material}
             onChange={(value) => setForm({ ...form, material: value })}
             options={materialOptions}
-            placeholder="Select or type material..."
-            onCreateOption={(value) => onCreateReferenceItem("materials", value)}
+            placeholder="Select or type a material..."
+            onCreateOption={(value) =>
+              onCreateReferenceItem("materials", value)
+            }
           />
         </div>
         {form.testType === TestType.Blocks && (
@@ -193,7 +241,9 @@ function StandardEditor({
                 onChange={(value) => setForm({ ...form, blockType: value })}
                 options={lookups?.blockTypes ?? []}
                 placeholder="Select block type..."
-                onCreateOption={(value) => onCreateReferenceItem("blockTypes", value)}
+                onCreateOption={(value) =>
+                  onCreateReferenceItem("blockTypes", value)
+                }
               />
             </div>
             <div className="space-y-2">
@@ -203,42 +253,52 @@ function StandardEditor({
                 onChange={(value) => setForm({ ...form, blockSize: value })}
                 options={lookups?.blockSizes ?? []}
                 placeholder="Select block size..."
-                onCreateOption={(value) => onCreateReferenceItem("blockSizes", value)}
+                onCreateOption={(value) =>
+                  onCreateReferenceItem("blockSizes", value)
+                }
               />
             </div>
           </>
         )}
         <div className="space-y-2">
-          <Label>BS Standard Reference</Label>
+          <Label>BS standard reference</Label>
           <Input
             value={form.bsStandard}
-            onChange={(event) => setForm({ ...form, bsStandard: event.target.value })}
-            placeholder="e.g. BS EN 12390-3:2009"
+            onChange={(event) =>
+              setForm({ ...form, bsStandard: event.target.value })
+            }
+            placeholder="For example, BS EN 12390-3:2009"
           />
         </div>
         <div className="grid grid-cols-[1fr_120px] gap-3">
           <div className="space-y-2">
-            <Label>Required Minimum</Label>
+            <Label>Minimum strength</Label>
             <Input
               type="number"
               min="0"
               step="0.01"
               value={form.requiredStrength}
-              onChange={(event) => setForm({ ...form, requiredStrength: event.target.value })}
-              placeholder="e.g. 30"
+              onChange={(event) =>
+                setForm({ ...form, requiredStrength: event.target.value })
+              }
+              placeholder="For example, 30"
             />
           </div>
           <div className="space-y-2">
             <Label>Unit</Label>
             <Input
               value={form.strengthUnit}
-              onChange={(event) => setForm({ ...form, strengthUnit: event.target.value })}
+              onChange={(event) =>
+                setForm({ ...form, strengthUnit: event.target.value })
+              }
               placeholder="N/mm²"
             />
           </div>
         </div>
         <div className="flex items-end justify-end gap-2 md:col-span-2">
-          <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
           <Button type="button" onClick={onSave} disabled={isSaving}>
             <Check className="mr-2 h-4 w-4" />
             {isSaving ? "Saving..." : editing ? "Save Changes" : "Add Standard"}
@@ -286,122 +346,217 @@ function SieveEditor({
           minimum: "",
           maximum: "",
           measurementType: form.criteria[0]?.measurementType ?? "percentage",
-          unit: form.criteria[0]?.measurementType === "amount" ? form.criteria[0].unit : "%",
+          unit:
+            form.criteria[0]?.measurementType === "amount"
+              ? form.criteria[0].unit
+              : "%",
         },
       ],
     });
   };
   const removeCriterion = (index: number) => {
     if (form.criteria.length === 1) return;
-    setForm({ ...form, criteria: form.criteria.filter((_, criterionIndex) => criterionIndex !== index) });
+    setForm({
+      ...form,
+      criteria: form.criteria.filter(
+        (_, criterionIndex) => criterionIndex !== index,
+      ),
+    });
   };
   return (
-    <Card className="border-amber-500/40 bg-amber-50/70 text-foreground dark:bg-amber-950/20">
-      <CardHeader>
+    <Card className="border-primary/20 bg-card text-foreground shadow-sm">
+      <CardHeader className="border-b border-border/70 bg-primary/[0.03]">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <CardTitle>{editing ? "Edit Sieve Standard" : "Add Sieve Standard"}</CardTitle>
+            <CardTitle>
+              {editing ? "Edit sieve rule" : "Add sieve rule"}
+            </CardTitle>
             <CardDescription>
-              Add every sieve or pore-size criterion that belongs to this material and standard reference.
+              Add each sieve or pore-size limit that belongs to this material
+              and reference.
             </CardDescription>
           </div>
-          <Button variant="ghost" size="icon" onClick={onCancel} aria-label="Close editor">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onCancel}
+            aria-label="Close editor"
+          >
             <X className="h-4 w-4" />
           </Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <Label>Test Type</Label>
-          <Select
-            value={form.testType}
-            onValueChange={(value: SieveTestType) => setForm({ ...form, testType: value })}
-          >
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value={TestType.Sand_Sieve}>Sand Sieve</SelectItem>
-              <SelectItem value={TestType.Aggregate_Sieve}>Aggregate Sieve</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="space-y-2">
+            <Label>Test Type</Label>
+            <Select
+              value={form.testType}
+              onValueChange={(value: SieveTestType) =>
+                setForm({ ...form, testType: value })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={TestType.Sand_Sieve}>Sand Sieve</SelectItem>
+                <SelectItem value={TestType.Aggregate_Sieve}>
+                  Aggregate Sieve
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Material from Reference Data</Label>
+            <Select
+              value={form.materialReferenceItemId}
+              onValueChange={(value) =>
+                setForm({ ...form, materialReferenceItemId: value })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select material..." />
+              </SelectTrigger>
+              <SelectContent>
+                {materialItems.map((item) => (
+                  <SelectItem key={item.id} value={String(item.id)}>
+                    {item.value}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>BS / Project Reference</Label>
+            <Input
+              value={form.standardReference}
+              onChange={(event) =>
+                setForm({ ...form, standardReference: event.target.value })
+              }
+              placeholder="e.g. BS 812-103.1"
+            />
+          </div>
         </div>
-        <div className="space-y-2">
-          <Label>Material from Reference Data</Label>
-          <Select
-            value={form.materialReferenceItemId}
-            onValueChange={(value) => setForm({ ...form, materialReferenceItemId: value })}
-          >
-            <SelectTrigger><SelectValue placeholder="Select material..." /></SelectTrigger>
-            <SelectContent>
-              {materialItems.map((item) => <SelectItem key={item.id} value={String(item.id)}>{item.value}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>BS / Project Reference</Label>
-          <Input
-            value={form.standardReference}
-            onChange={(event) => setForm({ ...form, standardReference: event.target.value })}
-            placeholder="e.g. BS 812-103.1"
-          />
-        </div>
-        </div>
-        <div className="rounded-lg border border-amber-500/30 bg-background/80">
-          <div className="flex flex-col gap-3 border-b border-amber-500/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="rounded-lg border border-border bg-muted/20">
+          <div className="flex flex-col gap-3 border-b border-border bg-card px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h3 className="font-semibold text-foreground">Pore-size criteria</h3>
-              <p className="text-xs text-muted-foreground">Add multiple sizes under this single standard entry.</p>
+              <h3 className="font-semibold text-foreground">
+                Acceptance limits
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Add one row for each sieve or pore size in this rule.
+              </p>
             </div>
             <Button type="button" variant="outline" onClick={addCriterion}>
-              <Plus className="mr-2 h-4 w-4" /> Add pore size
+              <Plus className="mr-2 h-4 w-4" /> Add another limit
             </Button>
           </div>
           <div className="space-y-3 p-4">
             {form.criteria.map((criterion, index) => (
-              <div key={index} className="grid grid-cols-1 items-end gap-3 rounded-md border bg-background p-3 md:grid-cols-[1.35fr_1.15fr_1fr_1fr_110px_40px]">
+              <div
+                key={index}
+                className="grid grid-cols-1 items-end gap-3 rounded-md border border-border bg-card p-3 md:grid-cols-[1.35fr_1.15fr_1fr_1fr_110px_40px]"
+              >
                 <div className="space-y-2">
-                  <Label>Pore / Sieve Size {index + 1}</Label>
+                  <Label>Sieve or pore size {index + 1}</Label>
                   <Select
                     value={criterion.sieveSizeReferenceItemId}
-                    onValueChange={(value) => updateCriterion(index, { sieveSizeReferenceItemId: value })}
+                    onValueChange={(value) =>
+                      updateCriterion(index, {
+                        sieveSizeReferenceItemId: value,
+                      })
+                    }
                   >
-                    <SelectTrigger><SelectValue placeholder="Select size..." /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select size..." />
+                    </SelectTrigger>
                     <SelectContent>
-                      {sieveItems.map((item) => <SelectItem key={item.id} value={String(item.id)}>{item.value}</SelectItem>)}
+                      {sieveItems.map((item) => (
+                        <SelectItem key={item.id} value={String(item.id)}>
+                          {item.value}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Measurement</Label>
+                  <Label>Limit type</Label>
                   <Select
                     value={criterion.measurementType}
                     onValueChange={(value: SieveCriterion["measurementType"]) =>
                       updateCriterion(index, {
                         measurementType: value,
-                        unit: value === "percentage" ? "%" : criterion.unit === "%" ? "g" : criterion.unit,
+                        unit:
+                          value === "percentage"
+                            ? "%"
+                            : criterion.unit === "%"
+                              ? "g"
+                              : criterion.unit,
                       })
                     }
                   >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="percentage">Percentage passing</SelectItem>
+                      <SelectItem value="percentage">
+                        Percentage passing
+                      </SelectItem>
                       <SelectItem value="amount">Amount passing</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Minimum</Label>
-                  <Input type="number" min="0" step="0.001" value={criterion.minimum} onChange={(event) => updateCriterion(index, { minimum: event.target.value })} placeholder="Optional" />
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.001"
+                    value={criterion.minimum}
+                    onChange={(event) =>
+                      updateCriterion(index, { minimum: event.target.value })
+                    }
+                    placeholder="Optional"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Maximum</Label>
-                  <Input type="number" min="0" step="0.001" value={criterion.maximum} onChange={(event) => updateCriterion(index, { maximum: event.target.value })} placeholder="Optional" />
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.001"
+                    value={criterion.maximum}
+                    onChange={(event) =>
+                      updateCriterion(index, { maximum: event.target.value })
+                    }
+                    placeholder="Optional"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Unit</Label>
-                   <Input value={criterion.measurementType === "percentage" ? "%" : criterion.unit} disabled={criterion.measurementType === "percentage"} onChange={(event) => updateCriterion(index, { unit: event.target.value })} placeholder="g" />
+                  <Input
+                    value={
+                      criterion.measurementType === "percentage"
+                        ? "%"
+                        : criterion.unit
+                    }
+                    disabled={criterion.measurementType === "percentage"}
+                    onChange={(event) =>
+                      updateCriterion(index, { unit: event.target.value })
+                    }
+                    placeholder="g"
+                  />
                 </div>
-                <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => removeCriterion(index)} disabled={form.criteria.length === 1} aria-label={`Remove pore size ${index + 1}`}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive"
+                  onClick={() => removeCriterion(index)}
+                  disabled={form.criteria.length === 1}
+                  aria-label={`Remove pore size ${index + 1}`}
+                >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -409,14 +564,21 @@ function SieveEditor({
           </div>
         </div>
         <div className="flex items-end justify-between gap-2 md:col-span-2">
-          <p className="text-xs text-muted-foreground">
-              Enter at least one limit for every pore size. Limits are inclusive; a result on the boundary passes.
+          <p className="max-w-xl text-xs text-muted-foreground">
+            Add at least one limit for every size. Limits are inclusive, so a
+            result on the boundary passes.
           </p>
           <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
             <Button type="button" onClick={onSave} disabled={isSaving}>
               <Check className="mr-2 h-4 w-4" />
-              {isSaving ? "Saving..." : editing ? "Save Changes" : "Add Standard"}
+              {isSaving
+                ? "Saving..."
+                : editing
+                  ? "Save Changes"
+                  : "Add Standard"}
             </Button>
           </div>
         </div>
@@ -427,8 +589,18 @@ function SieveEditor({
 
 export default function Standards() {
   const queryClient = useQueryClient();
-  const { data: strengthStandards, isLoading: strengthLoading, isError: strengthError, refetch: refetchStrength } = useListStrengthStandards();
-  const { data: sieveStandards, isLoading: sieveLoading, isError: sieveError, refetch: refetchSieve } = useListSieveStandards();
+  const {
+    data: strengthStandards,
+    isLoading: strengthLoading,
+    isError: strengthError,
+    refetch: refetchStrength,
+  } = useListStrengthStandards();
+  const {
+    data: sieveStandards,
+    isLoading: sieveLoading,
+    isError: sieveError,
+    refetch: refetchSieve,
+  } = useListSieveStandards();
   const { data: lookups } = useGetLookups();
   const { data: referenceData } = useGetReferenceData();
   const createStandard = useCreateStrengthStandard();
@@ -441,16 +613,23 @@ export default function Standards() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [sieveEditorOpen, setSieveEditorOpen] = useState(false);
   const [editing, setEditing] = useState<StrengthStandard | null>(null);
-  const [editingSieve, setEditingSieve] = useState<SieveStandard[] | null>(null);
+  const [editingSieve, setEditingSieve] = useState<SieveStandard[] | null>(
+    null,
+  );
   const [form, setForm] = useState<StandardForm>(emptyForm);
   const [sieveForm, setSieveForm] = useState<SieveForm>(emptySieveForm);
 
   const materialItems = useMemo(
-    () => referenceData?.categories.find((category) => category.key === "materials")?.items ?? [],
+    () =>
+      referenceData?.categories.find((category) => category.key === "materials")
+        ?.items ?? [],
     [referenceData],
   );
   const sieveItems = useMemo(
-    () => referenceData?.categories.find((category) => category.key === "sieveSizes")?.items ?? [],
+    () =>
+      referenceData?.categories.find(
+        (category) => category.key === "sieveSizes",
+      )?.items ?? [],
     [referenceData],
   );
   const sieveGroups = useMemo(() => {
@@ -470,8 +649,12 @@ export default function Standards() {
   }, [sieveStandards]);
 
   const invalidateStandards = () => {
-    queryClient.invalidateQueries({ queryKey: getListStrengthStandardsQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getListSieveStandardsQueryKey() });
+    queryClient.invalidateQueries({
+      queryKey: getListStrengthStandardsQueryKey(),
+    });
+    queryClient.invalidateQueries({
+      queryKey: getListSieveStandardsQueryKey(),
+    });
     queryClient.invalidateQueries({
       predicate: ({ queryKey }) => {
         const key = queryKey[0];
@@ -487,10 +670,14 @@ export default function Standards() {
   };
 
   const addReferenceDataItem = async (categoryKey: string, value: string) => {
-    const category = referenceData?.categories.find((item) => item.key === categoryKey);
+    const category = referenceData?.categories.find(
+      (item) => item.key === categoryKey,
+    );
     if (!category) {
       toast.error("This Reference Data category is not available.");
-      throw new Error(`Reference Data category "${categoryKey}" is not available.`);
+      throw new Error(
+        `Reference Data category "${categoryKey}" is not available.`,
+      );
     }
 
     try {
@@ -499,7 +686,9 @@ export default function Standards() {
         data: { value },
       });
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: getGetReferenceDataQueryKey() }),
+        queryClient.invalidateQueries({
+          queryKey: getGetReferenceDataQueryKey(),
+        }),
         queryClient.invalidateQueries({ queryKey: getGetLookupsQueryKey() }),
       ]);
       toast.success(`Added “${createdItem.value}” to Reference Data.`);
@@ -546,7 +735,8 @@ export default function Standards() {
       !form.strengthUnit.trim() ||
       !Number.isFinite(requiredStrength) ||
       requiredStrength < 0 ||
-      (form.testType === TestType.Blocks && (!form.blockType.trim() || !form.blockSize.trim()))
+      (form.testType === TestType.Blocks &&
+        (!form.blockType.trim() || !form.blockSize.trim()))
     ) {
       toast.error("Complete the strength standard fields before saving.");
       return;
@@ -554,15 +744,19 @@ export default function Standards() {
     const data = {
       testType: form.testType,
       material: form.material.trim(),
-      blockType: form.testType === TestType.Blocks ? form.blockType.trim() : null,
-      blockSize: form.testType === TestType.Blocks ? form.blockSize.trim() : null,
+      blockType:
+        form.testType === TestType.Blocks ? form.blockType.trim() : null,
+      blockSize:
+        form.testType === TestType.Blocks ? form.blockSize.trim() : null,
       bsStandard: form.bsStandard.trim(),
       requiredStrength,
       strengthUnit: form.strengthUnit.trim(),
     };
     const options = {
       onSuccess: () => {
-        toast.success(editing ? "Strength standard updated." : "Strength standard added.");
+        toast.success(
+          editing ? "Strength standard updated." : "Strength standard added.",
+        );
         setEditorOpen(false);
         invalidateStandards();
       },
@@ -574,8 +768,10 @@ export default function Standards() {
 
   const handleSaveSieve = () => {
     const invalidCriterion = sieveForm.criteria.some((criterion) => {
-      const minimum = criterion.minimum.trim() === "" ? null : Number(criterion.minimum);
-      const maximum = criterion.maximum.trim() === "" ? null : Number(criterion.maximum);
+      const minimum =
+        criterion.minimum.trim() === "" ? null : Number(criterion.minimum);
+      const maximum =
+        criterion.maximum.trim() === "" ? null : Number(criterion.maximum);
       return (
         !criterion.sieveSizeReferenceItemId ||
         (minimum === null && maximum === null) ||
@@ -584,7 +780,9 @@ export default function Standards() {
         (minimum !== null && maximum !== null && minimum > maximum)
       );
     });
-    const sizeIds = sieveForm.criteria.map((criterion) => criterion.sieveSizeReferenceItemId);
+    const sizeIds = sieveForm.criteria.map(
+      (criterion) => criterion.sieveSizeReferenceItemId,
+    );
     if (
       !sieveForm.materialReferenceItemId ||
       !sieveForm.standardReference.trim() ||
@@ -592,7 +790,9 @@ export default function Standards() {
       invalidCriterion ||
       new Set(sizeIds).size !== sizeIds.length
     ) {
-      toast.error("Complete every pore-size row and use a valid, non-duplicate limit range.");
+      toast.error(
+        "Complete every pore-size row and use a valid, non-duplicate limit range.",
+      );
       return;
     }
     const materialReferenceItemId = Number(sieveForm.materialReferenceItemId);
@@ -603,14 +803,21 @@ export default function Standards() {
       sieveSizeReferenceItemId: Number(criterion.sieveSizeReferenceItemId),
       standardReference,
       measurementType: criterion.measurementType,
-      minimum: criterion.minimum.trim() === "" ? null : Number(criterion.minimum),
-      maximum: criterion.maximum.trim() === "" ? null : Number(criterion.maximum),
-      unit: criterion.measurementType === "percentage" ? "%" : criterion.unit.trim() || "g",
+      minimum:
+        criterion.minimum.trim() === "" ? null : Number(criterion.minimum),
+      maximum:
+        criterion.maximum.trim() === "" ? null : Number(criterion.maximum),
+      unit:
+        criterion.measurementType === "percentage"
+          ? "%"
+          : criterion.unit.trim() || "g",
     });
 
     const saveSieveCriteria = async () => {
       const existing = editingSieve ?? [];
-      const existingById = new Map(existing.map((standard) => [standard.id, standard]));
+      const existingById = new Map(
+        existing.map((standard) => [standard.id, standard]),
+      );
       const retainedIds = new Set<number>();
       for (const criterion of sieveForm.criteria) {
         const data = dataForCriterion(criterion);
@@ -624,13 +831,17 @@ export default function Standards() {
       await Promise.all(
         existing
           .filter((standard) => !retainedIds.has(standard.id))
-          .map((standard) => deleteSieveStandard.mutateAsync({ id: standard.id })),
+          .map((standard) =>
+            deleteSieveStandard.mutateAsync({ id: standard.id }),
+          ),
       );
     };
 
     void saveSieveCriteria()
       .then(() => {
-        toast.success(editingSieve ? "Sieve standard updated." : "Sieve standard added.");
+        toast.success(
+          editingSieve ? "Sieve standard updated." : "Sieve standard added.",
+        );
         setSieveEditorOpen(false);
         invalidateStandards();
       })
@@ -638,20 +849,35 @@ export default function Standards() {
   };
 
   const handleDelete = (standard: StrengthStandard) => {
-    if (!confirm(`Delete the ${standard.testType} standard for ${standard.material}?`)) return;
-    deleteStandard.mutate({ id: standard.id }, {
-      onSuccess: () => {
-        toast.success("Strength standard deleted.");
-        invalidateStandards();
+    if (
+      !confirm(
+        `Delete the ${standard.testType} standard for ${standard.material}?`,
+      )
+    )
+      return;
+    deleteStandard.mutate(
+      { id: standard.id },
+      {
+        onSuccess: () => {
+          toast.success("Strength standard deleted.");
+          invalidateStandards();
+        },
+        onError: () => toast.error("Unable to delete the strength standard."),
       },
-      onError: () => toast.error("Unable to delete the strength standard."),
-    });
+    );
   };
 
   const handleDeleteSieve = (standards: SieveStandard[]) => {
     const standard = standards[0];
-    if (!confirm(`Delete the ${standard.testType} standard for ${standard.material} with all ${standards.length} pore-size criteria?`)) return;
-    Promise.all(standards.map((item) => deleteSieveStandard.mutateAsync({ id: item.id })))
+    if (
+      !confirm(
+        `Delete the ${standard.testType} standard for ${standard.material} with all ${standards.length} pore-size criteria?`,
+      )
+    )
+      return;
+    Promise.all(
+      standards.map((item) => deleteSieveStandard.mutateAsync({ id: item.id })),
+    )
       .then(() => {
         toast.success("Sieve standard deleted.");
         invalidateStandards();
@@ -663,26 +889,41 @@ export default function Standards() {
     <div className="mx-auto max-w-6xl space-y-6 pb-12">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
-          <Link href="/" className="rounded-md p-2 hover:bg-muted" aria-label="Back to dashboard">
+          <Link
+            href="/"
+            className="rounded-md p-2 hover:bg-muted"
+            aria-label="Back to dashboard"
+          >
             <ArrowLeft className="h-5 w-5 text-muted-foreground" />
           </Link>
           <div>
             <h1 className="flex items-center gap-3 text-3xl font-bold tracking-tight">
-              <FileCheck2 className="h-8 w-8 text-primary" /> Quality Standards
+              <FileCheck2 className="h-8 w-8 text-primary" /> Quality standards
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Configure the acceptance rules used to evaluate QC records automatically.
+              Keep the rules that automatically evaluate strength and sieve
+              results in one place.
             </p>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs font-medium text-muted-foreground">
+              <span className="rounded-full border border-border bg-card px-2.5 py-1">
+                {strengthStandards?.length ?? 0} strength{" "}
+                {strengthStandards?.length === 1 ? "rule" : "rules"}
+              </span>
+              <span className="rounded-full border border-border bg-card px-2.5 py-1">
+                {sieveGroups.length} sieve{" "}
+                {sieveGroups.length === 1 ? "group" : "groups"}
+              </span>
+            </div>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
           {!editorOpen && !sieveEditorOpen && (
             <>
               <Button variant="outline" onClick={openSieveCreate}>
-                <Plus className="mr-2 h-4 w-4" /> Add Sieve Standard
+                <Plus className="mr-2 h-4 w-4" /> Add sieve rule
               </Button>
               <Button onClick={openCreate}>
-                <Plus className="mr-2 h-4 w-4" /> Add Strength Standard
+                <Plus className="mr-2 h-4 w-4" /> Add strength rule
               </Button>
             </>
           )}
@@ -713,35 +954,46 @@ export default function Standards() {
           editing={editingSieve}
           onCancel={() => setSieveEditorOpen(false)}
           onSave={handleSaveSieve}
-          isSaving={createSieveStandard.isPending || updateSieveStandard.isPending}
+          isSaving={
+            createSieveStandard.isPending || updateSieveStandard.isPending
+          }
           materialItems={materialItems}
           sieveItems={sieveItems}
         />
       )}
 
-      <Card className="border-t-4 border-t-amber-500">
-        <CardHeader>
+      <Card className="border-border shadow-sm">
+        <CardHeader className="border-b border-border/70 bg-primary/[0.03]">
           <div className="flex items-start gap-3">
-            <div className="rounded-md bg-amber-500/10 p-2 text-amber-700"><FileCheck2 className="h-5 w-5" /></div>
+            <div className="rounded-md bg-primary/10 p-2 text-primary">
+              <FileCheck2 className="h-5 w-5" />
+            </div>
             <div>
-              <CardTitle>Compressive-strength standards</CardTitle>
+              <CardTitle>Strength rules</CardTitle>
               <CardDescription>
-                Ready Mix and Blocks require a matching configured minimum. Missing configuration produces Review.
+                Ready Mix and Blocks need a matching minimum. If no rule
+                matches, the record is marked Review.
               </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
           {strengthLoading ? (
-            <div className="p-12 text-center text-muted-foreground">Loading strength standards...</div>
+            <div className="p-12 text-center text-muted-foreground">
+              Loading strength standards...
+            </div>
           ) : strengthError ? (
             <div className="flex flex-col items-center gap-3 p-12 text-center">
-              <p className="text-sm text-destructive">Strength standards could not be loaded.</p>
-              <Button variant="outline" onClick={() => refetchStrength()}>Try Again</Button>
+              <p className="text-sm text-destructive">
+                Strength standards could not be loaded.
+              </p>
+              <Button variant="outline" onClick={() => refetchStrength()}>
+                Try Again
+              </Button>
             </div>
           ) : strengthStandards?.length ? (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[820px] text-sm">
+              <table className="w-full min-w-[820px] text-xs sm:text-sm">
                 <thead className="bg-muted/40 text-left">
                   <tr className="border-y">
                     <th className="px-4 py-3 font-semibold">Test Type</th>
@@ -750,24 +1002,45 @@ export default function Standards() {
                     <th className="px-4 py-3 font-semibold">Block Size</th>
                     <th className="px-4 py-3 font-semibold">BS Standard</th>
                     <th className="px-4 py-3 font-semibold">Minimum</th>
-                    <th className="px-4 py-3 text-right font-semibold">Actions</th>
+                    <th className="px-4 py-3 text-right font-semibold">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {strengthStandards.map((standard) => (
                     <tr key={standard.id} className="border-b last:border-b-0">
-                      <td className="px-4 py-3 font-medium">{standard.testType}</td>
+                      <td className="px-4 py-3 font-medium">
+                        {standard.testType}
+                      </td>
                       <td className="px-4 py-3">{standard.material}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{standard.blockType || "—"}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{standard.blockSize || "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {standard.blockType || "—"}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {standard.blockSize || "—"}
+                      </td>
                       <td className="px-4 py-3">{standard.bsStandard}</td>
-                      <td className="px-4 py-3 font-semibold">{standard.requiredStrength} {standard.strengthUnit}</td>
+                      <td className="px-4 py-3 font-semibold">
+                        {standard.requiredStrength} {standard.strengthUnit}
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => openEdit(standard)} aria-label={`Edit ${standard.bsStandard}`}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEdit(standard)}
+                            aria-label={`Edit ${standard.bsStandard}`}
+                          >
                             <Edit2 className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(standard)} aria-label={`Delete ${standard.bsStandard}`}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive"
+                            onClick={() => handleDelete(standard)}
+                            aria-label={`Delete ${standard.bsStandard}`}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -781,80 +1054,129 @@ export default function Standards() {
             <div className="flex flex-col items-center gap-3 p-12 text-center">
               <FileCheck2 className="h-10 w-10 text-muted-foreground/50" />
               <div>
-                <h3 className="font-semibold">No strength standards configured</h3>
-                <p className="mt-1 text-sm text-muted-foreground">Add the approved minimums for Ready Mix mixes and block products.</p>
+                <h3 className="font-semibold">
+                  No strength standards configured
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Add the approved minimums for Ready Mix mixes and block
+                  products.
+                </p>
               </div>
-              <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add First Strength Standard</Button>
+              <Button onClick={openCreate}>
+                <Plus className="mr-2 h-4 w-4" /> Add first strength rule
+              </Button>
             </div>
           )}
         </CardContent>
       </Card>
 
-      <Card className="border-t-4 border-t-amber-500">
-        <CardHeader>
+      <Card className="border-border shadow-sm">
+        <CardHeader className="border-b border-border/70 bg-primary/[0.03]">
           <div className="flex items-start gap-3">
-            <div className="rounded-md bg-amber-500/10 p-2 text-amber-700"><FlaskConical className="h-5 w-5" /></div>
+            <div className="rounded-md bg-primary/10 p-2 text-primary">
+              <FlaskConical className="h-5 w-5" />
+            </div>
             <div>
-              <CardTitle>Sieve acceptance standards</CardTitle>
+              <CardTitle>Sieve rules</CardTitle>
               <CardDescription>
-                Configure the allowed passing amount or percentage for each material and sieve/pore size. Materials and sizes come from Reference Data.
+                Set the accepted amount or percentage for each material and
+                sieve size. Materials and sizes come from Reference Data.
               </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
           {sieveLoading ? (
-            <div className="p-12 text-center text-muted-foreground">Loading sieve standards...</div>
+            <div className="p-12 text-center text-muted-foreground">
+              Loading sieve standards...
+            </div>
           ) : sieveError ? (
             <div className="flex flex-col items-center gap-3 p-12 text-center">
-              <p className="text-sm text-destructive">Sieve standards could not be loaded.</p>
-              <Button variant="outline" onClick={() => refetchSieve()}>Try Again</Button>
+              <p className="text-sm text-destructive">
+                Sieve standards could not be loaded.
+              </p>
+              <Button variant="outline" onClick={() => refetchSieve()}>
+                Try Again
+              </Button>
             </div>
           ) : sieveGroups.length ? (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px] text-sm">
+              <table className="w-full min-w-[900px] text-xs sm:text-sm">
                 <thead className="bg-muted/40 text-left">
                   <tr className="border-y">
                     <th className="px-4 py-3 font-semibold">Test Type</th>
                     <th className="px-4 py-3 font-semibold">Material</th>
-                    <th className="px-4 py-3 font-semibold">Sieve / Pore Size</th>
+                    <th className="px-4 py-3 font-semibold">
+                      Sieve / Pore Size
+                    </th>
                     <th className="px-4 py-3 font-semibold">Reference</th>
                     <th className="px-4 py-3 font-semibold">Acceptance</th>
-                    <th className="px-4 py-3 text-right font-semibold">Actions</th>
+                    <th className="px-4 py-3 text-right font-semibold">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {sieveGroups.map(({ standards, representative }) => (
-                    <tr key={`${representative.testType}-${representative.materialReferenceItemId}-${representative.standardReference}`} className="border-b last:border-b-0">
-                      <td className="px-4 py-3 font-medium">{representative.testType}</td>
-                      <td className="px-4 py-3">{representative.material || "Missing reference value"}</td>
+                    <tr
+                      key={`${representative.testType}-${representative.materialReferenceItemId}-${representative.standardReference}`}
+                      className="border-b last:border-b-0"
+                    >
+                      <td className="px-4 py-3 font-medium">
+                        {representative.testType}
+                      </td>
+                      <td className="px-4 py-3">
+                        {representative.material || "Missing reference value"}
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
                           {standards.map((standard) => (
-                            <span key={standard.id} className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-900/40 dark:text-amber-100">
+                            <span
+                              key={standard.id}
+                              className="rounded-full border border-primary/15 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+                            >
                               {standard.sieveSize || "Missing size"}
                             </span>
                           ))}
                         </div>
                       </td>
-                      <td className="px-4 py-3">{representative.standardReference}</td>
+                      <td className="px-4 py-3">
+                        {representative.standardReference}
+                      </td>
                       <td className="px-4 py-3 font-semibold">
                         <div className="space-y-1">
                           {standards.map((standard) => (
                             <div key={standard.id}>
-                              {standard.sieveSize}: {standard.minimum == null ? "—" : standard.minimum}
+                              {standard.sieveSize}:{" "}
+                              {standard.minimum == null
+                                ? "—"
+                                : standard.minimum}
                               {" to "}
-                              {standard.maximum == null ? "—" : standard.maximum} {standard.unit}
+                              {standard.maximum == null
+                                ? "—"
+                                : standard.maximum}{" "}
+                              {standard.unit}
                             </div>
                           ))}
                         </div>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => openSieveEdit(standards)} aria-label={`Edit ${representative.standardReference}`}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openSieveEdit(standards)}
+                            aria-label={`Edit ${representative.standardReference}`}
+                          >
                             <Edit2 className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteSieve(standards)} aria-label={`Delete ${representative.standardReference}`}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive"
+                            onClick={() => handleDeleteSieve(standards)}
+                            aria-label={`Delete ${representative.standardReference}`}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -870,10 +1192,13 @@ export default function Standards() {
               <div>
                 <h3 className="font-semibold">No sieve standards configured</h3>
                 <p className="mt-1 max-w-lg text-sm text-muted-foreground">
-                  Add sieve sizes in Reference Data first, then configure the accepted passing range for each material.
+                  Add sieve sizes in Reference Data first, then configure the
+                  accepted passing range for each material.
                 </p>
               </div>
-              <Button onClick={openSieveCreate}><Plus className="mr-2 h-4 w-4" /> Add First Sieve Standard</Button>
+              <Button onClick={openSieveCreate}>
+                <Plus className="mr-2 h-4 w-4" /> Add first sieve rule
+              </Button>
             </div>
           )}
         </CardContent>

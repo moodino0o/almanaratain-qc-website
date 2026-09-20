@@ -1,7 +1,16 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@workspace/replit-auth-web";
-import { ClipboardList, LayoutDashboard, Settings, FileText, Beaker, Archive, FileCheck2, FileWarning } from "lucide-react";
+import {
+  ClipboardList,
+  LayoutDashboard,
+  Settings,
+  FileText,
+  Beaker,
+  Archive,
+  FileCheck2,
+  FileWarning,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LayoutProps {
@@ -25,34 +34,36 @@ export function Layout({ children }: LayoutProps) {
   return (
     <div className="flex h-screen min-w-0 overflow-hidden bg-background">
       {/* Sidebar */}
-      <aside className="hidden w-64 flex-shrink-0 flex-col border-r border-border bg-sidebar print-hide md:flex">
+      <aside className="hidden w-64 flex-shrink-0 flex-col border-r border-border bg-card print-hide md:flex">
         <div className="h-16 flex items-center px-6 border-b border-border">
           <Link href="/">
-            <img 
-              src="/al-manaratain-logo.webp" 
-              alt="Al Manaratain" 
+            <img
+              src="/al-manaratain-logo.webp"
+              alt="Al Manaratain"
               className="h-8 object-contain cursor-pointer"
             />
           </Link>
         </div>
-        
+
         <div className="p-4 flex flex-col gap-1 flex-1 overflow-y-auto">
           <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">
             Quality Control
           </div>
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
-            
+            const isActive =
+              location === item.href ||
+              (item.href !== "/" && location.startsWith(item.href));
+
             return (
-              <Link 
-                key={item.href} 
+              <Link
+                key={item.href}
                 href={item.href}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                  isActive 
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground" 
-                    : "text-sidebar-foreground hover:bg-muted"
+                  isActive
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
               >
                 <Icon className="w-4 h-4" />
@@ -69,7 +80,8 @@ export function Layout({ children }: LayoutProps) {
             </div>
             <div className="flex flex-col">
               <span className="truncate text-sm font-medium">
-                {[user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Registered employee"}
+                {[user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
+                  "Registered employee"}
               </span>
               <span className="max-w-[170px] truncate text-xs text-muted-foreground">
                 {user?.email ?? "Employee account"}
@@ -90,21 +102,25 @@ export function Layout({ children }: LayoutProps) {
       <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
         <div className="flex min-h-16 shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-4 py-3 sm:px-8 print-hide">
           <div className="flex min-w-0 items-center gap-2 text-sm font-medium text-muted-foreground">
-             <Beaker className="w-4 h-4" />
-             <span className="truncate">Al Manaratain Quality Control System</span>
+            <Beaker className="w-4 h-4" />
+            <span className="truncate">
+              Al Manaratain Quality Control System
+            </span>
           </div>
           <div className="flex shrink-0 items-center gap-4">
-             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-               <span className="w-2 h-2 rounded-full bg-success"></span>
-               <span className="hidden sm:inline">System Operational</span>
-             </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="w-2 h-2 rounded-full bg-success"></span>
+              <span className="hidden sm:inline">System Operational</span>
+            </div>
           </div>
         </div>
 
         <nav className="flex shrink-0 gap-1 overflow-x-auto border-b border-border bg-card px-2 py-2 print-hide md:hidden">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
+            const isActive =
+              location === item.href ||
+              (item.href !== "/" && location.startsWith(item.href));
             return (
               <Link
                 key={item.href}
@@ -112,8 +128,8 @@ export function Layout({ children }: LayoutProps) {
                 className={cn(
                   "flex min-w-[68px] shrink-0 flex-col items-center gap-1 rounded-md px-2 py-2 text-[11px] font-medium",
                   isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground hover:bg-muted",
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -122,7 +138,7 @@ export function Layout({ children }: LayoutProps) {
             );
           })}
         </nav>
-        
+
         <div className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 print-container">
           <div className="mx-auto h-full w-full max-w-6xl min-w-0 print-container">
             {children}
