@@ -4,7 +4,6 @@ import { useGetDashboard, useListRecords } from "@workspace/api-client-react";
 import {
   AlertTriangle,
   ArrowUpRight,
-  BarChart3,
   CalendarDays,
   CheckCircle2,
   ChevronRight,
@@ -18,14 +17,6 @@ import {
   Search,
   XCircle,
 } from "lucide-react";
-import {
-  Cell,
-  Legend,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-} from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,7 +37,7 @@ import {
 } from "@/components/ui/table";
 import { formatDate } from "@/lib/utils";
 
-function MetricCard({
+function StatusSummary({
   label,
   value,
   detail,
@@ -59,23 +50,11 @@ function MetricCard({
   icon: typeof FileText;
   tone: "neutral" | "success" | "warning" | "danger";
 }) {
-  const toneClasses = {
-    neutral: "border-border bg-card",
-    success: "border-border bg-card",
-    warning: "border-border bg-card",
-    danger: "border-border bg-card",
-  };
   const iconClasses = {
     neutral: "bg-muted text-muted-foreground",
     success: "bg-success/10 text-success",
     warning: "bg-warning/10 text-warning",
     danger: "bg-destructive/10 text-destructive",
-  };
-  const labelClasses = {
-    neutral: "text-muted-foreground",
-    success: "text-success",
-    warning: "text-warning",
-    danger: "text-destructive",
   };
   const valueClasses = {
     neutral: "text-foreground",
@@ -85,26 +64,18 @@ function MetricCard({
   };
 
   return (
-    <Card className={`overflow-hidden border shadow-none ${toneClasses[tone]}`}>
-      <CardContent className="flex items-start justify-between gap-3 p-5">
-        <div className="min-w-0">
-          <p
-            className={`text-[11px] font-bold uppercase tracking-[0.14em] ${labelClasses[tone]}`}
-          >
-            {label}
-          </p>
-          <p
-            className={`mt-2 text-3xl font-bold tracking-tight ${valueClasses[tone]}`}
-          >
-            {value.toLocaleString()}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
-        </div>
-        <span className={`rounded-lg p-2.5 ${iconClasses[tone]}`}>
-          <Icon className="h-5 w-5" />
-        </span>
-      </CardContent>
-    </Card>
+    <div className="flex items-center gap-3 rounded-md border border-border/70 bg-muted/20 p-3">
+      <span className={`rounded-md p-2 ${iconClasses[tone]}`}>
+        <Icon className="h-4 w-4" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-xs font-medium text-muted-foreground">{label}</p>
+        <p className={`text-xl font-bold tracking-tight ${valueClasses[tone]}`}>
+          {value.toLocaleString()}
+        </p>
+        <p className="truncate text-[11px] text-muted-foreground">{detail}</p>
+      </div>
+    </div>
   );
 }
 
@@ -190,13 +161,6 @@ export default function Home() {
   const passRate =
     (dashboard.passedRecords / Math.max(dashboard.totalRecords, 1)) * 100;
   const records = recordsQuery.data ?? [];
-  const chartColors = [
-    "hsl(var(--primary) / 0.78)",
-    "hsl(var(--secondary) / 0.78)",
-    "hsl(var(--success) / 0.72)",
-    "hsl(var(--warning) / 0.72)",
-    "hsl(var(--destructive) / 0.68)",
-  ];
 
   return (
     <div className="space-y-7 pb-10">
@@ -227,21 +191,13 @@ export default function Home() {
         </div>
       </header>
 
-      <section
-        aria-labelledby="complaints-heading"
-        className="rounded-xl border border-primary/20 bg-primary/[0.045] p-4 sm:p-5"
-      >
-        <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+      <Card className="shadow-none">
+        <CardHeader className="border-b bg-card pb-4">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary">
-              Customer care
-            </p>
-            <h2
-              id="complaints-heading"
-              className="mt-1 text-xl font-bold tracking-tight"
-            >
+            <CardTitle id="complaints-heading" className="text-base">
               Complaints at a glance
-            </h2>
+            </CardTitle>
+            <CardDescription>Track customer issues and follow up on open cases.</CardDescription>
           </div>
           <Link
             href="/complaints"
@@ -249,111 +205,109 @@ export default function Home() {
           >
             Open complaint register <ArrowUpRight className="ml-1.5 h-4 w-4" />
           </Link>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-3">
+        </CardHeader>
+        <CardContent className="grid divide-y p-0 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
           <Link
             href="/complaints"
-            className="group rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-primary/[0.03]"
+            className="group flex items-center gap-3 p-4 transition-colors hover:bg-muted/40"
           >
-            <div className="flex items-center justify-between">
-              <span className="rounded-md bg-primary/10 p-2 text-primary">
-                <Inbox className="h-4 w-4" />
-              </span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-            </div>
-            <p className="mt-4 text-2xl font-bold">
-              {dashboard.totalComplaints.toLocaleString()}
-            </p>
-            <p className="mt-1 text-xs font-medium text-muted-foreground">
-              Total complaints
-            </p>
+            <span className="rounded-md bg-muted p-2 text-muted-foreground">
+              <Inbox className="h-4 w-4" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-2xl font-bold">{dashboard.totalComplaints.toLocaleString()}</span>
+              <span className="block text-xs font-medium text-muted-foreground">Total complaints</span>
+            </span>
+            <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
           </Link>
           <Link
             href="/complaints"
-            className="group rounded-lg border border-border bg-card p-4 transition-colors hover:border-warning/40 hover:bg-warning/5"
+            className="group flex items-center gap-3 p-4 transition-colors hover:bg-muted/40"
           >
-            <div className="flex items-center justify-between">
-              <span className="rounded-md bg-warning/10 p-2 text-warning">
-                <Clock3 className="h-4 w-4" />
-              </span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-            </div>
-            <p className="mt-4 text-2xl font-bold">
-              {dashboard.openComplaints.toLocaleString()}
-            </p>
-            <p className="mt-1 text-xs font-medium text-muted-foreground">
-              Open complaints
-            </p>
+            <span className="rounded-md bg-warning/10 p-2 text-warning">
+              <Clock3 className="h-4 w-4" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-2xl font-bold">{dashboard.openComplaints.toLocaleString()}</span>
+              <span className="block text-xs font-medium text-muted-foreground">Open complaints</span>
+            </span>
+            <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
           </Link>
           <Link
             href="/complaints"
-            className="group rounded-lg border border-border bg-card p-4 transition-colors hover:border-success/40 hover:bg-success/5"
+            className="group flex items-center gap-3 p-4 transition-colors hover:bg-muted/40"
           >
-            <div className="flex items-center justify-between">
-              <span className="rounded-md bg-success/10 p-2 text-success">
-                <CheckCircle2 className="h-4 w-4" />
-              </span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-            </div>
-            <p className="mt-4 text-2xl font-bold">
-              {dashboard.solvedComplaints.toLocaleString()}
-            </p>
-            <p className="mt-1 text-xs font-medium text-muted-foreground">
-              Solved complaints
-            </p>
+            <span className="rounded-md bg-success/10 p-2 text-success">
+              <CheckCircle2 className="h-4 w-4" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-2xl font-bold">{dashboard.solvedComplaints.toLocaleString()}</span>
+              <span className="block text-xs font-medium text-muted-foreground">Solved complaints</span>
+            </span>
+            <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
           </Link>
-        </div>
-      </section>
+        </CardContent>
+      </Card>
 
-      <section aria-labelledby="qc-heading">
-        <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-              Laboratory register
+      <Card className="shadow-none">
+        <CardHeader className="border-b bg-card pb-4">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <CardTitle id="qc-heading" className="text-base">QC test status</CardTitle>
+              <CardDescription>Review the current state of quality records.</CardDescription>
+            </div>
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <CalendarDays className="h-3.5 w-3.5" /> {dashboard.recordsThisMonth.toLocaleString()} records this month
             </p>
-            <h2
-              id="qc-heading"
-              className="mt-1 text-xl font-bold tracking-tight"
-            >
-              QC test status
-            </h2>
           </div>
-          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <CalendarDays className="h-3.5 w-3.5" />{" "}
-            {dashboard.recordsThisMonth.toLocaleString()} records this month
-          </p>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <MetricCard
+        </CardHeader>
+        <CardContent className="space-y-4 p-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <StatusSummary
             label="All records"
             value={dashboard.totalRecords}
             detail="In the QC register"
             icon={FileText}
             tone="neutral"
           />
-          <MetricCard
+          <StatusSummary
             label="Passed"
             value={dashboard.passedRecords}
             detail={`${passRate.toFixed(1)}% pass rate`}
             icon={CheckCircle2}
             tone="success"
           />
-          <MetricCard
+          <StatusSummary
             label="Needs review"
             value={dashboard.reviewRecords}
             detail="Supervisor approval needed"
             icon={AlertTriangle}
             tone="warning"
           />
-          <MetricCard
+          <StatusSummary
             label="Failed"
             value={dashboard.failedRecords}
             detail="Immediate action required"
             icon={XCircle}
             tone="danger"
           />
-        </div>
-      </section>
+          </div>
+          <div>
+            <div className="mb-1.5 flex items-center justify-between text-xs text-muted-foreground">
+              <span>Overall pass rate</span>
+              <span className="font-semibold text-foreground">{passRate.toFixed(1)}%</span>
+            </div>
+            <div className="h-3 overflow-hidden rounded-full bg-muted">
+              <div
+                className="flex h-full items-center justify-end rounded-full bg-primary px-2 text-[10px] font-semibold text-primary-foreground"
+                style={{ width: `${Math.max(passRate, passRate > 0 ? 4 : 0)}%` }}
+              >
+                {passRate >= 12 ? `${passRate.toFixed(0)}%` : ""}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="border-t-4 border-t-primary shadow-none">
         <CardHeader className="pb-3">
@@ -423,8 +377,7 @@ export default function Home() {
         </Card>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]">
-        <Card className="overflow-hidden shadow-none">
+      <Card className="overflow-hidden shadow-none">
           <CardHeader className="border-b bg-card pb-4">
             <CardTitle className="flex items-center gap-2 text-base">
               <Clock3 className="h-4 w-4 text-primary" /> Recent QC records
@@ -486,78 +439,7 @@ export default function Home() {
               </TableBody>
             </Table>
           </CardContent>
-        </Card>
-
-        <Card className="shadow-none">
-          <CardHeader className="border-b bg-card pb-4">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <BarChart3 className="h-4 w-4 text-primary" /> Tests by type
-            </CardTitle>
-            <CardDescription>
-              Distribution across the full register.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-4">
-            {dashboard.byType.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 py-9 text-center">
-                <BarChart3 className="h-7 w-7 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
-                  No test type data yet.
-                </p>
-              </div>
-            ) : (
-              <div
-                className="h-[250px] w-full"
-                aria-label="Tests by type pie chart"
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
-                    <Pie
-                      data={dashboard.byType}
-                      dataKey="count"
-                      nameKey="testType"
-                      cx="50%"
-                      cy="46%"
-                      innerRadius={54}
-                      outerRadius={82}
-                      paddingAngle={2}
-                      stroke="hsl(var(--card))"
-                      strokeWidth={2}
-                    >
-                      {dashboard.byType.map((typeData, index) => (
-                        <Cell
-                          key={typeData.testType}
-                          fill={chartColors[index % chartColors.length]}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(value: number, name: string) => [
-                        value.toLocaleString(),
-                        name,
-                      ]}
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "0.5rem",
-                        color: "hsl(var(--foreground))",
-                      }}
-                    />
-                    <Legend
-                      verticalAlign="bottom"
-                      iconType="circle"
-                      wrapperStyle={{
-                        color: "hsl(var(--muted-foreground))",
-                        fontSize: "11px",
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      </Card>
     </div>
   );
 }
