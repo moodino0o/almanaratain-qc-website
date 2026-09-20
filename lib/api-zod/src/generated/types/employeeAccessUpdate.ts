@@ -9,4 +9,9 @@
 export interface EmployeeAccessUpdate {
   active?: boolean;
   administrator?: boolean;
+  /**
+     * @minLength 8
+     * @maxLength 128
+     */
+  password?: string;
 }

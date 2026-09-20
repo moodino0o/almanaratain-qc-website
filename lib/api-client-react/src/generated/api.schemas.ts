@@ -388,6 +388,7 @@ export interface EmployeeAccess {
   displayName: string;
   active: boolean;
   administrator: boolean;
+  passwordSet?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -403,6 +404,11 @@ export interface EmployeeAccessInput {
 export interface EmployeeAccessUpdate {
   active?: boolean;
   administrator?: boolean;
+  /**
+     * @minLength 8
+     * @maxLength 128
+     */
+  password?: string;
 }
 
 export interface MobileTokenExchangeRequest {

@@ -196,7 +196,7 @@ router.get(
 
     res.json(
       GetEmployeeAccessResponse.parse({
-        employees: rows.map(({ entry, firstName, lastName }) =>
+        employees: rows.map(({ entry, firstName, lastName, passwordHash }) =>
           employeeAccessResponse(
             entry,
             [firstName, lastName].filter(Boolean).join(' ') || null,
@@ -264,7 +264,9 @@ router.patch(
     if (
       !parsedParams.success ||
       !parsedBody.success ||
-      (parsedBody.data.active === undefined && parsedBody.data.administrator === undefined)
+      (parsedBody.data.active === undefined &&
+        parsedBody.data.administrator === undefined &&
+        parsedBody.data.password === undefined)
     ) {
       res.status(400).json({ error: 'Invalid employee access update.' });
       return;

@@ -92,6 +92,7 @@ export const GetEmployeeAccessResponse = zod.object({
   "displayName": zod.string(),
   "active": zod.boolean(),
   "administrator": zod.boolean(),
+  "passwordSet": zod.boolean().optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 }))
@@ -111,6 +112,7 @@ export const CreateEmployeeAccessResponse = zod.object({
   "displayName": zod.string(),
   "active": zod.boolean(),
   "administrator": zod.boolean(),
+  "passwordSet": zod.boolean().optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -123,9 +125,15 @@ export const UpdateEmployeeAccessParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const updateEmployeeAccessBodyPasswordMin = 8;
+export const updateEmployeeAccessBodyPasswordMax = 128;
+
+
+
 export const UpdateEmployeeAccessBody = zod.object({
   "active": zod.boolean().optional(),
-  "administrator": zod.boolean().optional()
+  "administrator": zod.boolean().optional(),
+  "password": zod.string().min(updateEmployeeAccessBodyPasswordMin).max(updateEmployeeAccessBodyPasswordMax).optional()
 })
 
 export const UpdateEmployeeAccessResponse = zod.object({
@@ -134,6 +142,7 @@ export const UpdateEmployeeAccessResponse = zod.object({
   "displayName": zod.string(),
   "active": zod.boolean(),
   "administrator": zod.boolean(),
+  "passwordSet": zod.boolean().optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })

@@ -25,7 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
   Settings2, Building2, Users, Package, MapPin, Truck, Plus, Trash2, Edit2, 
-  Database, Check, X, Search, MoreVertical, UserPlus, ShieldAlert, Mail
+  Database, Check, X, Search, MoreVertical, UserPlus, ShieldAlert, Mail, KeyRound
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -732,6 +732,9 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
   const [employeeId, setEmployeeId] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [employeeToDeactivate, setEmployeeToDeactivate] = useState<EmployeeAccess | null>(null);
+  const [employeeForPassword, setEmployeeForPassword] = useState<EmployeeAccess | null>(null);
+  const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const { data, isLoading, isError, error, refetch } = useGetEmployeeAccess({
     query: { enabled: isAdmin, queryKey: getGetEmployeeAccessQueryKey() },
   });
@@ -785,6 +788,37 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
           invalidateAccess();
         },
         onError: () => toast.error("Could not update employee access. Try again."),
+      },
+    );
+  };
+
+  const closePasswordDialog = () => {
+    setEmployeeForPassword(null);
+    setPassword("");
+    setPasswordConfirmation("");
+  };
+
+  const handlePasswordSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (password.length < 8) {
+      toast.error("Password must be at least 8 characters.");
+      return;
+    }
+    if (password !== passwordConfirmation) {
+      toast.error("Passwords do not match.");
+      return;
+    }
+    if (!employeeForPassword) return;
+
+    updateEmployee.mutate(
+      { id: employeeForPassword.id, data: { password } },
+      {
+        onSuccess: () => {
+          toast.success(employeeForPassword.passwordSet ? "Password changed" : "Password set");
+          closePasswordDialog();
+          invalidateAccess();
+        },
+        onError: (error) => toast.error(error instanceof Error ? error.message : "Could not update password."),
       },
     );
   };
@@ -873,6 +907,7 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
                         <th className="pb-3 pr-4 font-medium">Employee</th>
                         <th className="pb-3 pr-4 font-medium">Status</th>
                         <th className="pb-3 pr-4 font-medium">Role</th>
+                        <th className="pb-3 pr-4 font-medium">Password</th>
                         <th className="pb-3 pr-4 font-medium">Added</th>
                         <th className="pb-3 pr-4 font-medium">Last updated</th>
                         <th className="pb-3 text-right font-medium">Action</th>
@@ -895,10 +930,28 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
                               {employee.administrator ? "Administrator" : "Employee"}
                             </Badge>
                           </td>
+                          <td className="py-4 pr-4">
+                            <Badge variant={employee.passwordSet ? "outline" : "secondary"}>
+                              {employee.passwordSet ? "Set" : "Not set"}
+                            </Badge>
+                          </td>
                           <td className="whitespace-nowrap py-4 pr-4 text-muted-foreground">{formatAccessDate(employee.createdAt)}</td>
                           <td className="whitespace-nowrap py-4 pr-4 text-muted-foreground">{formatAccessDate(employee.updatedAt)}</td>
                           <td className="py-4 text-right">
                             <div className="flex justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setEmployeeForPassword(employee);
+                                  setPassword("");
+                                  setPasswordConfirmation("");
+                                }}
+                                disabled={updateEmployee.isPending}
+                              >
+                                <KeyRound className="mr-1.5 h-3.5 w-3.5" />
+                                {employee.passwordSet ? "Change password" : "Set password"}
+                              </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -951,7 +1004,23 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
                       <Badge className="mt-4" variant={employee.administrator ? "outline" : "secondary"}>
                         {employee.administrator ? "Administrator" : "Employee"}
                       </Badge>
+                      <Badge className="ml-2 mt-4" variant={employee.passwordSet ? "outline" : "secondary"}>
+                        {employee.passwordSet ? "Password set" : "Password not set"}
+                      </Badge>
                       <div className="mt-3 grid gap-2">
+                        <Button
+                          className="w-full"
+                          variant="outline"
+                          onClick={() => {
+                            setEmployeeForPassword(employee);
+                            setPassword("");
+                            setPasswordConfirmation("");
+                          }}
+                          disabled={updateEmployee.isPending}
+                        >
+                          <KeyRound className="mr-2 h-4 w-4" />
+                          {employee.passwordSet ? "Change password" : "Set password"}
+                        </Button>
                         <Button
                           className="w-full"
                           variant="outline"
@@ -1012,6 +1081,57 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={createEmployee.isPending}>Add access</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={employeeForPassword !== null}
+        onOpenChange={(open) => { if (!open) closePasswordDialog(); }}
+      >
+        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-md">
+          <form onSubmit={handlePasswordSubmit}>
+            <DialogHeader>
+              <DialogTitle>{employeeForPassword?.passwordSet ? "Change employee password" : "Set employee password"}</DialogTitle>
+              <DialogDescription>
+                Only administrators can set or change passwords. The employee will need this password at login.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label htmlFor="employee-password" className="text-sm font-medium">New password</label>
+                <Input
+                  id="employee-password"
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={8}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="At least 8 characters"
+                  required
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="employee-password-confirmation" className="text-sm font-medium">Confirm password</label>
+                <Input
+                  id="employee-password-confirmation"
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={8}
+                  value={passwordConfirmation}
+                  onChange={(event) => setPasswordConfirmation(event.target.value)}
+                  placeholder="Re-enter password"
+                  required
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={closePasswordDialog}>Cancel</Button>
+              <Button type="submit" disabled={updateEmployee.isPending || password.length < 8 || password !== passwordConfirmation}>
+                {employeeForPassword?.passwordSet ? "Change password" : "Set password"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
