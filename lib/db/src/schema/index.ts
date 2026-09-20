@@ -24,3 +24,4 @@ export * from "./archive-documents";
 export * from "./qc-strength-standards";
 export * from "./qc-sieve-standards";
 export * from "./employee-directory";
+export * from "./complaints";

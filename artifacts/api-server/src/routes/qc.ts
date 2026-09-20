@@ -175,6 +175,16 @@ const REFERENCE_SEED = [
   },
   { key: "customers", label: "Customers", values: [] },
   { key: "customerLocations", label: "Customer Locations", values: [] },
+  {
+    key: "complaintTypes",
+    label: "Complaint Types",
+    values: ["Damage", "Crack", "Missing item"],
+  },
+  {
+    key: "complaintMaterials",
+    label: "Complaint Materials",
+    values: ["Block", "Paving", "Ready Mix"],
+  },
 ] as const;
 
 let referenceSeedPromise: Promise<void> | null = null;
@@ -292,7 +302,7 @@ async function ensureDefaultStrengthStandards() {
   await strengthSeedPromise;
 }
 
-async function ensureReferenceData() {
+export async function ensureReferenceData() {
   if (!referenceSeedPromise) {
     referenceSeedPromise = (async () => {
       for (const seed of REFERENCE_SEED) {

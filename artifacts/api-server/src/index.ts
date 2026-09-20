@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { ensureEmployeeDirectorySeed } from "./lib/employee-access";
+import { ensureReferenceData } from "./routes/qc";
 
 const rawPort = process.env["PORT"];
 
@@ -17,6 +18,7 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 ensureEmployeeDirectorySeed()
+  .then(() => ensureReferenceData())
   .then(() => {
     app.listen(port, (err) => {
       if (err) {

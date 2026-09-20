@@ -86,6 +86,62 @@ export interface QcRecordUpdate {
   details?: QcRecordUpdateDetails;
 }
 
+export interface ComplaintPicture {
+  /** @minLength 1 */
+  objectPath: string;
+  /** @minLength 1 */
+  originalName: string;
+  /** @minLength 1 */
+  mimeType: string;
+  /** @minimum 1 */
+  size: number;
+}
+
+export interface Complaint {
+  id: number;
+  complaintNo: string;
+  customerName: string;
+  deliveryDate: string;
+  complaintType: string;
+  materialType: string;
+  details: string;
+  solution: string;
+  recommendation: string;
+  picturePaths: ComplaintPicture[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ComplaintInput {
+  /** @minLength 1 */
+  customerName: string;
+  deliveryDate: string;
+  /** @minLength 1 */
+  complaintType: string;
+  /** @minLength 1 */
+  materialType: string;
+  /** @minLength 1 */
+  details: string;
+  solution?: string;
+  recommendation?: string;
+  picturePaths?: ComplaintPicture[];
+}
+
+export interface ComplaintUpdate {
+  /** @minLength 1 */
+  customerName?: string;
+  deliveryDate?: string;
+  /** @minLength 1 */
+  complaintType?: string;
+  /** @minLength 1 */
+  materialType?: string;
+  /** @minLength 1 */
+  details?: string;
+  solution?: string;
+  recommendation?: string;
+  picturePaths?: ComplaintPicture[];
+}
+
 export interface TypeCount {
   testType: TestType;
   count: number;
@@ -555,5 +611,11 @@ export type GetDailyReadyMixResultsParams = {
 testingDate: string;
 mixDesign?: string;
 referenceType: DailyReadyMixReferenceType;
+};
+
+export type ListComplaintsParams = {
+search?: string;
+complaintType?: string;
+materialType?: string;
 };
 

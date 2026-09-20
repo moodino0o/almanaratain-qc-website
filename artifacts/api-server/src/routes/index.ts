@@ -6,6 +6,7 @@ import storageRouter from "./storage";
 import archiveRouter from "./archive";
 import { requireAuthenticated } from "../middlewares/requireAuthenticated";
 import employeesRouter from "./employees";
+import complaintsRouter from "./complaints";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(employeesRouter);
 router.use(storageRouter);
 router.use(archiveRouter);
 router.use(qcRouter);
+router.use(complaintsRouter);
 
 export default router;

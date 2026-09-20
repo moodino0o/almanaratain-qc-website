@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@workspace/replit-auth-web";
-import { ClipboardList, LayoutDashboard, Settings, FileText, Beaker, Archive, FileCheck2 } from "lucide-react";
+import { ClipboardList, LayoutDashboard, Settings, FileText, Beaker, Archive, FileCheck2, FileWarning } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LayoutProps {
@@ -15,10 +15,11 @@ export function Layout({ children }: LayoutProps) {
   const navItems = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
     { href: "/records", label: "QC Register", icon: ClipboardList },
+    { href: "/complaints", label: "Complaints", icon: FileWarning },
     { href: "/reports", label: "Reports", icon: FileText },
     { href: "/archive", label: "Archive", icon: Archive },
     { href: "/standards", label: "Standards", icon: FileCheck2 },
-    { href: "/settings", label: "Reference Data", icon: Settings },
+    { href: "/settings", label: "Settings", icon: Settings },
   ];
 
   return (

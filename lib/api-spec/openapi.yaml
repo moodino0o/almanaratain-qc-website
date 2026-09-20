@@ -720,6 +720,99 @@ paths:
       responses:
         "204":
           description: Record deleted
+  /complaints:
+    get:
+      operationId: listComplaints
+      tags: [qc]
+      summary: List customer complaints
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: complaintType
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: materialType
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Customer complaints
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Complaint"
+    post:
+      operationId: createComplaint
+      tags: [qc]
+      summary: Create a customer complaint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComplaintInput"
+      responses:
+        "201":
+          description: Created customer complaint
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Complaint"
+  /complaints/{id}:
+    get:
+      operationId: getComplaint
+      tags: [qc]
+      summary: Get one customer complaint
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "200":
+          description: Customer complaint
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Complaint"
+        "404":
+          description: Complaint not found
+    patch:
+      operationId: updateComplaint
+      tags: [qc]
+      summary: Update a customer complaint
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComplaintUpdate"
+      responses:
+        "200":
+          description: Updated customer complaint
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Complaint"
+        "404":
+          description: Complaint not found
+    delete:
+      operationId: deleteComplaint
+      tags: [qc]
+      summary: Delete a customer complaint
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "204":
+          description: Complaint deleted
   /reports/{id}:
     get:
       operationId: getReport
@@ -900,6 +993,128 @@ components:
         details:
           type: object
           additionalProperties: true
+    ComplaintPicture:
+      type: object
+      required: [objectPath, originalName, mimeType, size]
+      properties:
+        objectPath:
+          type: string
+          minLength: 1
+        originalName:
+          type: string
+          minLength: 1
+        mimeType:
+          type: string
+          minLength: 1
+        size:
+          type: number
+          minimum: 1
+    Complaint:
+      type: object
+      required:
+        - id
+        - complaintNo
+        - customerName
+        - deliveryDate
+        - complaintType
+        - materialType
+        - details
+        - solution
+        - recommendation
+        - picturePaths
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: number
+        complaintNo:
+          type: string
+        customerName:
+          type: string
+        deliveryDate:
+          type: string
+          format: date
+        complaintType:
+          type: string
+        materialType:
+          type: string
+        details:
+          type: string
+        solution:
+          type: string
+        recommendation:
+          type: string
+        picturePaths:
+          type: array
+          items:
+            $ref: "#/components/schemas/ComplaintPicture"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ComplaintInput:
+      type: object
+      required:
+        - customerName
+        - deliveryDate
+        - complaintType
+        - materialType
+        - details
+      properties:
+        customerName:
+          type: string
+          minLength: 1
+        deliveryDate:
+          type: string
+          format: date
+        complaintType:
+          type: string
+          minLength: 1
+        materialType:
+          type: string
+          minLength: 1
+        details:
+          type: string
+          minLength: 1
+        solution:
+          type: string
+          default: ""
+        recommendation:
+          type: string
+          default: ""
+        picturePaths:
+          type: array
+          items:
+            $ref: "#/components/schemas/ComplaintPicture"
+          default: []
+    ComplaintUpdate:
+      type: object
+      properties:
+        customerName:
+          type: string
+          minLength: 1
+        deliveryDate:
+          type: string
+          format: date
+        complaintType:
+          type: string
+          minLength: 1
+        materialType:
+          type: string
+          minLength: 1
+        details:
+          type: string
+          minLength: 1
+        solution:
+          type: string
+        recommendation:
+          type: string
+        picturePaths:
+          type: array
+          items:
+            $ref: "#/components/schemas/ComplaintPicture"
     Dashboard:
       type: object
       required:

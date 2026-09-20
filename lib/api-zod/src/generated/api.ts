@@ -950,6 +950,204 @@ export const DeleteRecordResponse = zod.void()
 
 
 /**
+ * @summary List customer complaints
+ */
+export const ListComplaintsQueryParams = zod.object({
+  "search": zod.coerce.string().optional(),
+  "complaintType": zod.coerce.string().optional(),
+  "materialType": zod.coerce.string().optional()
+})
+
+
+
+
+
+
+
+export const ListComplaintsResponseItem = zod.object({
+  "id": zod.number(),
+  "complaintNo": zod.string(),
+  "customerName": zod.string(),
+  "deliveryDate": zod.coerce.date(),
+  "complaintType": zod.string(),
+  "materialType": zod.string(),
+  "details": zod.string(),
+  "solution": zod.string(),
+  "recommendation": zod.string(),
+  "picturePaths": zod.array(zod.object({
+  "objectPath": zod.string().min(1),
+  "originalName": zod.string().min(1),
+  "mimeType": zod.string().min(1),
+  "size": zod.number().min(1)
+})),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListComplaintsResponse = zod.array(ListComplaintsResponseItem)
+
+
+/**
+ * @summary Create a customer complaint
+ */
+
+
+
+
+export const createComplaintBodySolutionDefault = ``;
+export const createComplaintBodyRecommendationDefault = ``;
+
+
+
+export const createComplaintBodyPicturePathsDefault = [];
+
+export const CreateComplaintBody = zod.object({
+  "customerName": zod.string().min(1),
+  "deliveryDate": zod.coerce.date(),
+  "complaintType": zod.string().min(1),
+  "materialType": zod.string().min(1),
+  "details": zod.string().min(1),
+  "solution": zod.string().default(createComplaintBodySolutionDefault),
+  "recommendation": zod.string().default(createComplaintBodyRecommendationDefault),
+  "picturePaths": zod.array(zod.object({
+  "objectPath": zod.string().min(1),
+  "originalName": zod.string().min(1),
+  "mimeType": zod.string().min(1),
+  "size": zod.number().min(1)
+})).default(createComplaintBodyPicturePathsDefault)
+})
+
+
+
+
+
+
+
+export const CreateComplaintResponse = zod.object({
+  "id": zod.number(),
+  "complaintNo": zod.string(),
+  "customerName": zod.string(),
+  "deliveryDate": zod.coerce.date(),
+  "complaintType": zod.string(),
+  "materialType": zod.string(),
+  "details": zod.string(),
+  "solution": zod.string(),
+  "recommendation": zod.string(),
+  "picturePaths": zod.array(zod.object({
+  "objectPath": zod.string().min(1),
+  "originalName": zod.string().min(1),
+  "mimeType": zod.string().min(1),
+  "size": zod.number().min(1)
+})),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Get one customer complaint
+ */
+export const GetComplaintParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+
+
+
+export const GetComplaintResponse = zod.object({
+  "id": zod.number(),
+  "complaintNo": zod.string(),
+  "customerName": zod.string(),
+  "deliveryDate": zod.coerce.date(),
+  "complaintType": zod.string(),
+  "materialType": zod.string(),
+  "details": zod.string(),
+  "solution": zod.string(),
+  "recommendation": zod.string(),
+  "picturePaths": zod.array(zod.object({
+  "objectPath": zod.string().min(1),
+  "originalName": zod.string().min(1),
+  "mimeType": zod.string().min(1),
+  "size": zod.number().min(1)
+})),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a customer complaint
+ */
+export const UpdateComplaintParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+
+
+
+
+
+
+
+export const UpdateComplaintBody = zod.object({
+  "customerName": zod.string().min(1).optional(),
+  "deliveryDate": zod.coerce.date().optional(),
+  "complaintType": zod.string().min(1).optional(),
+  "materialType": zod.string().min(1).optional(),
+  "details": zod.string().min(1).optional(),
+  "solution": zod.string().optional(),
+  "recommendation": zod.string().optional(),
+  "picturePaths": zod.array(zod.object({
+  "objectPath": zod.string().min(1),
+  "originalName": zod.string().min(1),
+  "mimeType": zod.string().min(1),
+  "size": zod.number().min(1)
+})).optional()
+})
+
+
+
+
+
+
+
+export const UpdateComplaintResponse = zod.object({
+  "id": zod.number(),
+  "complaintNo": zod.string(),
+  "customerName": zod.string(),
+  "deliveryDate": zod.coerce.date(),
+  "complaintType": zod.string(),
+  "materialType": zod.string(),
+  "details": zod.string(),
+  "solution": zod.string(),
+  "recommendation": zod.string(),
+  "picturePaths": zod.array(zod.object({
+  "objectPath": zod.string().min(1),
+  "originalName": zod.string().min(1),
+  "mimeType": zod.string().min(1),
+  "size": zod.number().min(1)
+})),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a customer complaint
+ */
+export const DeleteComplaintParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteComplaintResponse = zod.void()
+
+
+/**
  * @summary Get a print-ready report record
  */
 export const GetReportParams = zod.object({

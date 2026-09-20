@@ -26,6 +26,9 @@ import type {
   ArchiveResponse,
   AuthUserEnvelope,
   BeginBrowserLoginParams,
+  Complaint,
+  ComplaintInput,
+  ComplaintUpdate,
   DailyReadyMixResults,
   Dashboard,
   EmployeeAccess,
@@ -34,6 +37,7 @@ import type {
   EmployeeAccessUpdate,
   GetDailyReadyMixResultsParams,
   HealthStatus,
+  ListComplaintsParams,
   ListRecordsParams,
   LogoutBrowserSessionParams,
   LogoutSuccess,
@@ -3218,6 +3222,381 @@ export const useDeleteRecord = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteRecordMutationOptions(options));
+    }
+
+export const getListComplaintsUrl = (params?: ListComplaintsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/complaints?${stringifiedParams}` : `/api/complaints`
+}
+
+/**
+ * @summary List customer complaints
+ */
+export const listComplaints = async (params?: ListComplaintsParams, options?: Parameters<typeof customFetch>[1]): Promise<Complaint[]> => {
+
+  return customFetch<Complaint[]>(getListComplaintsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListComplaintsQueryKey = (params?: ListComplaintsParams,) => {
+    return [
+    `/api/complaints`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListComplaintsQueryOptions = <TData = Awaited<ReturnType<typeof listComplaints>>, TError = ErrorType<unknown>>(params?: ListComplaintsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listComplaints>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListComplaintsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listComplaints>>> = ({ signal }) => listComplaints(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listComplaints>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListComplaintsQueryResult = NonNullable<Awaited<ReturnType<typeof listComplaints>>>
+export type ListComplaintsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List customer complaints
+ */
+
+export function useListComplaints<TData = Awaited<ReturnType<typeof listComplaints>>, TError = ErrorType<unknown>>(
+ params?: ListComplaintsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listComplaints>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListComplaintsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateComplaintUrl = () => {
+
+
+
+
+  return `/api/complaints`
+}
+
+/**
+ * @summary Create a customer complaint
+ */
+export const createComplaint = async (complaintInput: ComplaintInput, options?: Parameters<typeof customFetch>[1]): Promise<Complaint> => {
+
+  return customFetch<Complaint>(getCreateComplaintUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(complaintInput)
+  }
+);}
+
+
+
+
+
+export const getCreateComplaintMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createComplaint>>, TError,{data: BodyType<ComplaintInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createComplaint>>, TError,{data: BodyType<ComplaintInput>}, TContext> => {
+
+const mutationKey = ['createComplaint'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createComplaint>>, {data: BodyType<ComplaintInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createComplaint(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateComplaintMutationResult = NonNullable<Awaited<ReturnType<typeof createComplaint>>>
+    export type CreateComplaintMutationBody = BodyType<ComplaintInput>
+    export type CreateComplaintMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a customer complaint
+ */
+export const useCreateComplaint = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createComplaint>>, TError,{data: BodyType<ComplaintInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createComplaint>>,
+        TError,
+        {data: BodyType<ComplaintInput>},
+        TContext
+      > => {
+      return useMutation(getCreateComplaintMutationOptions(options));
+    }
+
+export const getGetComplaintUrl = (id: number,) => {
+
+
+
+
+  return `/api/complaints/${id}`
+}
+
+/**
+ * @summary Get one customer complaint
+ */
+export const getComplaint = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<Complaint> => {
+
+  return customFetch<Complaint>(getGetComplaintUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetComplaintQueryKey = (id: number,) => {
+    return [
+    `/api/complaints/${id}`
+    ] as const;
+    }
+
+
+export const getGetComplaintQueryOptions = <TData = Awaited<ReturnType<typeof getComplaint>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getComplaint>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetComplaintQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getComplaint>>> = ({ signal }) => getComplaint(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getComplaint>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetComplaintQueryResult = NonNullable<Awaited<ReturnType<typeof getComplaint>>>
+export type GetComplaintQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get one customer complaint
+ */
+
+export function useGetComplaint<TData = Awaited<ReturnType<typeof getComplaint>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getComplaint>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetComplaintQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateComplaintUrl = (id: number,) => {
+
+
+
+
+  return `/api/complaints/${id}`
+}
+
+/**
+ * @summary Update a customer complaint
+ */
+export const updateComplaint = async (id: number,
+    complaintUpdate: ComplaintUpdate, options?: Parameters<typeof customFetch>[1]): Promise<Complaint> => {
+
+  return customFetch<Complaint>(getUpdateComplaintUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(complaintUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateComplaintMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateComplaint>>, TError,{id: number;data: BodyType<ComplaintUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateComplaint>>, TError,{id: number;data: BodyType<ComplaintUpdate>}, TContext> => {
+
+const mutationKey = ['updateComplaint'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateComplaint>>, {id: number;data: BodyType<ComplaintUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateComplaint(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateComplaintMutationResult = NonNullable<Awaited<ReturnType<typeof updateComplaint>>>
+    export type UpdateComplaintMutationBody = BodyType<ComplaintUpdate>
+    export type UpdateComplaintMutationError = ErrorType<void>
+
+    /**
+ * @summary Update a customer complaint
+ */
+export const useUpdateComplaint = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateComplaint>>, TError,{id: number;data: BodyType<ComplaintUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateComplaint>>,
+        TError,
+        {id: number;data: BodyType<ComplaintUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateComplaintMutationOptions(options));
+    }
+
+export const getDeleteComplaintUrl = (id: number,) => {
+
+
+
+
+  return `/api/complaints/${id}`
+}
+
+/**
+ * @summary Delete a customer complaint
+ */
+export const deleteComplaint = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteComplaintUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteComplaintMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteComplaint>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteComplaint>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteComplaint'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteComplaint>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteComplaint(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteComplaintMutationResult = NonNullable<Awaited<ReturnType<typeof deleteComplaint>>>
+
+    export type DeleteComplaintMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a customer complaint
+ */
+export const useDeleteComplaint = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteComplaint>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteComplaint>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteComplaintMutationOptions(options));
     }
 
 export const getGetReportUrl = (id: number,) => {

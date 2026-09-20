@@ -55,12 +55,12 @@
 }
 
 :root {
-  --background: 0 0% 98%;
-  --foreground: 0 0% 15%;
+  --background: 36 33% 97%;
+  --foreground: 210 22% 18%;
 
-  --card: 0 0% 100%;
-  --card-foreground: 0 0% 15%;
-  --card-border: 210 14% 89%;
+  --card: 40 33% 99%;
+  --card-foreground: 210 22% 18%;
+  --card-border: 36 18% 86%;
 
   --popover: 0 0% 100%;
   --popover-foreground: 0 0% 15%;
@@ -74,11 +74,11 @@
   --secondary: 210 7% 46%;
   --secondary-foreground: 0 0% 100%;
 
-  --muted: 210 14% 96%;
-  --muted-foreground: 210 7% 46%;
+  --muted: 36 21% 93%;
+  --muted-foreground: 210 9% 45%;
 
-  --accent: 210 14% 96%;
-  --accent-foreground: 334 98% 36%;
+  --accent: 39 80% 92%;
+  --accent-foreground: 23 54% 29%;
 
   /* Red: #DC3545 */
   --destructive: 354 70% 54%;
@@ -92,15 +92,15 @@
   --warning: 35 92% 53%;
   --warning-foreground: 0 0% 100%;
 
-  --border: 210 14% 89%;
-  --input: 210 14% 89%;
+  --border: 36 18% 86%;
+  --input: 36 18% 80%;
   --ring: 334 98% 36%;
 
-  --sidebar: 0 0% 100%;
-  --sidebar-foreground: 0 0% 25%;
-  --sidebar-border: 210 14% 89%;
-  --sidebar-accent: 210 14% 96%;
-  --sidebar-accent-foreground: 334 98% 36%;
+  --sidebar: 213 28% 19%;
+  --sidebar-foreground: 40 30% 92%;
+  --sidebar-border: 213 22% 27%;
+  --sidebar-accent: 39 67% 34%;
+  --sidebar-accent-foreground: 40 40% 98%;
 
   --radius: 0.375rem;
   --app-font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
@@ -112,6 +112,83 @@
   }
   body {
     @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+.complaint-page {
+  background:
+    radial-gradient(circle at 100% 0%, hsl(39 74% 91% / 0.42), transparent 30rem),
+    transparent;
+}
+
+.complaint-kicker {
+  color: hsl(var(--primary));
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.complaint-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.75rem;
+}
+
+.complaint-photo-grid img {
+  aspect-ratio: 4 / 3;
+  width: 100%;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  object-fit: cover;
+  background: hsl(var(--muted));
+}
+
+.complaint-print-paper {
+  width: min(210mm, 100%);
+  min-height: 297mm;
+  margin: 0 auto;
+  background: hsl(var(--card));
+  padding: 14mm;
+  color: hsl(var(--foreground));
+}
+
+.complaint-print-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.complaint-print-table th,
+.complaint-print-table td {
+  border: 1px solid hsl(210 15% 32%);
+  padding: 0.65rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.complaint-print-table th {
+  width: 28%;
+  background: hsl(var(--muted));
+  font-size: 0.72rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+@media print {
+  .complaint-print-shell {
+    background: white !important;
+    padding: 0 !important;
+  }
+
+  .complaint-print-paper {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 12mm;
+    background: white;
+  }
+
+  .complaint-print-paper .complaint-photo-grid img {
+    max-height: 55mm;
   }
 }
 

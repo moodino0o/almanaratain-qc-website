@@ -609,7 +609,7 @@ export default function Settings() {
   };
 
   if (isLoading) {
-    return <div className="p-8 text-center text-muted-foreground">Loading reference data...</div>;
+    return <div className="p-8 text-center text-muted-foreground">Loading settings...</div>;
   }
 
   if (isError) {
@@ -617,7 +617,7 @@ export default function Settings() {
       <div className="flex min-h-[360px] flex-col items-center justify-center gap-4 rounded-lg border border-destructive/30 bg-destructive/5 p-8 text-center">
         <Database className="h-9 w-9 text-destructive" />
         <div>
-          <h2 className="text-lg font-semibold">Reference data could not be loaded</h2>
+          <h2 className="text-lg font-semibold">Settings could not be loaded</h2>
           <p className="mt-1 text-sm text-muted-foreground">Check the connection and try again.</p>
         </div>
         <Button variant="outline" onClick={() => refetch()}>Try Again</Button>
@@ -639,7 +639,7 @@ export default function Settings() {
       <Tabs defaultValue="reference-data" className="flex min-h-0 flex-1 flex-col">
         <TabsList className="grid h-auto w-full max-w-xl shrink-0 grid-cols-2">
           <TabsTrigger value="reference-data" className="gap-2 py-2.5">
-            <Database className="h-4 w-4" /> Reference Data
+            <Database className="h-4 w-4" /> Settings
           </TabsTrigger>
           <TabsTrigger value="employee-access" className="gap-2 py-2.5">
             <Users className="h-4 w-4" /> Employee Access
@@ -654,7 +654,7 @@ export default function Settings() {
         <TabsContent value="reference-data" className="mt-4 flex min-h-0 flex-1 flex-col">
           <div className="flex shrink-0 flex-col justify-between gap-4 sm:flex-row sm:items-center">
             <div>
-              <h2 className="text-xl font-semibold tracking-tight text-foreground">Reference Data</h2>
+              <h2 className="text-xl font-semibold tracking-tight text-foreground">Settings</h2>
               <p className="mt-1 text-sm text-muted-foreground">Manage locations, materials, mix designs, and personnel.</p>
             </div>
             <div className="flex items-center gap-4">
@@ -670,7 +670,7 @@ export default function Settings() {
               <div className="mb-4 rounded-full bg-muted p-4">
                 <Database className="h-8 w-8 text-muted-foreground" />
               </div>
-              <h3 className="mb-2 text-lg font-semibold">No Reference Data Found</h3>
+               <h3 className="mb-2 text-lg font-semibold">No Settings Data Found</h3>
               <p className="mb-6 max-w-sm text-muted-foreground">Create categories to manage the lookup values used throughout the application.</p>
               <Button onClick={() => setIsAddCategoryOpen(true)}>Create First Category</Button>
             </div>

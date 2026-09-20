@@ -23,6 +23,10 @@ import Settings from '@/pages/settings';
 import Standards from '@/pages/standards';
 import Archive from '@/pages/archive';
 import Login from '@/pages/login';
+import Complaints from '@/pages/complaints';
+import ComplaintForm from '@/pages/complaint-form';
+import ComplaintDetail from '@/pages/complaint-detail';
+import ComplaintPrint from '@/pages/complaint-print';
 import { Button } from '@/components/ui/button';
 import { ShieldAlert } from 'lucide-react';
 
@@ -34,7 +38,7 @@ function PrintLayout({ children }: { children: ReactNode }) {
 
 function Router() {
   const [location] = useLocation();
-  const isPrint = location.match(/^\/reports\/\d+$/);
+  const isPrint = location.match(/^\/reports\/\d+$/) || location.match(/^\/complaints\/\d+\/print$/);
 
   return (
     <RoutedErrorBoundary>
@@ -42,6 +46,7 @@ function Router() {
         <PrintLayout>
           <Switch>
             <Route path="/reports/:id" component={ReportPrint} />
+            <Route path="/complaints/:id/print" component={ComplaintPrint} />
             <Route component={NotFound} />
           </Switch>
         </PrintLayout>
@@ -53,6 +58,10 @@ function Router() {
             <Route path="/records/new" component={RecordForm} />
             <Route path="/records/:id/edit" component={RecordForm} />
             <Route path="/records/:id" component={RecordDetail} />
+            <Route path="/complaints" component={Complaints} />
+            <Route path="/complaints/new" component={ComplaintForm} />
+            <Route path="/complaints/:id/edit" component={ComplaintForm} />
+            <Route path="/complaints/:id" component={ComplaintDetail} />
             <Route path="/reports" component={Reports} />
             <Route path="/settings" component={Settings} />
             <Route path="/standards" component={Standards} />
