@@ -1123,6 +1123,9 @@ components:
         - reviewRecords
         - failedRecords
         - recordsThisMonth
+        - totalComplaints
+        - solvedComplaints
+        - openComplaints
         - byType
         - recentRecords
       properties:
@@ -1135,6 +1138,12 @@ components:
         failedRecords:
           type: number
         recordsThisMonth:
+          type: number
+        totalComplaints:
+          type: number
+        solvedComplaints:
+          type: number
+        openComplaints:
           type: number
         byType:
           type: array

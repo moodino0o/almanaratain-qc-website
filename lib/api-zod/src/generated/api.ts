@@ -26,6 +26,9 @@ export const GetDashboardResponse = zod.object({
   "reviewRecords": zod.number(),
   "failedRecords": zod.number(),
   "recordsThisMonth": zod.number(),
+  "totalComplaints": zod.number(),
+  "solvedComplaints": zod.number(),
+  "openComplaints": zod.number(),
   "byType": zod.array(zod.object({
   "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
   "count": zod.number()

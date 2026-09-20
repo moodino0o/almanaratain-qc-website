@@ -153,6 +153,9 @@ export interface Dashboard {
   reviewRecords: number;
   failedRecords: number;
   recordsThisMonth: number;
+  totalComplaints: number;
+  solvedComplaints: number;
+  openComplaints: number;
   byType: TypeCount[];
   recentRecords: QcRecord[];
 }

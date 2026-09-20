@@ -12,6 +12,7 @@ import {
 } from "drizzle-orm";
 import {
   db,
+  complaintsTable,
   qcRecordsTable,
   qcReferenceCategoriesTable,
   qcReferenceItemsTable,
@@ -537,6 +538,9 @@ router.get("/dashboard", async (_req, res): Promise<void> => {
       reviewRecords: sql<number>`count(*) filter (where ${qcRecordsTable.status} = 'Review')`,
       failedRecords: sql<number>`count(*) filter (where ${qcRecordsTable.status} = 'Failed')`,
       recordsThisMonth: sql<number>`count(*) filter (where ${qcRecordsTable.sampleDate} >= date_trunc('month', current_date))`,
+      totalComplaints: sql<number>`(select count(*) from ${complaintsTable})`,
+      solvedComplaints: sql<number>`(select count(*) from ${complaintsTable} where btrim(${complaintsTable.solution}) <> '')`,
+      openComplaints: sql<number>`(select count(*) from ${complaintsTable} where btrim(${complaintsTable.solution}) = '')`,
     })
     .from(qcRecordsTable);
 
@@ -559,6 +563,9 @@ router.get("/dashboard", async (_req, res): Promise<void> => {
       reviewRecords: Number(totals?.reviewRecords ?? 0),
       failedRecords: Number(totals?.failedRecords ?? 0),
       recordsThisMonth: Number(totals?.recordsThisMonth ?? 0),
+      totalComplaints: Number(totals?.totalComplaints ?? 0),
+      solvedComplaints: Number(totals?.solvedComplaints ?? 0),
+      openComplaints: Number(totals?.openComplaints ?? 0),
       byType: byTypeRows.map((row) => ({
         testType: row.testType,
         count: Number(row.count),
