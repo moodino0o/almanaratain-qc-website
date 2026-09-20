@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "wouter";
-import { AlertCircle, ArrowUpRight, CheckCircle2, Clock3, Download, FileWarning, Filter, Plus, Search, ShieldCheck, Trash2 } from "lucide-react";
-import { getListComplaintsQueryKey, useDeleteComplaint, useListComplaints, useUpdateComplaint, type Complaint } from "@workspace/api-client-react";
+import { AlertCircle, ArrowUpRight, CheckCircle2, Clock3, Download, FileWarning, Filter, Plus, Search, ShieldCheck } from "lucide-react";
+import { getListComplaintsQueryKey, useListComplaints, useUpdateComplaint, type Complaint } from "@workspace/api-client-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,35 +51,10 @@ function availability(value: string) {
   return value.trim() ? "Recorded" : "Pending";
 }
 
-function duplicatePart(value: string) {
-  return value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
-}
-
-function findDuplicateGroups(rows: Complaint[]) {
-  const groups = new Map<string, Complaint[]>();
-  for (const complaint of rows) {
-    const key = [
-      duplicatePart(complaint.customerName),
-      complaintCategory(complaint.materialType),
-      duplicatePart(complaint.solution),
-      complaint.deliveryDate.slice(0, 10),
-    ].join("\u001f");
-    groups.set(key, [...(groups.get(key) ?? []), complaint]);
-  }
-
-  return [...groups.values()]
-    .filter((group) => group.length > 1)
-    .map((group) => [...group].sort((left, right) => {
-      const createdDifference = new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
-      return createdDifference || right.id - left.id;
-    }));
-}
-
 export default function Complaints() {
   const { role } = useAuth();
   const canEditComplaints = role === "managerial" || role === "administrator";
   const complaintsQuery = useListComplaints();
-  const deleteComplaint = useDeleteComplaint();
   const updateComplaint = useUpdateComplaint();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -91,8 +66,6 @@ export default function Complaints() {
   const [toDate, setToDate] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const complaints = complaintsQuery.data ?? [];
-  const duplicateGroups = useMemo(() => findDuplicateGroups(complaints), [complaints]);
-  const duplicateRemovals = useMemo(() => duplicateGroups.flatMap((group) => group.slice(1)), [duplicateGroups]);
   const typeOptions = useMemo(() => [...new Set(complaints.map((item) => item.complaintType))].sort(), [complaints]);
   const materialOptions = useMemo(() => [...new Set(complaints.map((item) => item.materialType))].sort(), [complaints]);
   const activeFilterCount = [typeFilter, materialFilter, statusFilter, categoryFilter, fromDate, toDate]
@@ -122,19 +95,6 @@ export default function Complaints() {
     }
   }
 
-  async function removeDuplicates() {
-    if (!duplicateRemovals.length || !window.confirm(`Delete ${duplicateRemovals.length} duplicate complaint${duplicateRemovals.length === 1 ? "" : "s"}? The newest record in each group will be kept. This action cannot be undone.`)) {
-      return;
-    }
-    try {
-      await Promise.all(duplicateRemovals.map((complaint) => deleteComplaint.mutateAsync({ id: complaint.id })));
-      await queryClient.invalidateQueries({ queryKey: getListComplaintsQueryKey() });
-      toast.success(`${duplicateRemovals.length} duplicate complaint${duplicateRemovals.length === 1 ? "" : "s"} removed`);
-    } catch {
-      toast.error("Some duplicate complaints could not be removed. Refresh the register and try again.");
-    }
-  }
-
   if (complaintsQuery.isLoading) {
     return <div className="space-y-5 complaint-page"><div className="h-8 w-56 animate-pulse rounded bg-muted" /><div className="h-24 animate-pulse rounded-xl bg-muted" /><div className="h-80 animate-pulse rounded-xl bg-muted" /></div>;
   }
@@ -152,7 +112,7 @@ export default function Complaints() {
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">Record concerns precisely, preserve the evidence, and keep every resolution visible to the QC team.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-           <Button variant="outline" onClick={() => exportComplaints(complaints)} disabled={!complaints.length}><Download className="mr-2 h-4 w-4" />Export loaded rows</Button>{canEditComplaints && duplicateRemovals.length > 0 && <Button variant="outline" className="text-destructive hover:bg-destructive hover:text-destructive-foreground" onClick={() => void removeDuplicates()} disabled={deleteComplaint.isPending}><Trash2 className="mr-2 h-4 w-4" />Remove duplicates ({duplicateRemovals.length})</Button>}
+           <Button variant="outline" onClick={() => exportComplaints(complaints)} disabled={!complaints.length}><Download className="mr-2 h-4 w-4" />Export loaded rows</Button>
            {canEditComplaints && <Button asChild><Link href="/complaints/new"><Plus className="mr-2 h-4 w-4" />New complaint</Link></Button>}
         </div>
       </header>
@@ -181,7 +141,7 @@ export default function Complaints() {
 
       <Card className="overflow-hidden">
          <CardHeader className="flex flex-row items-center justify-between border-b bg-card pb-4"><div><CardTitle className="text-base">Complaint register</CardTitle><p className="mt-1 text-sm text-muted-foreground">{filtered.length} loaded record{filtered.length === 1 ? "" : "s"}</p></div><Badge variant="outline">QC controlled</Badge></CardHeader>
-            {filtered.length === 0 ? <CardContent className="flex flex-col items-center justify-center gap-3 p-14 text-center"><div className="rounded-full bg-muted p-4"><FileWarning className="h-7 w-7 text-muted-foreground" /></div><h2 className="text-lg font-semibold">{complaints.length ? "No complaints match those filters" : "No complaints recorded yet"}</h2><p className="max-w-md text-sm text-muted-foreground">{complaints.length ? "Try a broader search or clear one of the filters." : "No complaints have been recorded yet."}</p>{!complaints.length && canEditComplaints && <Button asChild><Link href="/complaints/new">Create first complaint</Link></Button>}</CardContent> : <div className="complaint-register-scroll"><table className="complaint-register-table w-full table-fixed text-xs"><colgroup><col className="w-[12%]" /><col className="w-[11%]" /><col className="w-[12%]" /><col className="w-[9%]" /><col className="w-[15%]" /><col className="w-[16%]" /><col className="w-[16%]" /><col className="w-[9%]" /></colgroup><thead className="sticky top-0 z-10 bg-muted/95 text-left text-[10px] uppercase tracking-wide text-muted-foreground"><tr><th>Complaint</th><th>Status</th><th>Customer</th><th>Delivery</th><th>Classification</th><th>Details</th><th>Follow-through</th><th className="text-right">Action</th></tr></thead><tbody className="divide-y">{filtered.map((complaint) => <tr key={complaint.id} className="align-top transition-colors hover:bg-muted/20"><td><Link href={`/complaints/${complaint.id}`} className="font-semibold text-primary hover:underline">{complaint.complaintNo}</Link><p className="mt-1 text-[10px] text-muted-foreground">Updated {displayDate(complaint.updatedAt)}</p></td><td><Badge variant={complaint.status === "complete" ? "success" : "secondary"}>{complaint.status === "complete" ? "Complete" : "Open"}</Badge>{canEditComplaints && complaint.status === "open" && <Button type="button" variant="outline" size="sm" className="mt-2 h-7 whitespace-normal px-1.5 text-[10px]" disabled={updateComplaint.isPending} onClick={() => void markComplete(complaint.id)}><CheckCircle2 className="mr-1 h-3 w-3 shrink-0" />Mark complete</Button>}</td><td className="font-medium">{complaint.customerName}</td><td className="text-muted-foreground">{displayDate(complaint.deliveryDate)}</td><td><p className="font-medium">{complaint.materialType}</p><div className="mt-1 flex flex-wrap items-center gap-1"><p className="text-[10px] text-muted-foreground">{complaint.complaintType}</p><Badge variant="outline" className="text-[10px]">{complaintCategory(complaint.materialType)}</Badge></div></td><td className="text-muted-foreground"><p className="line-clamp-2">{complaint.details}</p></td><td><div className="flex flex-wrap gap-1"><Badge variant={complaint.solution.trim() ? "success" : "secondary"} className="text-[10px]">Solution: {availability(complaint.solution)}</Badge><Badge variant={complaint.recommendation.trim() ? "success" : "secondary"} className="text-[10px]">Recommendation: {availability(complaint.recommendation)}</Badge><span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground"><ShieldCheck className="h-3 w-3 shrink-0" />{complaint.picturePaths.length} picture{complaint.picturePaths.length === 1 ? "" : "s"}</span></div></td><td className="text-right"><Button asChild variant="ghost" size="sm" className="h-7 px-1 text-[10px]"><Link href={`/complaints/${complaint.id}`}>Review <ArrowUpRight className="ml-1 h-3 w-3" /></Link></Button></td></tr>)}</tbody></table><div className="sticky bottom-0 z-10 border-t bg-card/95 px-3 py-2 text-[11px] text-muted-foreground backdrop-blur">Showing {filtered.length} of {complaints.length} loaded record{complaints.length === 1 ? "" : "s"}</div></div>}
+            {filtered.length === 0 ? <CardContent className="flex flex-col items-center justify-center gap-3 p-14 text-center"><div className="rounded-full bg-muted p-4"><FileWarning className="h-7 w-7 text-muted-foreground" /></div><h2 className="text-lg font-semibold">{complaints.length ? "No complaints match those filters" : "No complaints recorded yet"}</h2><p className="max-w-md text-sm text-muted-foreground">{complaints.length ? "Try a broader search or clear one of the filters." : "No complaints have been recorded yet."}</p>{!complaints.length && canEditComplaints && <Button asChild><Link href="/complaints/new">Create first complaint</Link></Button>}</CardContent> : <div className="complaint-register-scroll"><table className="complaint-register-table w-full table-fixed text-xs"><colgroup><col className="w-[12%]" /><col className="w-[11%]" /><col className="w-[12%]" /><col className="w-[9%]" /><col className="w-[15%]" /><col className="w-[16%]" /><col className="w-[16%]" /><col className="w-[9%]" /></colgroup><thead className="sticky top-0 z-10 bg-muted/95 text-left text-[10px] uppercase tracking-wide text-muted-foreground"><tr><th>Complaint</th><th>Status</th><th>Customer</th><th>Delivery</th><th>Classification</th><th>Details</th><th>Follow-through</th><th className="text-right">Action</th></tr></thead><tbody className="divide-y">{filtered.map((complaint) => <tr key={complaint.id} className="align-top transition-colors hover:bg-muted/20"><td><Link href={`/complaints/${complaint.id}`} className="font-semibold text-primary hover:underline">{complaint.complaintNo}</Link><p className="mt-1 text-[10px] text-muted-foreground">Updated {displayDate(complaint.updatedAt)}</p></td><td><Badge variant={complaint.status === "complete" ? "success" : "secondary"}>{complaint.status === "complete" ? "Complete" : "Open"}</Badge>{canEditComplaints && complaint.status === "open" && <Button type="button" variant="outline" size="sm" className="mt-2 h-7 whitespace-normal px-1.5 text-[10px]" disabled={updateComplaint.isPending} onClick={() => void markComplete(complaint.id)}><CheckCircle2 className="mr-1 h-3 w-3 shrink-0" />Mark complete</Button>}</td><td className="font-medium">{complaint.customerName}</td><td className="text-muted-foreground">{displayDate(complaint.deliveryDate)}</td><td><p className="font-medium">{complaint.materialType}</p><div className="mt-1 flex flex-wrap items-center gap-1"><Badge variant="outline" className="text-[10px]">{complaintCategory(complaint.materialType)}</Badge></div></td><td className="text-muted-foreground"><p className="line-clamp-2">{complaint.details}</p></td><td><div className="flex flex-wrap gap-1"><Badge variant={complaint.solution.trim() ? "success" : "secondary"} className="text-[10px]">Solution: {availability(complaint.solution)}</Badge><Badge variant={complaint.recommendation.trim() ? "success" : "secondary"} className="text-[10px]">Recommendation: {availability(complaint.recommendation)}</Badge><span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground"><ShieldCheck className="h-3 w-3 shrink-0" />{complaint.picturePaths.length} picture{complaint.picturePaths.length === 1 ? "" : "s"}</span></div></td><td className="text-right"><Button asChild variant="ghost" size="sm" className="h-7 px-1 text-[10px]"><Link href={`/complaints/${complaint.id}`}>Review <ArrowUpRight className="ml-1 h-3 w-3" /></Link></Button></td></tr>)}</tbody></table><div className="sticky bottom-0 z-10 border-t bg-card/95 px-3 py-2 text-[11px] text-muted-foreground backdrop-blur">Showing {filtered.length} of {complaints.length} loaded record{complaints.length === 1 ? "" : "s"}</div></div>}
       </Card>
     </div>
   );
