@@ -151,6 +151,21 @@
   text-transform: uppercase;
 }
 
+.employee-access-table {
+  border-collapse: collapse;
+  overflow-wrap: anywhere;
+}
+
+.employee-access-table th,
+.employee-access-table td {
+  padding: 0.55rem 0.4rem;
+  vertical-align: top;
+}
+
+.employee-access-table th {
+  white-space: normal;
+}
+
 .complaint-photo-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));

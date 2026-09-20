@@ -1004,48 +1004,58 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
               </div>
             ) : (
               <>
-                <div className="hidden overflow-x-auto md:block">
-                  <table className="w-full text-sm">
+                <div className="hidden md:block">
+                  <table className="employee-access-table w-full table-fixed text-xs">
+                    <colgroup>
+                      <col className="w-[16%]" />
+                      <col className="w-[9%]" />
+                      <col className="w-[12%]" />
+                      <col className="w-[11%]" />
+                      <col className="w-[11%]" />
+                      <col className="w-[11%]" />
+                      <col className="w-[30%]" />
+                    </colgroup>
                     <thead>
-                      <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
-                        <th className="pb-3 pr-4 font-medium">Employee</th>
-                        <th className="pb-3 pr-4 font-medium">Status</th>
-                        <th className="pb-3 pr-4 font-medium">Role</th>
-                        <th className="pb-3 pr-4 font-medium">Password</th>
-                        <th className="pb-3 pr-4 font-medium">Added</th>
-                        <th className="pb-3 pr-4 font-medium">Last updated</th>
-                        <th className="pb-3 text-right font-medium">Action</th>
+                      <tr className="border-b text-left text-[10px] uppercase tracking-wide text-muted-foreground">
+                        <th className="font-medium">Employee</th>
+                        <th className="font-medium">Status</th>
+                        <th className="font-medium">Role</th>
+                        <th className="font-medium">Password</th>
+                        <th className="font-medium">Added</th>
+                        <th className="font-medium">Last updated</th>
+                        <th className="text-right font-medium">Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredEmployees.map((employee) => (
                         <tr key={employee.id} className="border-b last:border-0">
-                          <td className="py-4 pr-4">
+                          <td>
                             <div className="font-medium">{employee.displayName}</div>
                             <div className="text-xs text-muted-foreground">ID: {employee.employeeId}</div>
                           </td>
-                          <td className="py-4 pr-4">
+                          <td>
                             <Badge variant={employee.active ? "default" : "secondary"}>
                               {employee.active ? "Active" : "Inactive"}
                             </Badge>
                           </td>
-                          <td className="py-4 pr-4">
+                          <td>
                             <Badge variant={employee.role === "administrator" ? "outline" : "secondary"}>
                               {employeeRoleLabel(employee.role)}
                             </Badge>
                           </td>
-                          <td className="py-4 pr-4">
+                          <td>
                             <Badge variant={employee.passwordSet ? "outline" : "secondary"}>
                               {employee.passwordSet ? "Set" : "Not set"}
                             </Badge>
                           </td>
-                          <td className="whitespace-nowrap py-4 pr-4 text-muted-foreground">{formatAccessDate(employee.createdAt)}</td>
-                          <td className="whitespace-nowrap py-4 pr-4 text-muted-foreground">{formatAccessDate(employee.updatedAt)}</td>
-                          <td className="py-4 text-right">
-                            <div className="flex justify-end gap-2">
+                          <td className="text-muted-foreground">{formatAccessDate(employee.createdAt)}</td>
+                          <td className="text-muted-foreground">{formatAccessDate(employee.updatedAt)}</td>
+                          <td className="text-right">
+                            <div className="flex flex-wrap justify-end gap-1">
                               <Button
                                 variant="outline"
-                                size="sm"
+                                 size="sm"
+                                 className="h-8 whitespace-normal px-2 text-[10px]"
                                 onClick={() => {
                                   setEmployeeForPassword(employee);
                                   setPassword("");
@@ -1058,7 +1068,7 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
                               </Button>
                               <select
                                 aria-label={`Role for ${employee.displayName}`}
-                                className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                                 className="h-8 min-w-0 max-w-full rounded-md border border-input bg-background px-1.5 text-[10px]"
                                 value={employee.role}
                                 onChange={(event) => updateRole(employee, event.target.value as UserRole)}
                                 disabled={updateEmployee.isPending}
