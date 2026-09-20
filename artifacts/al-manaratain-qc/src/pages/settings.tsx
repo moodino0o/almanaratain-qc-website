@@ -25,7 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
   Settings2, Building2, Users, Package, MapPin, Truck, Plus, Trash2, Edit2, 
-  Database, Check, X, Search, MoreVertical, UserPlus, ShieldAlert, Mail, KeyRound
+  Database, Check, X, Search, MoreVertical, UserPlus, ShieldAlert, Mail, KeyRound, ChevronDown
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -303,6 +303,7 @@ function CategoryCard({ category }: { category: ReferenceCategory }) {
   const [editItemValue, setEditItemValue] = useState("");
   const [itemToDelete, setItemToDelete] = useState<ReferenceItem | null>(null);
   const [categoryToDelete, setCategoryToDelete] = useState<ReferenceCategory | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const updateCategory = useUpdateReferenceCategory();
   const deleteCategory = useDeleteReferenceCategory();
@@ -396,50 +397,85 @@ function CategoryCard({ category }: { category: ReferenceCategory }) {
   return (
     <>
       <Card className="flex flex-col h-full border shadow-sm">
-        <CardHeader className="pb-4 shrink-0 bg-muted/20 border-b border-border/50 group">
-          <div className="flex justify-between items-start gap-2">
-            <div className="flex gap-3 flex-1 min-w-0">
-              <div className="p-2 bg-primary/10 text-primary rounded-md shrink-0">
+        <CardHeader className="shrink-0 border-b border-border/50 bg-muted/20 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              className="flex min-w-0 flex-1 items-center gap-3 rounded-md text-left"
+              onClick={() => setIsExpanded((value) => !value)}
+              aria-expanded={isExpanded}
+              aria-label={`${isExpanded ? "Collapse" : "Expand"} ${category.label}`}
+            >
+              <div className="shrink-0 rounded-md bg-primary/10 p-2 text-primary">
                 {getCategoryIcon(category.key)}
               </div>
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 {isEditingCategory ? (
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <Input 
-                      value={editCategoryLabel} 
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={editCategoryLabel}
                       onChange={(e) => setEditCategoryLabel(e.target.value)}
-                      className="h-7 text-sm px-2 py-1"
+                      className="h-7 px-2 py-1 text-sm"
                       autoFocus
+                      onClick={(event) => event.stopPropagation()}
                       onKeyDown={(e) => e.key === "Enter" && handleUpdateCategory()}
                     />
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-success shrink-0" onClick={handleUpdateCategory}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0 text-success"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleUpdateCategory();
+                      }}
+                    >
                       <Check className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground shrink-0" onClick={() => { setIsEditingCategory(false); setEditCategoryLabel(category.label); }}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0 text-muted-foreground"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setIsEditingCategory(false);
+                        setEditCategoryLabel(category.label);
+                      }}
+                    >
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                 ) : (
                   <>
-                    <CardTitle className="text-lg truncate" title={category.label}>{category.label}</CardTitle>
-                    <CardDescription className="text-xs mt-0.5 truncate" title={category.key}>Key: {category.key}</CardDescription>
+                    <CardTitle className="truncate text-base text-foreground" title={category.label}>
+                      {category.label}
+                    </CardTitle>
+                    {isExpanded && (
+                      <CardDescription className="mt-0.5 truncate text-xs" title={category.key}>
+                        Key: {category.key}
+                      </CardDescription>
+                    )}
                   </>
                 )}
               </div>
-            </div>
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${
+                  isExpanded ? "rotate-180" : ""
+                }`}
+              />
+            </button>
             {!isEditingCategory && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-muted-foreground">
                     <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setIsEditingCategory(true)}>
-                    <Edit2 className="h-4 w-4 mr-2" /> Edit Label
+                  <DropdownMenuItem onClick={() => { setIsExpanded(true); setIsEditingCategory(true); }}>
+                    <Edit2 className="mr-2 h-4 w-4" /> Edit Label
                   </DropdownMenuItem>
                   <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setCategoryToDelete(category)}>
-                    <Trash2 className="h-4 w-4 mr-2" /> Delete Category
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete Category
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -447,7 +483,8 @@ function CategoryCard({ category }: { category: ReferenceCategory }) {
           </div>
         </CardHeader>
 
-        <CardContent className="flex-1 p-0 overflow-hidden flex flex-col relative">
+        {isExpanded && (
+        <CardContent className="relative flex flex-1 flex-col overflow-hidden p-0">
           <div className="p-3 border-b border-border/50 flex gap-2 items-center bg-card">
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -540,6 +577,7 @@ function CategoryCard({ category }: { category: ReferenceCategory }) {
             )}
           </div>
         </CardContent>
+        )}
       </Card>
 
       {/* Delete Item Dialog */}
