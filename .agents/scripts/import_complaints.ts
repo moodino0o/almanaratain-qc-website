@@ -24,25 +24,28 @@ async function main() {
     await readFile(".agents/outputs/complaints_pdf/complaints_rows.json", "utf8"),
   ) as SourceRow[];
 
-  const values = rows.map((row, index) => {
-    const recommendation = [clean(row.departmentNotes), clean(row.stepsTaken)]
-      .filter(Boolean)
-      .join("\n\n");
+  const values = rows
+    .map((row, index) => ({ row, sourceIndex: index }))
+    .filter(({ row }) => clean(row.qcNotes))
+    .map(({ row, sourceIndex }) => {
+      const recommendation = [clean(row.departmentNotes), clean(row.stepsTaken)]
+        .filter(Boolean)
+        .join("\n\n");
 
-    return {
-      complaintNo: `CMP-IMPORTED-${String(index + 1).padStart(4, "0")}`,
-      customerName: clean(row.customerName),
-      deliveryDate: row.dateOfIssue || row.dateOfComplaint,
-      complaintType: clean(row.issueType),
-      materialType: clean(row.affectedProduct),
-      details: clean(row.salesNotes),
-      solution: clean(row.qcNotes),
-      recommendation,
-      status: /resolved\s*-\s*positive/i.test(row.currentStatus) ? "complete" : "open",
-      picturePaths: [],
-      createdBy: null,
-    };
-  });
+      return {
+        complaintNo: `CMP-IMPORTED-${String(sourceIndex + 1).padStart(4, "0")}`,
+        customerName: clean(row.customerName),
+        deliveryDate: row.dateOfIssue || row.dateOfComplaint,
+        complaintType: clean(row.issueType),
+        materialType: clean(row.affectedProduct),
+        details: clean(row.salesNotes),
+        solution: clean(row.qcNotes),
+        recommendation,
+        status: /resolved\s*-\s*positive/i.test(row.currentStatus) ? "complete" : "open",
+        picturePaths: [],
+        createdBy: null,
+      };
+    });
 
   const existing = await db
     .select({ complaintNo: complaintsTable.complaintNo })

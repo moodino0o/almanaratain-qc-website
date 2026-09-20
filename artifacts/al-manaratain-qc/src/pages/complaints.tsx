@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "wouter";
-import { AlertCircle, ArrowUpRight, CheckCircle2, Clock3, Download, FileWarning, Plus, Search, ShieldCheck } from "lucide-react";
+import { AlertCircle, ArrowUpRight, CheckCircle2, Clock3, Download, FileWarning, Filter, Plus, Search, ShieldCheck } from "lucide-react";
 import { getListComplaintsQueryKey, useListComplaints, useUpdateComplaint, type Complaint } from "@workspace/api-client-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -64,9 +64,12 @@ export default function Complaints() {
   const [categoryFilter, setCategoryFilter] = useState<ComplaintCategory | "all">("all");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const complaints = complaintsQuery.data ?? [];
   const typeOptions = useMemo(() => [...new Set(complaints.map((item) => item.complaintType))].sort(), [complaints]);
   const materialOptions = useMemo(() => [...new Set(complaints.map((item) => item.materialType))].sort(), [complaints]);
+  const activeFilterCount = [typeFilter, materialFilter, statusFilter, categoryFilter, fromDate, toDate]
+    .filter((value) => value && value !== "all").length;
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return complaints.filter((complaint) => {
@@ -122,17 +125,19 @@ export default function Complaints() {
       </section>
 
        <Card>
-        <CardHeader className="border-b bg-muted/25 pb-4"><CardTitle className="text-base">Find a complaint</CardTitle></CardHeader>
-         <CardContent className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_180px_180px_150px_150px_150px_150px]">
-           <label className="relative"><span className="sr-only">Search complaints, including dates</span><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search number, customer, material, details, or date" /></label>
-          <label><span className="sr-only">Filter complaint type</span><select className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}><option value="all">All complaint types</option>{typeOptions.map((item) => <option key={item}>{item}</option>)}</select></label>
-          <label><span className="sr-only">Filter material type</span><select className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={materialFilter} onChange={(event) => setMaterialFilter(event.target.value)}><option value="all">All materials</option>{materialOptions.map((item) => <option key={item}>{item}</option>)}</select></label>
-           <label><span className="sr-only">Filter product category</span><select className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value as ComplaintCategory | "all")}><option value="all">All categories</option><option value="Ready Mix">Ready Mix</option><option value="Block">Block</option><option value="Paving">Paving</option><option value="Other">Other</option></select></label>
-           <label><span className="sr-only">Filter complaint status</span><select className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">All statuses</option><option value="open">Open / uncompleted</option><option value="complete">Complete / closed</option></select></label>
-           <label className="space-y-1"><span className="text-xs font-medium text-muted-foreground">From date</span><Input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} aria-label="Filter complaints from date" /></label>
-           <label className="space-y-1"><span className="text-xs font-medium text-muted-foreground">To date</span><Input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} aria-label="Filter complaints to date" /></label>
-        </CardContent>
-      </Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3 border-b bg-muted/25 pb-4"><CardTitle className="text-base">Find a complaint</CardTitle><Button type="button" variant="outline" size="sm" onClick={() => setFiltersOpen((open) => !open)}><Filter className="mr-2 h-4 w-4" />{filtersOpen ? "Hide filters" : "Show filters"}{activeFilterCount > 0 && <Badge className="ml-2" variant="secondary">{activeFilterCount}</Badge>}</Button></CardHeader>
+         <CardContent className="p-4">
+           <label className="relative block"><span className="sr-only">Search complaints, including dates</span><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search number, customer, material, details, or date" /></label>
+           {filtersOpen && <div className="mt-4 grid gap-3 border-t pt-4 md:grid-cols-2 xl:grid-cols-3">
+             <label><span className="sr-only">Filter complaint type</span><select className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}><option value="all">All complaint types</option>{typeOptions.map((item) => <option key={item}>{item}</option>)}</select></label>
+             <label><span className="sr-only">Filter material type</span><select className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={materialFilter} onChange={(event) => setMaterialFilter(event.target.value)}><option value="all">All materials</option>{materialOptions.map((item) => <option key={item}>{item}</option>)}</select></label>
+             <label><span className="sr-only">Filter product category</span><select className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value as ComplaintCategory | "all")}><option value="all">All categories</option><option value="Ready Mix">Ready Mix</option><option value="Block">Block</option><option value="Paving">Paving</option><option value="Other">Other</option></select></label>
+             <label><span className="sr-only">Filter complaint status</span><select className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">All statuses</option><option value="open">Open / uncompleted</option><option value="complete">Complete / closed</option></select></label>
+             <label className="space-y-1"><span className="text-xs font-medium text-muted-foreground">From date</span><Input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} aria-label="Filter complaints from date" /></label>
+             <label className="space-y-1"><span className="text-xs font-medium text-muted-foreground">To date</span><Input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} aria-label="Filter complaints to date" /></label>
+           </div>}
+         </CardContent>
+       </Card>
 
       <Card className="overflow-hidden">
          <CardHeader className="flex flex-row items-center justify-between border-b bg-card pb-4"><div><CardTitle className="text-base">Complaint register</CardTitle><p className="mt-1 text-sm text-muted-foreground">{filtered.length} loaded record{filtered.length === 1 ? "" : "s"}</p></div><Badge variant="outline">QC controlled</Badge></CardHeader>
