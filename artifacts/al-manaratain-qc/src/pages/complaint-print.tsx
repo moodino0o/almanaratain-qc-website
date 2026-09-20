@@ -45,7 +45,7 @@ export default function ComplaintPrint() {
           <img src="/al-manaratain-logo.webp" alt="Al Manaratain Logo" className="complaint-print-logo" />
           <div className="complaint-print-title">
             <strong>Customer complaint record</strong>
-            <span>Ref: {complaint.complaintNo}</span>
+            <strong>{complaint.complaintNo}</strong>
           </div>
         </header>
         <section className="mt-7">
