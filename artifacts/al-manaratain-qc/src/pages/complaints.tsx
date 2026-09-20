@@ -58,18 +58,24 @@ export default function Complaints() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [materialFilter, setMaterialFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const complaints = complaintsQuery.data ?? [];
   const typeOptions = useMemo(() => [...new Set(complaints.map((item) => item.complaintType))].sort(), [complaints]);
   const materialOptions = useMemo(() => [...new Set(complaints.map((item) => item.materialType))].sort(), [complaints]);
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return complaints.filter((complaint) => {
-      const searchable = `${complaint.complaintNo} ${complaint.customerName} ${complaint.complaintType} ${complaint.materialType} ${complaint.details}`.toLowerCase();
+      const searchable = `${complaint.complaintNo} ${complaint.customerName} ${complaint.complaintType} ${complaint.materialType} ${complaint.details} ${complaint.deliveryDate} ${displayDate(complaint.deliveryDate)}`.toLowerCase();
       return (!term || searchable.includes(term)) &&
         (typeFilter === "all" || complaint.complaintType === typeFilter) &&
-        (materialFilter === "all" || complaint.materialType === materialFilter);
+        (materialFilter === "all" || complaint.materialType === materialFilter) &&
+        (statusFilter === "all" || complaint.status === statusFilter) &&
+        (!fromDate || complaint.deliveryDate >= fromDate) &&
+        (!toDate || complaint.deliveryDate <= toDate);
     });
-  }, [complaints, materialFilter, search, typeFilter]);
+  }, [complaints, fromDate, materialFilter, search, statusFilter, toDate, typeFilter]);
 
   async function markComplete(id: number) {
     try {
@@ -110,12 +116,15 @@ export default function Complaints() {
         <Card className="border-l-4 border-l-emerald-600"><CardContent className="flex items-center justify-between p-4"><div><p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Complete</p><p className="mt-1 text-2xl font-bold">{complaints.filter((item) => item.status === "complete").length}</p></div><CheckCircle2 className="h-6 w-6 text-emerald-600" /></CardContent></Card>
       </section>
 
-      <Card>
+       <Card>
         <CardHeader className="border-b bg-muted/25 pb-4"><CardTitle className="text-base">Find a complaint</CardTitle></CardHeader>
-        <CardContent className="grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_190px_190px]">
-          <label className="relative"><span className="sr-only">Search complaints</span><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search number, customer, material, or details" /></label>
+         <CardContent className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_180px_180px_160px_160px_160px]">
+           <label className="relative"><span className="sr-only">Search complaints, including dates</span><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search number, customer, material, details, or date" /></label>
           <label><span className="sr-only">Filter complaint type</span><select className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}><option value="all">All complaint types</option>{typeOptions.map((item) => <option key={item}>{item}</option>)}</select></label>
           <label><span className="sr-only">Filter material type</span><select className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={materialFilter} onChange={(event) => setMaterialFilter(event.target.value)}><option value="all">All materials</option>{materialOptions.map((item) => <option key={item}>{item}</option>)}</select></label>
+           <label><span className="sr-only">Filter complaint status</span><select className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">All statuses</option><option value="open">Open / uncompleted</option><option value="complete">Complete / closed</option></select></label>
+           <label className="space-y-1"><span className="text-xs font-medium text-muted-foreground">From date</span><Input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} aria-label="Filter complaints from date" /></label>
+           <label className="space-y-1"><span className="text-xs font-medium text-muted-foreground">To date</span><Input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} aria-label="Filter complaints to date" /></label>
         </CardContent>
       </Card>
 
