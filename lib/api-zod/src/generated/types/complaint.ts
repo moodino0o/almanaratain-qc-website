@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ComplaintPicture } from './complaintPicture';
+import type { ComplaintStatus } from './complaintStatus';
 
 export interface Complaint {
   id: number;
@@ -17,6 +18,7 @@ export interface Complaint {
   details: string;
   solution: string;
   recommendation: string;
+  status: ComplaintStatus;
   picturePaths: ComplaintPicture[];
   createdAt: Date;
   updatedAt: Date;

@@ -1042,6 +1042,7 @@ components:
         - details
         - solution
         - recommendation
+        - status
         - picturePaths
         - createdAt
         - updatedAt
@@ -1065,6 +1066,9 @@ components:
           type: string
         recommendation:
           type: string
+        status:
+          type: string
+          enum: [open, complete]
         picturePaths:
           type: array
           items:
@@ -1132,6 +1136,9 @@ components:
           type: string
         recommendation:
           type: string
+        status:
+          type: string
+          enum: [open, complete]
         picturePaths:
           type: array
           items:

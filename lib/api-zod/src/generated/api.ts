@@ -995,6 +995,7 @@ export const ListComplaintsResponseItem = zod.object({
   "details": zod.string(),
   "solution": zod.string(),
   "recommendation": zod.string(),
+  "status": zod.enum(['open', 'complete']),
   "picturePaths": zod.array(zod.object({
   "objectPath": zod.string().min(1),
   "originalName": zod.string().min(1),
@@ -1053,6 +1054,7 @@ export const CreateComplaintResponse = zod.object({
   "details": zod.string(),
   "solution": zod.string(),
   "recommendation": zod.string(),
+  "status": zod.enum(['open', 'complete']),
   "picturePaths": zod.array(zod.object({
   "objectPath": zod.string().min(1),
   "originalName": zod.string().min(1),
@@ -1087,6 +1089,7 @@ export const GetComplaintResponse = zod.object({
   "details": zod.string(),
   "solution": zod.string(),
   "recommendation": zod.string(),
+  "status": zod.enum(['open', 'complete']),
   "picturePaths": zod.array(zod.object({
   "objectPath": zod.string().min(1),
   "originalName": zod.string().min(1),
@@ -1123,6 +1126,7 @@ export const UpdateComplaintBody = zod.object({
   "details": zod.string().min(1).optional(),
   "solution": zod.string().optional(),
   "recommendation": zod.string().optional(),
+  "status": zod.enum(['open', 'complete']).optional(),
   "picturePaths": zod.array(zod.object({
   "objectPath": zod.string().min(1),
   "originalName": zod.string().min(1),
@@ -1147,6 +1151,7 @@ export const UpdateComplaintResponse = zod.object({
   "details": zod.string(),
   "solution": zod.string(),
   "recommendation": zod.string(),
+  "status": zod.enum(['open', 'complete']),
   "picturePaths": zod.array(zod.object({
   "objectPath": zod.string().min(1),
   "originalName": zod.string().min(1),

@@ -543,8 +543,8 @@ router.get("/dashboard", async (_req, res): Promise<void> => {
       failedRecords: sql<number>`count(*) filter (where ${qcRecordsTable.status} = 'Failed')`,
       recordsThisMonth: sql<number>`count(*) filter (where ${qcRecordsTable.sampleDate} >= date_trunc('month', current_date))`,
       totalComplaints: sql<number>`(select count(*) from ${complaintsTable})`,
-      solvedComplaints: sql<number>`(select count(*) from ${complaintsTable} where btrim(${complaintsTable.solution}) <> '')`,
-      openComplaints: sql<number>`(select count(*) from ${complaintsTable} where btrim(${complaintsTable.solution}) = '')`,
+      solvedComplaints: sql<number>`(select count(*) from ${complaintsTable} where ${complaintsTable.status} = 'complete')`,
+      openComplaints: sql<number>`(select count(*) from ${complaintsTable} where ${complaintsTable.status} = 'open')`,
     })
     .from(qcRecordsTable);
 

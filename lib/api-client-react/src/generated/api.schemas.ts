@@ -97,6 +97,14 @@ export interface ComplaintPicture {
   size: number;
 }
 
+export type ComplaintStatus = typeof ComplaintStatus[keyof typeof ComplaintStatus];
+
+
+export const ComplaintStatus = {
+  open: 'open',
+  complete: 'complete',
+} as const;
+
 export interface Complaint {
   id: number;
   complaintNo: string;
@@ -107,6 +115,7 @@ export interface Complaint {
   details: string;
   solution: string;
   recommendation: string;
+  status: ComplaintStatus;
   picturePaths: ComplaintPicture[];
   createdAt: string;
   updatedAt: string;
@@ -127,6 +136,14 @@ export interface ComplaintInput {
   picturePaths?: ComplaintPicture[];
 }
 
+export type ComplaintUpdateStatus = typeof ComplaintUpdateStatus[keyof typeof ComplaintUpdateStatus];
+
+
+export const ComplaintUpdateStatus = {
+  open: 'open',
+  complete: 'complete',
+} as const;
+
 export interface ComplaintUpdate {
   /** @minLength 1 */
   customerName?: string;
@@ -139,6 +156,7 @@ export interface ComplaintUpdate {
   details?: string;
   solution?: string;
   recommendation?: string;
+  status?: ComplaintUpdateStatus;
   picturePaths?: ComplaintPicture[];
 }
 

@@ -19,6 +19,7 @@ export const complaintsTable = pgTable("complaints", {
   details: text("details").notNull(),
   solution: text("solution").notNull().default(""),
   recommendation: text("recommendation").notNull().default(""),
+  status: text("status").notNull().default("open"),
   picturePaths: jsonb("picture_paths")
     .$type<Array<{
       objectPath: string;

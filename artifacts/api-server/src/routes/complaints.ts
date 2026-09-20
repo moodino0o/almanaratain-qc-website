@@ -30,6 +30,7 @@ function toComplaint(row: typeof complaintsTable.$inferSelect) {
     details: row.details,
     solution: row.solution,
     recommendation: row.recommendation,
+    status: row.status === "complete" ? "complete" : "open",
     picturePaths: row.picturePaths ?? [],
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -92,6 +93,7 @@ router.post("/complaints", requireComplaintEditor, async (req, res): Promise<voi
       details: parsed.data.details.trim(),
       solution: parsed.data.solution.trim(),
       recommendation: parsed.data.recommendation.trim(),
+      status: "open",
       picturePaths: parsed.data.picturePaths,
       createdBy: getEmployeeIdFromUser(req.user),
     })
@@ -163,6 +165,7 @@ router.patch("/complaints/:id", requireComplaintEditor, async (req, res): Promis
       ...(parsed.data.recommendation === undefined
         ? {}
         : { recommendation: parsed.data.recommendation.trim() }),
+      ...(parsed.data.status === undefined ? {} : { status: parsed.data.status }),
       ...(parsed.data.picturePaths === undefined
         ? {}
         : { picturePaths: parsed.data.picturePaths }),
