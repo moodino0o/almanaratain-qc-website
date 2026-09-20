@@ -211,139 +211,141 @@ export default function Home() {
         </div>
       </header>
 
-      <Card className="shadow-none">
-        <CardHeader className="border-b bg-card pb-4">
-          <div>
-            <CardTitle id="complaints-heading" className="text-base">
-              Complaints at a glance
-            </CardTitle>
-          </div>
-          <Link
-            href="/complaints"
-            className="inline-flex items-center text-sm font-semibold text-primary hover:underline"
-          >
-            Open complaint register <ArrowUpRight className="ml-1.5 h-4 w-4" />
-          </Link>
-        </CardHeader>
-        <CardContent className="p-4 sm:p-6">
-          {hasComplaintData ? (
-            <div className="relative h-[250px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
-                  <Pie
-                    data={complaintChartData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="44%"
-                    innerRadius={68}
-                    outerRadius={96}
-                    paddingAngle={3}
-                    stroke="hsl(var(--card))"
-                    strokeWidth={3}
-                  >
-                    {complaintChartData.map((item) => (
-                      <Cell key={item.name} fill={item.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value: number, name: string) => [
-                      value.toLocaleString(),
-                      name,
-                    ]}
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "0.5rem",
-                      color: "hsl(var(--foreground))",
-                    }}
-                  />
-                  <Legend
-                    verticalAlign="bottom"
-                    iconType="circle"
-                    wrapperStyle={{
-                      color: "hsl(var(--muted-foreground))",
-                      fontSize: "12px",
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="pointer-events-none absolute inset-x-0 top-[72px] flex flex-col items-center">
-                <span className="text-3xl font-bold tracking-tight">
-                  {dashboard.totalComplaints.toLocaleString()}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  Total complaints
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="flex h-[250px] flex-col items-center justify-center gap-2 text-center">
-              <Inbox className="h-7 w-7 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">No complaints yet.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="shadow-none">
-        <CardHeader className="border-b bg-card pb-4">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(240px,0.72fr)_minmax(0,1.28fr)]">
+        <Card className="shadow-none">
+          <CardHeader className="border-b bg-card px-4 pb-4">
             <div>
-              <CardTitle id="qc-heading" className="text-base">QC test status</CardTitle>
+              <CardTitle id="complaints-heading" className="text-base">
+                Complaints at a glance
+              </CardTitle>
             </div>
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <CalendarDays className="h-3.5 w-3.5" /> {dashboard.recordsThisMonth.toLocaleString()} records this month
-            </p>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4 p-4">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <StatusSummary
-            label="All records"
-            value={dashboard.totalRecords}
-            detail="In the QC register"
-            icon={FileText}
-            tone="neutral"
-          />
-          <StatusSummary
-            label="Passed"
-            value={dashboard.passedRecords}
-            detail={`${passRate.toFixed(1)}% pass rate`}
-            icon={CheckCircle2}
-            tone="success"
-          />
-          <StatusSummary
-            label="Needs review"
-            value={dashboard.reviewRecords}
-            detail="Supervisor approval needed"
-            icon={AlertTriangle}
-            tone="warning"
-          />
-          <StatusSummary
-            label="Failed"
-            value={dashboard.failedRecords}
-            detail="Immediate action required"
-            icon={XCircle}
-            tone="danger"
-          />
-          </div>
-          <div>
-            <div className="mb-1.5 flex items-center justify-between text-xs text-muted-foreground">
-              <span>Overall pass rate</span>
-              <span className="font-semibold text-foreground">{passRate.toFixed(1)}%</span>
+            <Link
+              href="/complaints"
+              className="inline-flex items-center text-sm font-semibold text-primary hover:underline"
+            >
+              Open complaint register <ArrowUpRight className="ml-1.5 h-4 w-4" />
+            </Link>
+          </CardHeader>
+          <CardContent className="p-3 sm:p-4">
+            {hasComplaintData ? (
+              <div className="relative h-[190px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
+                    <Pie
+                      data={complaintChartData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="42%"
+                      innerRadius={48}
+                      outerRadius={70}
+                      paddingAngle={3}
+                      stroke="hsl(var(--card))"
+                      strokeWidth={3}
+                    >
+                      {complaintChartData.map((item) => (
+                        <Cell key={item.name} fill={item.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value: number, name: string) => [
+                        value.toLocaleString(),
+                        name,
+                      ]}
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "0.5rem",
+                        color: "hsl(var(--foreground))",
+                      }}
+                    />
+                    <Legend
+                      verticalAlign="bottom"
+                      iconType="circle"
+                      wrapperStyle={{
+                        color: "hsl(var(--muted-foreground))",
+                        fontSize: "11px",
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="pointer-events-none absolute inset-x-0 top-[51px] flex flex-col items-center">
+                  <span className="text-2xl font-bold tracking-tight">
+                    {dashboard.totalComplaints.toLocaleString()}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">
+                    Total
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex h-[190px] flex-col items-center justify-center gap-2 text-center">
+                <Inbox className="h-7 w-7 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">No complaints yet.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-none">
+          <CardHeader className="border-b bg-card pb-4">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <CardTitle id="qc-heading" className="text-base">QC test status</CardTitle>
+              </div>
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <CalendarDays className="h-3.5 w-3.5" /> {dashboard.recordsThisMonth.toLocaleString()} records this month
+              </p>
             </div>
-            <div className="h-3 overflow-hidden rounded-full bg-muted">
-              <div
-                className="flex h-full items-center justify-end rounded-full bg-primary px-2 text-[10px] font-semibold text-primary-foreground"
-                style={{ width: `${Math.max(passRate, passRate > 0 ? 4 : 0)}%` }}
-              >
-                {passRate >= 12 ? `${passRate.toFixed(0)}%` : ""}
+          </CardHeader>
+          <CardContent className="space-y-4 p-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <StatusSummary
+                label="All records"
+                value={dashboard.totalRecords}
+                detail="In the QC register"
+                icon={FileText}
+                tone="neutral"
+              />
+              <StatusSummary
+                label="Passed"
+                value={dashboard.passedRecords}
+                detail={`${passRate.toFixed(1)}% pass rate`}
+                icon={CheckCircle2}
+                tone="success"
+              />
+              <StatusSummary
+                label="Needs review"
+                value={dashboard.reviewRecords}
+                detail="Supervisor approval needed"
+                icon={AlertTriangle}
+                tone="warning"
+              />
+              <StatusSummary
+                label="Failed"
+                value={dashboard.failedRecords}
+                detail="Immediate action required"
+                icon={XCircle}
+                tone="danger"
+              />
+            </div>
+            <div>
+              <div className="mb-1.5 flex items-center justify-between text-xs text-muted-foreground">
+                <span>Overall pass rate</span>
+                <span className="font-semibold text-foreground">{passRate.toFixed(1)}%</span>
+              </div>
+              <div className="h-3 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="flex h-full items-center justify-end rounded-full bg-primary px-2 text-[10px] font-semibold text-primary-foreground"
+                  style={{ width: `${Math.max(passRate, passRate > 0 ? 4 : 0)}%` }}
+                >
+                  {passRate >= 12 ? `${passRate.toFixed(0)}%` : ""}
+                </div>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
 
       <Card className="border-t-4 border-t-primary shadow-none">
         <CardHeader className="pb-3">
