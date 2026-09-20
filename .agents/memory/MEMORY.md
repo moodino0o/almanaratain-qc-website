@@ -8,3 +8,4 @@
 - [Employee role authorization](employee-role-authorization.md) — enforce role permissions on the server and keep legacy administrator flags and configured allowlists effective.
 - [Employee provisioning](employee-provisioning.md) — adding an employee must create or reactivate the directory identity before granting role-based access.
 - [Complaint completion workflow](complaint-completion-workflow.md) — complaint completion is an explicit Open/Complete status, independent of whether solution notes are filled.
+- [Complaint material categories](complaint-material-categories.md) — derive complaint categories from material labels using OPC/SRC, inch sizes, and 60/80mm rules.
