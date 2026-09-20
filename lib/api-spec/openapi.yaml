@@ -87,7 +87,7 @@ paths:
     post:
       tags: [Auth]
       operationId: createEmployeeAccess
-      summary: Add a registered employee ID to the approved access list
+      summary: Add a new employee to the approved access list
       requestBody:
         required: true
         content:
@@ -1720,6 +1720,9 @@ components:
       properties:
         employeeId:
           type: string
+        name:
+          type: string
+          maxLength: 255
         role:
           $ref: "#/components/schemas/UserRole"
     EmployeeAccessUpdate:

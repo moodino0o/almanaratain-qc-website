@@ -228,31 +228,64 @@ router.post(
     const employeeId = parsed.success
       ? normalizeEmployeeId(parsed.data.employeeId)
       : '';
+    const name = parsed.success && typeof parsed.data.name === 'string'
+      ? parsed.data.name.trim()
+      : '';
     const role = parsed.success ? parsed.data.role ?? 'technician' : 'technician';
-    const employee = employeeId ? await getActiveEmployee(employeeId) : null;
-    if (!employeeId || !employee) {
-      res.status(400).json({ error: 'A registered employee ID is required.' });
+    if (!employeeId || (name && name.length > 255)) {
+      res.status(400).json({ error: 'A valid employee ID is required.' });
       return;
     }
 
-    const [entry] = await db
-      .insert(employeeAccessTable)
-      .values({
-        employeeId,
-        active: true,
-        administrator: role === 'administrator',
-        role,
-      })
-      .onConflictDoUpdate({
-        target: employeeAccessTable.employeeId,
-        set: {
+    const [entry, employee] = await db.transaction(async (tx) => {
+      let [directoryEmployee] = await tx
+        .select()
+        .from(employeeDirectoryTable)
+        .where(eq(employeeDirectoryTable.employeeId, employeeId))
+        .limit(1);
+
+      if (!directoryEmployee) {
+        if (!name) {
+          return [null, null] as const;
+        }
+        [directoryEmployee] = await tx
+          .insert(employeeDirectoryTable)
+          .values({ employeeId, name, active: true })
+          .returning();
+      } else if (!directoryEmployee.active) {
+        [directoryEmployee] = await tx
+          .update(employeeDirectoryTable)
+          .set({ active: true, updatedAt: new Date() })
+          .where(eq(employeeDirectoryTable.id, directoryEmployee.id))
+          .returning();
+      }
+
+      const [accessEntry] = await tx
+        .insert(employeeAccessTable)
+        .values({
+          employeeId,
           active: true,
           administrator: role === 'administrator',
           role,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
+        })
+        .onConflictDoUpdate({
+          target: employeeAccessTable.employeeId,
+          set: {
+            active: true,
+            administrator: role === 'administrator',
+            role,
+            updatedAt: new Date(),
+          },
+        })
+        .returning();
+
+      return [accessEntry, directoryEmployee] as const;
+    });
+
+    if (!entry || !employee) {
+      res.status(400).json({ error: 'Enter an employee name when adding a new employee.' });
+      return;
+    }
 
     const [user] = await db
       .select({

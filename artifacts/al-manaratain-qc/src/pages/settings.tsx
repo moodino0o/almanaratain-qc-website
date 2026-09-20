@@ -793,6 +793,7 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [employeeId, setEmployeeId] = useState("");
+  const [employeeName, setEmployeeName] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [newEmployeeRole, setNewEmployeeRole] = useState<UserRole>("technician");
   const [employeeToDeactivate, setEmployeeToDeactivate] = useState<EmployeeAccess | null>(null);
@@ -825,17 +826,19 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
   const handleAddEmployee = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const normalizedEmployeeId = employeeId.trim();
-    if (!/^\d+$/.test(normalizedEmployeeId)) {
-      toast.error("Enter a valid registered employee ID");
+    const normalizedEmployeeName = employeeName.trim();
+    if (!/^\d+$/.test(normalizedEmployeeId) || !normalizedEmployeeName) {
+      toast.error("Enter the employee name and a valid employee ID");
       return;
     }
 
     createEmployee.mutate(
-       { data: { employeeId: normalizedEmployeeId, role: newEmployeeRole } },
+       { data: { employeeId: normalizedEmployeeId, name: normalizedEmployeeName, role: newEmployeeRole } },
       {
         onSuccess: () => {
           toast.success("Employee access added");
           setEmployeeId("");
+          setEmployeeName("");
           setNewEmployeeRole("technician");
           setIsAddOpen(false);
           invalidateAccess();
@@ -1174,10 +1177,21 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
             <DialogHeader>
               <DialogTitle>Add employee access</DialogTitle>
               <DialogDescription>
-                Enter a registered employee ID to grant access. The employee will use the existing login flow.
+                Enter the employee name and ID to create access. The employee will use the existing login flow.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-2 py-4">
+              <label htmlFor="employee-name" className="text-sm font-medium">Employee name</label>
+              <Input
+                id="employee-name"
+                placeholder="Enter employee name"
+                value={employeeName}
+                onChange={(event) => setEmployeeName(event.target.value)}
+                autoFocus
+                required
+              />
+            </div>
+            <div className="space-y-2 pb-4">
               <label htmlFor="employee-id" className="text-sm font-medium">Employee ID</label>
               <Input
                 id="employee-id"
@@ -1185,7 +1199,6 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
                 placeholder="Enter employee ID"
                 value={employeeId}
                 onChange={(event) => setEmployeeId(event.target.value)}
-                autoFocus
                 required
               />
             </div>

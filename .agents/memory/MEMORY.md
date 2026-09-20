@@ -6,4 +6,5 @@
 - [Sieve passing calculation](sieve-passing-calculation.md) — passing mass subtracts cumulative retained amounts; blank reference-only rows are skipped.
 - [Employee access identity](employee-access-identity.md) — the active login directory uses registered employee IDs, so approvals and administrator allowlists must key off IDs rather than email.
 - [Employee role authorization](employee-role-authorization.md) — enforce role permissions on the server and keep legacy administrator flags and configured allowlists effective.
+- [Employee provisioning](employee-provisioning.md) — adding an employee must create or reactivate the directory identity before granting role-based access.
 - [Complaint completion workflow](complaint-completion-workflow.md) — complaint completion is an explicit Open/Complete status, independent of whether solution notes are filled.

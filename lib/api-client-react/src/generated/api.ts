@@ -486,7 +486,7 @@ export const getCreateEmployeeAccessUrl = () => {
 }
 
 /**
- * @summary Add a registered employee ID to the approved access list
+ * @summary Add a new employee to the approved access list
  */
 export const createEmployeeAccess = async (employeeAccessInput: EmployeeAccessInput, options?: Parameters<typeof customFetch>[1]): Promise<EmployeeAccess> => {
 
@@ -535,7 +535,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type CreateEmployeeAccessMutationError = ErrorType<void>
 
     /**
- * @summary Add a registered employee ID to the approved access list
+ * @summary Add a new employee to the approved access list
  */
 export const useCreateEmployeeAccess = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createEmployeeAccess>>, TError,{data: BodyType<EmployeeAccessInput>}, TContext>, request?: SecondParameter<typeof customFetch>}

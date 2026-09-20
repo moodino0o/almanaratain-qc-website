@@ -9,5 +9,7 @@ import type { UserRole } from './userRole';
 
 export interface EmployeeAccessInput {
   employeeId: string;
+  /** @maxLength 255 */
+  name?: string;
   role?: UserRole;
 }

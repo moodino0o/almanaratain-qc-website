@@ -488,6 +488,8 @@ export interface EmployeeAccessList {
 
 export interface EmployeeAccessInput {
   employeeId: string;
+  /** @maxLength 255 */
+  name?: string;
   role?: UserRole;
 }
 

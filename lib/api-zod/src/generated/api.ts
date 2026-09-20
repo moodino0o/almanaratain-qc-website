@@ -105,10 +105,15 @@ export const GetEmployeeAccessResponse = zod.object({
 
 
 /**
- * @summary Add a registered employee ID to the approved access list
+ * @summary Add a new employee to the approved access list
  */
+export const createEmployeeAccessBodyNameMax = 255;
+
+
+
 export const CreateEmployeeAccessBody = zod.object({
   "employeeId": zod.string(),
+  "name": zod.string().max(createEmployeeAccessBodyNameMax).optional(),
   "role": zod.enum(['technician', 'managerial', 'administrator', 'visitor']).optional()
 })
 
