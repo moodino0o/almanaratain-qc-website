@@ -647,7 +647,6 @@ export default function Settings() {
         </TabsList>
 
         <TabsContent value="employee-access" className="mt-4 min-h-0 flex-1 overflow-y-auto">
-          <EmployeeAccessCard isAdmin={isAdmin} />
           <EmployeeAccessSection isAdmin={isAdmin} />
         </TabsContent>
 

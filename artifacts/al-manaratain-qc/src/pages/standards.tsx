@@ -176,7 +176,7 @@ function StandardEditor({
 
   return (
     <Card className="border-primary/20 bg-card text-foreground shadow-sm">
-      <CardHeader className="border-b border-border/70 bg-primary/[0.03]">
+      <CardHeader className="border-b border-border/70 bg-muted/40">
         <div className="flex items-start justify-between gap-4">
           <div>
             <CardTitle>
@@ -365,7 +365,7 @@ function SieveEditor({
   };
   return (
     <Card className="border-primary/20 bg-card text-foreground shadow-sm">
-      <CardHeader className="border-b border-border/70 bg-primary/[0.03]">
+      <CardHeader className="border-b border-border/70 bg-muted/40">
         <div className="flex items-start justify-between gap-4">
           <div>
             <CardTitle>
@@ -618,6 +618,9 @@ export default function Standards() {
   );
   const [form, setForm] = useState<StandardForm>(emptyForm);
   const [sieveForm, setSieveForm] = useState<SieveForm>(emptySieveForm);
+  const [standardView, setStandardView] = useState<"strength" | "sieve">(
+    "strength",
+  );
 
   const materialItems = useMemo(
     () =>
@@ -702,6 +705,7 @@ export default function Standards() {
   const openCreate = () => {
     setEditing(null);
     setForm(emptyForm);
+    setStandardView("strength");
     setEditorOpen(true);
     setSieveEditorOpen(false);
   };
@@ -709,6 +713,7 @@ export default function Standards() {
   const openEdit = (standard: StrengthStandard) => {
     setEditing(standard);
     setForm(formFromStandard(standard));
+    setStandardView("strength");
     setEditorOpen(true);
     setSieveEditorOpen(false);
   };
@@ -716,6 +721,7 @@ export default function Standards() {
   const openSieveCreate = () => {
     setEditingSieve(null);
     setSieveForm(emptySieveForm);
+    setStandardView("sieve");
     setSieveEditorOpen(true);
     setEditorOpen(false);
   };
@@ -723,6 +729,7 @@ export default function Standards() {
   const openSieveEdit = (standards: SieveStandard[]) => {
     setEditingSieve(standards);
     setSieveForm(formFromSieveStandards(standards));
+    setStandardView("sieve");
     setSieveEditorOpen(true);
     setEditorOpen(false);
   };
@@ -886,7 +893,7 @@ export default function Standards() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 pb-12">
+    <div className="mx-auto max-w-6xl space-y-5 pb-12">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
           <Link
@@ -897,23 +904,9 @@ export default function Standards() {
             <ArrowLeft className="h-5 w-5 text-muted-foreground" />
           </Link>
           <div>
-            <h1 className="flex items-center gap-3 text-3xl font-bold tracking-tight">
-              <FileCheck2 className="h-8 w-8 text-primary" /> Quality standards
+            <h1 className="flex items-center gap-3 text-3xl font-bold tracking-tight text-foreground">
+              <FileCheck2 className="h-8 w-8 text-foreground" /> Quality standards
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Keep the rules that automatically evaluate strength and sieve
-              results in one place.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2 text-xs font-medium text-muted-foreground">
-              <span className="rounded-full border border-border bg-card px-2.5 py-1">
-                {strengthStandards?.length ?? 0} strength{" "}
-                {strengthStandards?.length === 1 ? "rule" : "rules"}
-              </span>
-              <span className="rounded-full border border-border bg-card px-2.5 py-1">
-                {sieveGroups.length} sieve{" "}
-                {sieveGroups.length === 1 ? "group" : "groups"}
-              </span>
-            </div>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -962,18 +955,57 @@ export default function Standards() {
         />
       )}
 
-      <Card className="border-border shadow-sm">
-        <CardHeader className="border-b border-border/70 bg-primary/[0.03]">
+      <div
+        role="tablist"
+        aria-label="Standard type"
+        className="inline-flex rounded-md border border-border bg-muted/40 p-1"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={standardView === "strength"}
+          onClick={() => setStandardView("strength")}
+          className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
+            standardView === "strength"
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Strength rules
+          <span className="ml-1.5 text-xs text-muted-foreground">
+            ({strengthStandards?.length ?? 0})
+          </span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={standardView === "sieve"}
+          onClick={() => setStandardView("sieve")}
+          className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
+            standardView === "sieve"
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Sieve rules
+          <span className="ml-1.5 text-xs text-muted-foreground">
+            ({sieveGroups.length})
+          </span>
+        </button>
+      </div>
+
+      <Card
+        className={`border-border shadow-sm ${
+          standardView === "strength" ? "" : "hidden"
+        }`}
+      >
+        <CardHeader className="border-b border-border/70 bg-muted/40">
           <div className="flex items-start gap-3">
-            <div className="rounded-md bg-primary/10 p-2 text-primary">
+            <div className="rounded-md bg-card p-2 text-foreground">
               <FileCheck2 className="h-5 w-5" />
             </div>
             <div>
-              <CardTitle>Strength rules</CardTitle>
-              <CardDescription>
-                Ready Mix and Blocks need a matching minimum. If no rule
-                matches, the record is marked Review.
-              </CardDescription>
+              <CardTitle className="text-foreground">Strength rules</CardTitle>
             </div>
           </div>
         </CardHeader>
@@ -994,7 +1026,7 @@ export default function Standards() {
           ) : strengthStandards?.length ? (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[820px] text-xs sm:text-sm">
-                <thead className="bg-muted/40 text-left">
+                <thead className="bg-muted/40 text-left text-foreground">
                   <tr className="border-y">
                     <th className="px-4 py-3 font-semibold">Test Type</th>
                     <th className="px-4 py-3 font-semibold">Material / Mix</th>
@@ -1070,18 +1102,18 @@ export default function Standards() {
         </CardContent>
       </Card>
 
-      <Card className="border-border shadow-sm">
-        <CardHeader className="border-b border-border/70 bg-primary/[0.03]">
+      <Card
+        className={`border-border shadow-sm ${
+          standardView === "sieve" ? "" : "hidden"
+        }`}
+      >
+        <CardHeader className="border-b border-border/70 bg-muted/40">
           <div className="flex items-start gap-3">
-            <div className="rounded-md bg-primary/10 p-2 text-primary">
+            <div className="rounded-md bg-card p-2 text-foreground">
               <FlaskConical className="h-5 w-5" />
             </div>
             <div>
-              <CardTitle>Sieve rules</CardTitle>
-              <CardDescription>
-                Set the accepted amount or percentage for each material and
-                sieve size. Materials and sizes come from Reference Data.
-              </CardDescription>
+              <CardTitle className="text-foreground">Sieve rules</CardTitle>
             </div>
           </div>
         </CardHeader>
@@ -1102,7 +1134,7 @@ export default function Standards() {
           ) : sieveGroups.length ? (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[900px] text-xs sm:text-sm">
-                <thead className="bg-muted/40 text-left">
+                <thead className="bg-muted/40 text-left text-foreground">
                   <tr className="border-y">
                     <th className="px-4 py-3 font-semibold">Test Type</th>
                     <th className="px-4 py-3 font-semibold">Material</th>
@@ -1133,7 +1165,7 @@ export default function Standards() {
                           {standards.map((standard) => (
                             <span
                               key={standard.id}
-                              className="rounded-full border border-primary/15 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+                              className="rounded-full border border-border bg-muted px-2 py-0.5 text-xs font-medium text-foreground"
                             >
                               {standard.sieveSize || "Missing size"}
                             </span>
