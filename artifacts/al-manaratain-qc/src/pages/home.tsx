@@ -211,7 +211,7 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(240px,0.72fr)_minmax(0,1.28fr)]">
+      <div className="grid items-start gap-6 md:grid-cols-[minmax(220px,0.72fr)_minmax(0,1.28fr)]">
         <Card className="shadow-none">
           <CardHeader className="border-b bg-card px-4 pb-4">
             <div>
