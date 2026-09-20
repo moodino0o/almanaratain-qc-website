@@ -17,6 +17,14 @@ import {
   Search,
   XCircle,
 } from "lucide-react";
+import {
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+} from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -161,6 +169,19 @@ export default function Home() {
   const passRate =
     (dashboard.passedRecords / Math.max(dashboard.totalRecords, 1)) * 100;
   const records = recordsQuery.data ?? [];
+  const complaintChartData = [
+    {
+      name: "Open",
+      value: dashboard.openComplaints,
+      color: "hsl(var(--warning) / 0.82)",
+    },
+    {
+      name: "Solved",
+      value: dashboard.solvedComplaints,
+      color: "hsl(var(--success) / 0.78)",
+    },
+  ];
+  const hasComplaintData = complaintChartData.some((item) => item.value > 0);
 
   return (
     <div className="space-y-7 pb-10">
@@ -197,7 +218,6 @@ export default function Home() {
             <CardTitle id="complaints-heading" className="text-base">
               Complaints at a glance
             </CardTitle>
-            <CardDescription>Track customer issues and follow up on open cases.</CardDescription>
           </div>
           <Link
             href="/complaints"
@@ -206,46 +226,64 @@ export default function Home() {
             Open complaint register <ArrowUpRight className="ml-1.5 h-4 w-4" />
           </Link>
         </CardHeader>
-        <CardContent className="grid divide-y p-0 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          <Link
-            href="/complaints"
-            className="group flex items-center gap-3 p-4 transition-colors hover:bg-muted/40"
-          >
-            <span className="rounded-md bg-muted p-2 text-muted-foreground">
-              <Inbox className="h-4 w-4" />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-2xl font-bold">{dashboard.totalComplaints.toLocaleString()}</span>
-              <span className="block text-xs font-medium text-muted-foreground">Total complaints</span>
-            </span>
-            <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-          </Link>
-          <Link
-            href="/complaints"
-            className="group flex items-center gap-3 p-4 transition-colors hover:bg-muted/40"
-          >
-            <span className="rounded-md bg-warning/10 p-2 text-warning">
-              <Clock3 className="h-4 w-4" />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-2xl font-bold">{dashboard.openComplaints.toLocaleString()}</span>
-              <span className="block text-xs font-medium text-muted-foreground">Open complaints</span>
-            </span>
-            <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-          </Link>
-          <Link
-            href="/complaints"
-            className="group flex items-center gap-3 p-4 transition-colors hover:bg-muted/40"
-          >
-            <span className="rounded-md bg-success/10 p-2 text-success">
-              <CheckCircle2 className="h-4 w-4" />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-2xl font-bold">{dashboard.solvedComplaints.toLocaleString()}</span>
-              <span className="block text-xs font-medium text-muted-foreground">Solved complaints</span>
-            </span>
-            <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-          </Link>
+        <CardContent className="p-4 sm:p-6">
+          {hasComplaintData ? (
+            <div className="relative h-[250px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
+                  <Pie
+                    data={complaintChartData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="44%"
+                    innerRadius={68}
+                    outerRadius={96}
+                    paddingAngle={3}
+                    stroke="hsl(var(--card))"
+                    strokeWidth={3}
+                  >
+                    {complaintChartData.map((item) => (
+                      <Cell key={item.name} fill={item.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: number, name: string) => [
+                      value.toLocaleString(),
+                      name,
+                    ]}
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "0.5rem",
+                      color: "hsl(var(--foreground))",
+                    }}
+                  />
+                  <Legend
+                    verticalAlign="bottom"
+                    iconType="circle"
+                    wrapperStyle={{
+                      color: "hsl(var(--muted-foreground))",
+                      fontSize: "12px",
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="pointer-events-none absolute inset-x-0 top-[72px] flex flex-col items-center">
+                <span className="text-3xl font-bold tracking-tight">
+                  {dashboard.totalComplaints.toLocaleString()}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  Total complaints
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex h-[250px] flex-col items-center justify-center gap-2 text-center">
+              <Inbox className="h-7 w-7 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">No complaints yet.</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -254,7 +292,6 @@ export default function Home() {
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <CardTitle id="qc-heading" className="text-base">QC test status</CardTitle>
-              <CardDescription>Review the current state of quality records.</CardDescription>
             </div>
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <CalendarDays className="h-3.5 w-3.5" /> {dashboard.recordsThisMonth.toLocaleString()} records this month

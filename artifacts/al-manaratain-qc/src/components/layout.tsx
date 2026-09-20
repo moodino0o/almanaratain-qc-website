@@ -62,7 +62,7 @@ export function Layout({ children }: LayoutProps) {
                 className={cn(
                   "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
                   isActive
-                    ? "bg-primary/10 text-primary"
+                    ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
               >
@@ -128,7 +128,7 @@ export function Layout({ children }: LayoutProps) {
                 className={cn(
                   "flex min-w-[68px] shrink-0 flex-col items-center gap-1 rounded-md px-2 py-2 text-[11px] font-medium",
                   isActive
-                    ? "bg-primary/10 text-primary"
+                    ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
               >
