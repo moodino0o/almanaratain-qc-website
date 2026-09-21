@@ -494,6 +494,11 @@ export interface EmployeeAccessInput {
 }
 
 export interface EmployeeAccessUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
+  name?: string;
   active?: boolean;
   administrator?: boolean;
   role?: UserRole;

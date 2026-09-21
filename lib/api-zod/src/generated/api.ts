@@ -137,12 +137,15 @@ export const UpdateEmployeeAccessParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const updateEmployeeAccessBodyNameMax = 255;
+
 export const updateEmployeeAccessBodyPasswordMin = 8;
 export const updateEmployeeAccessBodyPasswordMax = 128;
 
 
 
 export const UpdateEmployeeAccessBody = zod.object({
+  "name": zod.string().min(1).max(updateEmployeeAccessBodyNameMax).optional(),
   "active": zod.boolean().optional(),
   "administrator": zod.boolean().optional(),
   "role": zod.enum(['technician', 'managerial', 'administrator', 'visitor']).optional(),

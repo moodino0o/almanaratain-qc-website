@@ -1729,6 +1729,10 @@ components:
       type: object
       required: []
       properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
         active:
           type: boolean
         administrator:
