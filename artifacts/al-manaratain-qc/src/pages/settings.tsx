@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
   Settings2, Building2, Users, Package, MapPin, Truck, Plus, Trash2, Edit2, 
-  Database, Check, X, Search, MoreVertical, UserPlus, ShieldAlert, Mail, KeyRound, ChevronDown
+  Database, Check, X, Search, MoreVertical, UserPlus, ShieldAlert, Mail, ChevronDown
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -796,11 +796,12 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
   const [employeeName, setEmployeeName] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [newEmployeeRole, setNewEmployeeRole] = useState<UserRole>("technician");
-  const [employeeToDeactivate, setEmployeeToDeactivate] = useState<EmployeeAccess | null>(null);
+  const [employeeForEdit, setEmployeeForEdit] = useState<EmployeeAccess | null>(null);
+  const [editRole, setEditRole] = useState<UserRole>("technician");
+  const [editActive, setEditActive] = useState(true);
+  const [editPassword, setEditPassword] = useState("");
+  const [editPasswordConfirmation, setEditPasswordConfirmation] = useState("");
   const [employeeToDelete, setEmployeeToDelete] = useState<EmployeeAccess | null>(null);
-  const [employeeForPassword, setEmployeeForPassword] = useState<EmployeeAccess | null>(null);
-  const [password, setPassword] = useState("");
-  const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const { data, isLoading, isError, error, refetch } = useGetEmployeeAccess({
     query: { enabled: isAdmin, queryKey: getGetEmployeeAccessQueryKey() },
   });
@@ -848,30 +849,49 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
     );
   };
 
-  const updateAccess = (employee: EmployeeAccess, active: boolean) => {
-    updateEmployee.mutate(
-      { id: employee.id, data: { active } },
-      {
-        onSuccess: () => {
-          toast.success(active ? "Access activated" : "Access deactivated");
-          setEmployeeToDeactivate(null);
-          invalidateAccess();
-        },
-        onError: () => toast.error("Could not update employee access. Try again."),
-      },
-    );
+  const openEditEmployee = (employee: EmployeeAccess) => {
+    setEmployeeForEdit(employee);
+    setEditRole(employee.role);
+    setEditActive(employee.active);
+    setEditPassword("");
+    setEditPasswordConfirmation("");
   };
 
-  const updateRole = (employee: EmployeeAccess, role: UserRole) => {
+  const closeEditEmployee = () => {
+    setEmployeeForEdit(null);
+    setEditPassword("");
+    setEditPasswordConfirmation("");
+  };
+
+  const handleEditEmployee = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!employeeForEdit) return;
+    if (editPassword && editPassword.length < 8) {
+      toast.error("Password must be at least 8 characters.");
+      return;
+    }
+    if (editPassword !== editPasswordConfirmation) {
+      toast.error("Passwords do not match.");
+      return;
+    }
+
     updateEmployee.mutate(
-      { id: employee.id, data: { role } },
+      {
+        id: employeeForEdit.id,
+        data: {
+          active: editActive,
+          role: editRole,
+          ...(editPassword ? { password: editPassword } : {}),
+        },
+      },
       {
         onSuccess: () => {
-          toast.success(`${employeeRoleLabel(role)} access assigned`);
+          toast.success("Employee access updated");
+          closeEditEmployee();
           invalidateAccess();
         },
         onError: (error) =>
-          toast.error(error instanceof Error ? error.message : "Could not update employee role."),
+          toast.error(error instanceof Error ? error.message : "Could not update employee access."),
       },
     );
   };
@@ -884,6 +904,7 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
         onSuccess: () => {
           toast.success("Employee access deleted");
           setEmployeeToDelete(null);
+          setEmployeeForEdit(null);
           invalidateAccess();
         },
         onError: (error) =>
@@ -892,37 +913,6 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
               ? error.message
               : "Could not delete employee access. Try again.",
           ),
-      },
-    );
-  };
-
-  const closePasswordDialog = () => {
-    setEmployeeForPassword(null);
-    setPassword("");
-    setPasswordConfirmation("");
-  };
-
-  const handlePasswordSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (password.length < 8) {
-      toast.error("Password must be at least 8 characters.");
-      return;
-    }
-    if (password !== passwordConfirmation) {
-      toast.error("Passwords do not match.");
-      return;
-    }
-    if (!employeeForPassword) return;
-
-    updateEmployee.mutate(
-      { id: employeeForPassword.id, data: { password } },
-      {
-        onSuccess: () => {
-          toast.success(employeeForPassword.passwordSet ? "Password changed" : "Password set");
-          closePasswordDialog();
-          invalidateAccess();
-        },
-        onError: (error) => toast.error(error instanceof Error ? error.message : "Could not update password."),
       },
     );
   };
@@ -1054,47 +1044,13 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
                             <div className="employee-access-actions grid grid-cols-2 gap-1">
                               <Button
                                 variant="outline"
-                                 size="sm"
-                                 className="h-8 w-full whitespace-normal px-2 text-[10px]"
-                                onClick={() => {
-                                  setEmployeeForPassword(employee);
-                                  setPassword("");
-                                  setPasswordConfirmation("");
-                                }}
-                                disabled={updateEmployee.isPending}
-                              >
-                                <KeyRound className="mr-1.5 h-3.5 w-3.5" />
-                                {employee.passwordSet ? "Change password" : "Set password"}
-                              </Button>
-                              <select
-                                aria-label={`Role for ${employee.displayName}`}
-                                 className="h-8 min-w-0 w-full rounded-md border border-input bg-background px-1.5 text-[10px]"
-                                value={employee.role}
-                                onChange={(event) => updateRole(employee, event.target.value as UserRole)}
-                                disabled={updateEmployee.isPending}
-                              >
-                                {employeeRoleOptions.map((option) => (
-                                  <option key={option.value} value={option.value}>{option.label}</option>
-                                ))}
-                              </select>
-                              {employee.active ? (
-                                 <Button variant="outline" size="sm" className="h-8 w-full whitespace-normal px-2 text-[10px]" onClick={() => setEmployeeToDeactivate(employee)}>
-                                  Deactivate access
-                                </Button>
-                              ) : (
-                                 <Button variant="outline" size="sm" className="h-8 w-full whitespace-normal px-2 text-[10px]" onClick={() => updateAccess(employee, true)} disabled={updateEmployee.isPending}>
-                                  Activate access
-                                </Button>
-                              )}
-                              <Button
-                                variant="ghost"
                                 size="sm"
-                                 className="h-8 w-full whitespace-normal px-2 text-[10px] text-destructive hover:text-destructive"
-                                onClick={() => setEmployeeToDelete(employee)}
-                                disabled={deleteEmployee.isPending}
+                                className="col-span-2 h-8 w-full whitespace-normal px-2 text-[10px]"
+                                onClick={() => openEditEmployee(employee)}
+                                disabled={updateEmployee.isPending || deleteEmployee.isPending}
                               >
-                                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                                Delete
+                                <Edit2 className="mr-1.5 h-3.5 w-3.5" />
+                                Edit
                               </Button>
                             </div>
                           </td>
@@ -1126,51 +1082,10 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
                         {employee.passwordSet ? "Password set" : "Password not set"}
                       </Badge>
                       <div className="mt-3 grid gap-2">
-                        <Button
-                          className="w-full"
-                          variant="outline"
-                          onClick={() => {
-                            setEmployeeForPassword(employee);
-                            setPassword("");
-                            setPasswordConfirmation("");
-                          }}
-                          disabled={updateEmployee.isPending}
-                        >
-                          <KeyRound className="mr-2 h-4 w-4" />
-                          {employee.passwordSet ? "Change password" : "Set password"}
-                        </Button>
-                        <label className="space-y-1 text-left text-sm font-medium">
-                          Role
-                          <select
-                            aria-label={`Role for ${employee.displayName}`}
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                            value={employee.role}
-                            onChange={(event) => updateRole(employee, event.target.value as UserRole)}
-                            disabled={updateEmployee.isPending}
-                          >
-                            {employeeRoleOptions.map((option) => (
-                              <option key={option.value} value={option.value}>{option.label}</option>
-                            ))}
-                          </select>
-                        </label>
-                        {employee.active ? (
-                          <Button className="w-full" variant="outline" onClick={() => setEmployeeToDeactivate(employee)}>
-                            Deactivate access
-                          </Button>
-                        ) : (
-                          <Button className="w-full" variant="outline" onClick={() => updateAccess(employee, true)} disabled={updateEmployee.isPending}>
-                            Activate access
-                          </Button>
-                        )}
-                        <Button
-                          className="w-full"
-                          variant="ghost"
-                          onClick={() => setEmployeeToDelete(employee)}
-                          disabled={deleteEmployee.isPending}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete employee access
-                        </Button>
+                         <Button className="w-full" variant="outline" onClick={() => openEditEmployee(employee)} disabled={updateEmployee.isPending || deleteEmployee.isPending}>
+                           <Edit2 className="mr-2 h-4 w-4" />
+                           Edit employee access
+                         </Button>
                       </div>
                     </div>
                   ))}
@@ -1234,77 +1149,91 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
       </Dialog>
 
       <Dialog
-        open={employeeForPassword !== null}
-        onOpenChange={(open) => { if (!open) closePasswordDialog(); }}
+        open={employeeForEdit !== null}
+        onOpenChange={(open) => { if (!open) closeEditEmployee(); }}
       >
         <DialogContent className="w-[calc(100%-2rem)] sm:max-w-md">
-          <form onSubmit={handlePasswordSubmit}>
+          <form onSubmit={handleEditEmployee}>
             <DialogHeader>
-              <DialogTitle>{employeeForPassword?.passwordSet ? "Change employee password" : "Set employee password"}</DialogTitle>
+              <DialogTitle>Edit employee access</DialogTitle>
               <DialogDescription>
-                Only administrators can set or change passwords. The employee will need this password at login.
+                Update the access role, account status, or password for employee ID {employeeForEdit?.employeeId}.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <label htmlFor="employee-password" className="text-sm font-medium">New password</label>
+                <label htmlFor="edit-employee-role" className="text-sm font-medium">Access role</label>
+                <select
+                  id="edit-employee-role"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={editRole}
+                  onChange={(event) => setEditRole(event.target.value as UserRole)}
+                >
+                  {employeeRoleOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="edit-employee-status" className="text-sm font-medium">Access status</label>
+                <select
+                  id="edit-employee-status"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={editActive ? "active" : "inactive"}
+                  onChange={(event) => setEditActive(event.target.value === "active")}
+                >
+                  <option value="active">Active — can sign in</option>
+                  <option value="inactive">Inactive — sign-in blocked</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="edit-employee-password" className="text-sm font-medium">New password (optional)</label>
                 <Input
-                  id="employee-password"
+                  id="edit-employee-password"
                   type="password"
                   autoComplete="new-password"
-                  minLength={8}
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder="At least 8 characters"
-                  required
+                  minLength={editPassword ? 8 : undefined}
+                  value={editPassword}
+                  onChange={(event) => setEditPassword(event.target.value)}
+                  placeholder={employeeForEdit?.passwordSet ? "Leave blank to keep current password" : "At least 8 characters"}
                   autoFocus
                 />
               </div>
               <div className="space-y-2">
-                <label htmlFor="employee-password-confirmation" className="text-sm font-medium">Confirm password</label>
+                <label htmlFor="edit-employee-password-confirmation" className="text-sm font-medium">Confirm new password</label>
                 <Input
-                  id="employee-password-confirmation"
+                  id="edit-employee-password-confirmation"
                   type="password"
                   autoComplete="new-password"
-                  minLength={8}
-                  value={passwordConfirmation}
-                  onChange={(event) => setPasswordConfirmation(event.target.value)}
+                  minLength={editPasswordConfirmation ? 8 : undefined}
+                  value={editPasswordConfirmation}
+                  onChange={(event) => setEditPasswordConfirmation(event.target.value)}
                   placeholder="Re-enter password"
-                  required
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={closePasswordDialog}>Cancel</Button>
-              <Button type="submit" disabled={updateEmployee.isPending || password.length < 8 || password !== passwordConfirmation}>
-                {employeeForPassword?.passwordSet ? "Change password" : "Set password"}
+              <Button
+                type="button"
+                variant="ghost"
+                className="mr-auto text-destructive hover:text-destructive"
+                onClick={() => {
+                  if (employeeForEdit) {
+                    setEmployeeToDelete(employeeForEdit);
+                    closeEditEmployee();
+                  }
+                }}
+                disabled={deleteEmployee.isPending}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete access
+              </Button>
+              <Button type="button" variant="outline" onClick={closeEditEmployee}>Cancel</Button>
+              <Button type="submit" disabled={updateEmployee.isPending || Boolean(editPassword && (editPassword.length < 8 || editPassword !== editPasswordConfirmation))}>
+                Save changes
               </Button>
             </DialogFooter>
           </form>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={employeeToDeactivate !== null}
-        onOpenChange={(open) => { if (!open) setEmployeeToDeactivate(null); }}
-      >
-        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Deactivate access for employee ID {employeeToDeactivate?.employeeId}?</DialogTitle>
-            <DialogDescription>
-              They will no longer be able to sign in to the quality control system.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEmployeeToDeactivate(null)}>Keep active</Button>
-            <Button
-              variant="destructive"
-              onClick={() => employeeToDeactivate && updateAccess(employeeToDeactivate, false)}
-              disabled={updateEmployee.isPending}
-            >
-              Deactivate access
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
