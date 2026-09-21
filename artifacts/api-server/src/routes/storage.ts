@@ -63,7 +63,7 @@ router.post(
     }
 
     try {
-      const { name, size, contentType } = parsed.data;
+      const { name, size, contentType, purpose } = parsed.data;
 
       const uploadURL = await objectStorageService.getObjectEntityUploadURL();
       const objectPath =
@@ -73,7 +73,7 @@ router.post(
         RequestUploadUrlResponse.parse({
           uploadURL,
           objectPath,
-          metadata: { name, size, contentType },
+          metadata: { name, size, contentType, purpose },
         }),
       );
     } catch (error) {
