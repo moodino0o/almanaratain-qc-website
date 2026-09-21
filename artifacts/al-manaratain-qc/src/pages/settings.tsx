@@ -12,7 +12,6 @@ import {
   getGetEmployeeAccessQueryKey,
   useGetEmployeeAccess,
   useCreateEmployeeAccess,
-  useDeleteEmployeeAccess,
   useUpdateEmployeeAccess,
   EmployeeAccess,
   UserRole,
@@ -26,7 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
-  Settings2, Building2, Users, Package, MapPin, Truck, Plus, Trash2, Edit2, 
+  Settings2, Building2, Users, Package, MapPin, Truck, Plus, Trash2, Edit2, KeyRound,
   Database, Check, X, Search, MoreVertical, UserPlus, ShieldAlert, Mail, ChevronDown
 } from "lucide-react";
 import { toast } from "sonner";
@@ -797,16 +796,15 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [newEmployeeRole, setNewEmployeeRole] = useState<UserRole>("technician");
   const [employeeForEdit, setEmployeeForEdit] = useState<EmployeeAccess | null>(null);
-  const [editRole, setEditRole] = useState<UserRole>("technician");
-  const [editActive, setEditActive] = useState(true);
-  const [editPassword, setEditPassword] = useState("");
-  const [editPasswordConfirmation, setEditPasswordConfirmation] = useState("");
-  const [employeeToDelete, setEmployeeToDelete] = useState<EmployeeAccess | null>(null);
+  const [editName, setEditName] = useState("");
+  const [employeeToDeactivate, setEmployeeToDeactivate] = useState<EmployeeAccess | null>(null);
+  const [employeeForPassword, setEmployeeForPassword] = useState<EmployeeAccess | null>(null);
+  const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const { data, isLoading, isError, error, refetch } = useGetEmployeeAccess({
     query: { enabled: isAdmin, queryKey: getGetEmployeeAccessQueryKey() },
   });
   const createEmployee = useCreateEmployeeAccess();
-  const deleteEmployee = useDeleteEmployeeAccess();
   const updateEmployee = useUpdateEmployeeAccess();
 
   if (!isAdmin) return null;
@@ -851,38 +849,26 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
 
   const openEditEmployee = (employee: EmployeeAccess) => {
     setEmployeeForEdit(employee);
-    setEditRole(employee.role);
-    setEditActive(employee.active);
-    setEditPassword("");
-    setEditPasswordConfirmation("");
+    setEditName(employee.displayName);
   };
 
   const closeEditEmployee = () => {
     setEmployeeForEdit(null);
-    setEditPassword("");
-    setEditPasswordConfirmation("");
+    setEditName("");
   };
 
   const handleEditEmployee = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!employeeForEdit) return;
-    if (editPassword && editPassword.length < 8) {
-      toast.error("Password must be at least 8 characters.");
-      return;
-    }
-    if (editPassword !== editPasswordConfirmation) {
-      toast.error("Passwords do not match.");
+    if (!editName.trim()) {
+      toast.error("Employee name cannot be blank.");
       return;
     }
 
     updateEmployee.mutate(
       {
         id: employeeForEdit.id,
-        data: {
-          active: editActive,
-          role: editRole,
-          ...(editPassword ? { password: editPassword } : {}),
-        },
+        data: { name: editName.trim() },
       },
       {
         onSuccess: () => {
@@ -896,23 +882,62 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
     );
   };
 
-  const handleDeleteEmployee = () => {
-    if (!employeeToDelete) return;
-    deleteEmployee.mutate(
-      { id: employeeToDelete.id },
+  const updateAccess = (employee: EmployeeAccess, active: boolean) => {
+    updateEmployee.mutate(
+      { id: employee.id, data: { active } },
       {
         onSuccess: () => {
-          toast.success("Employee access deleted");
-          setEmployeeToDelete(null);
-          setEmployeeForEdit(null);
+          toast.success(active ? "Access activated" : "Access deactivated");
+          setEmployeeToDeactivate(null);
+          invalidateAccess();
+        },
+        onError: () => toast.error("Could not update employee access. Try again."),
+      },
+    );
+  };
+
+  const updateRole = (employee: EmployeeAccess, role: UserRole) => {
+    updateEmployee.mutate(
+      { id: employee.id, data: { role } },
+      {
+        onSuccess: () => {
+          toast.success(`${employeeRoleLabel(role)} access assigned`);
           invalidateAccess();
         },
         onError: (error) =>
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : "Could not delete employee access. Try again.",
-          ),
+          toast.error(error instanceof Error ? error.message : "Could not update employee role."),
+      },
+    );
+  };
+
+  const closePasswordDialog = () => {
+    setEmployeeForPassword(null);
+    setPassword("");
+    setPasswordConfirmation("");
+  };
+
+  const handlePasswordSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (password.length < 8) {
+      toast.error("Password must be at least 8 characters.");
+      return;
+    }
+    if (password !== passwordConfirmation) {
+      toast.error("Passwords do not match.");
+      return;
+    }
+    if (!employeeForPassword) return;
+
+    updateEmployee.mutate(
+      { id: employeeForPassword.id, data: { password } },
+      {
+        onSuccess: () => {
+          toast.success(employeeForPassword.passwordSet ? "Password changed" : "Password set");
+          closePasswordDialog();
+          invalidateAccess();
+        },
+        onError: (error) =>
+          toast.error(error instanceof Error ? error.message : "Could not update password."),
       },
     );
   };
@@ -1045,9 +1070,43 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="col-span-2 h-8 w-full whitespace-normal px-2 text-[10px]"
+                                className="h-8 w-full whitespace-normal px-2 text-[10px]"
+                                onClick={() => {
+                                  setEmployeeForPassword(employee);
+                                  setPassword("");
+                                  setPasswordConfirmation("");
+                                }}
+                                disabled={updateEmployee.isPending}
+                              >
+                                <KeyRound className="mr-1.5 h-3.5 w-3.5" />
+                                {employee.passwordSet ? "Change password" : "Set password"}
+                              </Button>
+                              <select
+                                aria-label={`Role for ${employee.displayName}`}
+                                className="h-8 min-w-0 w-full rounded-md border border-input bg-background px-1.5 text-[10px]"
+                                value={employee.role}
+                                onChange={(event) => updateRole(employee, event.target.value as UserRole)}
+                                disabled={updateEmployee.isPending}
+                              >
+                                {employeeRoleOptions.map((option) => (
+                                  <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
+                              </select>
+                              {employee.active ? (
+                                <Button variant="outline" size="sm" className="h-8 w-full whitespace-normal px-2 text-[10px]" onClick={() => setEmployeeToDeactivate(employee)}>
+                                  Deactivate access
+                                </Button>
+                              ) : (
+                                <Button variant="outline" size="sm" className="h-8 w-full whitespace-normal px-2 text-[10px]" onClick={() => updateAccess(employee, true)} disabled={updateEmployee.isPending}>
+                                  Activate access
+                                </Button>
+                              )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 w-full whitespace-normal px-2 text-[10px]"
                                 onClick={() => openEditEmployee(employee)}
-                                disabled={updateEmployee.isPending || deleteEmployee.isPending}
+                                disabled={updateEmployee.isPending}
                               >
                                 <Edit2 className="mr-1.5 h-3.5 w-3.5" />
                                 Edit
@@ -1082,9 +1141,45 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
                         {employee.passwordSet ? "Password set" : "Password not set"}
                       </Badge>
                       <div className="mt-3 grid gap-2">
-                         <Button className="w-full" variant="outline" onClick={() => openEditEmployee(employee)} disabled={updateEmployee.isPending || deleteEmployee.isPending}>
+                         <Button
+                           className="w-full"
+                           variant="outline"
+                           onClick={() => {
+                             setEmployeeForPassword(employee);
+                             setPassword("");
+                             setPasswordConfirmation("");
+                           }}
+                           disabled={updateEmployee.isPending}
+                         >
+                           <KeyRound className="mr-2 h-4 w-4" />
+                           {employee.passwordSet ? "Change password" : "Set password"}
+                         </Button>
+                         <label className="space-y-1 text-left text-sm font-medium">
+                           Role
+                           <select
+                             aria-label={`Role for ${employee.displayName}`}
+                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                             value={employee.role}
+                             onChange={(event) => updateRole(employee, event.target.value as UserRole)}
+                             disabled={updateEmployee.isPending}
+                           >
+                             {employeeRoleOptions.map((option) => (
+                               <option key={option.value} value={option.value}>{option.label}</option>
+                             ))}
+                           </select>
+                         </label>
+                         {employee.active ? (
+                           <Button className="w-full" variant="outline" onClick={() => setEmployeeToDeactivate(employee)}>
+                             Deactivate access
+                           </Button>
+                         ) : (
+                           <Button className="w-full" variant="outline" onClick={() => updateAccess(employee, true)} disabled={updateEmployee.isPending}>
+                             Activate access
+                           </Button>
+                         )}
+                         <Button className="w-full" variant="outline" onClick={() => openEditEmployee(employee)} disabled={updateEmployee.isPending}>
                            <Edit2 className="mr-2 h-4 w-4" />
-                           Edit employee access
+                           Edit
                          </Button>
                       </div>
                     </div>
@@ -1155,82 +1250,26 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
         <DialogContent className="w-[calc(100%-2rem)] sm:max-w-md">
           <form onSubmit={handleEditEmployee}>
             <DialogHeader>
-              <DialogTitle>Edit employee access</DialogTitle>
+              <DialogTitle>Edit employee name</DialogTitle>
               <DialogDescription>
-                Update the access role, account status, or password for employee ID {employeeForEdit?.employeeId}.
+                Update the name shown for employee ID {employeeForEdit?.employeeId}.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <label htmlFor="edit-employee-role" className="text-sm font-medium">Access role</label>
-                <select
-                  id="edit-employee-role"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={editRole}
-                  onChange={(event) => setEditRole(event.target.value as UserRole)}
-                >
-                  {employeeRoleOptions.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="edit-employee-status" className="text-sm font-medium">Access status</label>
-                <select
-                  id="edit-employee-status"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={editActive ? "active" : "inactive"}
-                  onChange={(event) => setEditActive(event.target.value === "active")}
-                >
-                  <option value="active">Active — can sign in</option>
-                  <option value="inactive">Inactive — sign-in blocked</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="edit-employee-password" className="text-sm font-medium">New password (optional)</label>
-                <Input
-                  id="edit-employee-password"
-                  type="password"
-                  autoComplete="new-password"
-                  minLength={editPassword ? 8 : undefined}
-                  value={editPassword}
-                  onChange={(event) => setEditPassword(event.target.value)}
-                  placeholder={employeeForEdit?.passwordSet ? "Leave blank to keep current password" : "At least 8 characters"}
-                  autoFocus
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="edit-employee-password-confirmation" className="text-sm font-medium">Confirm new password</label>
-                <Input
-                  id="edit-employee-password-confirmation"
-                  type="password"
-                  autoComplete="new-password"
-                  minLength={editPasswordConfirmation ? 8 : undefined}
-                  value={editPasswordConfirmation}
-                  onChange={(event) => setEditPasswordConfirmation(event.target.value)}
-                  placeholder="Re-enter password"
-                />
-              </div>
+            <div className="space-y-2 py-4">
+              <label htmlFor="edit-employee-name" className="text-sm font-medium">Employee name</label>
+              <Input
+                id="edit-employee-name"
+                placeholder="Enter employee name"
+                value={editName}
+                onChange={(event) => setEditName(event.target.value)}
+                autoFocus
+                required
+              />
             </div>
             <DialogFooter>
-              <Button
-                type="button"
-                variant="ghost"
-                className="mr-auto text-destructive hover:text-destructive"
-                onClick={() => {
-                  if (employeeForEdit) {
-                    setEmployeeToDelete(employeeForEdit);
-                    closeEditEmployee();
-                  }
-                }}
-                disabled={deleteEmployee.isPending}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete access
-              </Button>
               <Button type="button" variant="outline" onClick={closeEditEmployee}>Cancel</Button>
-              <Button type="submit" disabled={updateEmployee.isPending || Boolean(editPassword && (editPassword.length < 8 || editPassword !== editPasswordConfirmation))}>
-                Save changes
+              <Button type="submit" disabled={updateEmployee.isPending || !editName.trim()}>
+                Save name
               </Button>
             </DialogFooter>
           </form>
@@ -1238,27 +1277,77 @@ function EmployeeAccessSection({ isAdmin }: { isAdmin: boolean }) {
       </Dialog>
 
       <Dialog
-        open={employeeToDelete !== null}
-        onOpenChange={(open) => { if (!open) setEmployeeToDelete(null); }}
+        open={employeeForPassword !== null}
+        onOpenChange={(open) => { if (!open) closePasswordDialog(); }}
+      >
+        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-md">
+          <form onSubmit={handlePasswordSubmit}>
+            <DialogHeader>
+              <DialogTitle>{employeeForPassword?.passwordSet ? "Change password" : "Set password"}</DialogTitle>
+              <DialogDescription>
+                Set the sign-in password for employee ID {employeeForPassword?.employeeId}.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label htmlFor="employee-password" className="text-sm font-medium">Password</label>
+                <Input
+                  id="employee-password"
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={8}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="At least 8 characters"
+                  autoFocus
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="employee-password-confirmation" className="text-sm font-medium">Confirm password</label>
+                <Input
+                  id="employee-password-confirmation"
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={8}
+                  value={passwordConfirmation}
+                  onChange={(event) => setPasswordConfirmation(event.target.value)}
+                  placeholder="Re-enter password"
+                  required
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={closePasswordDialog}>Cancel</Button>
+              <Button type="submit" disabled={updateEmployee.isPending || password.length < 8 || password !== passwordConfirmation}>
+                Save password
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={employeeToDeactivate !== null}
+        onOpenChange={(open) => { if (!open) setEmployeeToDeactivate(null); }}
       >
         <DialogContent className="w-[calc(100%-2rem)] sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete access for employee ID {employeeToDelete?.employeeId}?</DialogTitle>
+            <DialogTitle>Deactivate employee access?</DialogTitle>
             <DialogDescription>
-              This removes the employee from the approved access list. They can be added again later if needed.
+              Employee ID {employeeToDeactivate?.employeeId} will remain registered but will not be able to sign in.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEmployeeToDelete(null)}>
+            <Button variant="outline" onClick={() => setEmployeeToDeactivate(null)}>
               Cancel
             </Button>
             <Button
               variant="destructive"
-              onClick={handleDeleteEmployee}
-              disabled={deleteEmployee.isPending}
+              onClick={() => employeeToDeactivate && updateAccess(employeeToDeactivate, false)}
+              disabled={updateEmployee.isPending}
             >
-              <Trash2 className="mr-2 h-4 w-4" />
-              {deleteEmployee.isPending ? "Deleting..." : "Delete access"}
+              Deactivate access
             </Button>
           </DialogFooter>
         </DialogContent>

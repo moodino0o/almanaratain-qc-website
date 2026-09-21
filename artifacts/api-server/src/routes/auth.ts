@@ -190,6 +190,7 @@ router.get(
         firstName: usersTable.firstName,
         lastName: usersTable.lastName,
         passwordHash: employeeDirectoryTable.passwordHash,
+        directoryName: employeeDirectoryTable.name,
       })
       .from(employeeAccessTable)
       .leftJoin(
@@ -207,10 +208,10 @@ router.get(
 
     res.json(
       GetEmployeeAccessResponse.parse({
-        employees: rows.map(({ entry, firstName, lastName, passwordHash }) =>
+        employees: rows.map(({ entry, firstName, lastName, passwordHash, directoryName }) =>
           employeeAccessResponse(
             entry,
-            [firstName, lastName].filter(Boolean).join(' ') || null,
+              [firstName, lastName].filter(Boolean).join(' ') || directoryName || null,
             Boolean(passwordHash),
           ),
         ),
@@ -322,9 +323,17 @@ router.patch(
       (parsedBody.data.active === undefined &&
         parsedBody.data.administrator === undefined &&
         parsedBody.data.role === undefined &&
-        parsedBody.data.password === undefined)
+        parsedBody.data.password === undefined &&
+        parsedBody.data.name === undefined)
     ) {
       res.status(400).json({ error: 'Invalid employee access update.' });
+      return;
+    }
+    const normalizedName = parsedBody.success && parsedBody.data.name !== undefined
+      ? parsedBody.data.name.trim()
+      : undefined;
+    if (parsedBody.success && parsedBody.data.name !== undefined && !normalizedName) {
+      res.status(400).json({ error: 'Employee name cannot be blank.' });
       return;
     }
 
@@ -394,13 +403,16 @@ router.patch(
       return;
     }
 
-    const [user] = await db
-      .select({
-        firstName: usersTable.firstName,
-        lastName: usersTable.lastName,
-      })
-      .from(usersTable)
-      .where(eq(usersTable.id, `employee:${entry.employeeId}`));
+    if (normalizedName !== undefined) {
+      await db
+        .update(employeeDirectoryTable)
+        .set({ name: normalizedName, updatedAt: new Date() })
+        .where(eq(employeeDirectoryTable.employeeId, entry.employeeId));
+      await db
+        .update(usersTable)
+        .set({ firstName: normalizedName, lastName: null, updatedAt: new Date() })
+        .where(eq(usersTable.id, `employee:${entry.employeeId}`));
+    }
 
     if (parsedBody.data.password !== undefined) {
       await db
@@ -413,15 +425,27 @@ router.patch(
     }
 
     const [directoryEmployee] = await db
-      .select({ passwordHash: employeeDirectoryTable.passwordHash })
+      .select({
+        name: employeeDirectoryTable.name,
+        passwordHash: employeeDirectoryTable.passwordHash,
+      })
       .from(employeeDirectoryTable)
       .where(eq(employeeDirectoryTable.employeeId, entry.employeeId));
+    const [user] = await db
+      .select({
+        firstName: usersTable.firstName,
+        lastName: usersTable.lastName,
+      })
+      .from(usersTable)
+      .where(eq(usersTable.id, `employee:${entry.employeeId}`));
 
     res.json(
       UpdateEmployeeAccessResponse.parse(
         employeeAccessResponse(
           entry,
-          [user?.firstName, user?.lastName].filter(Boolean).join(' ') || null,
+          [user?.firstName, user?.lastName].filter(Boolean).join(' ') ||
+            directoryEmployee?.name ||
+            null,
           Boolean(directoryEmployee?.passwordHash),
         ),
       ),
