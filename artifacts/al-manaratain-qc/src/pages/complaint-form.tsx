@@ -19,9 +19,25 @@ function dateOnly(value: string) {
 }
 
 function uploadFile(url: string, file: File) {
-  return fetch(url, { method: "PUT", headers: { "Content-Type": file.type || "application/octet-stream" }, body: file }).then((response) => {
-    if (!response.ok) throw new Error("Picture upload failed");
+  return new Promise<void>((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open("PUT", url);
+    request.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+    request.onload = () => {
+      if (request.status >= 200 && request.status < 300) {
+        resolve();
+      } else {
+        reject(new Error(`Storage upload failed (${request.status})`));
+      }
+    };
+    request.onerror = () => reject(new Error("Storage upload failed. Check the connection and try again."));
+    request.onabort = () => reject(new Error("Storage upload was cancelled."));
+    request.send(file);
   });
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error && error.message ? error.message : "Storage upload failed.";
 }
 
 export default function ComplaintForm() {
@@ -102,20 +118,44 @@ export default function ComplaintForm() {
   async function addPictures(files: FileList | null) {
     if (!files?.length) return;
     setUploading(true);
+    const failed: string[] = [];
+    let uploadedCount = 0;
     try {
-      const uploaded: ComplaintPicture[] = [];
       for (const file of Array.from(files)) {
         if (!file.type.startsWith("image/") || file.size > maxPictureSize) {
-          toast.error(`${file.name} must be an image smaller than 10 MB.`);
+          failed.push(`${file.name}: choose an image smaller than 10 MB.`);
           continue;
         }
-        const signed = await requestUrl.mutateAsync({ data: { name: file.name, size: file.size, contentType: file.type || "application/octet-stream", purpose: "complaint" } });
-        await uploadFile(signed.uploadURL, file);
-        uploaded.push({ objectPath: signed.objectPath, originalName: file.name, mimeType: file.type, size: file.size });
+        try {
+          const signed = await requestUrl.mutateAsync({
+            data: {
+              name: file.name,
+              size: file.size,
+              contentType: file.type || "application/octet-stream",
+              purpose: "complaint",
+            },
+          });
+          await uploadFile(signed.uploadURL, file);
+          setPictures((current) => [
+            ...current,
+            {
+              objectPath: signed.objectPath,
+              originalName: file.name,
+              mimeType: file.type || "application/octet-stream",
+              size: file.size,
+            },
+          ]);
+          uploadedCount += 1;
+        } catch (error) {
+          failed.push(`${file.name}: ${errorMessage(error)}`);
+        }
       }
-      setPictures((current) => [...current, ...uploaded]);
-    } catch {
-      toast.error("One or more pictures could not be uploaded.");
+      if (uploadedCount > 0) {
+        toast.success(`${uploadedCount} picture${uploadedCount === 1 ? "" : "s"} attached.`);
+      }
+      if (failed.length > 0) {
+        toast.error(failed.length === 1 ? failed[0] : `${failed.length} pictures could not be attached.`);
+      }
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
