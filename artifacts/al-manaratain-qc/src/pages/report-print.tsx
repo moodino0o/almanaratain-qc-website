@@ -329,6 +329,13 @@ function BlockCompressionRowsTable({
     value === null ? "-" : formatNumber(value, digits);
   return (
     <>
+      <div className="block-report-section-heading">
+        <div>
+          <span>Specimen results</span>
+          <small>Measured values for each tested block</small>
+        </div>
+        <small>Values in N/mm² unless stated</small>
+      </div>
       <div className="block-report-table-wrap">
         <table className="report-table block-report-table">
           <thead>
@@ -371,20 +378,26 @@ function BlockCompressionRowsTable({
           </tbody>
         </table>
       </div>
+      <div className="block-report-section-heading block-report-statistics-heading">
+        <div>
+          <span>Summary statistics</span>
+          <small>Air Dry strength</small>
+        </div>
+      </div>
       <div className="block-report-statistics">
         <div>
           <strong>Maximum</strong>
-          <span>Dry Air Strength</span>
+          <span>Air Dry Strength</span>
           <b>{displayNumber(airDrySummary.maximum)}</b>
         </div>
         <div>
           <strong>Minimum</strong>
-          <span>Dry Air Strength</span>
+          <span>Air Dry Strength</span>
           <b>{displayNumber(airDrySummary.minimum)}</b>
         </div>
         <div>
           <strong>Stan.Dev.</strong>
-          <span>Dry Air Strength</span>
+          <span>Air Dry Strength</span>
           <b>{displayNumber(airDrySummary.standardDeviation)}</b>
         </div>
       </div>
@@ -951,13 +964,22 @@ function BlocksReport({
       : "REVIEW";
   return (
     <div className="block-compression-report">
+      <div className="block-report-section-heading">
+        <div>
+          <span>Test details</span>
+          <small>Identification, dates and test conditions</small>
+        </div>
+        <strong className={useDryStrength ? "block-report-air-dry-note" : undefined}>
+          {useDryStrength ? "Dammam: Air Dry compliance basis" : "Water strength compliance basis"}
+        </strong>
+      </div>
       <div className="block-report-fields">
         <ReportFields
           entries={[
             ["BLOCK SIZE:", detailValue(details, ["blockSize"])],
             ["CASTING DATE:", formatReportDate(record.sampleDate)],
             ["TESTING DATE:", formatReportDate(testingDate)],
-            ["SP. Strength (N/mm2):", requiredStrength === null ? "-" : formatNumber(requiredStrength)],
+            ["Sp. Strength (N/mm²):", requiredStrength === null ? "-" : formatNumber(requiredStrength)],
             ["Factory:", record.location],
             ["STRENGTH BASIS:", useDryStrength ? "AIR DRY STRENGTH" : "WATER STRENGTH"],
           ]}
@@ -986,7 +1008,8 @@ function BlocksReport({
       </div>
       <BlockCompressionRowsTable rows={testRows} useDryStrength={useDryStrength} />
       <div className={`block-report-result ${compliance.toLocaleLowerCase()}`}>
-        {complianceLabel}
+        <span>Overall result</span>
+        <strong>{complianceLabel}</strong>
       </div>
     </div>
   );
