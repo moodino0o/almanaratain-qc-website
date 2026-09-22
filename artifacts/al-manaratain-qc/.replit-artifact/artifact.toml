@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Al Manaratain Quality Control"
+description = "A browser-based quality control management system for Al Manaratain, bringing the existing Access workflows into searchable data entry forms, test records, dashboards, and print-ready reports."
+version = "1.0.0"
+id = "artifacts/al-manaratain-qc"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18364
+
+[services.development]
+run = "pnpm --filter @workspace/al-manaratain-qc run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/al-manaratain-qc", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/al-manaratain-qc/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18364"
+BASE_PATH = "/"

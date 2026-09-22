@@ -1,0 +1,1948 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: qc
+    description: Quality control operations
+  - name: Auth
+    description: Browser and mobile authentication endpoints.
+  - name: Storage
+    description: Object storage upload and serving endpoints.
+  - name: Archive
+    description: Private quality control document archive.
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [qc]
+      summary: Get QC dashboard summary
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+  /lookups:
+    get:
+      operationId: getLookups
+      tags: [qc]
+      summary: Get quality control lookup values
+      responses:
+        "200":
+          description: Lookup values
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lookups"
+  /auth/user:
+    get:
+      tags: [Auth]
+      operationId: getCurrentAuthUser
+      summary: Get the currently authenticated user
+      responses:
+        "200":
+          description: Auth status resolved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUserEnvelope"
+  /auth/employee-access:
+    get:
+      tags: [Auth]
+      operationId: getEmployeeAccess
+      summary: List approved employee access entries
+      responses:
+        "200":
+          description: Approved employee access entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeAccessList"
+        "401":
+          description: Authentication required
+        "403":
+          description: Administrator access required
+    post:
+      tags: [Auth]
+      operationId: createEmployeeAccess
+      summary: Add a new employee to the approved access list
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeAccessInput"
+      responses:
+        "201":
+          description: Employee access entry added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeAccess"
+        "400":
+          description: Invalid employee ID
+        "401":
+          description: Authentication required
+        "403":
+          description: Administrator access required
+  /auth/employee-access/{id}:
+    patch:
+      tags: [Auth]
+      operationId: updateEmployeeAccess
+      summary: Activate or deactivate an employee access entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeAccessUpdate"
+      responses:
+        "200":
+          description: Employee access entry updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeAccess"
+        "400":
+          description: Invalid employee access update
+        "401":
+          description: Authentication required
+        "403":
+          description: Administrator access required
+        "404":
+          description: Employee access entry not found
+    delete:
+      tags: [Auth]
+      operationId: deleteEmployeeAccess
+      summary: Remove an employee access entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Employee access entry removed
+        "400":
+          description: Invalid employee access entry or administrator safeguard
+        "401":
+          description: Authentication required
+        "403":
+          description: Administrator access required
+        "404":
+          description: Employee access entry not found
+  /login:
+    get:
+      tags: [Auth]
+      operationId: beginBrowserLogin
+      summary: Start the browser login flow
+      parameters:
+        - name: returnTo
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect to the authorization endpoint
+  /callback:
+    get:
+      tags: [Auth]
+      operationId: handleBrowserLoginCallback
+      summary: Complete the browser login flow
+      responses:
+        "302":
+          description: Redirect to the requested application path
+  /logout:
+    get:
+      tags: [Auth]
+      operationId: logoutBrowserSession
+      summary: Clear the browser session
+      parameters:
+        - name: returnTo
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect after logout
+  /mobile-auth/token-exchange:
+    post:
+      tags: [Auth]
+      operationId: exchangeMobileAuthorizationCode
+      summary: Exchange a mobile authorization code for a session token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MobileTokenExchangeRequest"
+      responses:
+        "200":
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MobileTokenExchangeSuccess"
+  /mobile-auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logoutMobileSession
+      summary: Delete a mobile session token
+      responses:
+        "200":
+          description: Session deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogoutSuccess"
+  /storage/uploads/request-url:
+    post:
+      tags: [Storage]
+      operationId: requestUploadUrl
+      summary: Request a private presigned upload URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadUrlRequest"
+      responses:
+        "200":
+          description: Presigned upload URL generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadUrlResponse"
+        "400":
+          description: Invalid file metadata
+        "401":
+          description: Authentication required
+  /storage/objects/{objectPath}:
+    get:
+      tags: [Storage]
+      operationId: getStorageObject
+      summary: Serve a private stored object
+      parameters:
+        - name: objectPath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Object content
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Authentication required
+        "404":
+          description: Object not found
+  /archive:
+    get:
+      tags: [Archive]
+      operationId: listArchive
+      summary: List the private document archive
+      responses:
+        "200":
+          description: Archive folders and documents
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArchiveResponse"
+        "401":
+          description: Authentication required
+  /archive/documents:
+    post:
+      tags: [Archive]
+      operationId: createArchiveDocument
+      summary: Save uploaded document metadata
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ArchiveDocumentInput"
+      responses:
+        "201":
+          description: Document metadata saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArchiveDocument"
+        "400":
+          description: Invalid document metadata
+        "401":
+          description: Authentication required
+  /archive/documents/{id}:
+    get:
+      tags: [Archive]
+      operationId: getArchiveDocument
+      summary: Get one archived document
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "200":
+          description: Archived document
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArchiveDocument"
+        "401":
+          description: Authentication required
+        "404":
+          description: Document not found
+    patch:
+      tags: [Archive]
+      operationId: updateArchiveDocument
+      summary: Update archived document metadata
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ArchiveDocumentUpdate"
+      responses:
+        "200":
+          description: Updated archived document
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArchiveDocument"
+        "400":
+          description: Invalid document metadata
+        "401":
+          description: Authentication required
+        "404":
+          description: Document not found
+    delete:
+      tags: [Archive]
+      operationId: retireArchiveDocument
+      summary: Retire an archived document and remove its stored file
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "204":
+          description: Document retired
+        "401":
+          description: Authentication required
+        "403":
+          description: Archive manager access required
+        "404":
+          description: Document not found
+        "500":
+          description: Unable to clean up the stored file or metadata
+  /archive/documents/{id}/content:
+    get:
+      tags: [Archive]
+      operationId: getArchiveDocumentContent
+      summary: Review or download an archived document
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "200":
+          description: Original document content
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Authentication required
+        "404":
+          description: Document not found
+  /archive/documents/{id}/download:
+    get:
+      tags: [Archive]
+      operationId: downloadArchiveDocument
+      summary: Download an archived document
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "200":
+          description: Original document download
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Authentication required
+        "404":
+          description: Document not found
+  /reference-data:
+    get:
+      operationId: getReferenceData
+      tags: [qc]
+      summary: List editable quality control reference data
+      responses:
+        "200":
+          description: Reference categories and values
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferenceData"
+  /reference-data/categories:
+    post:
+      operationId: createReferenceCategory
+      tags: [qc]
+      summary: Create a reference data category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReferenceCategoryInput"
+      responses:
+        "201":
+          description: Created category
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferenceCategory"
+  /reference-data/categories/{id}:
+    patch:
+      operationId: updateReferenceCategory
+      tags: [qc]
+      summary: Update a reference data category
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReferenceCategoryUpdate"
+      responses:
+        "200":
+          description: Updated category
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferenceCategory"
+    delete:
+      operationId: deleteReferenceCategory
+      tags: [qc]
+      summary: Delete a reference data category
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "204":
+          description: Category deleted
+  /reference-data/categories/{categoryId}/items:
+    post:
+      operationId: createReferenceItem
+      tags: [qc]
+      summary: Add a value to a reference data category
+      parameters:
+        - $ref: "#/components/parameters/CategoryIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReferenceItemInput"
+      responses:
+        "201":
+          description: Created reference value
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferenceItem"
+  /reference-data/items/{id}:
+    patch:
+      operationId: updateReferenceItem
+      tags: [qc]
+      summary: Update a reference data value
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReferenceItemInput"
+      responses:
+        "200":
+          description: Updated reference value
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferenceItem"
+    delete:
+      operationId: deleteReferenceItem
+      tags: [qc]
+      summary: Delete a reference data value
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "204":
+          description: Reference value deleted
+  /strength-standards:
+    get:
+      operationId: listStrengthStandards
+      tags: [qc]
+      summary: List configurable compressive strength standards
+      responses:
+        "200":
+          description: Configured strength standards
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StrengthStandard"
+    post:
+      operationId: createStrengthStandard
+      tags: [qc]
+      summary: Create a compressive strength standard
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StrengthStandardInput"
+      responses:
+        "201":
+          description: Created strength standard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StrengthStandard"
+  /strength-standards/{id}:
+    patch:
+      operationId: updateStrengthStandard
+      tags: [qc]
+      summary: Update a compressive strength standard
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StrengthStandardUpdate"
+      responses:
+        "200":
+          description: Updated strength standard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StrengthStandard"
+    delete:
+      operationId: deleteStrengthStandard
+      tags: [qc]
+      summary: Delete a compressive strength standard
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "204":
+          description: Strength standard deleted
+  /sieve-standards:
+    get:
+      operationId: listSieveStandards
+      tags: [qc]
+      summary: List configurable sieve acceptance standards
+      responses:
+        "200":
+          description: Configured sieve standards
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SieveStandard"
+    post:
+      operationId: createSieveStandard
+      tags: [qc]
+      summary: Create a sieve acceptance standard
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SieveStandardInput"
+      responses:
+        "201":
+          description: Created sieve standard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SieveStandard"
+  /sieve-standards/{id}:
+    patch:
+      operationId: updateSieveStandard
+      tags: [qc]
+      summary: Update a sieve acceptance standard
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SieveStandardUpdate"
+      responses:
+        "200":
+          description: Updated sieve standard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SieveStandard"
+    delete:
+      operationId: deleteSieveStandard
+      tags: [qc]
+      summary: Delete a sieve acceptance standard
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "204":
+          description: Sieve standard deleted
+  /records:
+    get:
+      operationId: listRecords
+      tags: [qc]
+      summary: List quality control records
+      parameters:
+        - $ref: "#/components/parameters/TestTypeParam"
+        - $ref: "#/components/parameters/SearchParam"
+        - $ref: "#/components/parameters/LimitParam"
+      responses:
+        "200":
+          description: Quality control records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QcRecord"
+    post:
+      operationId: createRecord
+      tags: [qc]
+      summary: Create a quality control record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QcRecordInput"
+      responses:
+        "201":
+          description: Created record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QcRecord"
+  /daily-ready-mix-results:
+    get:
+      operationId: getDailyReadyMixResults
+      tags: [qc]
+      summary: Get daily Ready Mix strength results
+      parameters:
+        - name: testingDate
+          in: query
+          required: true
+          schema:
+            type: string
+            description: Testing date in YYYY-MM-DD format
+        - name: mixDesign
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: referenceType
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/DailyReadyMixReferenceType"
+      responses:
+        "200":
+          description: Daily Ready Mix strength results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyReadyMixResults"
+  /records/{id}:
+    get:
+      operationId: getRecord
+      tags: [qc]
+      summary: Get one quality control record
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "200":
+          description: Quality control record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QcRecord"
+        "404":
+          description: Record not found
+    patch:
+      operationId: updateRecord
+      tags: [qc]
+      summary: Update a quality control record
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QcRecordUpdate"
+      responses:
+        "200":
+          description: Updated record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QcRecord"
+    delete:
+      operationId: deleteRecord
+      tags: [qc]
+      summary: Delete a quality control record
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "204":
+          description: Record deleted
+  /complaints:
+    get:
+      operationId: listComplaints
+      tags: [qc]
+      summary: List customer complaints
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: complaintType
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: materialType
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Customer complaints
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Complaint"
+    post:
+      operationId: createComplaint
+      tags: [qc]
+      summary: Create a customer complaint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComplaintInput"
+      responses:
+        "201":
+          description: Created customer complaint
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Complaint"
+  /complaints/{id}:
+    get:
+      operationId: getComplaint
+      tags: [qc]
+      summary: Get one customer complaint
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "200":
+          description: Customer complaint
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Complaint"
+        "404":
+          description: Complaint not found
+    patch:
+      operationId: updateComplaint
+      tags: [qc]
+      summary: Update a customer complaint
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComplaintUpdate"
+      responses:
+        "200":
+          description: Updated customer complaint
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Complaint"
+        "404":
+          description: Complaint not found
+    delete:
+      operationId: deleteComplaint
+      tags: [qc]
+      summary: Delete a customer complaint
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "204":
+          description: Complaint deleted
+  /reports/{id}:
+    get:
+      operationId: getReport
+      tags: [qc]
+      summary: Get a print-ready report record
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "200":
+          description: Print-ready quality control report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+components:
+  parameters:
+    RecordIdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: number
+    TestTypeParam:
+      name: testType
+      in: query
+      schema:
+        $ref: "#/components/schemas/TestType"
+    SearchParam:
+      name: search
+      in: query
+      schema:
+        type: string
+    LimitParam:
+      name: limit
+      in: query
+      schema:
+        type: number
+        minimum: 1
+        maximum: 100
+        default: 50
+    CategoryIdParam:
+      name: categoryId
+      in: path
+      required: true
+      schema:
+        type: number
+    AuthorizationSessionHeader:
+      name: Authorization
+      in: header
+      required: false
+      schema:
+        type: string
+    SessionCookie:
+      name: sid
+      in: cookie
+      required: false
+      schema:
+        type: string
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    TestType:
+      type: string
+      enum:
+        - Ready Mix
+        - Blocks
+        - Paving Blocks
+        - Sand Sieve
+        - Aggregate Sieve
+        - Water
+        - Flakiness & Elongation
+        - RMX Trial
+    RecordStatus:
+      type: string
+      enum:
+        - Passed
+        - Review
+        - Failed
+    QcRecord:
+      type: object
+      required:
+        - id
+        - recordNo
+        - testType
+        - sampleDate
+        - location
+        - material
+        - status
+        - testedBy
+        - details
+      properties:
+        id:
+          type: number
+        recordNo:
+          type: string
+        testType:
+          $ref: "#/components/schemas/TestType"
+        sampleDate:
+          type: string
+          format: date
+        location:
+          type: string
+        material:
+          type: string
+        status:
+          $ref: "#/components/schemas/RecordStatus"
+        testedBy:
+          type: string
+        reviewedBy:
+          type: ["string", "null"]
+        remarks:
+          type: ["string", "null"]
+        details:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+    QcRecordInput:
+      type: object
+      required:
+        - testType
+        - sampleDate
+        - location
+        - material
+        - status
+        - testedBy
+        - details
+      properties:
+        testType:
+          $ref: "#/components/schemas/TestType"
+        sampleDate:
+          type: string
+          format: date
+        location:
+          type: string
+          minLength: 1
+        material:
+          type: string
+          minLength: 1
+        status:
+          $ref: "#/components/schemas/RecordStatus"
+        testedBy:
+          type: string
+          minLength: 1
+        reviewedBy:
+          type: ["string", "null"]
+        remarks:
+          type: ["string", "null"]
+        details:
+          type: object
+          additionalProperties: true
+    QcRecordUpdate:
+      type: object
+      properties:
+        testType:
+          $ref: "#/components/schemas/TestType"
+        sampleDate:
+          type: string
+          format: date
+        location:
+          type: string
+        material:
+          type: string
+        status:
+          $ref: "#/components/schemas/RecordStatus"
+        testedBy:
+          type: string
+        reviewedBy:
+          type: ["string", "null"]
+        remarks:
+          type: ["string", "null"]
+        details:
+          type: object
+          additionalProperties: true
+    ComplaintPicture:
+      type: object
+      required: [objectPath, originalName, mimeType, size]
+      properties:
+        objectPath:
+          type: string
+          minLength: 1
+        originalName:
+          type: string
+          minLength: 1
+        mimeType:
+          type: string
+          minLength: 1
+        size:
+          type: number
+          minimum: 1
+    Complaint:
+      type: object
+      required:
+        - id
+        - complaintNo
+        - customerName
+        - deliveryDate
+        - complaintType
+        - materialType
+        - details
+        - solution
+        - recommendation
+        - status
+        - picturePaths
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: number
+        complaintNo:
+          type: string
+        customerName:
+          type: string
+        deliveryDate:
+          type: string
+          format: date
+        complaintType:
+          type: string
+        materialType:
+          type: string
+        details:
+          type: string
+        solution:
+          type: string
+        recommendation:
+          type: string
+        status:
+          type: string
+          enum: [open, complete]
+        picturePaths:
+          type: array
+          items:
+            $ref: "#/components/schemas/ComplaintPicture"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ComplaintInput:
+      type: object
+      required:
+        - customerName
+        - deliveryDate
+        - complaintType
+        - materialType
+        - details
+      properties:
+        customerName:
+          type: string
+          minLength: 1
+        deliveryDate:
+          type: string
+          format: date
+        complaintType:
+          type: string
+          minLength: 1
+        materialType:
+          type: string
+          minLength: 1
+        details:
+          type: string
+          minLength: 1
+        solution:
+          type: string
+          default: ""
+        recommendation:
+          type: string
+          default: ""
+        picturePaths:
+          type: array
+          items:
+            $ref: "#/components/schemas/ComplaintPicture"
+          default: []
+    ComplaintUpdate:
+      type: object
+      properties:
+        customerName:
+          type: string
+          minLength: 1
+        deliveryDate:
+          type: string
+          format: date
+        complaintType:
+          type: string
+          minLength: 1
+        materialType:
+          type: string
+          minLength: 1
+        details:
+          type: string
+          minLength: 1
+        solution:
+          type: string
+        recommendation:
+          type: string
+        status:
+          type: string
+          enum: [open, complete]
+        picturePaths:
+          type: array
+          items:
+            $ref: "#/components/schemas/ComplaintPicture"
+    Dashboard:
+      type: object
+      required:
+        - totalRecords
+        - passedRecords
+        - reviewRecords
+        - failedRecords
+        - recordsThisMonth
+        - totalComplaints
+        - solvedComplaints
+        - openComplaints
+        - byType
+        - recentRecords
+      properties:
+        totalRecords:
+          type: number
+        passedRecords:
+          type: number
+        reviewRecords:
+          type: number
+        failedRecords:
+          type: number
+        recordsThisMonth:
+          type: number
+        totalComplaints:
+          type: number
+        solvedComplaints:
+          type: number
+        openComplaints:
+          type: number
+        byType:
+          type: array
+          items:
+            $ref: "#/components/schemas/TypeCount"
+        recentRecords:
+          type: array
+          items:
+            $ref: "#/components/schemas/QcRecord"
+    TypeCount:
+      type: object
+      required:
+        - testType
+        - count
+      properties:
+        testType:
+          $ref: "#/components/schemas/TestType"
+        count:
+          type: number
+    Lookups:
+      type: object
+      required:
+        - factories
+        - plants
+        - employees
+        - suppliers
+        - materials
+        - locations
+        - blockTypes
+        - blockSizes
+        - mixStrengths
+        - customers
+        - customerLocations
+        - sieveSizes
+      properties:
+        factories:
+          type: array
+          items:
+            type: string
+        plants:
+          type: array
+          items:
+            type: string
+        employees:
+          type: array
+          items:
+            type: string
+        suppliers:
+          type: array
+          items:
+            type: string
+        materials:
+          type: array
+          items:
+            type: string
+        locations:
+          type: array
+          items:
+            type: string
+        blockTypes:
+          type: array
+          items:
+            type: string
+        blockSizes:
+          type: array
+          items:
+            type: string
+        mixStrengths:
+          type: array
+          items:
+            type: string
+        customers:
+          type: array
+          items:
+            type: string
+        customerLocations:
+          type: array
+          items:
+            type: string
+        sieveSizes:
+          type: array
+          items:
+            type: string
+    ReferenceData:
+      type: object
+      required:
+        - categories
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReferenceCategory"
+    ReferenceCategory:
+      type: object
+      required:
+        - id
+        - key
+        - label
+        - items
+      properties:
+        id:
+          type: number
+        key:
+          type: string
+        label:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReferenceItem"
+    ReferenceItem:
+      type: object
+      required:
+        - id
+        - categoryId
+        - value
+      properties:
+        id:
+          type: number
+        categoryId:
+          type: number
+        value:
+          type: string
+    ReferenceCategoryInput:
+      type: object
+      required:
+        - key
+        - label
+      properties:
+        key:
+          type: string
+          minLength: 1
+        label:
+          type: string
+          minLength: 1
+    ReferenceCategoryUpdate:
+      type: object
+      properties:
+        key:
+          type: string
+          minLength: 1
+        label:
+          type: string
+          minLength: 1
+    ReferenceItemInput:
+      type: object
+      required:
+        - value
+      properties:
+        value:
+          type: string
+          minLength: 1
+    StrengthStandard:
+      type: object
+      required:
+        - id
+        - testType
+        - material
+        - blockType
+        - blockSize
+        - bsStandard
+        - requiredStrength
+        - strengthUnit
+      properties:
+        id:
+          type: number
+        testType:
+          $ref: "#/components/schemas/TestType"
+        material:
+          type: string
+        blockType:
+          type: ["string", "null"]
+        blockSize:
+          type: ["string", "null"]
+        bsStandard:
+          type: string
+        requiredStrength:
+          type: number
+        strengthUnit:
+          type: string
+    StrengthStandardInput:
+      type: object
+      required:
+        - testType
+        - material
+        - bsStandard
+        - requiredStrength
+      properties:
+        testType:
+          $ref: "#/components/schemas/TestType"
+        material:
+          type: string
+          minLength: 1
+        blockType:
+          type: ["string", "null"]
+        blockSize:
+          type: ["string", "null"]
+        bsStandard:
+          type: string
+          minLength: 1
+        requiredStrength:
+          type: number
+          minimum: 0
+        strengthUnit:
+          type: string
+          default: N/mm²
+    StrengthStandardUpdate:
+      type: object
+      properties:
+        testType:
+          $ref: "#/components/schemas/TestType"
+        material:
+          type: string
+          minLength: 1
+        blockType:
+          type: ["string", "null"]
+        blockSize:
+          type: ["string", "null"]
+        bsStandard:
+          type: string
+          minLength: 1
+        requiredStrength:
+          type: number
+          minimum: 0
+        strengthUnit:
+          type: string
+    SieveStandard:
+      type: object
+      required:
+        - id
+        - testType
+        - materialReferenceItemId
+        - material
+        - sieveSizeReferenceItemId
+        - sieveSize
+        - standardReference
+        - measurementType
+        - minimum
+        - maximum
+        - unit
+      properties:
+        id:
+          type: number
+        testType:
+          $ref: "#/components/schemas/TestType"
+        materialReferenceItemId:
+          type: number
+        material:
+          type: string
+        sieveSizeReferenceItemId:
+          type: number
+        sieveSize:
+          type: string
+        standardReference:
+          type: string
+        measurementType:
+          type: string
+          enum: [percentage, amount]
+        minimum:
+          type: ["number", "null"]
+        maximum:
+          type: ["number", "null"]
+        unit:
+          type: string
+    SieveStandardInput:
+      type: object
+      required:
+        - testType
+        - materialReferenceItemId
+        - sieveSizeReferenceItemId
+        - standardReference
+        - measurementType
+      properties:
+        testType:
+          type: string
+          enum: [Sand Sieve, Aggregate Sieve]
+        materialReferenceItemId:
+          type: number
+          minimum: 1
+        sieveSizeReferenceItemId:
+          type: number
+          minimum: 1
+        standardReference:
+          type: string
+          minLength: 1
+        measurementType:
+          type: string
+          enum: [percentage, amount]
+        minimum:
+          type: ["number", "null"]
+        maximum:
+          type: ["number", "null"]
+        unit:
+          type: string
+          default: "%"
+    SieveStandardUpdate:
+      type: object
+      properties:
+        testType:
+          type: string
+          enum: [Sand Sieve, Aggregate Sieve]
+        materialReferenceItemId:
+          type: number
+          minimum: 1
+        sieveSizeReferenceItemId:
+          type: number
+          minimum: 1
+        standardReference:
+          type: string
+          minLength: 1
+        measurementType:
+          type: string
+          enum: [percentage, amount]
+        minimum:
+          type: ["number", "null"]
+        maximum:
+          type: ["number", "null"]
+        unit:
+          type: string
+    DailyReadyMixReferenceType:
+      type: string
+      enum: [site, plant]
+    DailyReadyMixStrengthSummary:
+      type: object
+      required:
+        - averageStrength
+        - minimumStrength
+        - maximumStrength
+      properties:
+        averageStrength:
+          type: ["number", "null"]
+        minimumStrength:
+          type: ["number", "null"]
+        maximumStrength:
+          type: ["number", "null"]
+    DailyReadyMixResult:
+      type: object
+      required:
+        - recordId
+        - recordNo
+        - sampleDate
+        - location
+        - mixDesign
+        - referenceNumber
+        - referenceType
+        - cubeAge
+        - strengths
+        - averageStrength
+        - minimumStrength
+        - maximumStrength
+        - sevenDay
+        - twentyEightDay
+        - strengthUnit
+      properties:
+        recordId:
+          type: number
+        recordNo:
+          type: string
+        sampleDate:
+          type: string
+          format: date
+        location:
+          type: string
+        mixDesign:
+          type: string
+        referenceNumber:
+          type: string
+        referenceType:
+          $ref: "#/components/schemas/DailyReadyMixReferenceType"
+        cubeAge:
+          type: number
+          minimum: 1
+          maximum: 365
+        strengths:
+          type: array
+          items:
+            type: number
+        averageStrength:
+          type: ["number", "null"]
+        minimumStrength:
+          type: ["number", "null"]
+        maximumStrength:
+          type: ["number", "null"]
+        sevenDay:
+          $ref: "#/components/schemas/DailyReadyMixStrengthSummary"
+        twentyEightDay:
+          $ref: "#/components/schemas/DailyReadyMixStrengthSummary"
+        strengthUnit:
+          type: string
+    DailyReadyMixMixSummary:
+      type: object
+      required:
+        - mixDesign
+        - recordCount
+        - averageStrength
+        - minimumStrength
+        - maximumStrength
+        - sevenDay
+        - twentyEightDay
+        - strengthUnit
+      properties:
+        mixDesign:
+          type: string
+        recordCount:
+          type: number
+        averageStrength:
+          type: ["number", "null"]
+        minimumStrength:
+          type: ["number", "null"]
+        maximumStrength:
+          type: ["number", "null"]
+        sevenDay:
+          $ref: "#/components/schemas/DailyReadyMixStrengthSummary"
+        twentyEightDay:
+          $ref: "#/components/schemas/DailyReadyMixStrengthSummary"
+        strengthUnit:
+          type: string
+    DailyReadyMixLocationSummary:
+      type: object
+      required:
+        - location
+        - recordCount
+        - sevenDay
+        - twentyEightDay
+        - strengthUnit
+      properties:
+        location:
+          type: string
+        recordCount:
+          type: number
+        sevenDay:
+          $ref: "#/components/schemas/DailyReadyMixStrengthSummary"
+        twentyEightDay:
+          $ref: "#/components/schemas/DailyReadyMixStrengthSummary"
+        strengthUnit:
+          type: string
+    DailyReadyMixResults:
+      type: object
+      required:
+        - testingDate
+        - mixDesign
+        - referenceType
+        - mixes
+        - locations
+        - records
+        - averageStrength
+        - minimumStrength
+        - maximumStrength
+        - strengthUnit
+      properties:
+        testingDate:
+          type: string
+          format: date
+        mixDesign:
+          type: ["string", "null"]
+        referenceType:
+          $ref: "#/components/schemas/DailyReadyMixReferenceType"
+        mixes:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailyReadyMixMixSummary"
+        locations:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailyReadyMixLocationSummary"
+        records:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailyReadyMixResult"
+        averageStrength:
+          type: ["number", "null"]
+        minimumStrength:
+          type: ["number", "null"]
+        maximumStrength:
+          type: ["number", "null"]
+        strengthUnit:
+          type: string
+    AuthUser:
+      type: object
+      required: [id, email, firstName, lastName, profileImageUrl]
+      properties:
+        id:
+          type: string
+        email:
+          type: ["string", "null"]
+        firstName:
+          type: ["string", "null"]
+        lastName:
+          type: ["string", "null"]
+        profileImageUrl:
+          type: ["string", "null"]
+    UserRole:
+      type: string
+      enum: [technician, managerial, administrator, visitor]
+    AuthUserEnvelope:
+      type: object
+      required: [user, accessAllowed, isAdmin, role]
+      properties:
+        user:
+          oneOf:
+            - $ref: "#/components/schemas/AuthUser"
+            - type: "null"
+        accessAllowed:
+          type: boolean
+        isAdmin:
+          type: boolean
+        role:
+          oneOf:
+            - $ref: "#/components/schemas/UserRole"
+            - type: "null"
+    EmployeeAccess:
+      type: object
+      required: [id, employeeId, displayName, active, administrator, role, createdAt, updatedAt]
+      properties:
+        id:
+          type: number
+        employeeId:
+          type: string
+        displayName:
+          type: string
+        active:
+          type: boolean
+        administrator:
+          type: boolean
+        role:
+          $ref: "#/components/schemas/UserRole"
+        passwordSet:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    EmployeeAccessList:
+      type: object
+      required: [employees]
+      properties:
+        employees:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmployeeAccess"
+    EmployeeAccessInput:
+      type: object
+      required: [employeeId]
+      properties:
+        employeeId:
+          type: string
+        name:
+          type: string
+          maxLength: 255
+        role:
+          $ref: "#/components/schemas/UserRole"
+    EmployeeAccessUpdate:
+      type: object
+      required: []
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        active:
+          type: boolean
+        administrator:
+          type: boolean
+        role:
+          $ref: "#/components/schemas/UserRole"
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+    MobileTokenExchangeRequest:
+      type: object
+      required: [code, code_verifier, redirect_uri, state]
+      properties:
+        code:
+          type: string
+          minLength: 1
+        code_verifier:
+          type: string
+          minLength: 1
+        redirect_uri:
+          type: string
+          minLength: 1
+        state:
+          type: string
+          minLength: 1
+        nonce:
+          type: string
+          minLength: 1
+    MobileTokenExchangeSuccess:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+    LogoutSuccess:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          const: true
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType, purpose]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        size:
+          type: number
+          minimum: 1
+        contentType:
+          type: string
+          minLength: 1
+        purpose:
+          type: string
+          enum: [complaint, archive]
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath, metadata]
+      properties:
+        uploadURL:
+          type: string
+        objectPath:
+          type: string
+        metadata:
+          $ref: "#/components/schemas/UploadUrlRequest"
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+    ArchiveDocument:
+      type: object
+      required:
+        - id
+        - originalName
+        - mimeType
+        - size
+        - category
+        - subcategory
+        - documentDate
+        - expiryDate
+        - description
+        - uploadedAt
+      properties:
+        id:
+          type: number
+        originalName:
+          type: string
+        mimeType:
+          type: string
+        size:
+          type: number
+        category:
+          type: string
+        subcategory:
+          type: string
+        documentDate:
+          type: string
+          format: date
+        expiryDate:
+          type: ["string", "null"]
+          format: date
+        description:
+          type: string
+        uploadedAt:
+          type: string
+          format: date-time
+    ArchiveDocumentInput:
+      type: object
+      required: [originalName, objectPath, mimeType, size, category, subcategory, documentDate]
+      properties:
+        originalName:
+          type: string
+          minLength: 1
+        objectPath:
+          type: string
+          minLength: 1
+        mimeType:
+          type: string
+          minLength: 1
+        size:
+          type: number
+          minimum: 1
+        category:
+          type: string
+          minLength: 1
+        subcategory:
+          type: string
+          minLength: 1
+        documentDate:
+          type: string
+          format: date
+        expiryDate:
+          type: ["string", "null"]
+          format: date
+        description:
+          type: string
+          default: ""
+    ArchiveDocumentUpdate:
+      type: object
+      properties:
+        originalName:
+          type: string
+          minLength: 1
+        category:
+          type: string
+          minLength: 1
+        subcategory:
+          type: string
+          minLength: 1
+        documentDate:
+          type: string
+          format: date
+        expiryDate:
+          type: ["string", "null"]
+          format: date
+        description:
+          type: string
+    ArchiveFolder:
+      type: object
+      required: [name, count, subcategories]
+      properties:
+        name:
+          type: string
+        count:
+          type: number
+        subcategories:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArchiveSubcategory"
+    ArchiveSubcategory:
+      type: object
+      required: [name, count, documents]
+      properties:
+        name:
+          type: string
+        count:
+          type: number
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArchiveDocument"
+    ArchiveResponse:
+      type: object
+      required: [categories, documents, canRetire]
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArchiveFolder"
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArchiveDocument"
+        canRetire:
+          type: boolean
+    Report:
+      type: object
+      required:
+        - record
+        - companyName
+        - companySubtitle
+      properties:
+        record:
+          $ref: "#/components/schemas/QcRecord"
+        companyName:
+          type: string
+        companySubtitle:
+          type: string
