@@ -293,6 +293,22 @@ function blockDensity(values: ValueMap) {
   return (wetWeight * 1_000_000_000) / (length * width * height);
 }
 
+function blockWaterStrength(values: ValueMap) {
+  return numericValue(
+    values.waterStrength ??
+    values.calculatedStrength ??
+    values.strength ??
+    values.compressiveStrength,
+  );
+}
+
+function blockAirDryStrength(values: ValueMap) {
+  const storedValue = numericValue(values.airDryStrength ?? values.dryAirStrength);
+  if (storedValue !== null) return storedValue;
+  const waterStrength = blockWaterStrength(values);
+  return waterStrength === null ? null : Number((waterStrength * 1.2).toFixed(1));
+}
+
 function BlockCompressionRowsTable({
   rows,
   useDryStrength,
@@ -304,15 +320,8 @@ function BlockCompressionRowsTable({
     typeof row === "object" && row !== null ? row as ValueMap : {}
   ));
   const columns = {
-    water: rowValues.map((values) => numericValue(
-      values.waterStrength ??
-      values.calculatedStrength ??
-      values.strength ??
-      values.compressiveStrength,
-    )),
-    airDry: rowValues.map((values) => numericValue(
-      values.airDryStrength ?? values.dryAirStrength,
-    )),
+    water: rowValues.map(blockWaterStrength),
+    airDry: rowValues.map(blockAirDryStrength),
     normalized: rowValues.map((values) => numericValue(values.normalizedStrength)),
     density: rowValues.map(blockDensity),
     wetWeight: rowValues.map((values) => numericValue(values.wetWeight)),
@@ -1008,7 +1017,6 @@ function BlocksReport({
       <div className="block-report-section-heading">
         <div>
           <span>Test details</span>
-          <small>Identification, dates and test conditions</small>
         </div>
         <strong className={useDryStrength ? "block-report-air-dry-note" : undefined}>
           {useDryStrength ? "Dammam: Air Dry compliance basis" : "Water strength compliance basis"}
