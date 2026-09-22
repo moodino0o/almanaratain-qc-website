@@ -688,7 +688,7 @@ const REPORT_LAYOUT_TABLE_LABELS: Record<string, string> = {
 };
 
 function ReportLayoutsSection() {
-  const { data: layouts = [], isLoading } = useListReportLayouts();
+  const { data: layouts = [], isLoading, isError } = useListReportLayouts();
   const queryClient = useQueryClient();
   const updateLayout = useUpdateReportLayout();
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -704,6 +704,18 @@ function ReportLayoutsSection() {
 
   if (isLoading) {
     return <Card><CardContent className="p-6 text-sm text-muted-foreground">Loading report layouts...</CardContent></Card>;
+  }
+  if (isError) {
+    return (
+      <Card>
+        <CardContent className="space-y-2 p-6">
+          <p className="font-medium">Report editor could not be loaded.</p>
+          <p className="text-sm text-muted-foreground">
+            Sign in as an administrator to edit and save report forms.
+          </p>
+        </CardContent>
+      </Card>
+    );
   }
   if (!draft) {
     return <Card><CardContent className="p-6 text-sm text-muted-foreground">No report layouts are configured.</CardContent></Card>;
@@ -970,7 +982,7 @@ export default function Settings() {
         <p className="mt-1 text-sm text-muted-foreground">Manage employee access and the master data used throughout quality control.</p>
       </div>
 
-      <Tabs defaultValue="reference-data" className="flex min-h-0 flex-1 flex-col">
+      <Tabs defaultValue="report-layouts" className="flex min-h-0 flex-1 flex-col">
         <TabsList className="grid h-auto w-full max-w-2xl shrink-0 grid-cols-3">
           <TabsTrigger value="reference-data" className="gap-2 py-2.5">
             <Database className="h-4 w-4" /> Settings

@@ -846,6 +846,20 @@ export default function RecordForm() {
                 />
               </div>
 
+              {canEditApprovedBy && (
+                <div className="space-y-2">
+                  <Label>Approved By</Label>
+                  <Input
+                    value={reviewedBy}
+                    onChange={(event) => setReviewedBy(event.target.value)}
+                    placeholder="Enter approving person"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This approval name is shown on the report.
+                  </p>
+                </div>
+              )}
+
               {testType === TestType.Ready_Mix && (
                 <>
                   <div className="space-y-2">
@@ -931,16 +945,6 @@ export default function RecordForm() {
                       onChange={(event) => handleDetailChange("testingDate", event.target.value)}
                     />
                   </div>
-                  {canEditApprovedBy && (
-                    <div className="space-y-2">
-                      <Label>Approved By</Label>
-                      <Input
-                        value={reviewedBy}
-                        onChange={(event) => setReviewedBy(event.target.value)}
-                        placeholder="Enter approving person"
-                      />
-                    </div>
-                  )}
                   <div className="space-y-2">
                     <Label>Sample Type</Label>
                     <TypeaheadInput
