@@ -135,17 +135,32 @@ test("matches legacy Block labels to canonical standards", () => {
   assert.equal((result.details.strengthEvaluation as Record<string, unknown>).requiredStrength, 7.5);
 });
 
-test("persists Block water strength and density for the compression report", () => {
+test("calculates Block air-dry and normalized strength with one-decimal rounding", () => {
   const result = evaluateStrengthRecord(
-    blockRecord([{
-      length: 400,
-      width: 100,
-      height: 200,
-      wetWeight: 3.73,
-      load: 109.1,
-      airDryStrength: 3.27,
-      normalizedStrength: 4.42,
-    }]),
+    {
+      ...blockRecord([{
+        length: 400,
+        width: 100,
+        height: 200,
+        wetWeight: 3.73,
+        load: 109.1,
+        airDryStrength: 99,
+        normalizedStrength: 99,
+      }]),
+      details: {
+        ...blockRecord([]).details,
+        shapeFactor: 1.35,
+        testRows: [{
+          length: 400,
+          width: 100,
+          height: 200,
+          wetWeight: 3.73,
+          load: 109.1,
+          airDryStrength: 99,
+          normalizedStrength: 99,
+        }],
+      },
+    },
     [blockStandard({
       blockType: "8'' Solid Block",
       blockSize: "400 x 200 x 200",
@@ -156,6 +171,23 @@ test("persists Block water strength and density for the compression report", () 
 
   assert.equal(row.waterStrength, "2.73");
   assert.equal(row.density, "466.25");
+  assert.equal(row.airDryStrength, 3.3);
+  assert.equal(row.normalizedStrength, 4.5);
+});
+
+test("keeps legacy manual Block strengths when calculation inputs are incomplete", () => {
+  const result = evaluateStrengthRecord(
+    blockRecord([{
+      length: 400,
+      width: 100,
+      load: "",
+      airDryStrength: 3.27,
+      normalizedStrength: 4.42,
+    }]),
+    [blockStandard()],
+  );
+  const row = (result.details.testRows as Record<string, unknown>[])[0];
+
   assert.equal(row.airDryStrength, 3.27);
   assert.equal(row.normalizedStrength, 4.42);
 });

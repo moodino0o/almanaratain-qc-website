@@ -16,6 +16,7 @@ import { TypeaheadInput } from "@/components/ui/typeahead-input";
 import {
   calculateWaterAbsorption,
   calculateBlockDensity,
+  calculateBlockStrengths,
   blockDimensionsFromSize,
   blockMaterialMatches,
   blockSizeMatches,
@@ -411,15 +412,8 @@ export default function RecordForm() {
     usesSieveRows,
   ]);
 
-  const calculateStrength = (row: TestRow) => {
-    const load = Number(row.load);
-    const length = Number(row.length);
-    const width = Number(row.width);
-    if (![load, length, width].every(Number.isFinite) || load < 0 || length <= 0 || width <= 0) {
-      return null;
-    }
-    return ((load * 1000) / (length * width)).toFixed(2);
-  };
+  const calculateStrength = (row: Pick<TestRow, "length" | "width" | "load">) =>
+    calculateBlockStrengths(row, details.shapeFactor);
 
   const getMaterialSuggestions = () => {
     if (!lookups) return [];
@@ -537,8 +531,10 @@ export default function RecordForm() {
             }
           : {
               load: row.load,
-              airDryStrength: row.airDryStrength,
-              normalizedStrength: row.normalizedStrength,
+              airDryStrength:
+                calculateStrength(row).airDryStrength || row.airDryStrength,
+              normalizedStrength:
+                calculateStrength(row).normalizedStrength || row.normalizedStrength,
               density: calculateBlockDensity(row),
             }),
       }));
@@ -1203,32 +1199,36 @@ export default function RecordForm() {
                                      className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground"
                                      aria-label={`Calculated strength for row ${rowIndex + 1}`}
                                    >
-                                     {calculateStrength(row) ? `${calculateStrength(row)} N/mm²` : "Enter load and dimensions"}
+                                     {calculateStrength(row).waterStrength
+                                       ? `${calculateStrength(row).waterStrength} N/mm²`
+                                       : "Enter load and dimensions"}
                                    </div>
                                 </td>
                                 {testType === TestType.Blocks && (
                                   <>
                                     <td className="px-2 py-2">
-                                      <Input
-                                        type="text"
-                                        inputMode="decimal"
-                                        value={row.airDryStrength}
-                                        onChange={event => updateTestRow(rowIndex, "airDryStrength", event.target.value)}
-                                        onKeyDown={event => handleTestRowKeyDown(event, rowIndex)}
-                                        placeholder="N/mm²"
-                                        aria-label={`Air dry strength for row ${rowIndex + 1}`}
-                                      />
+                                      <div
+                                        className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground"
+                                        aria-label={`Calculated air dry strength for row ${rowIndex + 1}`}
+                                      >
+                                        {calculateStrength(row).airDryStrength
+                                          ? `${calculateStrength(row).airDryStrength} N/mm²`
+                                          : row.airDryStrength
+                                            ? `${row.airDryStrength} N/mm²`
+                                            : "Enter load and dimensions"}
+                                      </div>
                                     </td>
                                     <td className="px-2 py-2">
-                                      <Input
-                                        type="text"
-                                        inputMode="decimal"
-                                        value={row.normalizedStrength}
-                                        onChange={event => updateTestRow(rowIndex, "normalizedStrength", event.target.value)}
-                                        onKeyDown={event => handleTestRowKeyDown(event, rowIndex)}
-                                        placeholder="N/mm²"
-                                        aria-label={`Normalized strength for row ${rowIndex + 1}`}
-                                      />
+                                      <div
+                                        className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground"
+                                        aria-label={`Calculated normalized strength for row ${rowIndex + 1}`}
+                                      >
+                                        {calculateStrength(row).normalizedStrength
+                                          ? `${calculateStrength(row).normalizedStrength} N/mm²`
+                                          : row.normalizedStrength
+                                            ? `${row.normalizedStrength} N/mm²`
+                                            : "Enter shape factor"}
+                                      </div>
                                     </td>
                                     <td className="px-2 py-2">
                                       <div

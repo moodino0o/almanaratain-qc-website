@@ -184,6 +184,41 @@ export const calculateBlockDensity = ({
   ).toFixed(2);
 };
 
+export const calculateBlockStrengths = (
+  row: Pick<TestRow, "length" | "width" | "load">,
+  shapeFactorValue: unknown,
+) => {
+  const length = Number(numericInputValue(row.length));
+  const width = Number(numericInputValue(row.width));
+  const load = Number(numericInputValue(row.load));
+  if (
+    !numericInputValue(row.length) ||
+    !numericInputValue(row.width) ||
+    !numericInputValue(row.load) ||
+    ![length, width, load].every(Number.isFinite) ||
+    length <= 0 ||
+    width <= 0 ||
+    load < 0
+  ) {
+    return { waterStrength: "", airDryStrength: "", normalizedStrength: "" };
+  }
+
+  const waterStrength = (load * 1000) / (length * width);
+  const airDryStrength = Math.round((waterStrength * 1.2 + Number.EPSILON) * 10) / 10;
+  const shapeFactorText = numericInputValue(shapeFactorValue);
+  const shapeFactor = Number(shapeFactorText);
+  const normalizedStrength =
+    shapeFactorText && Number.isFinite(shapeFactor) && shapeFactor > 0
+      ? Math.round((airDryStrength * shapeFactor + Number.EPSILON) * 10) / 10
+      : null;
+
+  return {
+    waterStrength: waterStrength.toFixed(2),
+    airDryStrength: airDryStrength.toFixed(1),
+    normalizedStrength: normalizedStrength === null ? "" : normalizedStrength.toFixed(1),
+  };
+};
+
 export const sieveSizeNumber = (value: string) => {
   const parsed = Number(numericInputValue(value));
   return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;

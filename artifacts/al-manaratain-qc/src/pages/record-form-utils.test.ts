@@ -7,6 +7,7 @@ import {
   blockSizeMatches,
   blockTypeMatches,
   calculateBlockDensity,
+  calculateBlockStrengths,
   calculateSieveSampleWeight,
   calculateSieveResults,
   prepareRecordForForm,
@@ -61,6 +62,20 @@ test("calculates Block density from wet weight and specimen dimensions", () => {
       wetWeight: "3.730",
     }),
     "466.25",
+  );
+});
+
+test("calculates and rounds Block air-dry and normalized strengths", () => {
+  assert.deepEqual(
+    calculateBlockStrengths(
+      { length: "400", width: "100", load: "109.1" },
+      "1.35",
+    ),
+    {
+      waterStrength: "2.73",
+      airDryStrength: "3.3",
+      normalizedStrength: "4.5",
+    },
   );
 });
 

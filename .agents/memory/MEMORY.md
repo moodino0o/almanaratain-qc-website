@@ -9,3 +9,4 @@
 - [Employee provisioning](employee-provisioning.md) — adding an employee must create or reactivate the directory identity before granting role-based access.
 - [Complaint completion workflow](complaint-completion-workflow.md) — complaint completion is an explicit Open/Complete status, independent of whether solution notes are filled.
 - [Complaint material categories](complaint-material-categories.md) — derive complaint categories from material labels using OPC/SRC, inch sizes, and 60/80mm rules.
+- [Block derived strengths](block-derived-strengths.md) — calculate air-dry and normalized Block strengths from wet strength and shape factor, rounded to one decimal.

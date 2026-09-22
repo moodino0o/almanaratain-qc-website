@@ -66,6 +66,10 @@ function rounded(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
+function roundedToOneDecimal(value: number) {
+  return Math.round((value + Number.EPSILON) * 10) / 10;
+}
+
 function textValue(value: unknown): string | null {
   if (typeof value !== "string" && typeof value !== "number") return null;
   const text = String(value).trim();
@@ -233,7 +237,7 @@ function dayAge(value: unknown) {
   return match ? Number(match[0]) : null;
 }
 
-function calculateRow(row: unknown) {
+function calculateRow(row: unknown, shapeFactorValue?: unknown) {
   if (typeof row !== "object" || row === null) {
     return { row, calculatedStrength: null, loadedFaceArea: null, complete: false };
   }
@@ -252,6 +256,17 @@ function calculateRow(row: unknown) {
     loadedFaceArea !== null &&
     loadedFaceArea > 0
       ? rounded((load * 1000) / loadedFaceArea)
+      : null;
+  const airDryStrength =
+    calculatedStrength !== null
+      ? roundedToOneDecimal(calculatedStrength * 1.2)
+      : null;
+  const shapeFactor = numericValue(shapeFactorValue);
+  const normalizedStrength =
+    airDryStrength !== null &&
+    shapeFactor !== null &&
+    shapeFactor > 0
+      ? roundedToOneDecimal(airDryStrength * shapeFactor)
       : null;
   const dryWeight = numericValue(values.dryWeight);
   const wetWeight = numericValue(values.wetWeight);
@@ -290,6 +305,8 @@ function calculateRow(row: unknown) {
             strength: calculatedStrength.toFixed(2),
           }
         : {}),
+      ...(airDryStrength !== null ? { airDryStrength } : {}),
+      ...(normalizedStrength !== null ? { normalizedStrength } : {}),
       ...(density !== null ? { density: density.toFixed(2) } : {}),
     },
     calculatedStrength,
@@ -317,7 +334,14 @@ export function evaluateStrengthRecord(
   const requiredStrength =
     standard === undefined ? null : numericValue(standard.requiredStrength);
   const rows = Array.isArray(normalizedDetails.testRows) ? normalizedDetails.testRows : [];
-  const calculatedRows = rows.map(calculateRow);
+  const calculatedRows = rows.map((row) =>
+    calculateRow(
+      row,
+      record.testType === "Blocks"
+        ? (normalizedDetails as Record<string, unknown>).shapeFactor
+        : undefined,
+    )
+  );
   const evaluatedRows =
     record.testType === "Ready Mix"
       ? calculatedRows.filter((row) => dayAge(row.row && typeof row.row === "object"
