@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { DailyReadyMixResult } from "@workspace/api-client-react";
-import { buildDailyStrengthRows, groupDailyResults, sortByReferenceNumber } from "./reports-utils";
+import type { DailyReadyMixResult, QcRecord } from "@workspace/api-client-react";
+import {
+  buildDailyReportRows,
+  buildDailyStrengthRows,
+  dailyReportProductOptions,
+  firstTwoWords,
+  groupDailyResults,
+  sortByReferenceNumber,
+} from "./reports-utils";
 
 const record = ({
   id,
@@ -185,4 +192,116 @@ test("builds one daily strength row per mix, plant, and cube age", () => {
     maximumStrength: 39,
     strengthUnit: "N/mm²",
   });
+});
+
+const qcRecord = ({
+  id,
+  testType,
+  sampleDate,
+  location,
+  material,
+  details,
+}: {
+  id: number;
+  testType: QcRecord["testType"];
+  sampleDate: string;
+  location: string;
+  material: string;
+  details: Record<string, unknown>;
+}): QcRecord => ({
+  id,
+  recordNo: `QC-${id}`,
+  testType,
+  sampleDate,
+  location,
+  material,
+  status: "Passed",
+  testedBy: "Tester",
+  details,
+});
+
+test("groups Ready Mix products by their first two words and summarizes each day", () => {
+  const records = [
+    qcRecord({
+      id: 10,
+      testType: "Ready Mix",
+      sampleDate: "2026-09-01",
+      location: "Plant A",
+      material: "OPC",
+      details: {
+        designStrength: "25 N OPC 20mm",
+        testRows: [
+          { testAge: 28, calculatedStrength: 40 },
+          { testAge: 28, calculatedStrength: 44 },
+        ],
+      },
+    }),
+    qcRecord({
+      id: 11,
+      testType: "Ready Mix",
+      sampleDate: "2026-09-01",
+      location: "Plant A",
+      material: "OPC",
+      details: {
+        designStrength: "25 N OPC 10mm",
+        testRows: [{ testAge: 28, calculatedStrength: 42 }],
+      },
+    }),
+  ];
+
+  assert.equal(firstTwoWords("25 N OPC 20mm"), "25 N");
+  assert.deepEqual(dailyReportProductOptions(records), [
+    { key: "Ready Mix\u000025 N", category: "Ready Mix", product: "25 N" },
+  ]);
+  assert.deepEqual(
+    buildDailyReportRows(records, "2026-09-29", "2026-09-29"),
+    [{
+      date: "2026-09-29",
+      category: "Ready Mix",
+      plant: "Plant A",
+      product: "25 N",
+      averageStrength: 42,
+      minimumStrength: 40,
+      maximumStrength: 44,
+      strengthUnit: "N/mm²",
+    }],
+  );
+});
+
+test("includes non-Ready Mix categories, date ranges, and selected product groups", () => {
+  const records = [
+    qcRecord({
+      id: 12,
+      testType: "Blocks",
+      sampleDate: "2026-09-10",
+      location: "Plant B",
+      material: "4 inch Block",
+      details: {
+        blockType: "Hollow Concrete Block",
+        testRows: [{ calculatedStrength: 8 }, { calculatedStrength: 10 }],
+      },
+    }),
+    qcRecord({
+      id: 13,
+      testType: "Water",
+      sampleDate: "2026-09-11",
+      location: "Plant C",
+      material: "Water",
+      details: { strength: 5 },
+    }),
+  ];
+
+  assert.deepEqual(
+    buildDailyReportRows(records, "2026-09-10", "2026-09-11", ["Blocks\u0000Hollow Concrete"]),
+    [{
+      date: "2026-09-10",
+      category: "Blocks",
+      plant: "Plant B",
+      product: "Hollow Concrete",
+      averageStrength: 9,
+      minimumStrength: 8,
+      maximumStrength: 10,
+      strengthUnit: "N/mm²",
+    }],
+  );
 });
