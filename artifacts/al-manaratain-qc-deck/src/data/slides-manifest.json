@@ -1,0 +1,18 @@
+[
+  { "id": "a1f1b5e1-7a88-4a08-9b3c-01e7b7e3d101", "position": 1, "filepath": "src/pages/slides/Slide1.tsx", "title": "Al Manaratain Quality Control", "description": "Project overview and publishing status.", "speakerNotes": "" },
+  { "id": "a1f1b5e1-7a88-4a08-9b3c-01e7b7e3d102", "position": 2, "filepath": "src/pages/slides/Slide2.tsx", "title": "Project Brief", "description": "The project purpose and operating focus.", "speakerNotes": "" },
+  { "id": "a1f1b5e1-7a88-4a08-9b3c-01e7b7e3d103", "position": 3, "filepath": "src/pages/slides/Slide3.tsx", "title": "Operating Context", "description": "The quality-control context the application supports.", "speakerNotes": "" },
+  { "id": "a1f1b5e1-7a88-4a08-9b3c-01e7b7e3d104", "position": 4, "filepath": "src/pages/slides/Slide4.tsx", "title": "Product Map", "description": "The main areas of the QC workspace.", "speakerNotes": "" },
+  { "id": "a1f1b5e1-7a88-4a08-9b3c-01e7b7e3d105", "position": 5, "filepath": "src/pages/slides/Slide5.tsx", "title": "QC Record Workflows", "description": "Supported material and test workflows.", "speakerNotes": "" },
+  { "id": "a1f1b5e1-7a88-4a08-9b3c-01e7b7e3d106", "position": 6, "filepath": "src/pages/slides/Slide6.tsx", "title": "Structured Data Entry", "description": "Consistent fields and repeatable record entry.", "speakerNotes": "" },
+  { "id": "a1f1b5e1-7a88-4a08-9b3c-01e7b7e3d107", "position": 7, "filepath": "src/pages/slides/Slide7.tsx", "title": "Assessment Engine", "description": "Standards evaluation and calculated review values.", "speakerNotes": "" },
+  { "id": "a1f1b5e1-7a88-4a08-9b3c-01e7b7e3d108", "position": 8, "filepath": "src/pages/slides/Slide8.tsx", "title": "Dashboard Visibility", "description": "Current activity and recent QC records.", "speakerNotes": "" },
+  { "id": "a1f1b5e1-7a88-4a08-9b3c-01e7b7e3d109", "position": 9, "filepath": "src/pages/slides/Slide9.tsx", "title": "Reports and Archive", "description": "Historical review, reporting, and print views.", "speakerNotes": "" },
+  { "id": "a1f1b5e1-7a88-4a08-9b3c-01e7b7e3d110", "position": 10, "filepath": "src/pages/slides/Slide10.tsx", "title": "Complaint Workflow", "description": "Complaint tracking through explicit completion states.", "speakerNotes": "" },
+  { "id": "a1f1b5e1-7a88-4a08-9b3c-01e7b7e3d111", "position": 11, "filepath": "src/pages/slides/Slide11.tsx", "title": "Employee Access", "description": "Registered identity, roles, passwords, and status.", "speakerNotes": "" },
+  { "id": "a1f1b5e1-7a88-4a08-9b3c-01e7b7e3d112", "position": 12, "filepath": "src/pages/slides/Slide12.tsx", "title": "Access Controls", "description": "Server-side authorization and administrator safeguards.", "speakerNotes": "" },
+  { "id": "a1f1b5e1-7a88-4a08-9b3c-01e7b7e3d113", "position": 13, "filepath": "src/pages/slides/Slide13.tsx", "title": "Reference Data Administration", "description": "Maintaining shared categories and values.", "speakerNotes": "" },
+  { "id": "a1f1b5e1-7a88-4a08-9b3c-01e7b7e3d114", "position": 14, "filepath": "src/pages/slides/Slide14.tsx", "title": "Evidence and Storage", "description": "Images, files, object paths, and metadata.", "speakerNotes": "" },
+  { "id": "a1f1b5e1-7a88-4a08-9b3c-01e7b7e3d115", "position": 15, "filepath": "src/pages/slides/Slide15.tsx", "title": "Current Delivery Status", "description": "Verified workflow, test, and build status.", "speakerNotes": "" },
+  { "id": "a1f1b5e1-7a88-4a08-9b3c-01e7b7e3d116", "position": 16, "filepath": "src/pages/slides/Slide16.tsx", "title": "Next Steps", "description": "Publishing, rollout, training, and future coverage.", "speakerNotes": "" }
+]

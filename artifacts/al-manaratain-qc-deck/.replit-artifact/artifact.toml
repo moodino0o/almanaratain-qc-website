@@ -1,0 +1,28 @@
+kind = "slides"
+previewPath = "/al-manaratain-qc-deck/"
+title = "Al Manaratain QC Project Deck"
+description = "A strategy-style project overview deck for the Al Manaratain Quality Control web application, covering its workflows, data structure, access controls, delivery status, and next steps."
+version = "1.0.0"
+id = "artifacts/al-manaratain-qc-deck"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/al-manaratain-qc-deck/" ]
+localPort = 22467
+
+[services.development]
+run = "pnpm --filter @workspace/al-manaratain-qc-deck run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/al-manaratain-qc-deck", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/al-manaratain-qc-deck/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22467"
+BASE_PATH = "/al-manaratain-qc-deck/"
