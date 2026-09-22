@@ -36,6 +36,7 @@ export type DailyReportRow = {
   category: string;
   plant: string;
   product: string;
+  cubeAge: number | null;
   averageStrength: number;
   minimumStrength: number;
   maximumStrength: number;
@@ -53,6 +54,7 @@ type StrengthGroup = {
   category: string;
   plant: string;
   product: string;
+  cubeAge: number | null;
   strengths: number[];
   strengthUnit: string;
 };
@@ -156,17 +158,19 @@ export function buildDailyReportRows(
     record: QcRecord,
     date: string | null,
     product: string,
+    cubeAge: number | null,
     strengths: number[],
   ) => {
     if (!date || !inRange(date) || !strengths.length) return;
     const category = record.testType;
-    const key = `${date}\u0000${category}\u0000${record.location}\u0000${product}`;
+    const key = `${date}\u0000${category}\u0000${record.location}\u0000${product}\u0000${cubeAge ?? ""}`;
     if (selected.size && !selected.has(`${category}\u0000${product}`)) return;
     const current = groups.get(key) ?? {
       date,
       category,
       plant: record.location,
       product,
+      cubeAge,
       strengths: [],
       strengthUnit: "N/mm²",
     };
@@ -193,14 +197,14 @@ export function buildDailyReportRows(
       }
       if (ageGroups.size) {
         for (const [age, strengths] of ageGroups) {
-          addStrengths(record, addDays(record.sampleDate, age), product, strengths);
+          addStrengths(record, addDays(record.sampleDate, age), product, age, strengths);
         }
       } else {
-        addStrengths(record, record.sampleDate.slice(0, 10), product, recordStrengths(record, details));
+        addStrengths(record, record.sampleDate.slice(0, 10), product, null, recordStrengths(record, details));
       }
       continue;
     }
-    addStrengths(record, record.sampleDate.slice(0, 10), product, recordStrengths(record, details));
+    addStrengths(record, record.sampleDate.slice(0, 10), product, null, recordStrengths(record, details));
   }
 
   return [...groups.values()]
@@ -209,6 +213,7 @@ export function buildDailyReportRows(
       category: group.category,
       plant: group.plant,
       product: group.product,
+      cubeAge: group.cubeAge,
       averageStrength: group.strengths.reduce((sum, value) => sum + value, 0) / group.strengths.length,
       minimumStrength: Math.min(...group.strengths),
       maximumStrength: Math.max(...group.strengths),
@@ -219,7 +224,8 @@ export function buildDailyReportRows(
         left.category.localeCompare(right.category) ||
         left.plant.localeCompare(right.plant) ||
         left.product.localeCompare(right.product) ||
-        left.date.localeCompare(right.date),
+        left.date.localeCompare(right.date) ||
+        (left.cubeAge ?? Number.POSITIVE_INFINITY) - (right.cubeAge ?? Number.POSITIVE_INFINITY),
     );
 }
 

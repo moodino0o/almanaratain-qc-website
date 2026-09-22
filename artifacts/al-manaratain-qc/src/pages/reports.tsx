@@ -467,6 +467,7 @@ export default function Reports() {
                           <TableHead className="border-l bg-emerald-50 text-right text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">Average</TableHead>
                           <TableHead className="bg-amber-50 text-right text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">Minimum</TableHead>
                           <TableHead className="bg-sky-50 text-right text-sky-900 dark:bg-sky-950/30 dark:text-sky-200">Maximum</TableHead>
+                          <TableHead className="text-center">Cube Age</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -479,6 +480,7 @@ export default function Reports() {
                             <TableCell className="border-l bg-emerald-50/50 text-right font-semibold text-emerald-900 dark:bg-emerald-950/10 dark:text-emerald-200">{formatStrength(row.averageStrength, row.strengthUnit)}</TableCell>
                             <TableCell className="bg-amber-50/50 text-right text-amber-900 dark:bg-amber-950/10 dark:text-amber-200">{formatStrength(row.minimumStrength, row.strengthUnit)}</TableCell>
                             <TableCell className="bg-sky-50/50 text-right text-sky-900 dark:bg-sky-950/10 dark:text-sky-200">{formatStrength(row.maximumStrength, row.strengthUnit)}</TableCell>
+                            <TableCell className="text-center">{row.cubeAge === null ? "—" : `${row.cubeAge} days`}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
