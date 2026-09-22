@@ -302,26 +302,27 @@ function blockWaterStrength(values: ValueMap) {
   );
 }
 
-function blockAirDryStrength(values: ValueMap) {
+function blockAirDryStrength(values: ValueMap, useDammamBasis: boolean) {
+  const waterStrength = blockWaterStrength(values);
+  if (useDammamBasis && waterStrength !== null) return waterStrength;
   const storedValue = numericValue(values.airDryStrength ?? values.dryAirStrength);
   if (storedValue !== null) return storedValue;
-  const waterStrength = blockWaterStrength(values);
   return waterStrength === null ? null : Number((waterStrength * 1.2).toFixed(1));
 }
 
 function BlockCompressionRowsTable({
   rows,
-  useDryStrength,
+  hideWaterStrength,
 }: {
   rows: unknown[];
-  useDryStrength: boolean;
+  hideWaterStrength: boolean;
 }) {
   const rowValues = rows.map((row) => (
     typeof row === "object" && row !== null ? row as ValueMap : {}
   ));
   const columns = {
     water: rowValues.map(blockWaterStrength),
-    airDry: rowValues.map(blockAirDryStrength),
+    airDry: rowValues.map((values) => blockAirDryStrength(values, hideWaterStrength)),
     normalized: rowValues.map((values) => numericValue(values.normalizedStrength)),
     density: rowValues.map(blockDensity),
     wetWeight: rowValues.map((values) => numericValue(values.wetWeight)),
@@ -333,8 +334,8 @@ function BlockCompressionRowsTable({
     density: numericSummary(columns.density).average,
     wetWeight: numericSummary(columns.wetWeight).average,
   };
-  const strengthSummary = numericSummary(useDryStrength ? columns.airDry : columns.water);
-  const strengthLabel = useDryStrength ? "Air Dry Strength" : "Water Strength";
+  const strengthSummary = numericSummary(columns.airDry);
+  const strengthLabel = "Air Dry Strength";
   const displayNumber = (value: number | null, digits = 2) =>
     value === null ? "-" : formatNumber(value, digits);
   return (
@@ -353,7 +354,7 @@ function BlockCompressionRowsTable({
               <th>Width<br />(mm)</th>
               <th>Height<br />(mm)</th>
               <th>Load<br />(kN)</th>
-              <th>Water<br />(N/mm2)</th>
+              {!hideWaterStrength && <th>Water<br />(N/mm2)</th>}
               <th>Air Dry<br />(N/mm2)</th>
               <th>Normalized<br />(N/mm2)</th>
               <th>Density<br />(kg/m3)</th>
@@ -368,7 +369,7 @@ function BlockCompressionRowsTable({
                 <td>{textValue(values.width)}</td>
                 <td>{textValue(values.height)}</td>
                 <td>{textValue(values.load)}</td>
-                <td>{displayNumber(columns.water[index])}</td>
+                {!hideWaterStrength && <td>{displayNumber(columns.water[index])}</td>}
                 <td>{displayNumber(columns.airDry[index])}</td>
                 <td>{displayNumber(columns.normalized[index])}</td>
                 <td>{displayNumber(columns.density[index])}</td>
@@ -376,8 +377,8 @@ function BlockCompressionRowsTable({
               </tr>
             ))}
             <tr className="block-report-average-row">
-              <td colSpan={5}>AVERAGE:</td>
-              <td>{displayNumber(averages.water)}</td>
+              <td colSpan={hideWaterStrength ? 4 : 5}>AVERAGE:</td>
+              {!hideWaterStrength && <td>{displayNumber(averages.water)}</td>}
               <td>{displayNumber(averages.airDry)}</td>
               <td>{displayNumber(averages.normalized)}</td>
               <td>{displayNumber(averages.density)}</td>
@@ -1055,7 +1056,7 @@ function BlocksReport({
         <strong>Remarks:</strong>
         <span>{record.remarks || ""}</span>
       </div>
-      <BlockCompressionRowsTable rows={testRows} useDryStrength={useDryStrength} />
+      <BlockCompressionRowsTable rows={testRows} hideWaterStrength={useDryStrength} />
       <div className={`block-report-result ${compliance.toLocaleLowerCase()}`}>
         <span>Overall result</span>
         <strong>{complianceLabel}</strong>

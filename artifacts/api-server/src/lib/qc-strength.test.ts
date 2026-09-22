@@ -243,6 +243,32 @@ test("calculates Block air-dry and normalized strength with one-decimal rounding
   assert.equal(row.normalizedStrength, 4.5);
 });
 
+test("uses air-dry strength for every Block evaluation and keeps Dammam water equal to air-dry", () => {
+  const result = evaluateStrengthRecord(
+    {
+      ...blockRecord([{ length: 400, width: 200, height: 200, load: 1000 }]),
+      location: "Dammam",
+    },
+    [blockStandard({ requiredStrength: "12.5" })],
+  );
+  const row = (result.details.testRows as Record<string, unknown>[])[0];
+
+  assert.equal(row.waterStrength, "12.50");
+  assert.equal(row.airDryStrength, 12.5);
+  assert.equal(result.evaluation!.averageStrength, 12.5);
+  assert.equal(result.status, "Passed");
+});
+
+test("uses the air-dry result for Block pass and fail evaluation", () => {
+  const result = evaluateStrengthRecord(
+    blockRecord([{ length: 400, width: 200, height: 200, load: 1000 }]),
+    [blockStandard({ requiredStrength: "13" })],
+  );
+
+  assert.equal(result.evaluation!.averageStrength, 15);
+  assert.equal(result.status, "Passed");
+});
+
 test("applies a configured Block-size shape factor only when no saved value exists", () => {
   const result = evaluateStrengthRecord(
     blockRecord([
@@ -561,10 +587,10 @@ test("evaluates block compliance using the average sample strength", () => {
   );
 
   assert.equal(result.status, "Passed");
-  assert.equal(result.evaluation.averageStrength, 6);
-  assert.equal(result.evaluation.minimumStrength, 4);
-  assert.equal(result.evaluation.maximumStrength, 8);
-  assert.equal(result.evaluation.reason, null);
+  assert.equal(result.evaluation!.averageStrength, 7.2);
+  assert.equal(result.evaluation!.minimumStrength, 4.8);
+  assert.equal(result.evaluation!.maximumStrength, 9.6);
+  assert.equal(result.evaluation!.reason, null);
 });
 
 test("uses Air Dry strength for Dammam Block compliance", () => {
@@ -576,13 +602,13 @@ test("uses Air Dry strength for Dammam Block compliance", () => {
       ]),
       location: "Dammam",
     },
-    [blockStandard({ requiredStrength: "16.5" })],
+    [blockStandard({ requiredStrength: "13.75" })],
   );
 
   assert.equal(result.status, "Passed");
-  assert.equal(result.evaluation.averageStrength, 16.5);
-  assert.equal(result.evaluation.minimumStrength, 15);
-  assert.equal(result.evaluation.maximumStrength, 18);
+  assert.equal(result.evaluation!.averageStrength, 13.75);
+  assert.equal(result.evaluation!.minimumStrength, 12.5);
+  assert.equal(result.evaluation!.maximumStrength, 15);
 });
 
 test("fails block compliance when the average sample strength is below the standard", () => {
@@ -591,12 +617,12 @@ test("fails block compliance when the average sample strength is below the stand
       { rowNo: 1, length: 100, width: 100, load: 60 },
       { rowNo: 2, length: 100, width: 100, load: 40 },
     ]),
-    [blockStandard({ requiredStrength: "5.1" })],
+    [blockStandard({ requiredStrength: "6.1" })],
   );
 
   assert.equal(result.status, "Failed");
-  assert.equal(result.evaluation.averageStrength, 5);
-  assert.equal(result.evaluation.minimumStrength, 4);
-  assert.equal(result.evaluation.maximumStrength, 6);
-  assert.match(result.evaluation.reason ?? "", /average block strength/i);
+  assert.equal(result.evaluation!.averageStrength, 6);
+  assert.equal(result.evaluation!.minimumStrength, 4.8);
+  assert.equal(result.evaluation!.maximumStrength, 7.2);
+  assert.match(result.evaluation!.reason ?? "", /average block air-dry strength/i);
 });

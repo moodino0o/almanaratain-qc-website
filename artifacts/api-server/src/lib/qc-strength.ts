@@ -333,6 +333,7 @@ function calculateRow(
   shapeFactorValue?: unknown,
   correctionFactorValue?: unknown,
   isPaving = false,
+  isDammam = false,
 ) {
   if (typeof row !== "object" || row === null) {
     return { row, calculatedStrength: null, loadedFaceArea: null, complete: false };
@@ -358,7 +359,7 @@ function calculateRow(
       : directStrength;
   const airDryStrength =
     calculatedStrength !== null
-      ? roundedToOneDecimal(calculatedStrength * 1.2)
+      ? roundedToOneDecimal(isDammam ? calculatedStrength : calculatedStrength * 1.2)
       : null;
   const shapeFactor = numericValue(shapeFactorValue);
   const normalizedStrength =
@@ -466,6 +467,7 @@ export function evaluateStrengthRecord(
         ? (normalizedDetails as Record<string, unknown>).correctionFactor
         : undefined,
       record.testType === "Paving Blocks",
+      record.testType === "Blocks" && isDammamLocation(record.location),
     )
   );
   const evaluatedRows =
@@ -484,7 +486,7 @@ export function evaluateStrengthRecord(
       if (record.testType === "Paving Blocks") {
         return numericValue(values.correctedStrength) ?? row.calculatedStrength;
       }
-      if (record.testType === "Blocks" && isDammamLocation(record.location)) {
+      if (record.testType === "Blocks") {
         return numericValue(values.airDryStrength ?? values.dryAirStrength);
       }
       return row.calculatedStrength;
@@ -498,7 +500,7 @@ export function evaluateStrengthRecord(
   const hasIncompleteMeasurements =
     evaluatedRows.length === 0 ||
     evaluatedRows.some((row) => {
-      if (record.testType === "Blocks" && isDammamLocation(record.location)) {
+      if (record.testType === "Blocks") {
         const values = typeof row.row === "object" && row.row !== null
           ? row.row as Record<string, unknown>
           : {};
@@ -518,7 +520,7 @@ export function evaluateStrengthRecord(
     record.testType === "Ready Mix"
       ? "A complete 28-day cube result is required."
       : record.testType === "Blocks"
-        ? "Complete specimen load, dimensions, and Block age are required."
+        ? "Complete specimen load, dimensions, air-dry strength, and Block age are required."
         : "Complete paving specimen dimensions and compressive strength are required.";
   if (!standard) {
       reason =
@@ -534,8 +536,8 @@ export function evaluateStrengthRecord(
     reason =
       record.testType === "Blocks"
         ? isDammamLocation(record.location)
-          ? "The average Block dry strength is below the configured minimum."
-          : "The average block strength is below the configured minimum."
+          ? "The average Block air-dry strength is below the configured minimum."
+          : "The average Block air-dry strength is below the configured minimum."
         : record.testType === "Paving Blocks"
           ? "The corrected paving block strength is below the configured minimum."
           : "The measured strength is below the configured minimum.";

@@ -125,20 +125,49 @@ const rowStrength = (row: unknown) => {
   );
 };
 
+const blockAirDryStrength = (row: unknown, location: string) => {
+  if (typeof row !== "object" || row === null) return null;
+  const values = row as Record<string, unknown>;
+  const storedAirDryStrength = numericValue(values.airDryStrength ?? values.dryAirStrength);
+  if (storedAirDryStrength !== null) return storedAirDryStrength;
+  const waterStrength = numericValue(
+    values.calculatedStrength ??
+    values.strength ??
+    values.compressiveStrength,
+  );
+  if (waterStrength === null) return null;
+  return Number((waterStrength * (location.trim().toLocaleLowerCase() === "dammam" ? 1 : 1.2)).toFixed(1));
+};
+
 const recordStrengths = (record: QcRecord, details: Record<string, unknown>) => {
   const rows = Array.isArray(details.testRows) ? details.testRows : [];
-  const strengths = rows.map(rowStrength).filter((value): value is number => value !== null);
+  const strengths = rows
+    .map((row) => record.testType === "Blocks"
+      ? blockAirDryStrength(row, record.location)
+      : rowStrength(row))
+    .filter((value): value is number => value !== null);
   if (strengths.length) return strengths;
   const directStrength = numericValue(
-    details.averageStrength ??
-    details.correctedStrength ??
-    details.normalizedStrength ??
-    details.airDryStrength ??
-    details.calculatedStrength ??
-    details.strength ??
-    details.compressiveStrength,
+    record.testType === "Blocks"
+      ? details.averageStrength ??
+        details.airDryStrength ??
+        details.dryAirStrength ??
+        details.calculatedStrength ??
+        details.strength ??
+        details.compressiveStrength
+      : details.averageStrength ??
+        details.correctedStrength ??
+        details.normalizedStrength ??
+        details.airDryStrength ??
+        details.calculatedStrength ??
+        details.strength ??
+        details.compressiveStrength,
   );
-  return directStrength === null ? [] : [directStrength];
+  if (directStrength === null) return [];
+  if (record.testType !== "Blocks" || details.averageStrength !== undefined || details.airDryStrength !== undefined) {
+    return [directStrength];
+  }
+  return [Number((directStrength * (record.location.trim().toLocaleLowerCase() === "dammam" ? 1 : 1.2)).toFixed(1))];
 };
 
 export function dailyReportProductOptions(records: QcRecord[]): DailyReportProductOption[] {
