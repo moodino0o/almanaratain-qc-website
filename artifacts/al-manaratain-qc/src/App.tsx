@@ -17,6 +17,7 @@ import Home from '@/pages/home';
 import Records from '@/pages/records';
 import RecordForm from '@/pages/record-form';
 import RecordDetail from '@/pages/record-detail';
+import RecordsBulkEdit from '@/pages/records-bulk-edit';
 import Reports from '@/pages/reports';
 import ReportPrint from '@/pages/report-print';
 import Settings from '@/pages/settings';
@@ -58,6 +59,7 @@ function Router() {
             <Route path="/" component={Home} />
             <Route path="/records" component={Records} />
             <Route path="/records/new" component={RecordForm} />
+            <Route path="/records/edit-all" component={RecordsBulkEdit} />
             <Route path="/records/:id/edit" component={RecordForm} />
             <Route path="/records/:id" component={RecordDetail} />
             {canViewComplaints && <Route path="/complaints" component={Complaints} />}

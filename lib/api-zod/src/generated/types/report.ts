@@ -6,9 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { QcRecord } from './qcRecord';
+import type { ReportLayout } from './reportLayout';
 
 export interface Report {
   record: QcRecord;
   companyName: string;
   companySubtitle: string;
+  layout?: ReportLayout;
 }

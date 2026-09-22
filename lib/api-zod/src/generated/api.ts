@@ -762,10 +762,93 @@ export const DeleteSieveStandardResponse = zod.void()
 
 
 /**
+ * @summary List default Block shape factors
+ */
+
+
+
+export const ListShapeFactorsResponseItem = zod.object({
+  "id": zod.number(),
+  "blockSize": zod.string().min(1),
+  "shapeFactor": zod.number().nullable(),
+  "correctionFactor": zod.number().nullable()
+})
+export const ListShapeFactorsResponse = zod.array(ListShapeFactorsResponseItem)
+
+
+/**
+ * @summary Create a default Block shape factor
+ */
+
+export const createShapeFactorBodyShapeFactorMin = 0;
+
+export const createShapeFactorBodyCorrectionFactorMin = 0;
+
+
+
+export const CreateShapeFactorBody = zod.object({
+  "blockSize": zod.string().min(1),
+  "shapeFactor": zod.number().min(createShapeFactorBodyShapeFactorMin).nullish(),
+  "correctionFactor": zod.number().min(createShapeFactorBodyCorrectionFactorMin).nullish()
+})
+
+
+
+
+export const CreateShapeFactorResponse = zod.object({
+  "id": zod.number(),
+  "blockSize": zod.string().min(1),
+  "shapeFactor": zod.number().nullable(),
+  "correctionFactor": zod.number().nullable()
+})
+
+
+/**
+ * @summary Update a default Block shape factor
+ */
+export const UpdateShapeFactorParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+export const updateShapeFactorBodyShapeFactorMin = 0;
+
+export const updateShapeFactorBodyCorrectionFactorMin = 0;
+
+
+
+export const UpdateShapeFactorBody = zod.object({
+  "blockSize": zod.string().min(1).optional(),
+  "shapeFactor": zod.number().min(updateShapeFactorBodyShapeFactorMin).nullish(),
+  "correctionFactor": zod.number().min(updateShapeFactorBodyCorrectionFactorMin).nullish()
+})
+
+
+
+
+export const UpdateShapeFactorResponse = zod.object({
+  "id": zod.number(),
+  "blockSize": zod.string().min(1),
+  "shapeFactor": zod.number().nullable(),
+  "correctionFactor": zod.number().nullable()
+})
+
+
+/**
+ * @summary Delete a default Block shape factor
+ */
+export const DeleteShapeFactorParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteShapeFactorResponse = zod.void()
+
+
+/**
  * @summary List quality control records
  */
 export const listRecordsQueryLimitDefault = 50;
-export const listRecordsQueryLimitMax = 100;
+export const listRecordsQueryLimitMax = 1000;
 
 
 
@@ -1188,6 +1271,27 @@ export const GetReportParams = zod.object({
   "id": zod.coerce.number()
 })
 
+
+export const getReportResponseLayoutConfigFontSizeMin = 8;
+export const getReportResponseLayoutConfigFontSizeMax = 24;
+
+export const getReportResponseLayoutConfigTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const getReportResponseLayoutConfigAccentColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const getReportResponseLayoutConfigPaperPaddingMin = 5;
+export const getReportResponseLayoutConfigPaperPaddingMax = 30;
+
+
+
+export const getReportResponseLayoutConfigSectionsItemOrderMin = 0;
+
+
+
+export const getReportResponseLayoutConfigColumnsItemOrderMin = 0;
+
+export const getReportResponseLayoutConfigColumnsItemWidthMax = 100;
+
+
+
 export const GetReportResponse = zod.object({
   "record": zod.object({
   "id": zod.number(),
@@ -1204,7 +1308,189 @@ export const GetReportResponse = zod.object({
   "createdAt": zod.coerce.date().optional()
 }),
   "companyName": zod.string(),
-  "companySubtitle": zod.string()
+  "companySubtitle": zod.string(),
+  "layout": zod.object({
+  "id": zod.number(),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "name": zod.string(),
+  "config": zod.object({
+  "title": zod.string().min(1),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']),
+  "fontSize": zod.number().min(getReportResponseLayoutConfigFontSizeMin).max(getReportResponseLayoutConfigFontSizeMax),
+  "textColor": zod.string().regex(getReportResponseLayoutConfigTextColorRegExp),
+  "accentColor": zod.string().regex(getReportResponseLayoutConfigAccentColorRegExp),
+  "paperPadding": zod.number().min(getReportResponseLayoutConfigPaperPaddingMin).max(getReportResponseLayoutConfigPaperPaddingMax),
+  "sections": zod.array(zod.object({
+  "key": zod.string().min(1),
+  "label": zod.string().min(1),
+  "visible": zod.boolean(),
+  "order": zod.number().min(getReportResponseLayoutConfigSectionsItemOrderMin)
+})),
+  "columns": zod.record(zod.string(), zod.array(zod.object({
+  "key": zod.string().min(1),
+  "label": zod.string().min(1),
+  "visible": zod.boolean(),
+  "order": zod.number().min(getReportResponseLayoutConfigColumnsItemOrderMin),
+  "width": zod.number().min(1).max(getReportResponseLayoutConfigColumnsItemWidthMax)
+})))
+})
+}).optional()
+})
+
+
+/**
+ * @summary List report layouts
+ */
+
+export const listReportLayoutsResponseConfigFontSizeMin = 8;
+export const listReportLayoutsResponseConfigFontSizeMax = 24;
+
+export const listReportLayoutsResponseConfigTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const listReportLayoutsResponseConfigAccentColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const listReportLayoutsResponseConfigPaperPaddingMin = 5;
+export const listReportLayoutsResponseConfigPaperPaddingMax = 30;
+
+
+
+export const listReportLayoutsResponseConfigSectionsItemOrderMin = 0;
+
+
+
+export const listReportLayoutsResponseConfigColumnsItemOrderMin = 0;
+
+export const listReportLayoutsResponseConfigColumnsItemWidthMax = 100;
+
+
+
+export const ListReportLayoutsResponseItem = zod.object({
+  "id": zod.number(),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "name": zod.string(),
+  "config": zod.object({
+  "title": zod.string().min(1),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']),
+  "fontSize": zod.number().min(listReportLayoutsResponseConfigFontSizeMin).max(listReportLayoutsResponseConfigFontSizeMax),
+  "textColor": zod.string().regex(listReportLayoutsResponseConfigTextColorRegExp),
+  "accentColor": zod.string().regex(listReportLayoutsResponseConfigAccentColorRegExp),
+  "paperPadding": zod.number().min(listReportLayoutsResponseConfigPaperPaddingMin).max(listReportLayoutsResponseConfigPaperPaddingMax),
+  "sections": zod.array(zod.object({
+  "key": zod.string().min(1),
+  "label": zod.string().min(1),
+  "visible": zod.boolean(),
+  "order": zod.number().min(listReportLayoutsResponseConfigSectionsItemOrderMin)
+})),
+  "columns": zod.record(zod.string(), zod.array(zod.object({
+  "key": zod.string().min(1),
+  "label": zod.string().min(1),
+  "visible": zod.boolean(),
+  "order": zod.number().min(listReportLayoutsResponseConfigColumnsItemOrderMin),
+  "width": zod.number().min(1).max(listReportLayoutsResponseConfigColumnsItemWidthMax)
+})))
+})
+})
+export const ListReportLayoutsResponse = zod.array(ListReportLayoutsResponseItem)
+
+
+/**
+ * @summary Update a report layout
+ */
+export const UpdateReportLayoutParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+export const updateReportLayoutBodyConfigFontSizeMin = 8;
+export const updateReportLayoutBodyConfigFontSizeMax = 24;
+
+export const updateReportLayoutBodyConfigTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportLayoutBodyConfigAccentColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportLayoutBodyConfigPaperPaddingMin = 5;
+export const updateReportLayoutBodyConfigPaperPaddingMax = 30;
+
+
+
+export const updateReportLayoutBodyConfigSectionsItemOrderMin = 0;
+
+
+
+export const updateReportLayoutBodyConfigColumnsItemOrderMin = 0;
+
+export const updateReportLayoutBodyConfigColumnsItemWidthMax = 100;
+
+
+
+export const UpdateReportLayoutBody = zod.object({
+  "name": zod.string().min(1).optional(),
+  "config": zod.object({
+  "title": zod.string().min(1),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']),
+  "fontSize": zod.number().min(updateReportLayoutBodyConfigFontSizeMin).max(updateReportLayoutBodyConfigFontSizeMax),
+  "textColor": zod.string().regex(updateReportLayoutBodyConfigTextColorRegExp),
+  "accentColor": zod.string().regex(updateReportLayoutBodyConfigAccentColorRegExp),
+  "paperPadding": zod.number().min(updateReportLayoutBodyConfigPaperPaddingMin).max(updateReportLayoutBodyConfigPaperPaddingMax),
+  "sections": zod.array(zod.object({
+  "key": zod.string().min(1),
+  "label": zod.string().min(1),
+  "visible": zod.boolean(),
+  "order": zod.number().min(updateReportLayoutBodyConfigSectionsItemOrderMin)
+})),
+  "columns": zod.record(zod.string(), zod.array(zod.object({
+  "key": zod.string().min(1),
+  "label": zod.string().min(1),
+  "visible": zod.boolean(),
+  "order": zod.number().min(updateReportLayoutBodyConfigColumnsItemOrderMin),
+  "width": zod.number().min(1).max(updateReportLayoutBodyConfigColumnsItemWidthMax)
+})))
+})
+})
+
+
+export const updateReportLayoutResponseConfigFontSizeMin = 8;
+export const updateReportLayoutResponseConfigFontSizeMax = 24;
+
+export const updateReportLayoutResponseConfigTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportLayoutResponseConfigAccentColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportLayoutResponseConfigPaperPaddingMin = 5;
+export const updateReportLayoutResponseConfigPaperPaddingMax = 30;
+
+
+
+export const updateReportLayoutResponseConfigSectionsItemOrderMin = 0;
+
+
+
+export const updateReportLayoutResponseConfigColumnsItemOrderMin = 0;
+
+export const updateReportLayoutResponseConfigColumnsItemWidthMax = 100;
+
+
+
+export const UpdateReportLayoutResponse = zod.object({
+  "id": zod.number(),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "name": zod.string(),
+  "config": zod.object({
+  "title": zod.string().min(1),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']),
+  "fontSize": zod.number().min(updateReportLayoutResponseConfigFontSizeMin).max(updateReportLayoutResponseConfigFontSizeMax),
+  "textColor": zod.string().regex(updateReportLayoutResponseConfigTextColorRegExp),
+  "accentColor": zod.string().regex(updateReportLayoutResponseConfigAccentColorRegExp),
+  "paperPadding": zod.number().min(updateReportLayoutResponseConfigPaperPaddingMin).max(updateReportLayoutResponseConfigPaperPaddingMax),
+  "sections": zod.array(zod.object({
+  "key": zod.string().min(1),
+  "label": zod.string().min(1),
+  "visible": zod.boolean(),
+  "order": zod.number().min(updateReportLayoutResponseConfigSectionsItemOrderMin)
+})),
+  "columns": zod.record(zod.string(), zod.array(zod.object({
+  "key": zod.string().min(1),
+  "label": zod.string().min(1),
+  "visible": zod.boolean(),
+  "order": zod.number().min(updateReportLayoutResponseConfigColumnsItemOrderMin),
+  "width": zod.number().min(1).max(updateReportLayoutResponseConfigColumnsItemWidthMax)
+})))
+})
 })
 
 

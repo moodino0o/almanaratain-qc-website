@@ -16,7 +16,12 @@ import {
   EmployeeAccess,
   UserRole,
   ReferenceCategory,
-  ReferenceItem
+  ReferenceItem,
+  ReportLayout,
+  ReportLayoutColumn,
+  useListReportLayouts,
+  useUpdateReportLayout,
+  getListReportLayoutsQueryKey,
 } from "@workspace/api-client-react";
 import { useAuth } from "@workspace/replit-auth-web";
 import { useQueryClient } from "@tanstack/react-query";
@@ -627,6 +632,284 @@ function CategoryCard({ category }: { category: ReferenceCategory }) {
   );
 }
 
+const REPORT_LAYOUT_COLUMN_OPTIONS: Record<
+  string,
+  Array<{ key: string; label: string }>
+> = {
+  blockCompression: [
+    { key: "no", label: "No." },
+    { key: "length", label: "Length (mm)" },
+    { key: "width", label: "Width (mm)" },
+    { key: "height", label: "Height (mm)" },
+    { key: "load", label: "Load (kN)" },
+    { key: "water", label: "Water (N/mm2)" },
+    { key: "airDry", label: "Air Dry (N/mm2)" },
+    { key: "normalized", label: "Normalized (N/mm2)" },
+    { key: "density", label: "Density (kg/m3)" },
+    { key: "wetWeight", label: "Wet Weight (kg)" },
+  ],
+  readyMixResults: [
+    { key: "no", label: "No." },
+    { key: "age", label: "Test Age" },
+    { key: "length", label: "Length (mm)" },
+    { key: "width", label: "Width (mm)" },
+    { key: "height", label: "Height (mm)" },
+    { key: "dryWeight", label: "Dry Weight" },
+    { key: "wetWeight", label: "Wet Weight" },
+    { key: "absorption", label: "Water Absorption (%)" },
+    { key: "load", label: "Load (kN)" },
+    { key: "strength", label: "Calculated Strength" },
+  ],
+  sieveResults: [
+    { key: "no", label: "No." },
+    { key: "size", label: "Sieve / Pore Size" },
+    { key: "returned", label: "Amount Returned" },
+    { key: "passing", label: "Amount Passing" },
+    { key: "percentage", label: "% Passing" },
+  ],
+  pavingResults: [
+    { key: "no", label: "No." },
+    { key: "age", label: "Test Age" },
+    { key: "length", label: "Length (mm)" },
+    { key: "width", label: "Width (mm)" },
+    { key: "height", label: "Height (mm)" },
+    { key: "dryWeight", label: "Dry Weight" },
+    { key: "wetWeight", label: "Wet Weight" },
+    { key: "load", label: "Load (kN)" },
+    { key: "strength", label: "Calculated Strength" },
+  ],
+};
+
+const REPORT_LAYOUT_TABLE_LABELS: Record<string, string> = {
+  blockCompression: "Block compression results",
+  readyMixResults: "Ready Mix specimen results",
+  sieveResults: "Sieve results",
+  pavingResults: "Paving Block specimen results",
+};
+
+function ReportLayoutsSection() {
+  const { data: layouts = [], isLoading, isError } = useListReportLayouts();
+  const queryClient = useQueryClient();
+  const updateLayout = useUpdateReportLayout();
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [draft, setDraft] = useState<ReportLayout | null>(null);
+  const selectedLayout = layouts.find((layout) => layout.id === selectedId) ?? layouts[0];
+
+  useEffect(() => {
+    if (selectedLayout) {
+      setSelectedId(selectedLayout.id);
+      setDraft(selectedLayout);
+    }
+  }, [selectedLayout?.id]);
+
+  if (isLoading) {
+    return <Card><CardContent className="p-6 text-sm text-muted-foreground">Loading report layouts...</CardContent></Card>;
+  }
+  if (isError) {
+    return (
+      <Card>
+        <CardContent className="space-y-2 p-6">
+          <p className="font-medium">Report editor could not be loaded.</p>
+          <p className="text-sm text-muted-foreground">
+            Sign in as an administrator to edit and save report forms.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+  if (!draft) {
+    return <Card><CardContent className="p-6 text-sm text-muted-foreground">No report layouts are configured.</CardContent></Card>;
+  }
+
+  const config = draft.config;
+  const tableKey = draft.testType === "Blocks"
+    ? "blockCompression"
+    : draft.testType === "Ready Mix"
+      ? "readyMixResults"
+      : draft.testType === "Sand Sieve" || draft.testType === "Aggregate Sieve"
+        ? "sieveResults"
+        : draft.testType === "Paving Blocks"
+          ? "pavingResults"
+          : "";
+  const configuredColumns = tableKey ? (config.columns[tableKey] ?? []) : [];
+  const columnOptions = REPORT_LAYOUT_COLUMN_OPTIONS[tableKey] ?? [];
+  const availableColumns = columnOptions.filter(
+    (option) => !configuredColumns.some((column) => column.key === option.key),
+  );
+  const setConfig = (patch: Partial<ReportLayout["config"]>) => {
+    setDraft((current) => current ? {
+      ...current,
+      config: { ...current.config, ...patch },
+    } : current);
+  };
+  const updateColumn = (columnKey: string, patch: Partial<ReportLayoutColumn>) => {
+    setConfig({
+      columns: {
+        ...config.columns,
+        [tableKey]: configuredColumns.map((column) =>
+          column.key === columnKey ? { ...column, ...patch } : column,
+        ),
+      },
+    });
+  };
+  const save = () => {
+    updateLayout.mutate(
+      { id: draft.id, data: { name: draft.name, config } },
+      {
+        onSuccess: (saved) => {
+          setDraft(saved);
+          queryClient.invalidateQueries({ queryKey: getListReportLayoutsQueryKey() });
+          toast.success(`${saved.testType} report layout saved`);
+        },
+        onError: () => toast.error("Unable to save report layout"),
+      },
+    );
+  };
+
+  return (
+    <Card className="mt-4">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2"><Settings2 className="h-5 w-5 text-primary" /> Report layouts</CardTitle>
+        <CardDescription>
+          Customize each report type. Changes affect new and existing printable reports and are limited to approved data fields.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <label className="flex-1 space-y-1 text-sm font-medium">
+            Report type
+            <select
+              value={draft.id}
+              onChange={(event) => setSelectedId(Number(event.target.value))}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 font-normal"
+            >
+              {layouts.map((layout) => <option key={layout.id} value={layout.id}>{layout.testType}</option>)}
+            </select>
+          </label>
+          <label className="flex-1 space-y-1 text-sm font-medium">
+            Report title
+            <Input
+              value={draft.config.title}
+              onChange={(event) => setConfig({ title: event.target.value })}
+            />
+          </label>
+          <Button onClick={save} disabled={updateLayout.isPending}>Save layout</Button>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <label className="space-y-1 text-sm font-medium">
+            Font family
+            <select
+              value={config.fontFamily}
+              onChange={(event) => setConfig({ fontFamily: event.target.value as ReportLayout["config"]["fontFamily"] })}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 font-normal"
+            >
+              {["Arial", "Calibri", "Times New Roman", "Helvetica"].map((font) => <option key={font}>{font}</option>)}
+            </select>
+          </label>
+          <label className="space-y-1 text-sm font-medium">
+            Font size
+            <Input type="number" min={8} max={24} value={config.fontSize} onChange={(event) => setConfig({ fontSize: Number(event.target.value) })} />
+          </label>
+          <label className="space-y-1 text-sm font-medium">
+            Text color
+            <Input type="color" value={config.textColor} onChange={(event) => setConfig({ textColor: event.target.value })} className="h-10 p-1" />
+          </label>
+          <label className="space-y-1 text-sm font-medium">
+            Accent color
+            <Input type="color" value={config.accentColor} onChange={(event) => setConfig({ accentColor: event.target.value })} className="h-10 p-1" />
+          </label>
+          <label className="space-y-1 text-sm font-medium">
+            Paper padding (mm)
+            <Input type="number" min={5} max={30} value={config.paperPadding} onChange={(event) => setConfig({ paperPadding: Number(event.target.value) })} />
+          </label>
+        </div>
+
+        <div>
+          <h3 className="mb-2 text-sm font-semibold">Sections and position</h3>
+          <div className="grid gap-2 md:grid-cols-2">
+            {[...config.sections].sort((left, right) => left.order - right.order).map((section) => (
+              <div key={section.key} className="flex items-center gap-2 rounded-md border p-2">
+                <input
+                  type="checkbox"
+                  checked={section.visible}
+                  onChange={(event) => setConfig({
+                    sections: config.sections.map((item) => item.key === section.key ? { ...item, visible: event.target.checked } : item),
+                  })}
+                />
+                <span className="min-w-0 flex-1 text-sm">{section.label}</span>
+                <Input
+                  type="number"
+                  min={0}
+                  value={section.order}
+                  className="h-8 w-20"
+                  onChange={(event) => setConfig({
+                    sections: config.sections.map((item) => item.key === section.key ? { ...item, order: Number(event.target.value) } : item),
+                  })}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {tableKey && (
+          <div>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold">{REPORT_LAYOUT_TABLE_LABELS[tableKey]}</h3>
+                <p className="text-xs text-muted-foreground">Change order, width, visibility, and labels. Add only supported fields.</p>
+              </div>
+              <select
+                disabled={!availableColumns.length}
+                value=""
+                onChange={(event) => {
+                  const option = columnOptions.find((item) => item.key === event.target.value);
+                  if (!option) return;
+                  setConfig({
+                    columns: {
+                      ...config.columns,
+                      [tableKey]: [
+                        ...configuredColumns,
+                        { ...option, visible: true, order: configuredColumns.length, width: 10 },
+                      ],
+                    },
+                  });
+                }}
+                className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+              >
+                <option value="">Add column…</option>
+                {availableColumns.map((option) => <option key={option.key} value={option.key}>{option.label}</option>)}
+              </select>
+            </div>
+            <div className="space-y-2">
+              {configuredColumns.map((column) => (
+                <div key={column.key} className="grid items-center gap-2 rounded-md border p-2 sm:grid-cols-[auto_1fr_90px_90px_auto]">
+                  <input
+                    type="checkbox"
+                    checked={column.visible}
+                    onChange={(event) => updateColumn(column.key, { visible: event.target.checked })}
+                  />
+                  <Input value={column.label} onChange={(event) => updateColumn(column.key, { label: event.target.value })} />
+                  <Input type="number" min={0} value={column.order} onChange={(event) => updateColumn(column.key, { order: Number(event.target.value) })} aria-label={`${column.label} order`} />
+                  <Input type="number" min={1} max={100} value={column.width} onChange={(event) => updateColumn(column.key, { width: Number(event.target.value) })} aria-label={`${column.label} width`} />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setConfig({ columns: { ...config.columns, [tableKey]: configuredColumns.filter((item) => item.key !== column.key) } })}
+                    aria-label={`Remove ${column.label}`}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function Settings() {
   const queryClient = useQueryClient();
   const { isAdmin } = useAuth();
@@ -699,13 +982,16 @@ export default function Settings() {
         <p className="mt-1 text-sm text-muted-foreground">Manage employee access and the master data used throughout quality control.</p>
       </div>
 
-      <Tabs defaultValue="reference-data" className="flex min-h-0 flex-1 flex-col">
-        <TabsList className="grid h-auto w-full max-w-xl shrink-0 grid-cols-2">
+      <Tabs defaultValue="report-layouts" className="flex min-h-0 flex-1 flex-col">
+        <TabsList className="grid h-auto w-full max-w-2xl shrink-0 grid-cols-3">
           <TabsTrigger value="reference-data" className="gap-2 py-2.5">
             <Database className="h-4 w-4" /> Settings
           </TabsTrigger>
           <TabsTrigger value="employee-access" className="gap-2 py-2.5">
             <Users className="h-4 w-4" /> Employee Access
+          </TabsTrigger>
+          <TabsTrigger value="report-layouts" className="gap-2 py-2.5">
+            <Settings2 className="h-4 w-4" /> Report Layouts
           </TabsTrigger>
         </TabsList>
 
@@ -743,6 +1029,10 @@ export default function Settings() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="report-layouts" className="mt-4 min-h-0 flex-1 overflow-y-auto">
+          <ReportLayoutsSection />
         </TabsContent>
       </Tabs>
 

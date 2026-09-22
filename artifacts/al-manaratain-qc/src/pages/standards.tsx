@@ -2,22 +2,28 @@ import { useMemo, useState } from "react";
 import { Link } from "wouter";
 import {
   getListSieveStandardsQueryKey,
+  getListShapeFactorsQueryKey,
   getListStrengthStandardsQueryKey,
   getGetLookupsQueryKey,
   getGetReferenceDataQueryKey,
   SieveStandard,
+  ShapeFactor,
   StrengthStandard,
   TestType,
   useCreateSieveStandard,
+  useCreateShapeFactor,
   useCreateReferenceItem,
   useCreateStrengthStandard,
   useDeleteSieveStandard,
+  useDeleteShapeFactor,
   useDeleteStrengthStandard,
   useGetLookups,
   useGetReferenceData,
   useListSieveStandards,
+  useListShapeFactors,
   useListStrengthStandards,
   useUpdateSieveStandard,
+  useUpdateShapeFactor,
   useUpdateStrengthStandard,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -55,8 +61,14 @@ import {
 } from "@/components/ui/select";
 import { TypeaheadInput } from "@/components/ui/typeahead-input";
 
-type AutomatedTestType = "Ready Mix" | "Blocks";
+type AutomatedTestType = "Ready Mix" | "Blocks" | "Paving Blocks";
 type SieveTestType = "Sand Sieve" | "Aggregate Sieve";
+
+type ShapeFactorForm = {
+  blockSize: string;
+  shapeFactor: string;
+  correctionFactor: string;
+};
 
 type StandardForm = {
   testType: AutomatedTestType;
@@ -109,6 +121,12 @@ const emptySieveForm: SieveForm = {
   ],
 };
 
+const emptyShapeFactorForm: ShapeFactorForm = {
+  blockSize: "",
+  shapeFactor: "",
+  correctionFactor: "",
+};
+
 function formFromStandard(standard: StrengthStandard): StandardForm {
   return {
     testType: standard.testType as StandardForm["testType"],
@@ -135,6 +153,16 @@ function formFromSieveStandards(standards: SieveStandard[]): SieveForm {
       maximum: item.maximum == null ? "" : String(item.maximum),
       unit: item.unit,
     })),
+  };
+}
+
+function formFromShapeFactor(shapeFactor: ShapeFactor): ShapeFactorForm {
+  return {
+    blockSize: shapeFactor.blockSize,
+    shapeFactor:
+      shapeFactor.shapeFactor === null ? "" : String(shapeFactor.shapeFactor),
+    correctionFactor:
+      shapeFactor.correctionFactor === null ? "" : String(shapeFactor.correctionFactor),
   };
 }
 
@@ -187,7 +215,7 @@ function StandardEditor({
               {editing ? "Edit strength standard" : "Add strength standard"}
             </CardTitle>
             <CardDescription>
-              Set the minimum compressive strength used when Ready Mix or Blocks
+               Set the minimum compressive strength used when Ready Mix, Blocks, or Paving Blocks
               records are checked.
             </CardDescription>
           </div>
@@ -221,6 +249,7 @@ function StandardEditor({
             <SelectContent>
               <SelectItem value={TestType.Ready_Mix}>Ready Mix</SelectItem>
               <SelectItem value={TestType.Blocks}>Blocks</SelectItem>
+                <SelectItem value={TestType.Paving_Blocks}>Paving Blocks</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -236,9 +265,9 @@ function StandardEditor({
             }
           />
         </div>
-        {form.testType === TestType.Blocks && (
+        {(form.testType === TestType.Blocks || form.testType === TestType.Paving_Blocks) && (
           <>
-            <div className="space-y-2">
+            {form.testType === TestType.Blocks && <div className="space-y-2">
               <Label>Block Type</Label>
               <TypeaheadInput
                 value={form.blockType}
@@ -249,7 +278,7 @@ function StandardEditor({
                   onCreateReferenceItem("blockTypes", value)
                 }
               />
-            </div>
+            </div>}
             <div className="space-y-2">
               <Label>Block Size</Label>
               <TypeaheadInput
@@ -257,9 +286,7 @@ function StandardEditor({
                 onChange={(value) => setForm({ ...form, blockSize: value })}
                 options={lookups?.blockSizes ?? []}
                 placeholder="Select block size..."
-                onCreateOption={(value) =>
-                  onCreateReferenceItem("blockSizes", value)
-                }
+                  onCreateOption={(value) => onCreateReferenceItem("blockSizes", value)}
               />
             </div>
           </>
@@ -591,7 +618,7 @@ function SieveEditor({
   );
 }
 
-type StrengthFolderKey = "readyMix" | "blocks";
+type StrengthFolderKey = "readyMix" | "blocks" | "paving";
 
 function StrengthStandardsFolder({
   label,
@@ -719,6 +746,197 @@ function StrengthStandardsFolder({
   );
 }
 
+function ShapeFactorsFolder({
+  shapeFactors,
+  canEdit,
+  expanded,
+  onToggle,
+  onAdd,
+  onEdit,
+  onDelete,
+}: {
+  shapeFactors: ShapeFactor[];
+  canEdit: boolean;
+  expanded: boolean;
+  onToggle: () => void;
+  onAdd: () => void;
+  onEdit: (shapeFactor: ShapeFactor) => void;
+  onDelete: (shapeFactor: ShapeFactor) => void;
+}) {
+  return (
+    <Card className="border-border shadow-sm">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        className="flex w-full items-center justify-between gap-4 rounded-lg px-4 py-3 text-left transition-colors hover:bg-muted/40"
+      >
+        <span className="flex min-w-0 items-center gap-3">
+          {expanded ? (
+            <FolderOpen className="h-5 w-5 shrink-0 text-foreground" />
+          ) : (
+            <Folder className="h-5 w-5 shrink-0 text-foreground" />
+          )}
+          <span className="min-w-0">
+            <span className="block truncate font-semibold text-foreground">
+              Block shape factors
+            </span>
+            <span className="block text-xs text-muted-foreground">
+              {shapeFactors.length} {shapeFactors.length === 1 ? "block size" : "block sizes"}
+            </span>
+          </span>
+        </span>
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${
+            expanded ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+      {expanded && (
+        <div className="border-t border-border">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px] text-xs sm:text-sm">
+              <thead className="bg-muted/40 text-left text-foreground">
+                <tr className="border-b">
+                  <th className="px-4 py-3 font-semibold">Block Size</th>
+                  <th className="px-4 py-3 font-semibold">Default Shape Factor</th>
+                  <th className="px-4 py-3 font-semibold">Paving Correction Factor</th>
+                  <th className="px-4 py-3 text-right font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shapeFactors.map((shapeFactor) => (
+                  <tr key={shapeFactor.id} className="border-b last:border-b-0">
+                    <td className="px-4 py-3 font-medium">{shapeFactor.blockSize}</td>
+                    <td className="px-4 py-3 font-semibold">
+                      {shapeFactor.shapeFactor === null ? "Not configured" : shapeFactor.shapeFactor}
+                    </td>
+                    <td className="px-4 py-3 font-semibold">
+                      {shapeFactor.correctionFactor === null ? "Not configured" : shapeFactor.correctionFactor}
+                    </td>
+                    <td className="px-4 py-3">
+                      {canEdit && (
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onEdit(shapeFactor)}
+                            aria-label={`Edit shape factor for ${shapeFactor.blockSize}`}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive"
+                            onClick={() => onDelete(shapeFactor)}
+                            aria-label={`Delete shape factor for ${shapeFactor.blockSize}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {!shapeFactors.length && (
+            <div className="flex flex-col items-center gap-3 p-8 text-center">
+              <Folder className="h-8 w-8 text-muted-foreground/60" />
+              <p className="text-sm text-muted-foreground">
+                No block shape factors configured yet.
+              </p>
+              {canEdit && (
+                <Button variant="outline" size="sm" onClick={onAdd}>
+                  <Plus className="mr-2 h-4 w-4" /> Add shape factor
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function ShapeFactorEditor({
+  form,
+  setForm,
+  editing,
+  onCancel,
+  onSave,
+  isSaving,
+  blockSizes,
+}: {
+  form: ShapeFactorForm;
+  setForm: (value: ShapeFactorForm) => void;
+  editing: ShapeFactor | null;
+  onCancel: () => void;
+  onSave: () => void;
+  isSaving: boolean;
+  blockSizes: string[];
+}) {
+  return (
+    <Card className="border-primary/20 bg-card text-foreground shadow-sm">
+      <CardHeader className="border-b border-border/70 bg-muted/40">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <CardTitle>{editing ? "Edit shape factor" : "Add shape factor"}</CardTitle>
+            <CardDescription>
+               Set the default used for Block entries and the Paving correction factor for this size. Existing records with a saved value are not changed.
+            </CardDescription>
+          </div>
+          <Button variant="ghost" size="icon" onClick={onCancel} aria-label="Close shape factor editor">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="grid grid-cols-1 gap-4 pt-5 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label>Block Size</Label>
+          <TypeaheadInput
+            value={form.blockSize}
+            onChange={(value) => setForm({ ...form, blockSize: value })}
+            options={blockSizes}
+            placeholder="Select or type a block size..."
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Default Shape Factor</Label>
+          <Input
+            type="number"
+            min="0"
+            step="0.001"
+            value={form.shapeFactor}
+            onChange={(event) => setForm({ ...form, shapeFactor: event.target.value })}
+            placeholder="Leave blank until configured"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Paving Correction Factor</Label>
+          <Input
+            type="number"
+            min="0"
+            step="0.001"
+            value={form.correctionFactor}
+            onChange={(event) => setForm({ ...form, correctionFactor: event.target.value })}
+            placeholder="0.87 for 60 mm, 1.00 for 80 mm"
+          />
+        </div>
+        <div className="flex items-end justify-end gap-2 md:col-span-2">
+          <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+          <Button type="button" onClick={onSave} disabled={isSaving}>
+            <Check className="mr-2 h-4 w-4" />
+            {isSaving ? "Saving..." : editing ? "Save Changes" : "Add Shape Factor"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function Standards() {
   const queryClient = useQueryClient();
   const { role } = useAuth();
@@ -735,6 +953,12 @@ export default function Standards() {
     isError: sieveError,
     refetch: refetchSieve,
   } = useListSieveStandards();
+  const {
+    data: shapeFactors,
+    isLoading: shapeFactorLoading,
+    isError: shapeFactorError,
+    refetch: refetchShapeFactors,
+  } = useListShapeFactors();
   const { data: lookups } = useGetLookups();
   const { data: referenceData } = useGetReferenceData();
   const createStandard = useCreateStrengthStandard();
@@ -744,20 +968,30 @@ export default function Standards() {
   const createReferenceItem = useCreateReferenceItem();
   const updateSieveStandard = useUpdateSieveStandard();
   const deleteSieveStandard = useDeleteSieveStandard();
+  const createShapeFactor = useCreateShapeFactor();
+  const updateShapeFactor = useUpdateShapeFactor();
+  const deleteShapeFactor = useDeleteShapeFactor();
   const [editorOpen, setEditorOpen] = useState(false);
   const [sieveEditorOpen, setSieveEditorOpen] = useState(false);
+  const [shapeFactorEditorOpen, setShapeFactorEditorOpen] = useState(false);
   const [editing, setEditing] = useState<StrengthStandard | null>(null);
   const [editingSieve, setEditingSieve] = useState<SieveStandard[] | null>(
     null,
   );
+  const [editingShapeFactor, setEditingShapeFactor] = useState<ShapeFactor | null>(
+    null,
+  );
   const [form, setForm] = useState<StandardForm>(emptyForm);
   const [sieveForm, setSieveForm] = useState<SieveForm>(emptySieveForm);
-  const [standardView, setStandardView] = useState<"strength" | "sieve">(
+  const [shapeFactorForm, setShapeFactorForm] =
+    useState<ShapeFactorForm>(emptyShapeFactorForm);
+  const [standardView, setStandardView] = useState<"strength" | "sieve" | "shapeFactor">(
     "strength",
   );
   const [expandedStrengthFolders, setExpandedStrengthFolders] = useState<
     Record<StrengthFolderKey, boolean>
-  >({ readyMix: false, blocks: false });
+  >({ readyMix: false, blocks: false, paving: false });
+  const [shapeFactorsExpanded, setShapeFactorsExpanded] = useState(true);
 
   const materialItems = useMemo(
     () =>
@@ -805,6 +1039,14 @@ export default function Standards() {
             (standard) => standard.testType === TestType.Blocks,
           ) ?? [],
       },
+      {
+        key: "paving" as const,
+        label: "Paving Blocks standards",
+        standards:
+          strengthStandards?.filter(
+            (standard) => standard.testType === TestType.Paving_Blocks,
+          ) ?? [],
+      },
     ],
     [strengthStandards],
   );
@@ -815,6 +1057,9 @@ export default function Standards() {
     });
     queryClient.invalidateQueries({
       queryKey: getListSieveStandardsQueryKey(),
+    });
+    queryClient.invalidateQueries({
+      queryKey: getListShapeFactorsQueryKey(),
     });
     queryClient.invalidateQueries({
       predicate: ({ queryKey }) => {
@@ -866,6 +1111,7 @@ export default function Standards() {
     setStandardView("strength");
     setEditorOpen(true);
     setSieveEditorOpen(false);
+    setShapeFactorEditorOpen(false);
   };
 
   const openEdit = (standard: StrengthStandard) => {
@@ -874,6 +1120,7 @@ export default function Standards() {
     setStandardView("strength");
     setEditorOpen(true);
     setSieveEditorOpen(false);
+    setShapeFactorEditorOpen(false);
   };
 
   const openSieveCreate = () => {
@@ -882,6 +1129,7 @@ export default function Standards() {
     setStandardView("sieve");
     setSieveEditorOpen(true);
     setEditorOpen(false);
+    setShapeFactorEditorOpen(false);
   };
 
   const openSieveEdit = (standards: SieveStandard[]) => {
@@ -890,6 +1138,25 @@ export default function Standards() {
     setStandardView("sieve");
     setSieveEditorOpen(true);
     setEditorOpen(false);
+    setShapeFactorEditorOpen(false);
+  };
+
+  const openShapeFactorCreate = () => {
+    setEditingShapeFactor(null);
+    setShapeFactorForm(emptyShapeFactorForm);
+    setStandardView("shapeFactor");
+    setShapeFactorEditorOpen(true);
+    setEditorOpen(false);
+    setSieveEditorOpen(false);
+  };
+
+  const openShapeFactorEdit = (shapeFactor: ShapeFactor) => {
+    setEditingShapeFactor(shapeFactor);
+    setShapeFactorForm(formFromShapeFactor(shapeFactor));
+    setStandardView("shapeFactor");
+    setShapeFactorEditorOpen(true);
+    setEditorOpen(false);
+    setSieveEditorOpen(false);
   };
 
   const handleSave = () => {
@@ -900,8 +1167,9 @@ export default function Standards() {
       !form.strengthUnit.trim() ||
       !Number.isFinite(requiredStrength) ||
       requiredStrength < 0 ||
-      (form.testType === TestType.Blocks &&
-        (!form.blockType.trim() || !form.blockSize.trim()))
+      ((form.testType === TestType.Blocks &&
+        (!form.blockType.trim() || !form.blockSize.trim())) ||
+        (form.testType === TestType.Paving_Blocks && !form.blockSize.trim()))
     ) {
       toast.error("Complete the strength standard fields before saving.");
       return;
@@ -912,7 +1180,9 @@ export default function Standards() {
       blockType:
         form.testType === TestType.Blocks ? form.blockType.trim() : null,
       blockSize:
-        form.testType === TestType.Blocks ? form.blockSize.trim() : null,
+        form.testType === TestType.Blocks || form.testType === TestType.Paving_Blocks
+          ? form.blockSize.trim()
+          : null,
       bsStandard: form.bsStandard.trim(),
       requiredStrength,
       strengthUnit: form.strengthUnit.trim(),
@@ -925,7 +1195,11 @@ export default function Standards() {
         setEditorOpen(false);
         setExpandedStrengthFolders((current) => ({
           ...current,
-          [data.testType === TestType.Blocks ? "blocks" : "readyMix"]: true,
+           [data.testType === TestType.Blocks
+             ? "blocks"
+             : data.testType === TestType.Paving_Blocks
+               ? "paving"
+               : "readyMix"]: true,
         }));
         invalidateStandards();
       },
@@ -933,6 +1207,50 @@ export default function Standards() {
     };
     if (editing) updateStandard.mutate({ id: editing.id, data }, options);
     else createStandard.mutate({ data }, options);
+  };
+
+  const handleSaveShapeFactor = () => {
+    const shapeFactor =
+      shapeFactorForm.shapeFactor.trim() === ""
+        ? null
+        : Number(shapeFactorForm.shapeFactor);
+    const correctionFactor =
+      shapeFactorForm.correctionFactor.trim() === ""
+        ? null
+        : Number(shapeFactorForm.correctionFactor);
+    if (
+      !shapeFactorForm.blockSize.trim() ||
+      (shapeFactor !== null &&
+        (!Number.isFinite(shapeFactor) || shapeFactor < 0)) ||
+      (correctionFactor !== null &&
+        (!Number.isFinite(correctionFactor) || correctionFactor < 0))
+    ) {
+      toast.error("Enter a block size and a valid shape factor.");
+      return;
+    }
+    const data = {
+      blockSize: shapeFactorForm.blockSize.trim(),
+      shapeFactor,
+      correctionFactor,
+    };
+    const options = {
+      onSuccess: () => {
+        toast.success(
+          editingShapeFactor
+            ? "Shape factor updated."
+            : "Shape factor added.",
+        );
+        setShapeFactorEditorOpen(false);
+        setShapeFactorsExpanded(true);
+        invalidateStandards();
+      },
+      onError: () => toast.error("Unable to save the shape factor."),
+    };
+    if (editingShapeFactor) {
+      updateShapeFactor.mutate({ id: editingShapeFactor.id, data }, options);
+    } else {
+      createShapeFactor.mutate({ data }, options);
+    }
   };
 
   const handleSaveSieve = () => {
@@ -1054,6 +1372,20 @@ export default function Standards() {
       .catch(() => toast.error("Unable to delete the sieve standard."));
   };
 
+  const handleDeleteShapeFactor = (shapeFactor: ShapeFactor) => {
+    if (!confirm(`Delete the shape factor for ${shapeFactor.blockSize}?`)) return;
+    deleteShapeFactor.mutate(
+      { id: shapeFactor.id },
+      {
+        onSuccess: () => {
+          toast.success("Shape factor deleted.");
+          invalidateStandards();
+        },
+        onError: () => toast.error("Unable to delete the shape factor."),
+      },
+    );
+  };
+
   return (
     <div className="mx-auto max-w-6xl space-y-5 pb-12">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -1072,9 +1404,15 @@ export default function Standards() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {canEditStandards && !editorOpen && !sieveEditorOpen && (
+          {canEditStandards &&
+            !editorOpen &&
+            !sieveEditorOpen &&
+            !shapeFactorEditorOpen && (
             <>
-               <Button variant="outline" onClick={openSieveCreate}>
+              <Button variant="outline" onClick={openShapeFactorCreate}>
+                <Plus className="mr-2 h-4 w-4" /> Add shape factor
+              </Button>
+              <Button variant="outline" onClick={openSieveCreate}>
                 <Plus className="mr-2 h-4 w-4" /> Add sieve standard
               </Button>
               <Button onClick={openCreate}>
@@ -1116,6 +1454,17 @@ export default function Standards() {
           sieveItems={sieveItems}
         />
       )}
+      {shapeFactorEditorOpen && (
+        <ShapeFactorEditor
+          form={shapeFactorForm}
+          setForm={setShapeFactorForm}
+          editing={editingShapeFactor}
+          onCancel={() => setShapeFactorEditorOpen(false)}
+          onSave={handleSaveShapeFactor}
+          isSaving={createShapeFactor.isPending || updateShapeFactor.isPending}
+           blockSizes={lookups?.blockSizes ?? []}
+        />
+      )}
 
       <div
         role="tablist"
@@ -1152,6 +1501,22 @@ export default function Standards() {
           Sieve standards
           <span className="ml-1.5 text-xs text-muted-foreground">
             ({sieveGroups.length})
+          </span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={standardView === "shapeFactor"}
+          onClick={() => setStandardView("shapeFactor")}
+          className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
+            standardView === "shapeFactor"
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Shape factors
+          <span className="ml-1.5 text-xs text-muted-foreground">
+            ({shapeFactors?.length ?? 0})
           </span>
         </button>
       </div>
@@ -1194,9 +1559,11 @@ export default function Standards() {
                 setForm({
                   ...emptyForm,
                   testType:
-                    folder.key === "blocks"
-                      ? TestType.Blocks
-                      : TestType.Ready_Mix,
+                     folder.key === "blocks"
+                       ? TestType.Blocks
+                       : folder.key === "paving"
+                         ? TestType.Paving_Blocks
+                         : TestType.Ready_Mix,
                 });
                 setEditorOpen(true);
                 setSieveEditorOpen(false);
@@ -1205,6 +1572,39 @@ export default function Standards() {
                onDelete={canEditStandards ? handleDelete : () => undefined}
             />
           ))
+        )}
+      </div>
+
+      <div className={standardView === "shapeFactor" ? "space-y-3" : "hidden"}>
+        {shapeFactorLoading ? (
+          <Card className="border-border shadow-sm">
+            <CardContent className="p-12 text-center text-muted-foreground">
+              Loading shape factors...
+            </CardContent>
+          </Card>
+        ) : shapeFactorError ? (
+          <Card className="border-border shadow-sm">
+            <CardContent className="flex flex-col items-center gap-3 p-12 text-center">
+              <p className="text-sm text-destructive">
+                Shape factors could not be loaded.
+              </p>
+              <Button variant="outline" onClick={() => refetchShapeFactors()}>
+                Try Again
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <ShapeFactorsFolder
+            shapeFactors={shapeFactors ?? []}
+            canEdit={canEditStandards}
+            expanded={shapeFactorsExpanded}
+            onToggle={() => setShapeFactorsExpanded((current) => !current)}
+            onAdd={openShapeFactorCreate}
+            onEdit={canEditStandards ? openShapeFactorEdit : () => undefined}
+            onDelete={
+              canEditStandards ? handleDeleteShapeFactor : () => undefined
+            }
+          />
         )}
       </div>
 

@@ -229,6 +229,46 @@ export interface ReferenceItemInput {
   value: string;
 }
 
+export interface ShapeFactor {
+  id: number;
+  /** @minLength 1 */
+  blockSize: string;
+  /** @nullable */
+  shapeFactor: number | null;
+  /** @nullable */
+  correctionFactor: number | null;
+}
+
+export interface ShapeFactorInput {
+  /** @minLength 1 */
+  blockSize: string;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  shapeFactor?: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  correctionFactor?: number | null;
+}
+
+export interface ShapeFactorUpdate {
+  /** @minLength 1 */
+  blockSize?: string;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  shapeFactor?: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  correctionFactor?: number | null;
+}
+
 export interface StrengthStandard {
   id: number;
   testType: TestType;
@@ -623,10 +663,83 @@ export interface ArchiveResponse {
   canRetire: boolean;
 }
 
+export type ReportLayoutConfigFontFamily = typeof ReportLayoutConfigFontFamily[keyof typeof ReportLayoutConfigFontFamily];
+
+
+export const ReportLayoutConfigFontFamily = {
+  Arial: 'Arial',
+  Calibri: 'Calibri',
+  Times_New_Roman: 'Times New Roman',
+  Helvetica: 'Helvetica',
+} as const;
+
+export interface ReportLayoutSection {
+  /** @minLength 1 */
+  key: string;
+  /** @minLength 1 */
+  label: string;
+  visible: boolean;
+  /** @minimum 0 */
+  order: number;
+}
+
+export interface ReportLayoutColumn {
+  /** @minLength 1 */
+  key: string;
+  /** @minLength 1 */
+  label: string;
+  visible: boolean;
+  /** @minimum 0 */
+  order: number;
+  /**
+     * @minimum 1
+     * @maximum 100
+     */
+  width: number;
+}
+
+export type ReportLayoutConfigColumns = {[key: string]: ReportLayoutColumn[]};
+
+export interface ReportLayoutConfig {
+  /** @minLength 1 */
+  title: string;
+  fontFamily: ReportLayoutConfigFontFamily;
+  /**
+     * @minimum 8
+     * @maximum 24
+     */
+  fontSize: number;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  textColor: string;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  accentColor: string;
+  /**
+     * @minimum 5
+     * @maximum 30
+     */
+  paperPadding: number;
+  sections: ReportLayoutSection[];
+  columns: ReportLayoutConfigColumns;
+}
+
+export interface ReportLayout {
+  id: number;
+  testType: TestType;
+  name: string;
+  config: ReportLayoutConfig;
+}
+
 export interface Report {
   record: QcRecord;
   companyName: string;
   companySubtitle: string;
+  layout?: ReportLayout;
+}
+
+export interface ReportLayoutUpdate {
+  /** @minLength 1 */
+  name?: string;
+  config: ReportLayoutConfig;
 }
 
 export type TestTypeParamParameter = TestType;
@@ -650,7 +763,7 @@ testType?: TestTypeParamParameter;
 search?: SearchParamParameter;
 /**
  * @minimum 1
- * @maximum 100
+ * @maximum 1000
  */
 limit?: LimitParamParameter;
 };

@@ -7,7 +7,7 @@
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
     "build": "vite build --config vite.config.ts",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
-    "test": "tsx --test src/components/ui/typeahead-options.test.ts src/pages/record-form-utils.test.ts src/pages/reports-utils.test.ts src/pages/complaints-utils.test.ts",
+    "test": "tsx --test src/components/ui/typeahead-options.test.ts src/pages/record-form-utils.test.ts src/pages/records-bulk-utils.test.ts src/pages/reports-utils.test.ts src/pages/complaints-utils.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

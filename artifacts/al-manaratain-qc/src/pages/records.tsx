@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { CheckCircle2, AlertTriangle, XCircle, Search, Plus, Filter, Printer } from "lucide-react";
+import { CheckCircle2, AlertTriangle, XCircle, Search, Plus, Filter, Printer, TableProperties } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { useAuth } from "@workspace/replit-auth-web";
 
@@ -39,10 +39,16 @@ export default function Records() {
           <p className="text-muted-foreground mt-1 text-sm">Comprehensive searchable list of all quality control tests.</p>
         </div>
          {canEditQc && (
-           <Link href="/records/new" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary text-primary-foreground shadow hover:bg-primary/90 h-10 px-6">
-             <Plus className="w-4 h-4 mr-2" />
-             New Record
-           </Link>
+           <div className="flex flex-wrap gap-2">
+             <Link href="/records/edit-all" className="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-5 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground">
+               <TableProperties className="mr-2 h-4 w-4" />
+               Edit All Records
+             </Link>
+             <Link href="/records/new" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary text-primary-foreground shadow hover:bg-primary/90 h-10 px-6">
+               <Plus className="w-4 h-4 mr-2" />
+               New Record
+             </Link>
+           </div>
          )}
       </div>
 
@@ -88,7 +94,7 @@ export default function Records() {
                 <TableHead>Sample Date</TableHead>
                 <TableHead>Tested By</TableHead>
                 <TableHead className="w-[100px]">Status</TableHead>
-                <TableHead className="text-right w-[100px]">Actions</TableHead>
+                <TableHead className="text-right w-[180px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

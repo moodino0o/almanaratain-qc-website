@@ -361,6 +361,7 @@ export default function RecordDetail() {
   const { id } = useParams();
   const { role } = useAuth();
   const canEditQc = role === "technician" || role === "managerial" || role === "administrator";
+  const canEditApprovedBy = role === "administrator";
   const recordId = Number(id);
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
@@ -374,7 +375,13 @@ export default function RecordDetail() {
   if (error || !record) return <div className="p-8 text-center text-destructive">Failed to load record.</div>;
 
   const handleStatusUpdate = (status: RecordStatus) => {
-    updateRecord.mutate({ id: recordId, data: { status, reviewedBy: "Current Supervisor" } }, {
+    updateRecord.mutate({
+      id: recordId,
+      data: {
+        status,
+        ...(canEditApprovedBy ? { reviewedBy: record.reviewedBy || "ADEL ABBAS EBRAHIM" } : {}),
+      },
+    }, {
       onSuccess: () => {
         toast.success(`Record marked as ${status}.`);
         queryClient.invalidateQueries({ queryKey: getGetRecordQueryKey(recordId) });
@@ -397,6 +404,7 @@ export default function RecordDetail() {
     ["Location", record.location],
     ["Material / Product", record.material],
     ["Tested By", record.testedBy],
+    ["Approved By", record.reviewedBy || "ADEL ABBAS EBRAHIM"],
   ];
 
   if (record.testType === "Ready Mix") {
@@ -437,8 +445,6 @@ export default function RecordDetail() {
   if (record.testType === "Water") {
     summaryEntries.push(["Source", detailText(recordDetails, "source")]);
   }
-  if (record.reviewedBy) summaryEntries.push(["Reviewed By", record.reviewedBy]);
-
   const testRows = Array.isArray(recordDetails.testRows) ? recordDetails.testRows : [];
   const hasLegacySpecimen = ["length", "width", "height", "dryWeight", "wetWeight", "load", "loadedFaceArea", "calculatedStrength"]
     .some((key) => recordDetails[key] !== undefined && recordDetails[key] !== "");

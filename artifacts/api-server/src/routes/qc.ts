@@ -17,6 +17,8 @@ import {
   qcReferenceCategoriesTable,
   qcReferenceItemsTable,
   qcSieveStandardsTable,
+  qcShapeFactorsTable,
+  qcReportLayoutsTable,
   qcStrengthStandardsTable,
 } from "@workspace/db";
 import {
@@ -39,6 +41,10 @@ import {
   GetDailyReadyMixResultsResponse,
   GetReportParams,
   GetReportResponse,
+  ListReportLayoutsResponse,
+  UpdateReportLayoutBody,
+  UpdateReportLayoutParams,
+  UpdateReportLayoutResponse,
   CreateStrengthStandardBody,
   CreateStrengthStandardResponse,
   DeleteStrengthStandardParams,
@@ -61,15 +67,25 @@ import {
   CreateSieveStandardResponse,
   DeleteSieveStandardParams,
   ListSieveStandardsResponse,
+  ListShapeFactorsResponse,
   UpdateSieveStandardBody,
   UpdateSieveStandardParams,
   UpdateSieveStandardResponse,
+  CreateShapeFactorBody,
+  CreateShapeFactorResponse,
+  DeleteShapeFactorParams,
+  UpdateShapeFactorBody,
+  UpdateShapeFactorParams,
+  UpdateShapeFactorResponse,
 } from "@workspace/api-zod";
 import {
   requireAdministrator,
   requireQcEditor,
 } from "../middlewares/requireAuthenticated";
+import { isConfiguredAdministrator } from "../lib/auth";
 import {
+  blockShapeFactorFromSize,
+  pavingCorrectionFactorFromSize,
   evaluateSieveRecord,
   evaluateStrengthRecord,
   type SieveStandardForEvaluation,
@@ -138,6 +154,21 @@ const REFERENCE_SEED = [
       "400*200*200",
       "400*250*200",
     ],
+  },
+  {
+    key: "sampleTypes",
+    label: "Block Sample Types",
+    values: ["CUBER", "MANUAL"],
+  },
+  {
+    key: "conditioningMethods",
+    label: "Block Conditioning Methods",
+    values: ["WATER at 20±5 C"],
+  },
+  {
+    key: "preparationMethods",
+    label: "Block Preparation Methods",
+    values: ["GRINDING"],
   },
   {
     key: "mixStrengths",
@@ -236,6 +267,197 @@ const BLOCK_DEFAULT_STANDARDS = [
   { blockType: "Sandwich Insulation Block", blockSize: '12"', requiredStrength: "5" },
 ] as const;
 
+const REPORT_LAYOUT_TEST_TYPES = [
+  "Ready Mix",
+  "Blocks",
+  "Paving Blocks",
+  "Sand Sieve",
+  "Aggregate Sieve",
+  "Water",
+  "Flakiness & Elongation",
+  "RMX Trial",
+] as const;
+
+const REPORT_LAYOUT_DEFAULTS: Record<string, Record<string, unknown>> = {
+  "Ready Mix": {
+    title: "Readymix Cube Test Report",
+    fontFamily: "Arial",
+    fontSize: 11,
+    textColor: "#1f2937",
+    accentColor: "#be0055",
+    paperPadding: 14,
+    sections: [
+      { key: "header", label: "Header", visible: true, order: 0 },
+      { key: "standard", label: "Standard", visible: true, order: 1 },
+      { key: "results", label: "Results", visible: true, order: 2 },
+      { key: "remarks", label: "Remarks", visible: true, order: 3 },
+      { key: "signatures", label: "Signatures", visible: true, order: 4 },
+    ],
+    columns: {
+      readyMixResults: [
+        { key: "age", label: "Age", visible: true, order: 0, width: 12 },
+        { key: "size", label: "Size", visible: true, order: 1, width: 16 },
+        { key: "load", label: "Load", visible: true, order: 2, width: 18 },
+        { key: "strength", label: "Strength", visible: true, order: 3, width: 20 },
+      ],
+    },
+  },
+  Blocks: {
+    title: "Block Compression Test",
+    fontFamily: "Arial",
+    fontSize: 11,
+    textColor: "#1f2937",
+    accentColor: "#be0055",
+    paperPadding: 14,
+    sections: [
+      { key: "header", label: "Header", visible: true, order: 0 },
+      { key: "standard", label: "Standard", visible: true, order: 1 },
+      { key: "context", label: "Block details", visible: true, order: 2 },
+      { key: "results", label: "Results", visible: true, order: 3 },
+      { key: "remarks", label: "Remarks", visible: true, order: 4 },
+      { key: "signatures", label: "Signatures", visible: true, order: 5 },
+    ],
+    columns: {
+      blockCompression: [
+        { key: "no", label: "No.", visible: true, order: 0, width: 7 },
+        { key: "length", label: "Length (mm)", visible: true, order: 1, width: 10 },
+        { key: "width", label: "Width (mm)", visible: true, order: 2, width: 10 },
+        { key: "height", label: "Height (mm)", visible: true, order: 3, width: 10 },
+        { key: "load", label: "Load (kN)", visible: true, order: 4, width: 10 },
+        { key: "water", label: "Water (N/mm2)", visible: true, order: 5, width: 12 },
+        { key: "airDry", label: "Air Dry (N/mm2)", visible: true, order: 6, width: 12 },
+        { key: "normalized", label: "Normalized (N/mm2)", visible: true, order: 7, width: 13 },
+        { key: "density", label: "Density (kg/m3)", visible: true, order: 8, width: 13 },
+        { key: "wetWeight", label: "Wet Weight (kg)", visible: true, order: 9, width: 13 },
+      ],
+    },
+  },
+  "Paving Blocks": {
+    title: "Paving Block Test Report",
+    fontFamily: "Arial",
+    fontSize: 11,
+    textColor: "#1f2937",
+    accentColor: "#be0055",
+    paperPadding: 14,
+    sections: [
+      { key: "header", label: "Header", visible: true, order: 0 },
+      { key: "standard", label: "Standard", visible: true, order: 1 },
+      { key: "results", label: "Results", visible: true, order: 2 },
+      { key: "remarks", label: "Remarks", visible: true, order: 3 },
+      { key: "signatures", label: "Signatures", visible: true, order: 4 },
+    ],
+    columns: {
+      pavingResults: [
+        { key: "no", label: "No.", visible: true, order: 0, width: 7 },
+        { key: "age", label: "Test Age", visible: true, order: 1, width: 9 },
+        { key: "length", label: "Length (mm)", visible: true, order: 2, width: 10 },
+        { key: "width", label: "Width (mm)", visible: true, order: 3, width: 10 },
+        { key: "height", label: "Height (mm)", visible: true, order: 4, width: 10 },
+        { key: "dryWeight", label: "Dry Weight", visible: true, order: 5, width: 10 },
+        { key: "wetWeight", label: "Wet Weight", visible: true, order: 6, width: 10 },
+        { key: "load", label: "Load (kN)", visible: true, order: 7, width: 10 },
+        { key: "strength", label: "Calculated Strength", visible: true, order: 8, width: 14 },
+      ],
+    },
+  },
+  "Sand Sieve": {
+    title: "Sand Sieve Test Report",
+    fontFamily: "Arial",
+    fontSize: 11,
+    textColor: "#1f2937",
+    accentColor: "#be0055",
+    paperPadding: 14,
+    sections: [
+      { key: "header", label: "Header", visible: true, order: 0 },
+      { key: "standard", label: "Standard", visible: true, order: 1 },
+      { key: "results", label: "Results", visible: true, order: 2 },
+      { key: "remarks", label: "Remarks", visible: true, order: 3 },
+      { key: "signatures", label: "Signatures", visible: true, order: 4 },
+    ],
+    columns: {
+      sieveResults: [
+        { key: "no", label: "No.", visible: true, order: 0, width: 7 },
+        { key: "size", label: "Sieve / Pore Size", visible: true, order: 1, width: 26 },
+        { key: "returned", label: "Amount Returned", visible: true, order: 2, width: 22 },
+        { key: "passing", label: "Amount Passing", visible: true, order: 3, width: 22 },
+        { key: "percentage", label: "% Passing", visible: true, order: 4, width: 23 },
+      ],
+    },
+  },
+  "Aggregate Sieve": {
+    title: "Aggregate Sieve Test Report",
+    fontFamily: "Arial",
+    fontSize: 11,
+    textColor: "#1f2937",
+    accentColor: "#be0055",
+    paperPadding: 14,
+    sections: [
+      { key: "header", label: "Header", visible: true, order: 0 },
+      { key: "standard", label: "Standard", visible: true, order: 1 },
+      { key: "results", label: "Results", visible: true, order: 2 },
+      { key: "remarks", label: "Remarks", visible: true, order: 3 },
+      { key: "signatures", label: "Signatures", visible: true, order: 4 },
+    ],
+    columns: {
+      sieveResults: [
+        { key: "no", label: "No.", visible: true, order: 0, width: 7 },
+        { key: "size", label: "Sieve / Pore Size", visible: true, order: 1, width: 26 },
+        { key: "returned", label: "Amount Returned", visible: true, order: 2, width: 22 },
+        { key: "passing", label: "Amount Passing", visible: true, order: 3, width: 22 },
+        { key: "percentage", label: "% Passing", visible: true, order: 4, width: 23 },
+      ],
+    },
+  },
+  Water: {
+    title: "Water Test Report",
+    fontFamily: "Arial",
+    fontSize: 11,
+    textColor: "#1f2937",
+    accentColor: "#be0055",
+    paperPadding: 14,
+    sections: [
+      { key: "header", label: "Header", visible: true, order: 0 },
+      { key: "standard", label: "Standard", visible: true, order: 1 },
+      { key: "results", label: "Results", visible: true, order: 2 },
+      { key: "remarks", label: "Remarks", visible: true, order: 3 },
+      { key: "signatures", label: "Signatures", visible: true, order: 4 },
+    ],
+    columns: {},
+  },
+  "Flakiness & Elongation": {
+    title: "Flakiness & Elongation Test Report",
+    fontFamily: "Arial",
+    fontSize: 11,
+    textColor: "#1f2937",
+    accentColor: "#be0055",
+    paperPadding: 14,
+    sections: [
+      { key: "header", label: "Header", visible: true, order: 0 },
+      { key: "standard", label: "Standard", visible: true, order: 1 },
+      { key: "results", label: "Results", visible: true, order: 2 },
+      { key: "remarks", label: "Remarks", visible: true, order: 3 },
+      { key: "signatures", label: "Signatures", visible: true, order: 4 },
+    ],
+    columns: {},
+  },
+  "RMX Trial": {
+    title: "RMX Trial Report",
+    fontFamily: "Arial",
+    fontSize: 11,
+    textColor: "#1f2937",
+    accentColor: "#be0055",
+    paperPadding: 14,
+    sections: [
+      { key: "header", label: "Header", visible: true, order: 0 },
+      { key: "standard", label: "Standard", visible: true, order: 1 },
+      { key: "results", label: "Results", visible: true, order: 2 },
+      { key: "remarks", label: "Remarks", visible: true, order: 3 },
+      { key: "signatures", label: "Signatures", visible: true, order: 4 },
+    ],
+    columns: {},
+  },
+};
+
 const strengthStandardKey = (value: {
   testType: string;
   material: string;
@@ -307,6 +529,100 @@ async function ensureDefaultStrengthStandards() {
   await strengthSeedPromise;
 }
 
+async function ensureDefaultShapeFactors() {
+  const [category] = await db
+    .select()
+    .from(qcReferenceCategoriesTable)
+    .where(eq(qcReferenceCategoriesTable.key, "blockSizes"));
+  if (!category) return;
+  const blockSizes = await db
+    .select()
+    .from(qcReferenceItemsTable)
+    .where(eq(qcReferenceItemsTable.categoryId, category.id));
+  let changed = false;
+  for (const blockSize of blockSizes) {
+    const defaultShapeFactor = blockShapeFactorFromSize(blockSize.value);
+    const defaultCorrectionFactor = pavingCorrectionFactorFromSize(blockSize.value);
+    const [inserted] = await db
+      .insert(qcShapeFactorsTable)
+      .values({
+        blockType: null,
+        blockSize: blockSize.value,
+        shapeFactor: defaultShapeFactor === null ? null : String(defaultShapeFactor),
+        correctionFactor:
+          defaultCorrectionFactor === null ? null : String(defaultCorrectionFactor),
+      })
+      .onConflictDoNothing({ target: qcShapeFactorsTable.blockSize })
+      .returning({ id: qcShapeFactorsTable.id });
+    if (inserted) {
+      changed = true;
+      continue;
+    }
+    if (defaultShapeFactor !== null) {
+      const [updated] = await db
+        .update(qcShapeFactorsTable)
+        .set({ shapeFactor: String(defaultShapeFactor) })
+        .where(and(
+          eq(qcShapeFactorsTable.blockSize, blockSize.value),
+          sql`${qcShapeFactorsTable.shapeFactor} IS NULL`,
+        ))
+        .returning({ id: qcShapeFactorsTable.id });
+      if (updated) changed = true;
+    }
+    if (defaultCorrectionFactor === null) continue;
+    const [updated] = await db
+      .update(qcShapeFactorsTable)
+      .set({ correctionFactor: String(defaultCorrectionFactor) })
+      .where(and(
+        eq(qcShapeFactorsTable.blockSize, blockSize.value),
+        sql`${qcShapeFactorsTable.correctionFactor} IS NULL`,
+      ))
+      .returning({ id: qcShapeFactorsTable.id });
+    if (updated) changed = true;
+  }
+  if (changed) {
+    await refreshRecordEvaluations(["Blocks", "Paving Blocks"]);
+  }
+}
+
+async function ensureReportLayouts() {
+  for (const testType of REPORT_LAYOUT_TEST_TYPES) {
+    const defaults = REPORT_LAYOUT_DEFAULTS[testType];
+    await db
+      .insert(qcReportLayoutsTable)
+      .values({
+        testType,
+        name: `${testType} report`,
+        config: defaults,
+      })
+      .onConflictDoNothing({ target: qcReportLayoutsTable.testType });
+    const [existing] = await db
+      .select()
+      .from(qcReportLayoutsTable)
+      .where(eq(qcReportLayoutsTable.testType, testType));
+    const defaultColumns = typeof defaults.columns === "object" && defaults.columns !== null
+      ? defaults.columns as Record<string, unknown>
+      : {};
+    const existingColumns = typeof existing?.config.columns === "object" && existing.config.columns !== null
+      ? existing.config.columns as Record<string, unknown>
+      : {};
+    const missingColumns = Object.fromEntries(
+      Object.entries(defaultColumns).filter(([key]) => existingColumns[key] === undefined),
+    );
+    if (existing && Object.keys(missingColumns).length > 0) {
+      await db
+        .update(qcReportLayoutsTable)
+        .set({
+          config: {
+            ...existing.config,
+            columns: { ...existingColumns, ...missingColumns },
+          },
+        })
+        .where(eq(qcReportLayoutsTable.id, existing.id));
+    }
+  }
+}
+
 export async function ensureReferenceData() {
   if (!referenceSeedPromise) {
     referenceSeedPromise = (async () => {
@@ -342,6 +658,8 @@ export async function ensureReferenceData() {
     });
   }
   await referenceSeedPromise;
+  await ensureDefaultShapeFactors();
+  await ensureReportLayouts();
 }
 
 async function listReferenceData() {
@@ -385,9 +703,10 @@ const toRecord = (row: typeof qcRecordsTable.$inferSelect) => ({
 async function refreshRecordEvaluations(testTypes: string[]) {
   const uniqueTestTypes = [...new Set(testTypes)];
   if (!uniqueTestTypes.length) return;
-  const [strengthStandards, sieveStandards, records] = await Promise.all([
+  const [strengthStandards, sieveStandards, shapeFactors, records] = await Promise.all([
     db.select().from(qcStrengthStandardsTable),
     loadSieveStandards(),
+    db.select().from(qcShapeFactorsTable),
     db
       .select()
       .from(qcRecordsTable)
@@ -398,12 +717,13 @@ async function refreshRecordEvaluations(testTypes: string[]) {
     const candidate = {
       testType: record.testType,
       material: record.material,
+      location: record.location,
       details: record.details as Record<string, unknown>,
     };
     const evaluated =
       record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve"
         ? evaluateSieveRecord(candidate, sieveStandards)
-        : evaluateStrengthRecord(candidate, strengthStandards);
+        : evaluateStrengthRecord(candidate, strengthStandards, shapeFactors);
     if (evaluated.status === undefined) continue;
     await db
       .update(qcRecordsTable)
@@ -479,6 +799,14 @@ const toStrengthStandard = (row: typeof qcStrengthStandardsTable.$inferSelect) =
   bsStandard: row.bsStandard,
   requiredStrength: Number(row.requiredStrength),
   strengthUnit: row.strengthUnit,
+});
+
+const toShapeFactor = (row: typeof qcShapeFactorsTable.$inferSelect) => ({
+  id: row.id,
+  blockSize: row.blockSize ?? "",
+  shapeFactor: row.shapeFactor === null ? null : Number(row.shapeFactor),
+  correctionFactor:
+    row.correctionFactor === null ? null : Number(row.correctionFactor),
 });
 
 const withSieveReferenceValues = (
@@ -875,6 +1203,166 @@ router.delete("/strength-standards/:id", requireAdministrator, async (req, res):
   res.sendStatus(204);
 });
 
+router.get("/shape-factors", async (_req, res): Promise<void> => {
+  await ensureDefaultShapeFactors();
+  const shapeFactors = await db
+    .select()
+    .from(qcShapeFactorsTable)
+    .where(sql`${qcShapeFactorsTable.blockSize} IS NOT NULL`)
+    .orderBy(asc(qcShapeFactorsTable.blockSize), asc(qcShapeFactorsTable.id));
+  res.json(ListShapeFactorsResponse.parse(shapeFactors.map(toShapeFactor)));
+});
+
+router.post("/shape-factors", requireAdministrator, async (req, res): Promise<void> => {
+  const body = CreateShapeFactorBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+  const [shapeFactor] = await db
+    .insert(qcShapeFactorsTable)
+    .values({
+      blockType: null,
+      blockSize: body.data.blockSize.trim(),
+      shapeFactor:
+        body.data.shapeFactor == null ? null : String(body.data.shapeFactor),
+      correctionFactor:
+        body.data.correctionFactor === undefined
+          ? (() => {
+              const value = pavingCorrectionFactorFromSize(body.data.blockSize);
+              return value === null ? null : String(value);
+            })()
+          : body.data.correctionFactor == null
+            ? null
+            : String(body.data.correctionFactor),
+    })
+    .returning();
+  if (!shapeFactor) {
+    res.status(500).json({ error: "Unable to create shape factor" });
+    return;
+  }
+   await refreshRecordEvaluations(["Blocks", "Paving Blocks"]);
+  res.status(201).json(CreateShapeFactorResponse.parse(toShapeFactor(shapeFactor)));
+});
+
+router.patch("/shape-factors/:id", requireAdministrator, async (req, res): Promise<void> => {
+  const params = UpdateShapeFactorParams.safeParse(req.params);
+  const body = UpdateShapeFactorBody.safeParse(req.body);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+  const [existing] = await db
+    .select()
+    .from(qcShapeFactorsTable)
+    .where(eq(qcShapeFactorsTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Shape factor not found" });
+    return;
+  }
+  const [shapeFactor] = await db
+    .update(qcShapeFactorsTable)
+    .set({
+      ...(body.data.blockSize !== undefined
+        ? { blockSize: body.data.blockSize.trim() }
+        : {}),
+      ...(body.data.shapeFactor !== undefined
+        ? {
+            shapeFactor:
+              body.data.shapeFactor == null ? null : String(body.data.shapeFactor),
+          }
+        : {}),
+      ...(body.data.correctionFactor !== undefined
+        ? {
+            correctionFactor:
+              body.data.correctionFactor == null
+                ? null
+                : String(body.data.correctionFactor),
+          }
+        : {}),
+    })
+    .where(eq(qcShapeFactorsTable.id, params.data.id))
+    .returning();
+  if (!shapeFactor) {
+    res.status(404).json({ error: "Shape factor not found" });
+    return;
+  }
+  await refreshRecordEvaluations(["Blocks", "Paving Blocks"]);
+  res.json(UpdateShapeFactorResponse.parse(toShapeFactor(shapeFactor)));
+});
+
+router.delete("/shape-factors/:id", requireAdministrator, async (req, res): Promise<void> => {
+  const params = DeleteShapeFactorParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const [shapeFactor] = await db
+    .delete(qcShapeFactorsTable)
+    .where(eq(qcShapeFactorsTable.id, params.data.id))
+    .returning();
+  if (!shapeFactor) {
+    res.status(404).json({ error: "Shape factor not found" });
+    return;
+  }
+  await refreshRecordEvaluations(["Blocks", "Paving Blocks"]);
+  res.sendStatus(204);
+});
+
+const toReportLayout = (row: typeof qcReportLayoutsTable.$inferSelect) => ({
+  id: row.id,
+  testType: row.testType,
+  name: row.name,
+  config: row.config,
+});
+
+router.get("/report-layouts", async (_req, res): Promise<void> => {
+  await ensureReferenceData();
+  const layouts = await db
+    .select()
+    .from(qcReportLayoutsTable)
+    .orderBy(asc(qcReportLayoutsTable.testType));
+  res.json(ListReportLayoutsResponse.parse(layouts.map(toReportLayout)));
+});
+
+router.patch("/report-layouts/:id", requireAdministrator, async (req, res): Promise<void> => {
+  const params = UpdateReportLayoutParams.safeParse(req.params);
+  const body = UpdateReportLayoutBody.safeParse(req.body);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+  const [existing] = await db
+    .select()
+    .from(qcReportLayoutsTable)
+    .where(eq(qcReportLayoutsTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Report layout not found" });
+    return;
+  }
+  const [layout] = await db
+    .update(qcReportLayoutsTable)
+    .set({
+      ...(body.data.name !== undefined ? { name: body.data.name.trim() } : {}),
+      ...(body.data.config !== undefined ? { config: body.data.config } : {}),
+    })
+    .where(eq(qcReportLayoutsTable.id, params.data.id))
+    .returning();
+  if (!layout) {
+    res.status(404).json({ error: "Report layout not found" });
+    return;
+  }
+  res.json(UpdateReportLayoutResponse.parse(toReportLayout(layout)));
+});
+
 async function getReferenceItemForCategory(id: number, key: string) {
   const [row] = await db
     .select({ item: qcReferenceItemsTable })
@@ -1246,10 +1734,18 @@ router.post("/records", requireQcEditor, async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+  if (
+    parsed.data.reviewedBy !== undefined &&
+    !(await isConfiguredAdministrator(req.user))
+  ) {
+    res.status(403).json({ error: "Only administrators can set Approved By." });
+    return;
+  }
 
-  const [strengthStandards, sieveStandards] = await Promise.all([
+  const [strengthStandards, sieveStandards, shapeFactors] = await Promise.all([
     db.select().from(qcStrengthStandardsTable),
     loadSieveStandards(),
+    db.select().from(qcShapeFactorsTable),
   ]);
   const evaluated =
     parsed.data.testType === "Sand Sieve" || parsed.data.testType === "Aggregate Sieve"
@@ -1265,9 +1761,11 @@ router.post("/records", requireQcEditor, async (req, res): Promise<void> => {
     {
       testType: parsed.data.testType,
       material: parsed.data.material,
+      location: parsed.data.location,
       details: parsed.data.details,
     },
           strengthStandards,
+          shapeFactors,
         );
   const prefix = parsed.data.testType
     .replace(/[^A-Z]/gi, "")
@@ -1325,6 +1823,13 @@ router.patch("/records/:id", requireQcEditor, async (req, res): Promise<void> =>
     res.status(400).json({ error: body.error.message });
     return;
   }
+  if (
+    body.data.reviewedBy !== undefined &&
+    !(await isConfiguredAdministrator(req.user))
+  ) {
+    res.status(403).json({ error: "Only administrators can set Approved By." });
+    return;
+  }
   const [existing] = await db
     .select()
     .from(qcRecordsTable)
@@ -1337,16 +1842,18 @@ router.patch("/records/:id", requireQcEditor, async (req, res): Promise<void> =>
   const candidate = {
     testType: body.data.testType ?? existing.testType,
     material: body.data.material ?? existing.material,
+    location: body.data.location ?? existing.location,
     details: body.data.details ?? existing.details,
   };
-  const [strengthStandards, sieveStandards] = await Promise.all([
+  const [strengthStandards, sieveStandards, shapeFactors] = await Promise.all([
     db.select().from(qcStrengthStandardsTable),
     loadSieveStandards(),
+    db.select().from(qcShapeFactorsTable),
   ]);
   const evaluated =
     candidate.testType === "Sand Sieve" || candidate.testType === "Aggregate Sieve"
       ? evaluateSieveRecord(candidate, sieveStandards)
-      : evaluateStrengthRecord(candidate, strengthStandards);
+      : evaluateStrengthRecord(candidate, strengthStandards, shapeFactors);
   const { sampleDate, ...rest } = body.data;
   const updates = {
     ...rest,
@@ -1399,16 +1906,29 @@ router.get("/reports/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Record not found" });
     return;
   }
+  await ensureReferenceData();
   await refreshRecordEvaluations([record.testType]);
   const [currentRecord] = await db
     .select()
     .from(qcRecordsTable)
     .where(eq(qcRecordsTable.id, parsed.data.id));
+  const [layout] = await db
+    .select()
+    .from(qcReportLayoutsTable)
+    .where(eq(qcReportLayoutsTable.testType, record.testType));
   res.json(
     GetReportResponse.parse({
       record: toRecord(currentRecord ?? record),
       companyName: "AL MANARATAIN",
       companySubtitle: "Al Manaratain Company & Ali Shaab Group W.L.L",
+      layout: toReportLayout(layout ?? {
+        id: 0,
+        testType: record.testType,
+        name: `${record.testType} report`,
+        config: REPORT_LAYOUT_DEFAULTS[record.testType] ?? REPORT_LAYOUT_DEFAULTS.Water,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
     }),
   );
 });

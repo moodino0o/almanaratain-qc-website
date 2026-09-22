@@ -1,4 +1,8 @@
-import type { QcSieveStandardRow, QcStrengthStandardRow } from "@workspace/db";
+import type {
+  QcShapeFactorRow,
+  QcSieveStandardRow,
+  QcStrengthStandardRow,
+} from "@workspace/db";
 
 export type StrengthEvaluationStatus = "Passed" | "Review" | "Failed";
 
@@ -41,6 +45,7 @@ export type SieveEvaluation = {
 type RecordForStrength = {
   testType: string;
   material: string;
+  location?: string;
   details: Record<string, unknown>;
 };
 
@@ -50,7 +55,11 @@ export type BlockDimensions = {
   height: number;
 };
 
-const AUTOMATED_TEST_TYPES = new Set(["Ready Mix", "Blocks"]);
+export function isDammamLocation(value: unknown) {
+  return normalizedText(value) === "dammam";
+}
+
+const AUTOMATED_TEST_TYPES = new Set(["Ready Mix", "Blocks", "Paving Blocks"]);
 const DEFAULT_STRENGTH_UNIT = "N/mm²";
 
 function numericValue(value: unknown): number | null {
@@ -64,6 +73,10 @@ function numericValue(value: unknown): number | null {
 
 function rounded(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+function roundedToOneDecimal(value: number) {
+  return Math.round((value + Number.EPSILON) * 10) / 10;
 }
 
 function textValue(value: unknown): string | null {
@@ -104,13 +117,51 @@ export function blockDimensionsFromSize(value: unknown): BlockDimensions | null 
     "4": 100,
     "6": 150,
     "8": 200,
-    "12": 250,
+    "12": 300,
   };
   return {
     length: 400,
     width: widthByInchSize[inchSize],
     height: 200,
   };
+}
+
+const BLOCK_SHAPE_FACTOR_TABLE = [
+  { height: 40, factors: [0.8, 0.7, null, null, null] },
+  { height: 50, factors: [0.85, 0.75, 0.7, null, null] },
+  { height: 65, factors: [0.95, 0.85, 0.75, 0.7, 0.65] },
+  { height: 100, factors: [1.15, 1, 0.9, 0.8, 0.75] },
+  { height: 150, factors: [1.3, 1.2, 1.1, 1, 0.95] },
+  { height: 200, factors: [1.45, 1.35, 1.25, 1.15, 1.1] },
+  { height: 250, factors: [1.55, 1.45, 1.35, 1.25, 1.15] },
+] as const;
+
+export function blockShapeFactorFromSize(value: unknown): number | null {
+  const dimensions = blockDimensionsFromSize(value);
+  if (!dimensions) return null;
+
+  const height = dimensions.height;
+  const width = dimensions.width;
+  const heightRow =
+    BLOCK_SHAPE_FACTOR_TABLE.find((row) => row.height === height) ??
+    (height >= 250
+      ? BLOCK_SHAPE_FACTOR_TABLE[BLOCK_SHAPE_FACTOR_TABLE.length - 1]
+      : undefined);
+  if (!heightRow) return null;
+
+  const widthColumn =
+    width >= 250
+      ? 4
+      : [50, 100, 150, 200].indexOf(width);
+  return widthColumn < 0 ? null : heightRow.factors[widthColumn] ?? null;
+}
+
+export function pavingCorrectionFactorFromSize(value: unknown): number | null {
+  const text = textValue(value);
+  if (!text) return null;
+  if (/(?:^|[^0-9])60\s*(?:mm)?$/i.test(text)) return 0.87;
+  if (/(?:^|[^0-9])80\s*(?:mm)?$/i.test(text)) return 1;
+  return null;
 }
 
 function normalizedBlockType(value: unknown) {
@@ -155,7 +206,10 @@ function blockMaterialMatches(
     (standard === "concrete block" && blockTypeMatches(recordMaterial, recordBlockType));
 }
 
-export function normalizeBlockDetails(details: Record<string, unknown>) {
+export function normalizeBlockDetails(
+  details: Record<string, unknown>,
+  shapeFactors: QcShapeFactorRow[] = [],
+) {
   const rows = Array.isArray(details.testRows) ? details.testRows : null;
   const legacyBlockAge = rows
     ?.map((row) => (
@@ -166,10 +220,18 @@ export function normalizeBlockDetails(details: Record<string, unknown>) {
     .find((value): value is string => value !== null) ?? null;
   const blockAge = textValue(details.blockAge) ?? legacyBlockAge;
   const dimensions = blockDimensionsFromSize(details.blockSize);
+  const blockType = textValue(details.blockType);
+  const configuredShapeFactor = numericValue(details.shapeFactor);
+  const defaultShapeFactor =
+    configuredShapeFactor === null && details.blockSize
+      ? shapeFactors.find((factor) => blockSizeMatches(factor.blockSize, details.blockSize))
+          ?.shapeFactor ?? null
+      : null;
 
   return {
     ...details,
     ...(blockAge ? { blockAge } : {}),
+    ...(defaultShapeFactor !== null ? { shapeFactor: defaultShapeFactor } : {}),
     ...(rows
       ? {
           testRows: rows.map((row) => {
@@ -189,6 +251,32 @@ export function normalizeBlockDetails(details: Record<string, unknown>) {
   };
 }
 
+export function normalizePavingDetails(
+  details: Record<string, unknown>,
+  shapeFactors: QcShapeFactorRow[] = [],
+) {
+  const pavingBlockSize = textValue(details.pavingBlockSize ?? details.blockSize);
+  const configuredCorrectionFactor = numericValue(details.correctionFactor);
+  const configuredSizeFactor =
+    configuredCorrectionFactor === null && pavingBlockSize
+      ? shapeFactors.find(
+          (factor) => normalizedText(factor.blockSize) === normalizedText(pavingBlockSize),
+        )?.correctionFactor ?? null
+      : null;
+  const defaultCorrectionFactor =
+    configuredCorrectionFactor === null && configuredSizeFactor === null
+      ? pavingCorrectionFactorFromSize(pavingBlockSize)
+      : configuredSizeFactor;
+
+  return {
+    ...details,
+    ...(pavingBlockSize ? { pavingBlockSize } : {}),
+    ...(defaultCorrectionFactor !== null
+      ? { correctionFactor: defaultCorrectionFactor }
+      : {}),
+  };
+}
+
 function standardMatchesRecord(
   standard: QcStrengthStandardRow,
   record: RecordForStrength,
@@ -204,6 +292,13 @@ function standardMatchesRecord(
     )
   ) {
     return false;
+  }
+  if (record.testType === "Paving Blocks") {
+    const pavingBlockSize = textValue(
+      record.details.pavingBlockSize ?? record.details.blockSize,
+    );
+    return !standard.blockSize ||
+      (Boolean(pavingBlockSize) && blockSizeMatches(standard.blockSize, pavingBlockSize));
   }
   if (record.testType !== "Blocks") return true;
   return (
@@ -233,7 +328,13 @@ function dayAge(value: unknown) {
   return match ? Number(match[0]) : null;
 }
 
-function calculateRow(row: unknown) {
+function calculateRow(
+  row: unknown,
+  shapeFactorValue?: unknown,
+  correctionFactorValue?: unknown,
+  isPaving = false,
+  isDammam = false,
+) {
   if (typeof row !== "object" || row === null) {
     return { row, calculatedStrength: null, loadedFaceArea: null, complete: false };
   }
@@ -246,15 +347,51 @@ function calculateRow(row: unknown) {
     length !== null && width !== null && length > 0 && width > 0
       ? rounded(length * width)
       : null;
+  const directStrength = isPaving
+    ? numericValue(values.compressiveStrength ?? values.strength)
+    : null;
   const calculatedStrength =
     load !== null &&
     load >= 0 &&
     loadedFaceArea !== null &&
     loadedFaceArea > 0
       ? rounded((load * 1000) / loadedFaceArea)
+      : directStrength;
+  const airDryStrength =
+    calculatedStrength !== null
+      ? roundedToOneDecimal(isDammam ? calculatedStrength : calculatedStrength * 1.2)
+      : null;
+  const shapeFactor = numericValue(shapeFactorValue);
+  const normalizedStrength =
+    airDryStrength !== null &&
+    shapeFactor !== null &&
+    shapeFactor > 0
+      ? roundedToOneDecimal(airDryStrength * shapeFactor)
+      : null;
+  const correctionFactor = numericValue(correctionFactorValue);
+  const correctedStrength =
+    isPaving &&
+    calculatedStrength !== null &&
+    correctionFactor !== null &&
+    correctionFactor >= 0
+      ? roundedToOneDecimal(calculatedStrength * correctionFactor)
       : null;
   const dryWeight = numericValue(values.dryWeight);
   const wetWeight = numericValue(values.wetWeight);
+  const density =
+    wetWeight !== null &&
+    length !== null &&
+    width !== null &&
+    numericValue(values.height) !== null &&
+    wetWeight >= 0 &&
+    length > 0 &&
+    width > 0 &&
+    numericValue(values.height)! > 0
+      ? rounded(
+          (wetWeight * 1_000_000_000) /
+          (length * width * numericValue(values.height)!),
+        )
+      : null;
   const waterAbsorption =
     dryWeight !== null &&
     wetWeight !== null &&
@@ -272,9 +409,23 @@ function calculateRow(row: unknown) {
       ...(calculatedStrength !== null
         ? {
             calculatedStrength,
-            strength: calculatedStrength.toFixed(2),
+            ...(isPaving
+              ? { compressiveStrength: calculatedStrength.toFixed(2) }
+              : {
+                  waterStrength: calculatedStrength.toFixed(2),
+                  strength: calculatedStrength.toFixed(2),
+                }),
           }
         : {}),
+      ...(airDryStrength !== null ? { airDryStrength } : {}),
+      ...(normalizedStrength !== null ? { normalizedStrength } : {}),
+      ...(correctedStrength !== null
+        ? {
+            correctedStrength,
+            strength: correctedStrength.toFixed(2),
+          }
+        : {}),
+      ...(density !== null ? { density: density.toFixed(2) } : {}),
     },
     calculatedStrength,
     loadedFaceArea,
@@ -285,6 +436,7 @@ function calculateRow(row: unknown) {
 export function evaluateStrengthRecord(
   record: RecordForStrength,
   standards: QcStrengthStandardRow[],
+  shapeFactors: QcShapeFactorRow[] = [],
 ) {
   if (!AUTOMATED_TEST_TYPES.has(record.testType)) {
     return {
@@ -294,14 +446,30 @@ export function evaluateStrengthRecord(
     };
   }
 
-  const normalizedDetails =
-    record.testType === "Blocks" ? normalizeBlockDetails(record.details) : record.details;
+  const normalizedDetails: Record<string, unknown> =
+    record.testType === "Blocks"
+      ? normalizeBlockDetails(record.details, shapeFactors)
+      : record.testType === "Paving Blocks"
+        ? normalizePavingDetails(record.details, shapeFactors)
+      : record.details;
   const normalizedRecord = { ...record, details: normalizedDetails };
   const standard = matchingStandard(normalizedRecord, standards);
   const requiredStrength =
     standard === undefined ? null : numericValue(standard.requiredStrength);
   const rows = Array.isArray(normalizedDetails.testRows) ? normalizedDetails.testRows : [];
-  const calculatedRows = rows.map(calculateRow);
+  const calculatedRows = rows.map((row) =>
+    calculateRow(
+      row,
+      record.testType === "Blocks"
+        ? (normalizedDetails as Record<string, unknown>).shapeFactor
+        : undefined,
+      record.testType === "Paving Blocks"
+        ? (normalizedDetails as Record<string, unknown>).correctionFactor
+        : undefined,
+      record.testType === "Paving Blocks",
+      record.testType === "Blocks" && isDammamLocation(record.location),
+    )
+  );
   const evaluatedRows =
     record.testType === "Ready Mix"
       ? calculatedRows.filter((row) => dayAge(row.row && typeof row.row === "object"
@@ -311,7 +479,18 @@ export function evaluateStrengthRecord(
         : null) === 28)
       : calculatedRows;
   const measuredStrengths = evaluatedRows
-    .map((row) => row.calculatedStrength)
+    .map((row) => {
+      const values = typeof row.row === "object" && row.row !== null
+        ? row.row as Record<string, unknown>
+        : {};
+      if (record.testType === "Paving Blocks") {
+        return numericValue(values.correctedStrength) ?? row.calculatedStrength;
+      }
+      if (record.testType === "Blocks") {
+        return numericValue(values.airDryStrength ?? values.dryAirStrength);
+      }
+      return row.calculatedStrength;
+    })
     .filter((strength): strength is number => strength !== null);
   const averageStrength = measuredStrengths.length
     ? rounded(measuredStrengths.reduce((sum, strength) => sum + strength, 0) / measuredStrengths.length)
@@ -320,7 +499,15 @@ export function evaluateStrengthRecord(
   const maximumStrength = measuredStrengths.length ? Math.max(...measuredStrengths) : null;
   const hasIncompleteMeasurements =
     evaluatedRows.length === 0 ||
-    evaluatedRows.some((row) => !row.complete) ||
+    evaluatedRows.some((row) => {
+      if (record.testType === "Blocks") {
+        const values = typeof row.row === "object" && row.row !== null
+          ? row.row as Record<string, unknown>
+          : {};
+        return numericValue(values.airDryStrength ?? values.dryAirStrength) === null;
+      }
+      return !row.complete;
+    }) ||
     (record.testType === "Blocks" &&
       (dayAge(normalizedDetails.blockAge) === null || dayAge(normalizedDetails.blockAge)! <= 0));
   const averageBelowRequired =
@@ -332,20 +519,28 @@ export function evaluateStrengthRecord(
   let reason: string | null =
     record.testType === "Ready Mix"
       ? "A complete 28-day cube result is required."
-      : "Complete specimen load, dimensions, and Block age are required.";
+      : record.testType === "Blocks"
+        ? "Complete specimen load, dimensions, air-dry strength, and Block age are required."
+        : "Complete paving specimen dimensions and compressive strength are required.";
   if (!standard) {
-    reason =
-      record.testType === "Blocks"
-        ? "No matching standard was configured for this block type and size."
-        : "No matching standard was configured for this material.";
+      reason =
+        record.testType === "Blocks"
+          ? "No matching standard was configured for this block type and size."
+          : record.testType === "Paving Blocks"
+            ? "No matching standard was configured for this paving block size."
+            : "No matching standard was configured for this material.";
   } else if (requiredStrength === null) {
     reason = "The configured minimum strength is invalid.";
   } else if (averageBelowRequired) {
     status = "Failed";
     reason =
       record.testType === "Blocks"
-        ? "The average block strength is below the configured minimum."
-        : "The measured strength is below the configured minimum.";
+        ? isDammamLocation(record.location)
+          ? "The average Block air-dry strength is below the configured minimum."
+          : "The average Block air-dry strength is below the configured minimum."
+        : record.testType === "Paving Blocks"
+          ? "The corrected paving block strength is below the configured minimum."
+          : "The measured strength is below the configured minimum.";
   } else if (!hasIncompleteMeasurements) {
     status = "Passed";
     reason = null;

@@ -54,6 +54,11 @@ import type {
   ReferenceItem,
   ReferenceItemInput,
   Report,
+  ReportLayout,
+  ReportLayoutUpdate,
+  ShapeFactor,
+  ShapeFactorInput,
+  ShapeFactorUpdate,
   SieveStandard,
   SieveStandardInput,
   SieveStandardUpdate,
@@ -2836,6 +2841,297 @@ export const useDeleteSieveStandard = <TError = ErrorType<unknown>,
       return useMutation(getDeleteSieveStandardMutationOptions(options));
     }
 
+export const getListShapeFactorsUrl = () => {
+
+
+
+
+  return `/api/shape-factors`
+}
+
+/**
+ * @summary List default Block shape factors
+ */
+export const listShapeFactors = async ( options?: Parameters<typeof customFetch>[1]): Promise<ShapeFactor[]> => {
+
+  return customFetch<ShapeFactor[]>(getListShapeFactorsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListShapeFactorsQueryKey = () => {
+    return [
+    `/api/shape-factors`
+    ] as const;
+    }
+
+
+export const getListShapeFactorsQueryOptions = <TData = Awaited<ReturnType<typeof listShapeFactors>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listShapeFactors>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListShapeFactorsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listShapeFactors>>> = ({ signal }) => listShapeFactors({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listShapeFactors>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListShapeFactorsQueryResult = NonNullable<Awaited<ReturnType<typeof listShapeFactors>>>
+export type ListShapeFactorsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List default Block shape factors
+ */
+
+export function useListShapeFactors<TData = Awaited<ReturnType<typeof listShapeFactors>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listShapeFactors>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListShapeFactorsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateShapeFactorUrl = () => {
+
+
+
+
+  return `/api/shape-factors`
+}
+
+/**
+ * @summary Create a default Block shape factor
+ */
+export const createShapeFactor = async (shapeFactorInput: ShapeFactorInput, options?: Parameters<typeof customFetch>[1]): Promise<ShapeFactor> => {
+
+  return customFetch<ShapeFactor>(getCreateShapeFactorUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(shapeFactorInput)
+  }
+);}
+
+
+
+
+
+export const getCreateShapeFactorMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createShapeFactor>>, TError,{data: BodyType<ShapeFactorInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createShapeFactor>>, TError,{data: BodyType<ShapeFactorInput>}, TContext> => {
+
+const mutationKey = ['createShapeFactor'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createShapeFactor>>, {data: BodyType<ShapeFactorInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createShapeFactor(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateShapeFactorMutationResult = NonNullable<Awaited<ReturnType<typeof createShapeFactor>>>
+    export type CreateShapeFactorMutationBody = BodyType<ShapeFactorInput>
+    export type CreateShapeFactorMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a default Block shape factor
+ */
+export const useCreateShapeFactor = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createShapeFactor>>, TError,{data: BodyType<ShapeFactorInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createShapeFactor>>,
+        TError,
+        {data: BodyType<ShapeFactorInput>},
+        TContext
+      > => {
+      return useMutation(getCreateShapeFactorMutationOptions(options));
+    }
+
+export const getUpdateShapeFactorUrl = (id: number,) => {
+
+
+
+
+  return `/api/shape-factors/${id}`
+}
+
+/**
+ * @summary Update a default Block shape factor
+ */
+export const updateShapeFactor = async (id: number,
+    shapeFactorUpdate: ShapeFactorUpdate, options?: Parameters<typeof customFetch>[1]): Promise<ShapeFactor> => {
+
+  return customFetch<ShapeFactor>(getUpdateShapeFactorUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(shapeFactorUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateShapeFactorMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateShapeFactor>>, TError,{id: number;data: BodyType<ShapeFactorUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateShapeFactor>>, TError,{id: number;data: BodyType<ShapeFactorUpdate>}, TContext> => {
+
+const mutationKey = ['updateShapeFactor'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateShapeFactor>>, {id: number;data: BodyType<ShapeFactorUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateShapeFactor(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateShapeFactorMutationResult = NonNullable<Awaited<ReturnType<typeof updateShapeFactor>>>
+    export type UpdateShapeFactorMutationBody = BodyType<ShapeFactorUpdate>
+    export type UpdateShapeFactorMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update a default Block shape factor
+ */
+export const useUpdateShapeFactor = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateShapeFactor>>, TError,{id: number;data: BodyType<ShapeFactorUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateShapeFactor>>,
+        TError,
+        {id: number;data: BodyType<ShapeFactorUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateShapeFactorMutationOptions(options));
+    }
+
+export const getDeleteShapeFactorUrl = (id: number,) => {
+
+
+
+
+  return `/api/shape-factors/${id}`
+}
+
+/**
+ * @summary Delete a default Block shape factor
+ */
+export const deleteShapeFactor = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteShapeFactorUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteShapeFactorMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteShapeFactor>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteShapeFactor>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteShapeFactor'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteShapeFactor>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteShapeFactor(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteShapeFactorMutationResult = NonNullable<Awaited<ReturnType<typeof deleteShapeFactor>>>
+
+    export type DeleteShapeFactorMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a default Block shape factor
+ */
+export const useDeleteShapeFactor = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteShapeFactor>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteShapeFactor>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteShapeFactorMutationOptions(options));
+    }
+
 export const getListRecordsUrl = (params?: ListRecordsParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -3746,4 +4042,153 @@ export function useGetReport<TData = Awaited<ReturnType<typeof getReport>>, TErr
 
 
 
+
+export const getListReportLayoutsUrl = () => {
+
+
+
+
+  return `/api/report-layouts`
+}
+
+/**
+ * @summary List report layouts
+ */
+export const listReportLayouts = async ( options?: Parameters<typeof customFetch>[1]): Promise<ReportLayout[]> => {
+
+  return customFetch<ReportLayout[]>(getListReportLayoutsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListReportLayoutsQueryKey = () => {
+    return [
+    `/api/report-layouts`
+    ] as const;
+    }
+
+
+export const getListReportLayoutsQueryOptions = <TData = Awaited<ReturnType<typeof listReportLayouts>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listReportLayouts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListReportLayoutsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listReportLayouts>>> = ({ signal }) => listReportLayouts({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listReportLayouts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListReportLayoutsQueryResult = NonNullable<Awaited<ReturnType<typeof listReportLayouts>>>
+export type ListReportLayoutsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List report layouts
+ */
+
+export function useListReportLayouts<TData = Awaited<ReturnType<typeof listReportLayouts>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listReportLayouts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListReportLayoutsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateReportLayoutUrl = (id: number,) => {
+
+
+
+
+  return `/api/report-layouts/${id}`
+}
+
+/**
+ * @summary Update a report layout
+ */
+export const updateReportLayout = async (id: number,
+    reportLayoutUpdate: ReportLayoutUpdate, options?: Parameters<typeof customFetch>[1]): Promise<ReportLayout> => {
+
+  return customFetch<ReportLayout>(getUpdateReportLayoutUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(reportLayoutUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateReportLayoutMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateReportLayout>>, TError,{id: number;data: BodyType<ReportLayoutUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateReportLayout>>, TError,{id: number;data: BodyType<ReportLayoutUpdate>}, TContext> => {
+
+const mutationKey = ['updateReportLayout'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateReportLayout>>, {id: number;data: BodyType<ReportLayoutUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateReportLayout(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateReportLayoutMutationResult = NonNullable<Awaited<ReturnType<typeof updateReportLayout>>>
+    export type UpdateReportLayoutMutationBody = BodyType<ReportLayoutUpdate>
+    export type UpdateReportLayoutMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update a report layout
+ */
+export const useUpdateReportLayout = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateReportLayout>>, TError,{id: number;data: BodyType<ReportLayoutUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateReportLayout>>,
+        TError,
+        {id: number;data: BodyType<ReportLayoutUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateReportLayoutMutationOptions(options));
+    }
 

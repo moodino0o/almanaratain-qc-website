@@ -23,5 +23,7 @@ export * from "./auth";
 export * from "./archive-documents";
 export * from "./qc-strength-standards";
 export * from "./qc-sieve-standards";
+export * from "./qc-shape-factors";
+export * from "./qc-report-layouts";
 export * from "./employee-directory";
 export * from "./complaints";

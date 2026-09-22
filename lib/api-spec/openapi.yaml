@@ -633,6 +633,66 @@ paths:
       responses:
         "204":
           description: Sieve standard deleted
+  /shape-factors:
+    get:
+      operationId: listShapeFactors
+      tags: [qc]
+      summary: List default Block shape factors
+      responses:
+        "200":
+          description: Configured Block shape factors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShapeFactor"
+    post:
+      operationId: createShapeFactor
+      tags: [qc]
+      summary: Create a default Block shape factor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShapeFactorInput"
+      responses:
+        "201":
+          description: Created Block shape factor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShapeFactor"
+  /shape-factors/{id}:
+    patch:
+      operationId: updateShapeFactor
+      tags: [qc]
+      summary: Update a default Block shape factor
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShapeFactorUpdate"
+      responses:
+        "200":
+          description: Updated Block shape factor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShapeFactor"
+    delete:
+      operationId: deleteShapeFactor
+      tags: [qc]
+      summary: Delete a default Block shape factor
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "204":
+          description: Block shape factor deleted
   /records:
     get:
       operationId: listRecords
@@ -848,6 +908,40 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Report"
+  /report-layouts:
+    get:
+      operationId: listReportLayouts
+      tags: [qc]
+      summary: List report layouts
+      responses:
+        "200":
+          description: Configured report layouts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReportLayout"
+  /report-layouts/{id}:
+    patch:
+      operationId: updateReportLayout
+      tags: [qc]
+      summary: Update a report layout
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportLayoutUpdate"
+      responses:
+        "200":
+          description: Updated report layout
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportLayout"
 components:
   parameters:
     RecordIdParam:
@@ -872,7 +966,7 @@ components:
       schema:
         type: number
         minimum: 1
-        maximum: 100
+        maximum: 1000
         default: 50
     CategoryIdParam:
       name: categoryId
@@ -1324,6 +1418,49 @@ components:
         value:
           type: string
           minLength: 1
+    ShapeFactor:
+      type: object
+      required:
+        - id
+        - blockSize
+        - shapeFactor
+        - correctionFactor
+      properties:
+        id:
+          type: number
+        blockSize:
+          type: string
+          minLength: 1
+        shapeFactor:
+          type: ["number", "null"]
+        correctionFactor:
+          type: ["number", "null"]
+    ShapeFactorInput:
+      type: object
+      required:
+        - blockSize
+      properties:
+        blockSize:
+          type: string
+          minLength: 1
+        shapeFactor:
+          type: ["number", "null"]
+          minimum: 0
+        correctionFactor:
+          type: ["number", "null"]
+          minimum: 0
+    ShapeFactorUpdate:
+      type: object
+      properties:
+        blockSize:
+          type: string
+          minLength: 1
+        shapeFactor:
+          type: ["number", "null"]
+          minimum: 0
+        correctionFactor:
+          type: ["number", "null"]
+          minimum: 0
     StrengthStandard:
       type: object
       required:
@@ -1946,3 +2083,102 @@ components:
           type: string
         companySubtitle:
           type: string
+        layout:
+          $ref: "#/components/schemas/ReportLayout"
+    ReportLayoutColumn:
+      type: object
+      required: [key, label, visible, order, width]
+      properties:
+        key:
+          type: string
+          minLength: 1
+        label:
+          type: string
+          minLength: 1
+        visible:
+          type: boolean
+        order:
+          type: number
+          minimum: 0
+        width:
+          type: number
+          minimum: 1
+          maximum: 100
+    ReportLayoutSection:
+      type: object
+      required: [key, label, visible, order]
+      properties:
+        key:
+          type: string
+          minLength: 1
+        label:
+          type: string
+          minLength: 1
+        visible:
+          type: boolean
+        order:
+          type: number
+          minimum: 0
+    ReportLayoutConfig:
+      type: object
+      required:
+        - title
+        - fontFamily
+        - fontSize
+        - textColor
+        - accentColor
+        - paperPadding
+        - sections
+        - columns
+      properties:
+        title:
+          type: string
+          minLength: 1
+        fontFamily:
+          type: string
+          enum: [Arial, Calibri, "Times New Roman", Helvetica]
+        fontSize:
+          type: number
+          minimum: 8
+          maximum: 24
+        textColor:
+          type: string
+          pattern: "^#[0-9A-Fa-f]{6}$"
+        accentColor:
+          type: string
+          pattern: "^#[0-9A-Fa-f]{6}$"
+        paperPadding:
+          type: number
+          minimum: 5
+          maximum: 30
+        sections:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportLayoutSection"
+        columns:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: "#/components/schemas/ReportLayoutColumn"
+    ReportLayout:
+      type: object
+      required: [id, testType, name, config]
+      properties:
+        id:
+          type: number
+        testType:
+          $ref: "#/components/schemas/TestType"
+        name:
+          type: string
+        config:
+          $ref: "#/components/schemas/ReportLayoutConfig"
+    ReportLayoutUpdate:
+      type: object
+      required: [config]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        config:
+          $ref: "#/components/schemas/ReportLayoutConfig"

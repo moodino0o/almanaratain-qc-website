@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useParams } from "wouter";
-import { getGetDashboardQueryKey, getGetLookupsQueryKey, getGetRecordQueryKey, getGetReferenceDataQueryKey, getGetReportQueryKey, getListRecordsQueryKey, useCreateRecord, useCreateReferenceItem, useGetLookups, useGetReferenceData, useGetRecord, useListSieveStandards, useListStrengthStandards, useUpdateRecord, TestType, RecordStatus, QcRecordInput, QcRecordUpdate } from "@workspace/api-client-react";
+import { getGetDashboardQueryKey, getGetLookupsQueryKey, getGetRecordQueryKey, getGetReferenceDataQueryKey, getGetReportQueryKey, getListRecordsQueryKey, useCreateRecord, useCreateReferenceItem, useGetLookups, useGetReferenceData, useGetRecord, useListSieveStandards, useListShapeFactors, useListStrengthStandards, useUpdateRecord, TestType, RecordStatus, QcRecordInput, QcRecordUpdate } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,9 @@ import { Link } from "wouter";
 import { TypeaheadInput } from "@/components/ui/typeahead-input";
 import {
   calculateWaterAbsorption,
+  calculateBlockDensity,
+  calculateBlockStrengths,
+  calculatePavingStrengths,
   blockDimensionsFromSize,
   blockMaterialMatches,
   blockSizeMatches,
@@ -27,10 +30,12 @@ import {
   stringValue,
   toFormRow,
   numericInputValue,
+  pavingCorrectionFactorFromSize,
   type TestRow,
 } from "./record-form-utils";
 
 const REFERENCE_NUMBER_MAX_LENGTH = 32;
+const DEFAULT_APPROVED_BY = "ADEL ABBAS EBRAHIM";
 
 export default function RecordForm() {
   const [, setLocation] = useLocation();
@@ -39,6 +44,7 @@ export default function RecordForm() {
   const isEditing = Number.isInteger(recordId) && recordId > 0;
   const { role } = useAuth();
   const canEditQc = role === "technician" || role === "managerial" || role === "administrator";
+  const canEditApprovedBy = role === "administrator";
   const canEditReferenceData = role === "administrator";
   const queryClient = useQueryClient();
   
@@ -56,6 +62,7 @@ export default function RecordForm() {
     },
   });
   const { data: strengthStandards } = useListStrengthStandards();
+  const { data: shapeFactors } = useListShapeFactors();
   const { data: sieveStandards } = useListSieveStandards();
   const createRecord = useCreateRecord();
   const updateRecord = useUpdateRecord();
@@ -68,6 +75,7 @@ export default function RecordForm() {
   const [locationValue, setLocationValue] = useState("");
   const [material, setMaterial] = useState("");
   const [testedBy, setTestedBy] = useState("");
+  const [reviewedBy, setReviewedBy] = useState(DEFAULT_APPROVED_BY);
   const [machine, setMachine] = useState("");
   const [blockAge, setBlockAge] = useState("");
   const [referenceNumber, setReferenceNumber] = useState("");
@@ -82,6 +90,8 @@ export default function RecordForm() {
   const rowInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
   const sieveContextKeyRef = useRef("");
   const previousBlockSizeRef = useRef("");
+  const previousShapeFactorRef = useRef("");
+  const previousCorrectionFactorRef = useRef("");
 
   const addReferenceDataItem = async (categoryKey: string, value: string) => {
     const category = referenceData?.categories.find((item) => item.key === categoryKey);
@@ -122,6 +132,7 @@ export default function RecordForm() {
     setLocationValue(existingRecord.location);
     setMaterial(existingRecord.material);
     setTestedBy(existingRecord.testedBy);
+    setReviewedBy(existingRecord.reviewedBy || DEFAULT_APPROVED_BY);
     setRemarks(existingRecord.remarks ?? "");
     setReferenceNumber(stringValue(savedDetails.referenceNumber));
     setCustomerName(stringValue(savedDetails.customerName));
@@ -136,8 +147,14 @@ export default function RecordForm() {
     setBlockAge(numericInputValue(savedDetails.blockAge ?? legacyBlockAge));
     setSelectedStrengthStandardId(stringValue(savedDetails.strengthStandardId));
     setDetails(savedDetails);
-    const loadedRows = savedRows.length
-      ? savedRows.map((row, index) => toFormRow(row, index + 1))
+    const loadedSourceRows =
+      savedRows.length
+        ? savedRows
+        : existingRecord.testType === TestType.Paving_Blocks
+          ? [savedDetails]
+          : [];
+    const loadedRows = loadedSourceRows.length
+      ? loadedSourceRows.map((row, index) => toFormRow(row, index + 1))
       : [createEmptyRow(1)];
     const calculatedRows = existingRecord.testType === TestType.Sand_Sieve ||
       existingRecord.testType === TestType.Aggregate_Sieve
@@ -148,11 +165,14 @@ export default function RecordForm() {
       ...(calculatedRows[index] ?? {}),
     })));
     sieveContextKeyRef.current = `${existingRecord.testType}|${String(savedDetails.materialReferenceItemId ?? existingRecord.material)}`;
-    nextRowId.current = Math.max(savedRows.length + 1, 2);
+    nextRowId.current = Math.max(loadedSourceRows.length + 1, 2);
     initializedRecordId.current = recordId;
   }, [existingRecord, isEditing, recordId]);
 
-  const usesTestRows = testType === TestType.Ready_Mix || testType === TestType.Blocks;
+  const usesTestRows =
+    testType === TestType.Ready_Mix ||
+    testType === TestType.Blocks ||
+    testType === TestType.Paving_Blocks;
   const usesSieveRows = testType === TestType.Sand_Sieve || testType === TestType.Aggregate_Sieve;
 
   const handleDetailChange = (key: string, value: string) => {
@@ -202,6 +222,58 @@ export default function RecordForm() {
     );
   }, [details.blockSize, testType]);
 
+  useEffect(() => {
+    if (testType !== TestType.Blocks) {
+      previousShapeFactorRef.current = "";
+      return;
+    }
+    const blockSize = String(details.blockSize ?? "").trim();
+    const configuredShapeFactor = shapeFactors?.find((shapeFactor) =>
+      blockSizeMatches(shapeFactor.blockSize, blockSize),
+    );
+    const nextDefault =
+      configuredShapeFactor?.shapeFactor == null
+        ? ""
+        : String(configuredShapeFactor.shapeFactor);
+    const currentValue = String(details.shapeFactor ?? "").trim();
+    const previousDefault = previousShapeFactorRef.current;
+    if (!currentValue || currentValue === previousDefault) {
+      setDetails((current) => {
+        const next = { ...current };
+        if (nextDefault) next.shapeFactor = nextDefault;
+        else delete next.shapeFactor;
+        return next;
+      });
+    }
+    previousShapeFactorRef.current = nextDefault;
+  }, [details.blockSize, shapeFactors, testType]);
+
+  useEffect(() => {
+    if (testType !== TestType.Paving_Blocks) {
+      previousCorrectionFactorRef.current = "";
+      return;
+    }
+    const blockSize = String(details.pavingBlockSize ?? "").trim();
+    const configuredFactor = shapeFactors?.find(
+      (factor) => factor.blockSize.trim().toLocaleLowerCase() === blockSize.toLocaleLowerCase(),
+    )?.correctionFactor;
+    const nextDefault =
+      configuredFactor == null
+        ? pavingCorrectionFactorFromSize(blockSize)
+        : String(configuredFactor);
+    const currentValue = String(details.correctionFactor ?? "").trim();
+    const previousDefault = previousCorrectionFactorRef.current;
+    if (!currentValue || currentValue === previousDefault) {
+      setDetails((current) => {
+        const next = { ...current };
+        if (nextDefault) next.correctionFactor = nextDefault;
+        else delete next.correctionFactor;
+        return next;
+      });
+    }
+    previousCorrectionFactorRef.current = nextDefault;
+  }, [details.correctionFactor, details.pavingBlockSize, shapeFactors, testType]);
+
   const materialReferenceItems = useMemo(
     () => referenceData?.categories.find((category) => category.key === "materials")?.items ?? [],
     [referenceData],
@@ -210,6 +282,45 @@ export default function RecordForm() {
     () => referenceData?.categories.find((category) => category.key === "sieveSizes")?.items ?? [],
     [referenceData],
   );
+  const sampleTypeOptions = useMemo(
+    () => referenceData?.categories.find((category) => category.key === "sampleTypes")?.items.map((item) => item.value) ?? [],
+    [referenceData],
+  );
+  const conditioningMethodOptions = useMemo(
+    () => referenceData?.categories.find((category) => category.key === "conditioningMethods")?.items.map((item) => item.value) ?? [],
+    [referenceData],
+  );
+  const preparationMethodOptions = useMemo(
+    () => referenceData?.categories.find((category) => category.key === "preparationMethods")?.items.map((item) => item.value) ?? [],
+    [referenceData],
+  );
+
+  useEffect(() => {
+    if (testType !== TestType.Blocks) return;
+    const sampleType = sampleTypeOptions.includes("CUBER")
+      ? "CUBER"
+      : sampleTypeOptions[0] ?? "";
+    const conditioningMethod = conditioningMethodOptions[0] ?? "";
+    const preparationMethod = preparationMethodOptions[0] ?? "";
+    if (!sampleType && !conditioningMethod && !preparationMethod) return;
+    setDetails((current) => ({
+      ...current,
+      ...(String(current.sampleType ?? "").trim() || !sampleType
+        ? {}
+        : { sampleType }),
+      ...(String(current.conditioningMethod ?? "").trim() || !conditioningMethod
+        ? {}
+        : { conditioningMethod }),
+      ...(String(current.preparationMethod ?? "").trim() || !preparationMethod
+        ? {}
+        : { preparationMethod }),
+    }));
+  }, [
+    conditioningMethodOptions,
+    preparationMethodOptions,
+    sampleTypeOptions,
+    testType,
+  ]);
 
   const updateTestRow = (rowIndex: number, key: keyof Omit<TestRow, "id">, value: string) => {
     setTestRows(prev => prev.map((row, index) => (
@@ -261,14 +372,6 @@ export default function RecordForm() {
         return [
           { key: "machine", label: "Machine", type: "text" }
         ];
-      case TestType.Paving_Blocks:
-        return [
-          { key: "weight", label: "Weight (kg)", type: "number" },
-          { key: "length", label: "Length (mm)", type: "number" },
-          { key: "width", label: "Width (mm)", type: "number" },
-          { key: "height", label: "Height (mm)", type: "number" },
-          { key: "compressiveStrength", label: "Compressive Strength (N/mm²)", type: "number" }
-        ];
       case TestType.Sand_Sieve:
       case TestType.Aggregate_Sieve:
         return [];
@@ -281,14 +384,24 @@ export default function RecordForm() {
   };
 
   const matchingStrengthStandards = useMemo(() => {
-    if (testType !== TestType.Ready_Mix && testType !== TestType.Blocks) return [];
+    if (
+      testType !== TestType.Ready_Mix &&
+      testType !== TestType.Blocks &&
+      testType !== TestType.Paving_Blocks
+    ) return [];
     const normalizedMaterial = material.trim().toLocaleLowerCase();
+    const selectedPavingSize = String(details.pavingBlockSize ?? "").trim();
     return (strengthStandards ?? [])
       .filter((standard) => (
         standard.testType === testType &&
         (testType === TestType.Blocks
           ? blockMaterialMatches(standard.material, material, details.blockType)
           : standard.material.trim().toLocaleLowerCase() === normalizedMaterial) &&
+        (testType === TestType.Blocks ||
+          testType === TestType.Paving_Blocks
+            ? (!standard.blockSize ||
+              blockSizeMatches(standard.blockSize, selectedPavingSize))
+            : true) &&
         (testType !== TestType.Blocks ||
           (blockTypeMatches(standard.blockType, details.blockType) &&
             blockSizeMatches(standard.blockSize, details.blockSize)))
@@ -301,7 +414,11 @@ export default function RecordForm() {
     matchingStrengthStandards[0];
 
   useEffect(() => {
-    if (testType !== TestType.Blocks) return;
+    if (
+      testType !== TestType.Ready_Mix &&
+      testType !== TestType.Blocks &&
+      testType !== TestType.Paving_Blocks
+    ) return;
     const selectedStillMatches = matchingStrengthStandards.some(
       (standard) => String(standard.id) === selectedStrengthStandardId,
     );
@@ -410,15 +527,18 @@ export default function RecordForm() {
     usesSieveRows,
   ]);
 
-  const calculateStrength = (row: TestRow) => {
-    const load = Number(row.load);
-    const length = Number(row.length);
-    const width = Number(row.width);
-    if (![load, length, width].every(Number.isFinite) || load < 0 || length <= 0 || width <= 0) {
-      return null;
-    }
-    return ((load * 1000) / (length * width)).toFixed(2);
-  };
+  const calculateStrength = (row: Pick<TestRow, "length" | "width" | "load">) =>
+    calculateBlockStrengths(row, details.shapeFactor);
+  const calculatePavingStrength = (
+    row: Pick<TestRow, "length" | "width" | "load" | "compressiveStrength">,
+  ) => calculatePavingStrengths(row, details.correctionFactor);
+
+  const measurementKeys: Array<keyof Omit<TestRow, "id">> =
+    testType === TestType.Ready_Mix
+      ? ["length", "width", "height", "dryWeight", "wetWeight"]
+      : testType === TestType.Blocks
+        ? ["length", "width", "height", "wetWeight"]
+        : ["length", "width", "height", "weight"];
 
   const getMaterialSuggestions = () => {
     if (!lookups) return [];
@@ -476,6 +596,10 @@ export default function RecordForm() {
       toast.error("Please enter a valid Block age in days.");
       return;
     }
+    if (testType === TestType.Paving_Blocks && !String(details.pavingBlockSize ?? "").trim()) {
+      toast.error("Please enter the paving block size.");
+      return;
+    }
 
     let payloadDetails: Record<string, unknown> = { ...details };
 
@@ -509,7 +633,11 @@ export default function RecordForm() {
       payloadDetails.customerLocation = customerLocation;
       payloadDetails.referenceNumber = referenceNumber.trim();
     }
-    if (testType === TestType.Ready_Mix || testType === TestType.Blocks) {
+    if (
+      testType === TestType.Ready_Mix ||
+      testType === TestType.Blocks ||
+      testType === TestType.Paving_Blocks
+    ) {
       if (applicableStandard) payloadDetails.strengthStandardId = applicableStandard.id;
       else delete payloadDetails.strengthStandardId;
     }
@@ -534,7 +662,24 @@ export default function RecordForm() {
               load: row.load,
               waterAbsorption: calculateWaterAbsorption(row.dryWeight, row.wetWeight),
             }
-          : { load: row.load }),
+          : testType === TestType.Blocks
+            ? {
+              load: row.load,
+              airDryStrength:
+                calculateStrength(row).airDryStrength || row.airDryStrength,
+              normalizedStrength:
+                calculateStrength(row).normalizedStrength || row.normalizedStrength,
+              density: calculateBlockDensity(row),
+            }
+            : {
+              weight: row.weight,
+              load: row.load,
+              compressiveStrength:
+                calculatePavingStrength(row).compressiveStrength || row.compressiveStrength,
+              correctionFactor: details.correctionFactor,
+              correctedStrength:
+                calculatePavingStrength(row).correctedStrength || row.correctedStrength,
+            }),
       }));
     }
 
@@ -545,6 +690,7 @@ export default function RecordForm() {
       material,
       status: RecordStatus.Review, 
       testedBy,
+      ...(canEditApprovedBy ? { reviewedBy: reviewedBy.trim() } : {}),
       remarks,
       details: payloadDetails
     };
@@ -706,7 +852,7 @@ export default function RecordForm() {
               </div>
 
               <div className="space-y-2">
-                <Label>Sample Date <span className="text-destructive">*</span></Label>
+                <Label>{testType === TestType.Blocks ? "Casting Date" : "Sample Date"} <span className="text-destructive">*</span></Label>
                 <Input 
                   type="date" 
                   value={sampleDate} 
@@ -737,7 +883,9 @@ export default function RecordForm() {
                 />
               </div>
 
-              {(testType === TestType.Ready_Mix || testType === TestType.Blocks) && (
+      {(testType === TestType.Ready_Mix ||
+        testType === TestType.Blocks ||
+        testType === TestType.Paving_Blocks) && (
                 <div className="space-y-2">
                   <Label>Evaluation / Report Standard</Label>
                   <select
@@ -771,6 +919,20 @@ export default function RecordForm() {
                   onCreateOption={createReferenceOption("employees")}
                 />
               </div>
+
+              {canEditApprovedBy && (
+                <div className="space-y-2">
+                  <Label>Approved By</Label>
+                  <Input
+                    value={reviewedBy}
+                    onChange={(event) => setReviewedBy(event.target.value)}
+                    placeholder="Enter approving person"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This approval name is shown on the report.
+                  </p>
+                </div>
+              )}
 
               {testType === TestType.Ready_Mix && (
                 <>
@@ -809,7 +971,7 @@ export default function RecordForm() {
                 </>
               )}
 
-              {testType === TestType.Blocks && (
+      {testType === TestType.Blocks && (
                 <>
                   <div className="space-y-2">
                     <Label>Block Type <span className="text-destructive">*</span></Label>
@@ -849,8 +1011,90 @@ export default function RecordForm() {
                       placeholder="e.g. 28"
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label>Testing Date</Label>
+                    <Input
+                      type="date"
+                      value={String(details.testingDate ?? "")}
+                      onChange={(event) => handleDetailChange("testingDate", event.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Sample Type</Label>
+                    <TypeaheadInput
+                      value={String(details.sampleType ?? "")}
+                      onChange={(value) => handleDetailChange("sampleType", value)}
+                      options={sampleTypeOptions}
+                      placeholder="Select sample type..."
+                      onCreateOption={createReferenceOption("sampleTypes")}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Method of Conditioning</Label>
+                    <TypeaheadInput
+                      value={String(details.conditioningMethod ?? "")}
+                      onChange={(value) => handleDetailChange("conditioningMethod", value)}
+                      options={conditioningMethodOptions}
+                      placeholder="Select conditioning method..."
+                      onCreateOption={createReferenceOption("conditioningMethods")}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Method of Preparation</Label>
+                    <TypeaheadInput
+                      value={String(details.preparationMethod ?? "")}
+                      onChange={(value) => handleDetailChange("preparationMethod", value)}
+                      options={preparationMethodOptions}
+                      placeholder="Select preparation method..."
+                      onCreateOption={createReferenceOption("preparationMethods")}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>
+                      Shape Factor
+                      <span className="ml-1 text-xs font-normal text-muted-foreground">
+                        (default from Standards by block size)
+                      </span>
+                    </Label>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      value={String(details.shapeFactor ?? "")}
+                      onChange={(event) => handleDetailChange("shapeFactor", event.target.value)}
+                      placeholder="Enter shape factor"
+                    />
+                  </div>
                 </>
               )}
+      {testType === TestType.Paving_Blocks && (
+        <>
+          <div className="space-y-2">
+            <Label>Paving Block Size <span className="text-destructive">*</span></Label>
+            <TypeaheadInput
+              value={String(details.pavingBlockSize ?? "")}
+              onChange={(value) => handleDetailChange("pavingBlockSize", value)}
+              options={lookups?.blockSizes || []}
+              placeholder="e.g. 200*200*60"
+              onCreateOption={createReferenceOption("blockSizes")}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>
+              Correction Factor
+              <span className="ml-1 text-xs font-normal text-muted-foreground">
+                (default from Standards by size)
+              </span>
+            </Label>
+            <Input
+              type="text"
+              inputMode="decimal"
+              value={String(details.correctionFactor ?? "")}
+              onChange={(event) => handleDetailChange("correctionFactor", event.target.value)}
+              placeholder="0.87 for 60 mm, 1.00 for 80 mm"
+            />
+          </div>
+        </>
+      )}
             </CardContent>
           </Card>
 
@@ -973,7 +1217,7 @@ export default function RecordForm() {
                     </div>
                   )}
                    {usesSieveRows && !sieveEntryItems.length ? null : <div className="overflow-x-auto rounded-md border">
-                    <table className={`w-full ${usesSieveRows ? "min-w-[760px]" : "min-w-[1080px]"} text-sm`}>
+                     <table className={`w-full ${usesSieveRows ? "min-w-[760px]" : testType === TestType.Blocks || testType === TestType.Paving_Blocks ? "min-w-[1440px]" : "min-w-[1080px]"} text-sm`}>
                       <thead className="bg-muted/50">
                         <tr className="border-b">
                           <th className="w-12 px-3 py-3 text-left font-semibold">No.</th>
@@ -994,17 +1238,37 @@ export default function RecordForm() {
                               <th className="px-3 py-3 text-left font-semibold">Length (mm)</th>
                               <th className="px-3 py-3 text-left font-semibold">Width (mm)</th>
                               <th className="px-3 py-3 text-left font-semibold">Height (mm)</th>
-                              <th className="px-3 py-3 text-left font-semibold">Dry Weight</th>
-                              <th className="px-3 py-3 text-left font-semibold">Wet Weight</th>
+                              {testType === TestType.Ready_Mix && (
+                                <th className="px-3 py-3 text-left font-semibold">Dry Weight</th>
+                              )}
+                              <th className="px-3 py-3 text-left font-semibold">
+                                {testType === TestType.Paving_Blocks ? "Weight (kg)" : "Wet Weight"}
+                              </th>
                                {testType === TestType.Ready_Mix && (
                                  <th className="px-3 py-3 text-left font-semibold">Water Absorption</th>
                                )}
                             </>
                           )}
-                           {(testType === TestType.Ready_Mix || testType === TestType.Blocks) && (
+                            {(testType === TestType.Ready_Mix ||
+                              testType === TestType.Blocks ||
+                              testType === TestType.Paving_Blocks) && (
                              <>
                                <th className="px-3 py-3 text-left font-semibold">Load (kN)</th>
-                               <th className="px-3 py-3 text-left font-semibold">Calculated Strength</th>
+                               <th className="px-3 py-3 text-left font-semibold">
+                                 {testType === TestType.Blocks ? "Water Strength" : "Calculated Strength"}
+                               </th>
+                                {testType === TestType.Paving_Blocks && (
+                                  <th className="px-3 py-3 text-left font-semibold">
+                                    Compressive Strength (N/mm²)
+                                  </th>
+                                )}
+                               {testType === TestType.Blocks && (
+                                 <>
+                                   <th className="px-3 py-3 text-left font-semibold">Air Dry Strength</th>
+                                   <th className="px-3 py-3 text-left font-semibold">Normalized Strength</th>
+                                   <th className="px-3 py-3 text-left font-semibold">Density (kg/m³)</th>
+                                 </>
+                               )}
                              </>
                            )}
                           <th className="w-20 px-3 py-3 text-left font-semibold">Action</th>
@@ -1089,18 +1353,19 @@ export default function RecordForm() {
                               />
                             </td>
                             )}
-                            {(["length", "width", "height", "dryWeight", "wetWeight"] as const).map(key => (
+                            {measurementKeys.map(key => (
                               <td key={key} className="px-2 py-2">
                                 <Input
                                   type="text"
                                   inputMode="decimal"
-                                  value={row[key]}
+                                  value={row[key] ?? ""}
                                   onChange={event => updateTestRow(rowIndex, key, event.target.value)}
                                   onKeyDown={event => handleTestRowKeyDown(event, rowIndex)}
                                    placeholder={
-                                     testType === TestType.Blocks && ["length", "width", "height"].includes(key)
+                                      (testType === TestType.Blocks || testType === TestType.Paving_Blocks) &&
+                                        ["length", "width", "height"].includes(key)
                                        ? "Auto from size"
-                                       : key === "dryWeight" || key === "wetWeight"
+                                        : key === "dryWeight" || key === "wetWeight" || key === "weight"
                                          ? "kg"
                                          : "mm"
                                    }
@@ -1120,7 +1385,9 @@ export default function RecordForm() {
                              )}
                             </>
                             )}
-                             {(testType === TestType.Ready_Mix || testType === TestType.Blocks) && (
+                              {(testType === TestType.Ready_Mix ||
+                                testType === TestType.Blocks ||
+                                testType === TestType.Paving_Blocks) && (
                               <>
                                 <td className="px-2 py-2">
                                   <Input
@@ -1133,14 +1400,90 @@ export default function RecordForm() {
                                     aria-label={`Load for row ${rowIndex + 1}`}
                                   />
                                 </td>
+                               {testType === TestType.Paving_Blocks && (
+                                 <td className="px-2 py-2">
+                                   <Input
+                                     type="text"
+                                     inputMode="decimal"
+                                     value={row.compressiveStrength}
+                                     onChange={event =>
+                                       updateTestRow(rowIndex, "compressiveStrength", event.target.value)
+                                     }
+                                     onKeyDown={event => handleTestRowKeyDown(event, rowIndex)}
+                                     placeholder="N/mm²"
+                                     aria-label={`Compressive strength for row ${rowIndex + 1}`}
+                                   />
+                                 </td>
+                               )}
                                 <td className="px-2 py-2">
                                    <div
                                      className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground"
                                      aria-label={`Calculated strength for row ${rowIndex + 1}`}
                                    >
-                                     {calculateStrength(row) ? `${calculateStrength(row)} N/mm²` : "Enter load and dimensions"}
+                                     {testType === TestType.Paving_Blocks
+                                       ? calculatePavingStrength(row).compressiveStrength
+                                         ? `${calculatePavingStrength(row).compressiveStrength} N/mm²`
+                                         : "Enter compressive strength or load"
+                                       : calculateStrength(row).waterStrength
+                                         ? `${calculateStrength(row).waterStrength} N/mm²`
+                                         : "Enter load and dimensions"}
                                    </div>
                                 </td>
+                                 {testType === TestType.Paving_Blocks && (
+                                   <>
+                                     <td className="px-2 py-2">
+                                       <div className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground">
+                                         {String(details.correctionFactor ?? "") || "—"}
+                                       </div>
+                                     </td>
+                                     <td className="px-2 py-2">
+                                       <div
+                                         className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground"
+                                         aria-label={`Corrected compressive strength for row ${rowIndex + 1}`}
+                                       >
+                                         {calculatePavingStrength(row).correctedStrength
+                                           ? `${calculatePavingStrength(row).correctedStrength} N/mm²`
+                                           : "Enter correction factor"}
+                                       </div>
+                                     </td>
+                                   </>
+                                 )}
+                                {testType === TestType.Blocks && (
+                                  <>
+                                    <td className="px-2 py-2">
+                                      <div
+                                        className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground"
+                                        aria-label={`Calculated air dry strength for row ${rowIndex + 1}`}
+                                      >
+                                        {calculateStrength(row).airDryStrength
+                                          ? `${calculateStrength(row).airDryStrength} N/mm²`
+                                          : row.airDryStrength
+                                            ? `${row.airDryStrength} N/mm²`
+                                            : "Enter load and dimensions"}
+                                      </div>
+                                    </td>
+                                    <td className="px-2 py-2">
+                                      <div
+                                        className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground"
+                                        aria-label={`Calculated normalized strength for row ${rowIndex + 1}`}
+                                      >
+                                        {calculateStrength(row).normalizedStrength
+                                          ? `${calculateStrength(row).normalizedStrength} N/mm²`
+                                          : row.normalizedStrength
+                                            ? `${row.normalizedStrength} N/mm²`
+                                            : "Enter shape factor"}
+                                      </div>
+                                    </td>
+                                    <td className="px-2 py-2">
+                                      <div
+                                        className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground"
+                                        aria-label={`Calculated density for row ${rowIndex + 1}`}
+                                      >
+                                        {calculateBlockDensity(row) || "Enter wet weight and dimensions"}
+                                      </div>
+                                    </td>
+                                  </>
+                                )}
                               </>
                             )}
                             <td className="px-2 py-2">
