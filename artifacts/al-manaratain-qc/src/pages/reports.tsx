@@ -15,6 +15,7 @@ import type {
 import {
   buildDailyReportRows,
   dailyReportProductOptions,
+  downloadDailyReportWorkbook,
   sortByReferenceNumber,
   type DailyReportProductOption,
 } from "./reports-utils";
@@ -32,7 +33,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CalendarDays, Check, ClipboardList, Filter, FlaskConical, Loader2, PlusCircle, Save, Search, SlidersHorizontal } from "lucide-react";
+import { CalendarDays, Check, ClipboardList, Download, Filter, FlaskConical, Loader2, PlusCircle, Save, Search, SlidersHorizontal } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -413,10 +414,18 @@ export default function Reports() {
                       : "Choose a date range and one or more product groups to view daily summaries."}
                   </CardDescription>
                 </div>
-                <Button variant={hasFilters ? "outline" : "default"} size="sm" onClick={openFilters}>
-                  {hasFilters ? <Filter className="mr-2 h-4 w-4" /> : <SlidersHorizontal className="mr-2 h-4 w-4" />}
-                  {hasFilters ? "Edit selection" : "Choose results"}
-                </Button>
+                 <div className="flex flex-wrap gap-2">
+                   {hasResultRows && (
+                     <Button variant="outline" size="sm" onClick={() => downloadDailyReportWorkbook(dailyReportRows)}>
+                       <Download className="mr-2 h-4 w-4" />
+                       Download Excel
+                     </Button>
+                   )}
+                   <Button variant={hasFilters ? "outline" : "default"} size="sm" onClick={openFilters}>
+                     {hasFilters ? <Filter className="mr-2 h-4 w-4" /> : <SlidersHorizontal className="mr-2 h-4 w-4" />}
+                     {hasFilters ? "Edit selection" : "Choose results"}
+                   </Button>
+                 </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -457,30 +466,32 @@ export default function Reports() {
                     </span>
                   </div>
                   <div className="overflow-x-auto rounded-md border">
-                    <Table className="min-w-[980px]">
+                     <Table className="min-w-[1180px]">
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Date</TableHead>
                           <TableHead>Category</TableHead>
+                           <TableHead className="text-center">Age (days)</TableHead>
+                           <TableHead>Date</TableHead>
                           <TableHead>Plant</TableHead>
                           <TableHead>Type / Mix Design</TableHead>
                           <TableHead className="border-l bg-emerald-50 text-right text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">Average</TableHead>
                           <TableHead className="bg-amber-50 text-right text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">Minimum</TableHead>
                           <TableHead className="bg-sky-50 text-right text-sky-900 dark:bg-sky-950/30 dark:text-sky-200">Maximum</TableHead>
-                          <TableHead className="text-center">Cube Age</TableHead>
+                           <TableHead className="bg-violet-50 text-right text-violet-900 dark:bg-violet-950/30 dark:text-violet-200">Std. Dev.</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {dailyReportRows.map((row) => (
-                          <TableRow key={`${row.date}-${row.category}-${row.plant}-${row.product}`}>
-                            <TableCell className="whitespace-nowrap">{formatDate(row.date)}</TableCell>
+                           <TableRow key={`${row.date}-${row.category}-${row.plant}-${row.product}-${row.cubeAge ?? "none"}`}>
                             <TableCell className="font-medium">{row.category}</TableCell>
+                             <TableCell className="text-center">{row.cubeAge === null ? "—" : row.cubeAge}</TableCell>
+                             <TableCell className="whitespace-nowrap">{formatDate(row.date)}</TableCell>
                             <TableCell>{row.plant}</TableCell>
                             <TableCell>{row.product}</TableCell>
                             <TableCell className="border-l bg-emerald-50/50 text-right font-semibold text-emerald-900 dark:bg-emerald-950/10 dark:text-emerald-200">{formatStrength(row.averageStrength, row.strengthUnit)}</TableCell>
                             <TableCell className="bg-amber-50/50 text-right text-amber-900 dark:bg-amber-950/10 dark:text-amber-200">{formatStrength(row.minimumStrength, row.strengthUnit)}</TableCell>
                             <TableCell className="bg-sky-50/50 text-right text-sky-900 dark:bg-sky-950/10 dark:text-sky-200">{formatStrength(row.maximumStrength, row.strengthUnit)}</TableCell>
-                            <TableCell className="text-center">{row.cubeAge === null ? "—" : `${row.cubeAge} days`}</TableCell>
+                             <TableCell className="bg-violet-50/50 text-right text-violet-900 dark:bg-violet-950/10 dark:text-violet-200">{formatStrength(row.standardDeviation, row.strengthUnit)}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>

@@ -5,6 +5,7 @@ import {
   buildDailyReportRows,
   buildDailyStrengthRows,
   dailyReportProductOptions,
+  downloadDailyReportWorkbook,
   firstWords,
   groupDailyResults,
   sortByReferenceNumber,
@@ -264,6 +265,7 @@ test("groups Ready Mix products by their first three words and summarizes each d
       averageStrength: 42,
       minimumStrength: 40,
       maximumStrength: 44,
+      standardDeviation: Math.sqrt(8 / 3),
       strengthUnit: "N/mm²",
     }],
   );
@@ -303,7 +305,61 @@ test("includes non-Ready Mix categories, date ranges, and selected product group
       averageStrength: 9,
       minimumStrength: 8,
       maximumStrength: 10,
+      standardDeviation: 1,
       strengthUnit: "N/mm²",
     }],
   );
+});
+
+test("uses Block Age for block results and orders Ready Mix ages 7 days before 28 days per plant", () => {
+  const records = [
+    qcRecord({
+      id: 14,
+      testType: "Ready Mix",
+      sampleDate: "2026-09-01",
+      location: "Plant A",
+      material: "OPC",
+      details: {
+        designStrength: "25 N OPC 20mm",
+        testRows: [{ testAge: 28, calculatedStrength: 44 }],
+      },
+    }),
+    qcRecord({
+      id: 15,
+      testType: "Ready Mix",
+      sampleDate: "2026-09-01",
+      location: "Plant A",
+      material: "OPC",
+      details: {
+        designStrength: "25 N OPC 20mm",
+        testRows: [{ testAge: 7, calculatedStrength: 30 }],
+      },
+    }),
+    qcRecord({
+      id: 16,
+      testType: "Blocks",
+      sampleDate: "2026-09-01",
+      location: "Plant B",
+      material: "4 inch Block",
+      details: {
+        blockType: "Hollow Concrete Block",
+        blockAge: "28",
+        testRows: [{ calculatedStrength: 10 }],
+      },
+    }),
+  ];
+
+  const rows = buildDailyReportRows(records, "2026-09-01", "2026-09-29");
+  assert.deepEqual(
+    rows.map(({ category, plant, cubeAge }) => ({ category, plant, cubeAge })),
+    [
+      { category: "Blocks", plant: "Plant B", cubeAge: 28 },
+      { category: "Ready Mix", plant: "Plant A", cubeAge: 7 },
+      { category: "Ready Mix", plant: "Plant A", cubeAge: 28 },
+    ],
+  );
+});
+
+test("does not attempt an Excel download for an empty report", () => {
+  assert.doesNotThrow(() => downloadDailyReportWorkbook([]));
 });

@@ -107,6 +107,11 @@ const recordProduct = (record: QcRecord, details: Record<string, unknown>) => {
   );
 };
 
+const recordAge = (record: QcRecord, details: Record<string, unknown>) =>
+  record.testType === "Blocks" || record.testType === "Paving Blocks"
+    ? numericValue(detailsValue(details, ["blockAge"]))
+    : null;
+
 const rowStrength = (row: unknown) => {
   if (typeof row !== "object" || row === null) return null;
   const values = row as Record<string, unknown>;
@@ -212,7 +217,13 @@ export function buildDailyReportRows(
       }
       continue;
     }
-    addStrengths(record, record.sampleDate.slice(0, 10), product, null, recordStrengths(record, details));
+    addStrengths(
+      record,
+      record.sampleDate.slice(0, 10),
+      product,
+      recordAge(record, details),
+      recordStrengths(record, details),
+    );
   }
 
   return [...groups.values()]
@@ -232,6 +243,9 @@ export function buildDailyReportRows(
       (left, right) =>
         left.category.localeCompare(right.category) ||
         left.plant.localeCompare(right.plant) ||
+        (left.category === "Ready Mix" || right.category === "Ready Mix"
+          ? (left.cubeAge ?? Number.POSITIVE_INFINITY) - (right.cubeAge ?? Number.POSITIVE_INFINITY)
+          : 0) ||
         left.product.localeCompare(right.product) ||
         left.date.localeCompare(right.date) ||
         (left.cubeAge ?? Number.POSITIVE_INFINITY) - (right.cubeAge ?? Number.POSITIVE_INFINITY),
@@ -352,8 +366,7 @@ const createZip = (files: Array<{ name: string; content: string }>) => {
 
 export function downloadDailyReportWorkbook(rows: DailyReportRow[]) {
   if (!rows.length) return;
-  const encoder = new TextEncoder();
-  const headers = ["Date", "Category", "Plant", "Type / Mix Design", "Average", "Minimum", "Maximum", "Stan.Dev.", "Cube Age"];
+  const headers = ["Category", "Age (days)", "Date", "Plant", "Type / Mix Design", "Average", "Minimum", "Maximum", "Std. Dev."];
   const columns = ["A", "B", "C", "D", "E", "F", "G", "H", "I"];
   const sheetRows = [
     `<row r="1">${inlineStringCell("A1", "Al Manaratain Daily QC Results", 1)}</row>`,
@@ -362,17 +375,17 @@ export function downloadDailyReportWorkbook(rows: DailyReportRow[]) {
     ...rows.map((row, index) => {
       const rowNumber = index + 5;
       return `<row r="${rowNumber}">${
-        inlineStringCell(`A${rowNumber}`, row.date) +
-        inlineStringCell(`B${rowNumber}`, row.category) +
-        inlineStringCell(`C${rowNumber}`, row.plant) +
-        inlineStringCell(`D${rowNumber}`, row.product) +
-        numberCell(`E${rowNumber}`, row.averageStrength) +
-        numberCell(`F${rowNumber}`, row.minimumStrength) +
-        numberCell(`G${rowNumber}`, row.maximumStrength) +
-        numberCell(`H${rowNumber}`, row.standardDeviation) +
+        inlineStringCell(`A${rowNumber}`, row.category) +
         (row.cubeAge === null
-          ? inlineStringCell(`I${rowNumber}`, "—")
-          : inlineStringCell(`I${rowNumber}`, `${row.cubeAge} days`))
+          ? inlineStringCell(`B${rowNumber}`, "—")
+          : numberCell(`B${rowNumber}`, row.cubeAge, 0)) +
+        inlineStringCell(`C${rowNumber}`, row.date) +
+        inlineStringCell(`D${rowNumber}`, row.plant) +
+        inlineStringCell(`E${rowNumber}`, row.product) +
+        numberCell(`F${rowNumber}`, row.averageStrength) +
+        numberCell(`G${rowNumber}`, row.minimumStrength) +
+        numberCell(`H${rowNumber}`, row.maximumStrength) +
+        numberCell(`I${rowNumber}`, row.standardDeviation)
       }</row>`;
     }),
   ].join("");
@@ -380,12 +393,12 @@ export function downloadDailyReportWorkbook(rows: DailyReportRow[]) {
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
   <dimension ref="A1:I${rows.length + 4}"/>
   <cols>
-    <col min="1" max="1" width="14" customWidth="1"/>
-    <col min="2" max="2" width="18" customWidth="1"/>
-    <col min="3" max="3" width="18" customWidth="1"/>
-    <col min="4" max="4" width="24" customWidth="1"/>
-    <col min="5" max="8" width="15" customWidth="1"/>
-    <col min="9" max="9" width="12" customWidth="1"/>
+    <col min="1" max="1" width="18" customWidth="1"/>
+    <col min="2" max="2" width="12" customWidth="1"/>
+    <col min="3" max="3" width="14" customWidth="1"/>
+    <col min="4" max="4" width="18" customWidth="1"/>
+    <col min="5" max="5" width="24" customWidth="1"/>
+    <col min="6" max="9" width="15" customWidth="1"/>
   </cols>
   <sheetData>${sheetRows}</sheetData>
   <mergeCells count="1"><mergeCell ref="A1:I1"/></mergeCells>
@@ -448,7 +461,6 @@ export function downloadDailyReportWorkbook(rows: DailyReportRow[]) {
   anchor.download = `daily-qc-results-${rows[0].date}.xlsx`;
   anchor.click();
   URL.revokeObjectURL(url);
-  void encoder;
 }
 
 export function buildDailyStrengthRows(records: DailyReadyMixResult[]): DailyStrengthTableRow[] {
