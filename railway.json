@@ -1,0 +1,7 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "deploy": {
+    "preDeployCommand": "pnpm --filter @workspace/db run push",
+    "startCommand": "pnpm --filter @workspace/api-server run start"
+  }
+}
