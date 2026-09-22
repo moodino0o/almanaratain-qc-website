@@ -762,6 +762,71 @@ export const DeleteSieveStandardResponse = zod.void()
 
 
 /**
+ * @summary List default Block shape factors
+ */
+export const ListShapeFactorsResponseItem = zod.object({
+  "id": zod.number(),
+  "blockType": zod.string(),
+  "shapeFactor": zod.number().nullable()
+})
+export const ListShapeFactorsResponse = zod.array(ListShapeFactorsResponseItem)
+
+
+/**
+ * @summary Create a default Block shape factor
+ */
+
+export const createShapeFactorBodyShapeFactorMin = 0;
+
+
+
+export const CreateShapeFactorBody = zod.object({
+  "blockType": zod.string().min(1),
+  "shapeFactor": zod.number().min(createShapeFactorBodyShapeFactorMin).nullish()
+})
+
+export const CreateShapeFactorResponse = zod.object({
+  "id": zod.number(),
+  "blockType": zod.string(),
+  "shapeFactor": zod.number().nullable()
+})
+
+
+/**
+ * @summary Update a default Block shape factor
+ */
+export const UpdateShapeFactorParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+export const updateShapeFactorBodyShapeFactorMin = 0;
+
+
+
+export const UpdateShapeFactorBody = zod.object({
+  "blockType": zod.string().min(1).optional(),
+  "shapeFactor": zod.number().min(updateShapeFactorBodyShapeFactorMin).nullish()
+})
+
+export const UpdateShapeFactorResponse = zod.object({
+  "id": zod.number(),
+  "blockType": zod.string(),
+  "shapeFactor": zod.number().nullable()
+})
+
+
+/**
+ * @summary Delete a default Block shape factor
+ */
+export const DeleteShapeFactorParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteShapeFactorResponse = zod.void()
+
+
+/**
  * @summary List quality control records
  */
 export const listRecordsQueryLimitDefault = 50;

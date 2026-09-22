@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { QcStrengthStandardRow } from "@workspace/db";
+import type { QcShapeFactorRow, QcStrengthStandardRow } from "@workspace/db";
 import type { SieveStandardForEvaluation } from "./qc-strength";
 import {
   blockDimensionsFromSize,
@@ -20,6 +20,17 @@ const blockStandard = (
   bsStandard: "BS EN 771-3",
   requiredStrength: "5",
   strengthUnit: "N/mm²",
+  createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+  ...overrides,
+});
+
+const blockShapeFactor = (
+  overrides: Partial<QcShapeFactorRow> = {},
+): QcShapeFactorRow => ({
+  id: 1,
+  blockType: "8'' Solid Block",
+  shapeFactor: "1.15",
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   updatedAt: new Date("2026-01-01T00:00:00.000Z"),
   ...overrides,
@@ -173,6 +184,40 @@ test("calculates Block air-dry and normalized strength with one-decimal rounding
   assert.equal(row.density, "466.25");
   assert.equal(row.airDryStrength, 3.3);
   assert.equal(row.normalizedStrength, 4.5);
+});
+
+test("applies a configured Block shape factor only when no saved value exists", () => {
+  const result = evaluateStrengthRecord(
+    blockRecord([
+      { length: 400, width: 200, height: 200, load: 1000 },
+    ]),
+    [blockStandard()],
+    [blockShapeFactor()],
+  );
+
+  const resultDetails = result.details as Record<string, unknown>;
+  const resultRows = resultDetails.testRows as Array<Record<string, unknown>>;
+  assert.equal(resultDetails.shapeFactor, "1.15");
+  assert.equal(resultRows[0].normalizedStrength, 17.3);
+
+  const legacyResult = evaluateStrengthRecord(
+    {
+      ...blockRecord([
+        { length: 400, width: 200, height: 200, load: 1000 },
+      ]),
+      details: {
+        ...blockRecord([]).details,
+        shapeFactor: "1.3",
+        testRows: [{ length: 400, width: 200, height: 200, load: 1000 }],
+      },
+    },
+    [blockStandard()],
+    [blockShapeFactor()],
+  );
+  const legacyDetails = legacyResult.details as Record<string, unknown>;
+  const legacyRows = legacyDetails.testRows as Array<Record<string, unknown>>;
+  assert.equal(legacyDetails.shapeFactor, "1.3");
+  assert.equal(legacyRows[0].normalizedStrength, 19.5);
 });
 
 test("keeps legacy manual Block strengths when calculation inputs are incomplete", () => {

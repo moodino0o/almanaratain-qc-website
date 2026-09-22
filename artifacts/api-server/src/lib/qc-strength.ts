@@ -1,4 +1,8 @@
-import type { QcSieveStandardRow, QcStrengthStandardRow } from "@workspace/db";
+import type {
+  QcShapeFactorRow,
+  QcSieveStandardRow,
+  QcStrengthStandardRow,
+} from "@workspace/db";
 
 export type StrengthEvaluationStatus = "Passed" | "Review" | "Failed";
 
@@ -159,7 +163,10 @@ function blockMaterialMatches(
     (standard === "concrete block" && blockTypeMatches(recordMaterial, recordBlockType));
 }
 
-export function normalizeBlockDetails(details: Record<string, unknown>) {
+export function normalizeBlockDetails(
+  details: Record<string, unknown>,
+  shapeFactors: QcShapeFactorRow[] = [],
+) {
   const rows = Array.isArray(details.testRows) ? details.testRows : null;
   const legacyBlockAge = rows
     ?.map((row) => (
@@ -170,10 +177,18 @@ export function normalizeBlockDetails(details: Record<string, unknown>) {
     .find((value): value is string => value !== null) ?? null;
   const blockAge = textValue(details.blockAge) ?? legacyBlockAge;
   const dimensions = blockDimensionsFromSize(details.blockSize);
+  const blockType = textValue(details.blockType);
+  const configuredShapeFactor = numericValue(details.shapeFactor);
+  const defaultShapeFactor =
+    configuredShapeFactor === null && blockType
+      ? shapeFactors.find((factor) => blockTypeMatches(factor.blockType, blockType))
+          ?.shapeFactor ?? null
+      : null;
 
   return {
     ...details,
     ...(blockAge ? { blockAge } : {}),
+    ...(defaultShapeFactor !== null ? { shapeFactor: defaultShapeFactor } : {}),
     ...(rows
       ? {
           testRows: rows.map((row) => {
@@ -318,6 +333,7 @@ function calculateRow(row: unknown, shapeFactorValue?: unknown) {
 export function evaluateStrengthRecord(
   record: RecordForStrength,
   standards: QcStrengthStandardRow[],
+  shapeFactors: QcShapeFactorRow[] = [],
 ) {
   if (!AUTOMATED_TEST_TYPES.has(record.testType)) {
     return {
@@ -328,7 +344,9 @@ export function evaluateStrengthRecord(
   }
 
   const normalizedDetails =
-    record.testType === "Blocks" ? normalizeBlockDetails(record.details) : record.details;
+    record.testType === "Blocks"
+      ? normalizeBlockDetails(record.details, shapeFactors)
+      : record.details;
   const normalizedRecord = { ...record, details: normalizedDetails };
   const standard = matchingStandard(normalizedRecord, standards);
   const requiredStrength =

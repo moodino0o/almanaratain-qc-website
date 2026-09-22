@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useParams } from "wouter";
-import { getGetDashboardQueryKey, getGetLookupsQueryKey, getGetRecordQueryKey, getGetReferenceDataQueryKey, getGetReportQueryKey, getListRecordsQueryKey, useCreateRecord, useCreateReferenceItem, useGetLookups, useGetReferenceData, useGetRecord, useListSieveStandards, useListStrengthStandards, useUpdateRecord, TestType, RecordStatus, QcRecordInput, QcRecordUpdate } from "@workspace/api-client-react";
+import { getGetDashboardQueryKey, getGetLookupsQueryKey, getGetRecordQueryKey, getGetReferenceDataQueryKey, getGetReportQueryKey, getListRecordsQueryKey, useCreateRecord, useCreateReferenceItem, useGetLookups, useGetReferenceData, useGetRecord, useListSieveStandards, useListShapeFactors, useListStrengthStandards, useUpdateRecord, TestType, RecordStatus, QcRecordInput, QcRecordUpdate } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -58,6 +58,7 @@ export default function RecordForm() {
     },
   });
   const { data: strengthStandards } = useListStrengthStandards();
+  const { data: shapeFactors } = useListShapeFactors();
   const { data: sieveStandards } = useListSieveStandards();
   const createRecord = useCreateRecord();
   const updateRecord = useUpdateRecord();
@@ -84,6 +85,7 @@ export default function RecordForm() {
   const rowInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
   const sieveContextKeyRef = useRef("");
   const previousBlockSizeRef = useRef("");
+  const previousShapeFactorRef = useRef("");
 
   const addReferenceDataItem = async (categoryKey: string, value: string) => {
     const category = referenceData?.categories.find((item) => item.key === categoryKey);
@@ -203,6 +205,32 @@ export default function RecordForm() {
       }),
     );
   }, [details.blockSize, testType]);
+
+  useEffect(() => {
+    if (testType !== TestType.Blocks) {
+      previousShapeFactorRef.current = "";
+      return;
+    }
+    const blockType = String(details.blockType ?? "").trim();
+    const configuredShapeFactor = shapeFactors?.find((shapeFactor) =>
+      blockTypeMatches(shapeFactor.blockType, blockType),
+    );
+    const nextDefault =
+      configuredShapeFactor?.shapeFactor == null
+        ? ""
+        : String(configuredShapeFactor.shapeFactor);
+    const currentValue = String(details.shapeFactor ?? "").trim();
+    const previousDefault = previousShapeFactorRef.current;
+    if (!currentValue || currentValue === previousDefault) {
+      setDetails((current) => {
+        const next = { ...current };
+        if (nextDefault) next.shapeFactor = nextDefault;
+        else delete next.shapeFactor;
+        return next;
+      });
+    }
+    previousShapeFactorRef.current = nextDefault;
+  }, [details.blockType, shapeFactors, testType]);
 
   const materialReferenceItems = useMemo(
     () => referenceData?.categories.find((category) => category.key === "materials")?.items ?? [],
@@ -884,7 +912,12 @@ export default function RecordForm() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Shape Factor</Label>
+                    <Label>
+                      Shape Factor
+                      <span className="ml-1 text-xs font-normal text-muted-foreground">
+                        (default from Standards)
+                      </span>
+                    </Label>
                     <Input
                       type="text"
                       inputMode="decimal"

@@ -633,6 +633,66 @@ paths:
       responses:
         "204":
           description: Sieve standard deleted
+  /shape-factors:
+    get:
+      operationId: listShapeFactors
+      tags: [qc]
+      summary: List default Block shape factors
+      responses:
+        "200":
+          description: Configured Block shape factors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShapeFactor"
+    post:
+      operationId: createShapeFactor
+      tags: [qc]
+      summary: Create a default Block shape factor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShapeFactorInput"
+      responses:
+        "201":
+          description: Created Block shape factor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShapeFactor"
+  /shape-factors/{id}:
+    patch:
+      operationId: updateShapeFactor
+      tags: [qc]
+      summary: Update a default Block shape factor
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShapeFactorUpdate"
+      responses:
+        "200":
+          description: Updated Block shape factor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShapeFactor"
+    delete:
+      operationId: deleteShapeFactor
+      tags: [qc]
+      summary: Delete a default Block shape factor
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "204":
+          description: Block shape factor deleted
   /records:
     get:
       operationId: listRecords
@@ -1324,6 +1384,39 @@ components:
         value:
           type: string
           minLength: 1
+    ShapeFactor:
+      type: object
+      required:
+        - id
+        - blockType
+        - shapeFactor
+      properties:
+        id:
+          type: number
+        blockType:
+          type: string
+        shapeFactor:
+          type: ["number", "null"]
+    ShapeFactorInput:
+      type: object
+      required:
+        - blockType
+      properties:
+        blockType:
+          type: string
+          minLength: 1
+        shapeFactor:
+          type: ["number", "null"]
+          minimum: 0
+    ShapeFactorUpdate:
+      type: object
+      properties:
+        blockType:
+          type: string
+          minLength: 1
+        shapeFactor:
+          type: ["number", "null"]
+          minimum: 0
     StrengthStandard:
       type: object
       required:

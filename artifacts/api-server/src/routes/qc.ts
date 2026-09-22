@@ -17,6 +17,7 @@ import {
   qcReferenceCategoriesTable,
   qcReferenceItemsTable,
   qcSieveStandardsTable,
+  qcShapeFactorsTable,
   qcStrengthStandardsTable,
 } from "@workspace/db";
 import {
@@ -61,9 +62,16 @@ import {
   CreateSieveStandardResponse,
   DeleteSieveStandardParams,
   ListSieveStandardsResponse,
+  ListShapeFactorsResponse,
   UpdateSieveStandardBody,
   UpdateSieveStandardParams,
   UpdateSieveStandardResponse,
+  CreateShapeFactorBody,
+  CreateShapeFactorResponse,
+  DeleteShapeFactorParams,
+  UpdateShapeFactorBody,
+  UpdateShapeFactorParams,
+  UpdateShapeFactorResponse,
 } from "@workspace/api-zod";
 import {
   requireAdministrator,
@@ -194,6 +202,7 @@ const REFERENCE_SEED = [
 
 let referenceSeedPromise: Promise<void> | null = null;
 let strengthSeedPromise: Promise<void> | null = null;
+let shapeFactorSeedPromise: Promise<void> | null = null;
 
 const READY_MIX_DEFAULT_DESIGNS = [
   "20 N OPC",
@@ -234,6 +243,16 @@ const BLOCK_DEFAULT_STANDARDS = [
   { blockType: "Lined Block", blockSize: '8"', requiredStrength: "7.5" },
   { blockType: "Sandwich Insulation Block", blockSize: '8"', requiredStrength: "5" },
   { blockType: "Sandwich Insulation Block", blockSize: '12"', requiredStrength: "5" },
+] as const;
+
+const DEFAULT_SHAPE_FACTOR_BLOCK_TYPES = [
+  "Plain Block",
+  "Lined Block",
+  "Sandwich Insulation Block",
+  "8'' Two Piston Block",
+  "8'' Three Piston Block",
+  "8'' Solid Block",
+  "8'' Slotted Insulation Block",
 ] as const;
 
 const strengthStandardKey = (value: {
@@ -307,6 +326,26 @@ async function ensureDefaultStrengthStandards() {
   await strengthSeedPromise;
 }
 
+async function ensureDefaultShapeFactors() {
+  if (!shapeFactorSeedPromise) {
+    shapeFactorSeedPromise = (async () => {
+      const existing = await db.select().from(qcShapeFactorsTable);
+      const existingTypes = new Set(
+        existing.map((row) => row.blockType.trim().toLocaleLowerCase()),
+      );
+      for (const blockType of DEFAULT_SHAPE_FACTOR_BLOCK_TYPES) {
+        if (existingTypes.has(blockType.toLocaleLowerCase())) continue;
+        await db.insert(qcShapeFactorsTable).values({ blockType, shapeFactor: null });
+        existingTypes.add(blockType.toLocaleLowerCase());
+      }
+    })().catch((error) => {
+      shapeFactorSeedPromise = null;
+      throw error;
+    });
+  }
+  await shapeFactorSeedPromise;
+}
+
 export async function ensureReferenceData() {
   if (!referenceSeedPromise) {
     referenceSeedPromise = (async () => {
@@ -342,6 +381,7 @@ export async function ensureReferenceData() {
     });
   }
   await referenceSeedPromise;
+  await ensureDefaultShapeFactors();
 }
 
 async function listReferenceData() {
@@ -385,9 +425,10 @@ const toRecord = (row: typeof qcRecordsTable.$inferSelect) => ({
 async function refreshRecordEvaluations(testTypes: string[]) {
   const uniqueTestTypes = [...new Set(testTypes)];
   if (!uniqueTestTypes.length) return;
-  const [strengthStandards, sieveStandards, records] = await Promise.all([
+  const [strengthStandards, sieveStandards, shapeFactors, records] = await Promise.all([
     db.select().from(qcStrengthStandardsTable),
     loadSieveStandards(),
+    db.select().from(qcShapeFactorsTable),
     db
       .select()
       .from(qcRecordsTable)
@@ -403,7 +444,7 @@ async function refreshRecordEvaluations(testTypes: string[]) {
     const evaluated =
       record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve"
         ? evaluateSieveRecord(candidate, sieveStandards)
-        : evaluateStrengthRecord(candidate, strengthStandards);
+        : evaluateStrengthRecord(candidate, strengthStandards, shapeFactors);
     if (evaluated.status === undefined) continue;
     await db
       .update(qcRecordsTable)
@@ -479,6 +520,12 @@ const toStrengthStandard = (row: typeof qcStrengthStandardsTable.$inferSelect) =
   bsStandard: row.bsStandard,
   requiredStrength: Number(row.requiredStrength),
   strengthUnit: row.strengthUnit,
+});
+
+const toShapeFactor = (row: typeof qcShapeFactorsTable.$inferSelect) => ({
+  id: row.id,
+  blockType: row.blockType,
+  shapeFactor: row.shapeFactor === null ? null : Number(row.shapeFactor),
 });
 
 const withSieveReferenceValues = (
@@ -875,6 +922,97 @@ router.delete("/strength-standards/:id", requireAdministrator, async (req, res):
   res.sendStatus(204);
 });
 
+router.get("/shape-factors", async (_req, res): Promise<void> => {
+  await ensureDefaultShapeFactors();
+  const shapeFactors = await db
+    .select()
+    .from(qcShapeFactorsTable)
+    .orderBy(asc(qcShapeFactorsTable.blockType), asc(qcShapeFactorsTable.id));
+  res.json(ListShapeFactorsResponse.parse(shapeFactors.map(toShapeFactor)));
+});
+
+router.post("/shape-factors", requireAdministrator, async (req, res): Promise<void> => {
+  const body = CreateShapeFactorBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+  const [shapeFactor] = await db
+    .insert(qcShapeFactorsTable)
+    .values({
+      blockType: body.data.blockType.trim(),
+      shapeFactor:
+        body.data.shapeFactor == null ? null : String(body.data.shapeFactor),
+    })
+    .returning();
+  if (!shapeFactor) {
+    res.status(500).json({ error: "Unable to create shape factor" });
+    return;
+  }
+  await refreshRecordEvaluations(["Blocks"]);
+  res.status(201).json(CreateShapeFactorResponse.parse(toShapeFactor(shapeFactor)));
+});
+
+router.patch("/shape-factors/:id", requireAdministrator, async (req, res): Promise<void> => {
+  const params = UpdateShapeFactorParams.safeParse(req.params);
+  const body = UpdateShapeFactorBody.safeParse(req.body);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+  const [existing] = await db
+    .select()
+    .from(qcShapeFactorsTable)
+    .where(eq(qcShapeFactorsTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Shape factor not found" });
+    return;
+  }
+  const [shapeFactor] = await db
+    .update(qcShapeFactorsTable)
+    .set({
+      ...(body.data.blockType !== undefined
+        ? { blockType: body.data.blockType.trim() }
+        : {}),
+      ...(body.data.shapeFactor !== undefined
+        ? {
+            shapeFactor:
+              body.data.shapeFactor == null ? null : String(body.data.shapeFactor),
+          }
+        : {}),
+    })
+    .where(eq(qcShapeFactorsTable.id, params.data.id))
+    .returning();
+  if (!shapeFactor) {
+    res.status(404).json({ error: "Shape factor not found" });
+    return;
+  }
+  await refreshRecordEvaluations(["Blocks"]);
+  res.json(UpdateShapeFactorResponse.parse(toShapeFactor(shapeFactor)));
+});
+
+router.delete("/shape-factors/:id", requireAdministrator, async (req, res): Promise<void> => {
+  const params = DeleteShapeFactorParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const [shapeFactor] = await db
+    .delete(qcShapeFactorsTable)
+    .where(eq(qcShapeFactorsTable.id, params.data.id))
+    .returning();
+  if (!shapeFactor) {
+    res.status(404).json({ error: "Shape factor not found" });
+    return;
+  }
+  await refreshRecordEvaluations(["Blocks"]);
+  res.sendStatus(204);
+});
+
 async function getReferenceItemForCategory(id: number, key: string) {
   const [row] = await db
     .select({ item: qcReferenceItemsTable })
@@ -1247,9 +1385,10 @@ router.post("/records", requireQcEditor, async (req, res): Promise<void> => {
     return;
   }
 
-  const [strengthStandards, sieveStandards] = await Promise.all([
+  const [strengthStandards, sieveStandards, shapeFactors] = await Promise.all([
     db.select().from(qcStrengthStandardsTable),
     loadSieveStandards(),
+    db.select().from(qcShapeFactorsTable),
   ]);
   const evaluated =
     parsed.data.testType === "Sand Sieve" || parsed.data.testType === "Aggregate Sieve"
@@ -1268,6 +1407,7 @@ router.post("/records", requireQcEditor, async (req, res): Promise<void> => {
       details: parsed.data.details,
     },
           strengthStandards,
+          shapeFactors,
         );
   const prefix = parsed.data.testType
     .replace(/[^A-Z]/gi, "")
@@ -1339,14 +1479,15 @@ router.patch("/records/:id", requireQcEditor, async (req, res): Promise<void> =>
     material: body.data.material ?? existing.material,
     details: body.data.details ?? existing.details,
   };
-  const [strengthStandards, sieveStandards] = await Promise.all([
+  const [strengthStandards, sieveStandards, shapeFactors] = await Promise.all([
     db.select().from(qcStrengthStandardsTable),
     loadSieveStandards(),
+    db.select().from(qcShapeFactorsTable),
   ]);
   const evaluated =
     candidate.testType === "Sand Sieve" || candidate.testType === "Aggregate Sieve"
       ? evaluateSieveRecord(candidate, sieveStandards)
-      : evaluateStrengthRecord(candidate, strengthStandards);
+      : evaluateStrengthRecord(candidate, strengthStandards, shapeFactors);
   const { sampleDate, ...rest } = body.data;
   const updates = {
     ...rest,

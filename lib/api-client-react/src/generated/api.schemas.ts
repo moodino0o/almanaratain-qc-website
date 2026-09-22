@@ -229,6 +229,33 @@ export interface ReferenceItemInput {
   value: string;
 }
 
+export interface ShapeFactor {
+  id: number;
+  blockType: string;
+  /** @nullable */
+  shapeFactor: number | null;
+}
+
+export interface ShapeFactorInput {
+  /** @minLength 1 */
+  blockType: string;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  shapeFactor?: number | null;
+}
+
+export interface ShapeFactorUpdate {
+  /** @minLength 1 */
+  blockType?: string;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  shapeFactor?: number | null;
+}
+
 export interface StrengthStandard {
   id: number;
   testType: TestType;
