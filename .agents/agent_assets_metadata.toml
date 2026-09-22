@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "3sXpB36D4TmZlJueanU0T"
+uri = "file://.local/outputs/Al-Manaratain-QC-Project-Deck.pptx"
+type = "slides"
+title = "Al Manaratain QC Project Deck.pptx"
