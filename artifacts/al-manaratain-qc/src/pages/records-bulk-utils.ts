@@ -14,6 +14,7 @@ export type BulkRecordDraft = {
   location: string;
   material: string;
   testedBy: string;
+  reviewedBy: string;
   remarks: string;
   details: Record<string, unknown>;
 };
@@ -29,6 +30,7 @@ export const recordToBulkDraft = (record: QcRecord): BulkRecordDraft => ({
   location: record.location,
   material: record.material,
   testedBy: record.testedBy,
+  reviewedBy: record.reviewedBy ?? "",
   remarks: record.remarks ?? "",
   details: structuredClone(record.details),
 });
@@ -41,6 +43,7 @@ export const createEmptyBulkDraft = (sampleDate: string): BulkRecordDraft => ({
   location: "",
   material: "",
   testedBy: "",
+  reviewedBy: "ADEL ABBAS EBRAHIM",
   remarks: "",
   details: {},
 });
@@ -67,20 +70,31 @@ export const validateBulkDraft = (draft: BulkRecordDraft) => {
   return missing;
 };
 
-const commonPayload = (draft: BulkRecordDraft): QcRecordUpdate => ({
+const commonPayload = (
+  draft: BulkRecordDraft,
+  includeApprovedBy = false,
+): QcRecordUpdate => ({
   sampleDate: draft.sampleDate,
   location: draft.location.trim(),
   material: draft.material.trim(),
   testedBy: draft.testedBy.trim(),
   remarks: draft.remarks.trim() || null,
   details: structuredClone(draft.details),
+  ...(includeApprovedBy && draft.reviewedBy.trim()
+    ? { reviewedBy: draft.reviewedBy.trim() }
+    : {}),
 });
 
-export const bulkDraftToUpdate = (draft: BulkRecordDraft): QcRecordUpdate =>
-  commonPayload(draft);
+export const bulkDraftToUpdate = (
+  draft: BulkRecordDraft,
+  includeApprovedBy = false,
+): QcRecordUpdate => commonPayload(draft, includeApprovedBy);
 
-export const bulkDraftToCreate = (draft: BulkRecordDraft): QcRecordInput => ({
-  ...commonPayload(draft),
+export const bulkDraftToCreate = (
+  draft: BulkRecordDraft,
+  includeApprovedBy = false,
+): QcRecordInput => ({
+  ...commonPayload(draft, includeApprovedBy),
   testType: draft.testType,
   status: RecordStatus.Review,
   details: structuredClone(draft.details),
