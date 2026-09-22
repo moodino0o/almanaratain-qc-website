@@ -872,7 +872,7 @@ components:
       schema:
         type: number
         minimum: 1
-        maximum: 100
+        maximum: 1000
         default: 50
     CategoryIdParam:
       name: categoryId

@@ -226,6 +226,140 @@ function strengthSummary(rows: unknown[]) {
   };
 }
 
+function numericSummary(values: Array<number | null>) {
+  const numbers = values.filter((value): value is number => value !== null);
+  if (!numbers.length) {
+    return { average: null, minimum: null, maximum: null, standardDeviation: null };
+  }
+  const average = numbers.reduce((total, value) => total + value, 0) / numbers.length;
+  const variance = numbers.reduce(
+    (total, value) => total + ((value - average) ** 2),
+    0,
+  ) / numbers.length;
+  return {
+    average,
+    minimum: Math.min(...numbers),
+    maximum: Math.max(...numbers),
+    standardDeviation: numbers.length > 1 ? Math.sqrt(variance) : null,
+  };
+}
+
+function blockDensity(values: ValueMap) {
+  const storedDensity = numericValue(values.density ?? values.densityKgM3);
+  if (storedDensity !== null) return storedDensity;
+  const wetWeight = numericValue(values.wetWeight);
+  const length = numericValue(values.length);
+  const width = numericValue(values.width);
+  const height = numericValue(values.height);
+  if (
+    wetWeight === null ||
+    length === null ||
+    width === null ||
+    height === null ||
+    wetWeight < 0 ||
+    length <= 0 ||
+    width <= 0 ||
+    height <= 0
+  ) {
+    return null;
+  }
+  return (wetWeight * 1_000_000_000) / (length * width * height);
+}
+
+function BlockCompressionRowsTable({ rows }: { rows: unknown[] }) {
+  const rowValues = rows.map((row) => (
+    typeof row === "object" && row !== null ? row as ValueMap : {}
+  ));
+  const columns = {
+    water: rowValues.map((values) => numericValue(
+      values.waterStrength ??
+      values.calculatedStrength ??
+      values.strength ??
+      values.compressiveStrength,
+    )),
+    airDry: rowValues.map((values) => numericValue(
+      values.airDryStrength ?? values.dryAirStrength,
+    )),
+    normalized: rowValues.map((values) => numericValue(values.normalizedStrength)),
+    density: rowValues.map(blockDensity),
+    wetWeight: rowValues.map((values) => numericValue(values.wetWeight)),
+  };
+  const averages = {
+    water: numericSummary(columns.water).average,
+    airDry: numericSummary(columns.airDry).average,
+    normalized: numericSummary(columns.normalized).average,
+    density: numericSummary(columns.density).average,
+    wetWeight: numericSummary(columns.wetWeight).average,
+  };
+  const airDrySummary = numericSummary(columns.airDry);
+  const displayNumber = (value: number | null, digits = 2) =>
+    value === null ? "-" : formatNumber(value, digits);
+
+  return (
+    <>
+      <div className="block-report-table-wrap">
+        <table className="report-table block-report-table">
+          <thead>
+            <tr>
+              <th>No.</th>
+              <th>Length<br />(mm)</th>
+              <th>Width<br />(mm)</th>
+              <th>Height<br />(mm)</th>
+              <th>Load<br />(kN)</th>
+              <th>Water<br />(N/mm2)</th>
+              <th>Air Dry<br />(N/mm2)</th>
+              <th>Normalized<br />(N/mm2)</th>
+              <th>Density<br />(kg/m3)</th>
+              <th>Wet Weight<br />(kg)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rowValues.map((values, index) => (
+              <tr key={index}>
+                <td>{textValue(values.rowNo, String(index + 1))}</td>
+                <td>{textValue(values.length)}</td>
+                <td>{textValue(values.width)}</td>
+                <td>{textValue(values.height)}</td>
+                <td>{textValue(values.load)}</td>
+                <td>{displayNumber(columns.water[index])}</td>
+                <td>{displayNumber(columns.airDry[index])}</td>
+                <td>{displayNumber(columns.normalized[index])}</td>
+                <td>{displayNumber(columns.density[index])}</td>
+                <td>{displayNumber(columns.wetWeight[index], 3)}</td>
+              </tr>
+            ))}
+            <tr className="block-report-average-row">
+              <td colSpan={5}>AVERAGE:</td>
+              <td>{displayNumber(averages.water)}</td>
+              <td>{displayNumber(averages.airDry)}</td>
+              <td>{displayNumber(averages.normalized)}</td>
+              <td>{displayNumber(averages.density)}</td>
+              <td>{displayNumber(averages.wetWeight, 3)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div className="block-report-statistics">
+        <div>
+          <strong>Maximum</strong>
+          <span>Dry Air Strength</span>
+          <b>{displayNumber(airDrySummary.maximum)}</b>
+        </div>
+        <div>
+          <strong>Minimum</strong>
+          <span>Dry Air Strength</span>
+          <b>{displayNumber(airDrySummary.minimum)}</b>
+        </div>
+        <div>
+          <strong>Stan.Dev.</strong>
+          <span>Dry Air Strength</span>
+          <b>{displayNumber(airDrySummary.standardDeviation)}</b>
+        </div>
+      </div>
+    </>
+  );
+}
+
 function blockAgeFromRecord(details: DetailMap, rows: unknown[]) {
   const configuredAge = numericValue(details.blockAge);
   if (configuredAge !== null && configuredAge > 0) return configuredAge;
@@ -749,64 +883,60 @@ function BlocksReport({
   const evaluation = objectValue(details.strengthEvaluation);
   const testRows = Array.isArray(details.testRows) ? details.testRows : [];
   const blockAge = blockAgeFromRecord(details, testRows);
-  const testingDate = blockAge === null ? null : addDaysToDate(record.sampleDate, blockAge);
-  const calculatedSummary = strengthSummary(testRows);
-  const strengthUnit = textValue(evaluation?.strengthUnit, "N/mm²");
-  const averageStrength = numericValue(evaluation?.averageStrength) ?? calculatedSummary.average;
-  const minimumStrength = numericValue(evaluation?.minimumStrength) ?? calculatedSummary.minimum;
-  const maximumStrength = numericValue(evaluation?.maximumStrength) ?? calculatedSummary.maximum;
+  const enteredTestingDate =
+    typeof details.testingDate === "string" ? details.testingDate : null;
+  const testingDate = enteredTestingDate ||
+    (blockAge === null ? null : addDaysToDate(record.sampleDate, blockAge));
+  const configuredStandard = standards
+    .filter((standard) => strengthStandardMatchesRecord(standard, record))
+    .sort((left, right) => left.id - right.id)[0];
+  const requiredStrength = configuredStandard?.requiredStrength ??
+    numericValue(evaluation?.requiredStrength);
   const compliance = textValue(evaluation?.status, record.status);
+  const complianceLabel = compliance === "Passed"
+    ? "PASS"
+    : compliance === "Failed"
+      ? "NOT PASS"
+      : "REVIEW";
   return (
-    <>
-      <div className="report-two-column">
-        <section>
-          <SectionHeading>Block Details</SectionHeading>
-          <ReportFields
-            entries={[
-              ["Block Type", detailValue(details, ["blockType"], record.material)],
-              ["Block Size", detailValue(details, ["blockSize"])],
-              ["Block No.", detailValue(details, ["blockNo", "blockNumber"])],
-              ["Machine", detailValue(details, ["machine"])],
-              ["Casting Date", formatReportDate(record.sampleDate)],
-              ["Testing Date", formatReportDate(testingDate)],
-              ["Block Age", blockAge === null ? "-" : `${formatNumber(blockAge)} days`],
-            ]}
-          />
-        </section>
-        <section className="report-summary">
-          <SectionHeading>Test Result</SectionHeading>
-          <ReportFields
-            entries={[
-              ["Average Strength", averageStrength === null ? "-" : `${formatNumber(averageStrength, 2)} ${strengthUnit}`],
-              ["Minimum Strength", minimumStrength === null ? "-" : `${formatNumber(minimumStrength, 2)} ${strengthUnit}`],
-              ["Maximum Strength", maximumStrength === null ? "-" : `${formatNumber(maximumStrength, 2)} ${strengthUnit}`],
-              ["Shape Factor", detailValue(details, ["shapeFactor"])],
-              ["Compliance", compliance],
-            ]}
-          />
-        </section>
+    <div className="block-compression-report">
+      <div className="block-report-fields">
+        <ReportFields
+          entries={[
+            ["BLOCK SIZE:", detailValue(details, ["blockSize"])],
+            ["CASTING DATE:", formatReportDate(record.sampleDate)],
+            ["TESTING DATE:", formatReportDate(testingDate)],
+            ["SP. Strength (N/mm2):", requiredStrength === null ? "-" : formatNumber(requiredStrength)],
+            ["Factory:", record.location],
+          ]}
+        />
+        <ReportFields
+          entries={[
+            ["BLOCK AGE IN DAYS:", blockAge === null ? "-" : formatNumber(blockAge)],
+            ["MACHINE TYPE:", detailValue(details, ["machine"])],
+            ["SAMPLE TYPE:", detailValue(details, ["sampleType"])],
+            ["METHOD OF CONDITIONING:", detailValue(details, ["conditioningMethod"])],
+            [
+              "METHOD OF PREPARATION:",
+              [
+                detailValue(details, ["preparationMethod"]),
+                detailValue(details, ["shapeFactor"], "") &&
+                  `Shape factor ${detailValue(details, ["shapeFactor"], "")}`,
+              ].filter(Boolean).join(" "),
+            ],
+            ["BLOCK TYPE:", detailValue(details, ["blockType"], record.material)],
+          ]}
+        />
       </div>
-
-      <div className="report-two-column report-test-details">
-        <section>
-          <SectionHeading>Test Information</SectionHeading>
-          <RecordContextFields record={record} includeSampleDate={false} />
-        </section>
-        <section className="report-test-measures">
-          <ReportFields
-            entries={[
-              ["Required Minimum", evaluation?.requiredStrength == null
-                ? "-"
-                : `${textValue(evaluation.requiredStrength)} ${strengthUnit}`],
-              ["Applicable BS", textValue(evaluation?.bsStandard)],
-            ]}
-          />
-        </section>
+      <div className="block-report-remarks">
+        <strong>Remarks:</strong>
+        <span>{record.remarks || ""}</span>
       </div>
-
-      <SpecimenRowsTable rows={testRows} ageLabel="Sample Age" showAge={false} />
-      <StrengthStandardsTable record={record} standards={standards} evaluation={evaluation} />
-    </>
+      <BlockCompressionRowsTable rows={testRows} />
+      <div className={`block-report-result ${compliance.toLocaleLowerCase()}`}>
+        {complianceLabel}
+      </div>
+    </div>
   );
 }
 
@@ -1074,6 +1204,8 @@ export default function ReportPrint() {
             <strong>
               {record.testType === "Ready Mix"
                 ? "Readymix Cube Test Report"
+                : record.testType === "Blocks"
+                  ? "Block Compression Test"
                 : `${record.testType} Test Report`}
             </strong>
             <span>Ref: {record.recordNo}</span>
@@ -1105,7 +1237,7 @@ export default function ReportPrint() {
           <FallbackReport record={record} />
         )}
 
-        {record.remarks && (
+        {record.testType !== "Blocks" && record.remarks && (
           <div className="report-remarks">
             <span>Remarks:</span> {record.remarks}
           </div>

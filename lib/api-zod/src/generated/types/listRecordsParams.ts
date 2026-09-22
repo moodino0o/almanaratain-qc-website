@@ -15,7 +15,7 @@ testType?: TestTypeParamParameter;
 search?: SearchParamParameter;
 /**
  * @minimum 1
- * @maximum 100
+ * @maximum 1000
  */
 limit?: LimitParamParameter;
 };

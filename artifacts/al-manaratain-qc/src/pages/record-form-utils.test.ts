@@ -6,6 +6,7 @@ import {
   blockMaterialMatches,
   blockSizeMatches,
   blockTypeMatches,
+  calculateBlockDensity,
   calculateSieveSampleWeight,
   calculateSieveResults,
   prepareRecordForForm,
@@ -49,6 +50,18 @@ test("matches legacy Block labels to canonical standards", () => {
   assert.equal(blockTypeMatches('8" Plain Block', "Plain Block"), true);
   assert.equal(blockSizeMatches("400*200*200", '8"'), true);
   assert.equal(blockMaterialMatches("Concrete Block", '8" Plain Block', '8" Plain Block'), true);
+});
+
+test("calculates Block density from wet weight and specimen dimensions", () => {
+  assert.equal(
+    calculateBlockDensity({
+      length: "400",
+      width: "100",
+      height: "200",
+      wetWeight: "3.730",
+    }),
+    "466.25",
+  );
 });
 
 test("calculates sieve passing mass from cumulative retained amounts", () => {
@@ -123,6 +136,9 @@ test("copies Ready Mix fields, reference information, and cube rows", () => {
     wetWeight: "8.7",
     load: "550",
     strength: "24.44",
+    airDryStrength: "",
+    normalizedStrength: "",
+    density: "",
     waterAbsorption: "6.10",
     sieveSize: "",
     sieveSizeReferenceItemId: null,
@@ -150,6 +166,9 @@ test("copies Blocks fields and every block specimen row", () => {
       wetWeight: 19,
       load: 800,
       strength: 10,
+      airDryStrength: 11.25,
+      normalizedStrength: 12.4,
+      density: 1187.5,
     }],
   });
 
@@ -171,6 +190,9 @@ test("copies Blocks fields and every block specimen row", () => {
     wetWeight: "19",
     load: "800",
     strength: "10",
+    airDryStrength: "11.25",
+    normalizedStrength: "12.4",
+    density: "1187.5",
     waterAbsorption: "5.56",
     sieveSize: "",
     sieveSizeReferenceItemId: null,
@@ -210,6 +232,9 @@ for (const testType of [TestType.Sand_Sieve, TestType.Aggregate_Sieve]) {
       testAge: "",
       load: "",
       strength: "",
+      airDryStrength: "",
+      normalizedStrength: "",
+      density: "",
       waterAbsorption: "",
       sieveSize: "5 mm",
       sieveSizeReferenceItemId: 21,
@@ -255,6 +280,9 @@ test("copies Paving Blocks material details", () => {
     testAge: "",
     load: "",
     strength: "",
+    airDryStrength: "",
+    normalizedStrength: "",
+    density: "",
     waterAbsorption: "",
     sieveSize: "",
     sieveSizeReferenceItemId: null,

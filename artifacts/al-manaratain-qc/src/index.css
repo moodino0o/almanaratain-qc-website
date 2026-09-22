@@ -531,6 +531,115 @@
   font-size: 8px;
 }
 
+.block-report-fields {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: 3mm 10mm;
+  margin-top: 3mm;
+}
+
+.block-report-fields .report-field {
+  grid-template-columns: 44mm minmax(0, 1fr);
+  min-height: 7mm;
+  align-items: start;
+}
+
+.block-report-fields > div:last-child .report-field {
+  grid-template-columns: 49mm minmax(0, 1fr);
+}
+
+.block-report-fields .report-field span {
+  font-size: 8px;
+}
+
+.block-report-fields .report-field strong {
+  font-size: 9px;
+}
+
+.block-report-remarks {
+  display: grid;
+  grid-template-columns: 24mm minmax(0, 1fr);
+  min-height: 10mm;
+  margin-top: 2mm;
+  border-top: 1px solid #111;
+  border-bottom: 1px solid #111;
+  background: #f3f3f3;
+  padding: 2mm 1mm;
+}
+
+.block-report-table-wrap {
+  margin-top: 4mm;
+}
+
+.block-report-table {
+  table-layout: auto;
+}
+
+.block-report-table th,
+.block-report-table td {
+  border-left: 0;
+  border-right: 0;
+  padding: 1.4mm 0.7mm;
+  font-size: 7.5px;
+}
+
+.block-report-table th:first-child,
+.block-report-table td:first-child {
+  width: 7mm;
+}
+
+.block-report-average-row td {
+  border-bottom-width: 2px;
+  font-weight: 700;
+}
+
+.block-report-average-row td:first-child {
+  text-align: left;
+}
+
+.block-report-result {
+  margin: 2mm 0 0 112mm;
+  width: 32mm;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.block-report-result.passed {
+  color: #16733b;
+}
+
+.block-report-result.failed {
+  color: #b42318;
+}
+
+.block-report-result.review {
+  color: #996515;
+}
+
+.block-report-statistics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  width: 100mm;
+  margin: 7mm auto 0;
+  text-align: center;
+}
+
+.block-report-statistics div {
+  display: grid;
+  gap: 4mm;
+}
+
+.block-report-statistics strong,
+.block-report-statistics span {
+  font-size: 8px;
+}
+
+.block-report-statistics b {
+  font-size: 11px;
+  font-weight: 500;
+}
+
 .report-strength-block {
   width: 82mm;
   margin: 31mm auto 0;

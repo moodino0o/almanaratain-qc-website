@@ -15,6 +15,7 @@ import { Link } from "wouter";
 import { TypeaheadInput } from "@/components/ui/typeahead-input";
 import {
   calculateWaterAbsorption,
+  calculateBlockDensity,
   blockDimensionsFromSize,
   blockMaterialMatches,
   blockSizeMatches,
@@ -534,7 +535,12 @@ export default function RecordForm() {
               load: row.load,
               waterAbsorption: calculateWaterAbsorption(row.dryWeight, row.wetWeight),
             }
-          : { load: row.load }),
+          : {
+              load: row.load,
+              airDryStrength: row.airDryStrength,
+              normalizedStrength: row.normalizedStrength,
+              density: calculateBlockDensity(row),
+            }),
       }));
     }
 
@@ -706,7 +712,7 @@ export default function RecordForm() {
               </div>
 
               <div className="space-y-2">
-                <Label>Sample Date <span className="text-destructive">*</span></Label>
+                <Label>{testType === TestType.Blocks ? "Casting Date" : "Sample Date"} <span className="text-destructive">*</span></Label>
                 <Input 
                   type="date" 
                   value={sampleDate} 
@@ -849,6 +855,48 @@ export default function RecordForm() {
                       placeholder="e.g. 28"
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label>Testing Date</Label>
+                    <Input
+                      type="date"
+                      value={String(details.testingDate ?? "")}
+                      onChange={(event) => handleDetailChange("testingDate", event.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Sample Type</Label>
+                    <Input
+                      value={String(details.sampleType ?? "")}
+                      onChange={(event) => handleDetailChange("sampleType", event.target.value)}
+                      placeholder="e.g. CUBER"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Method of Conditioning</Label>
+                    <Input
+                      value={String(details.conditioningMethod ?? "")}
+                      onChange={(event) => handleDetailChange("conditioningMethod", event.target.value)}
+                      placeholder="e.g. WATER at 20±5 C"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Method of Preparation</Label>
+                    <Input
+                      value={String(details.preparationMethod ?? "")}
+                      onChange={(event) => handleDetailChange("preparationMethod", event.target.value)}
+                      placeholder="e.g. GRINDING"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Shape Factor</Label>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      value={String(details.shapeFactor ?? "")}
+                      onChange={(event) => handleDetailChange("shapeFactor", event.target.value)}
+                      placeholder="Enter shape factor"
+                    />
+                  </div>
                 </>
               )}
             </CardContent>
@@ -973,7 +1021,7 @@ export default function RecordForm() {
                     </div>
                   )}
                    {usesSieveRows && !sieveEntryItems.length ? null : <div className="overflow-x-auto rounded-md border">
-                    <table className={`w-full ${usesSieveRows ? "min-w-[760px]" : "min-w-[1080px]"} text-sm`}>
+                    <table className={`w-full ${usesSieveRows ? "min-w-[760px]" : testType === TestType.Blocks ? "min-w-[1320px]" : "min-w-[1080px]"} text-sm`}>
                       <thead className="bg-muted/50">
                         <tr className="border-b">
                           <th className="w-12 px-3 py-3 text-left font-semibold">No.</th>
@@ -994,7 +1042,9 @@ export default function RecordForm() {
                               <th className="px-3 py-3 text-left font-semibold">Length (mm)</th>
                               <th className="px-3 py-3 text-left font-semibold">Width (mm)</th>
                               <th className="px-3 py-3 text-left font-semibold">Height (mm)</th>
-                              <th className="px-3 py-3 text-left font-semibold">Dry Weight</th>
+                              {testType === TestType.Ready_Mix && (
+                                <th className="px-3 py-3 text-left font-semibold">Dry Weight</th>
+                              )}
                               <th className="px-3 py-3 text-left font-semibold">Wet Weight</th>
                                {testType === TestType.Ready_Mix && (
                                  <th className="px-3 py-3 text-left font-semibold">Water Absorption</th>
@@ -1004,7 +1054,16 @@ export default function RecordForm() {
                            {(testType === TestType.Ready_Mix || testType === TestType.Blocks) && (
                              <>
                                <th className="px-3 py-3 text-left font-semibold">Load (kN)</th>
-                               <th className="px-3 py-3 text-left font-semibold">Calculated Strength</th>
+                               <th className="px-3 py-3 text-left font-semibold">
+                                 {testType === TestType.Blocks ? "Water Strength" : "Calculated Strength"}
+                               </th>
+                               {testType === TestType.Blocks && (
+                                 <>
+                                   <th className="px-3 py-3 text-left font-semibold">Air Dry Strength</th>
+                                   <th className="px-3 py-3 text-left font-semibold">Normalized Strength</th>
+                                   <th className="px-3 py-3 text-left font-semibold">Density (kg/m³)</th>
+                                 </>
+                               )}
                              </>
                            )}
                           <th className="w-20 px-3 py-3 text-left font-semibold">Action</th>
@@ -1089,7 +1148,13 @@ export default function RecordForm() {
                               />
                             </td>
                             )}
-                            {(["length", "width", "height", "dryWeight", "wetWeight"] as const).map(key => (
+                            {([
+                              "length",
+                              "width",
+                              "height",
+                              ...(testType === TestType.Ready_Mix ? ["dryWeight" as const] : []),
+                              "wetWeight",
+                            ] as const).map(key => (
                               <td key={key} className="px-2 py-2">
                                 <Input
                                   type="text"
@@ -1141,6 +1206,40 @@ export default function RecordForm() {
                                      {calculateStrength(row) ? `${calculateStrength(row)} N/mm²` : "Enter load and dimensions"}
                                    </div>
                                 </td>
+                                {testType === TestType.Blocks && (
+                                  <>
+                                    <td className="px-2 py-2">
+                                      <Input
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={row.airDryStrength}
+                                        onChange={event => updateTestRow(rowIndex, "airDryStrength", event.target.value)}
+                                        onKeyDown={event => handleTestRowKeyDown(event, rowIndex)}
+                                        placeholder="N/mm²"
+                                        aria-label={`Air dry strength for row ${rowIndex + 1}`}
+                                      />
+                                    </td>
+                                    <td className="px-2 py-2">
+                                      <Input
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={row.normalizedStrength}
+                                        onChange={event => updateTestRow(rowIndex, "normalizedStrength", event.target.value)}
+                                        onKeyDown={event => handleTestRowKeyDown(event, rowIndex)}
+                                        placeholder="N/mm²"
+                                        aria-label={`Normalized strength for row ${rowIndex + 1}`}
+                                      />
+                                    </td>
+                                    <td className="px-2 py-2">
+                                      <div
+                                        className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground"
+                                        aria-label={`Calculated density for row ${rowIndex + 1}`}
+                                      >
+                                        {calculateBlockDensity(row) || "Enter wet weight and dimensions"}
+                                      </div>
+                                    </td>
+                                  </>
+                                )}
                               </>
                             )}
                             <td className="px-2 py-2">

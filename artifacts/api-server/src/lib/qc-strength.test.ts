@@ -135,6 +135,31 @@ test("matches legacy Block labels to canonical standards", () => {
   assert.equal((result.details.strengthEvaluation as Record<string, unknown>).requiredStrength, 7.5);
 });
 
+test("persists Block water strength and density for the compression report", () => {
+  const result = evaluateStrengthRecord(
+    blockRecord([{
+      length: 400,
+      width: 100,
+      height: 200,
+      wetWeight: 3.73,
+      load: 109.1,
+      airDryStrength: 3.27,
+      normalizedStrength: 4.42,
+    }]),
+    [blockStandard({
+      blockType: "8'' Solid Block",
+      blockSize: "400 x 200 x 200",
+      requiredStrength: "3.5",
+    })],
+  );
+  const row = (result.details.testRows as Record<string, unknown>[])[0];
+
+  assert.equal(row.waterStrength, "2.73");
+  assert.equal(row.density, "466.25");
+  assert.equal(row.airDryStrength, 3.27);
+  assert.equal(row.normalizedStrength, 4.42);
+});
+
 test("recomputes percentage standards from sample weight and returned amount", () => {
   const result = evaluateSieveRecord(
     record(),

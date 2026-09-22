@@ -11,6 +11,9 @@ export type TestRow = {
   testAge: string;
   load: string;
   strength: string;
+  airDryStrength: string;
+  normalizedStrength: string;
+  density: string;
   waterAbsorption: string;
   sieveSize: string;
   sieveSizeReferenceItemId: number | null;
@@ -69,6 +72,9 @@ export const createEmptyRow = (id: number): TestRow => ({
   testAge: "",
   load: "",
   strength: "",
+  airDryStrength: "",
+  normalizedStrength: "",
+  density: "",
   waterAbsorption: "",
   sieveSize: "",
   sieveSizeReferenceItemId: null,
@@ -147,6 +153,35 @@ export const calculateWaterAbsorption = (dryWeight: unknown, wetWeight: unknown)
     return "";
   }
   return (((wet - dry) / dry) * 100).toFixed(2);
+};
+
+export const calculateBlockDensity = ({
+  length,
+  width,
+  height,
+  wetWeight,
+}: Pick<TestRow, "length" | "width" | "height" | "wetWeight">) => {
+  const lengthValue = Number(numericInputValue(length));
+  const widthValue = Number(numericInputValue(width));
+  const heightValue = Number(numericInputValue(height));
+  const wetWeightValue = Number(numericInputValue(wetWeight));
+  if (
+    !numericInputValue(length) ||
+    !numericInputValue(width) ||
+    !numericInputValue(height) ||
+    !numericInputValue(wetWeight) ||
+    ![lengthValue, widthValue, heightValue, wetWeightValue].every(Number.isFinite) ||
+    lengthValue <= 0 ||
+    widthValue <= 0 ||
+    heightValue <= 0 ||
+    wetWeightValue < 0
+  ) {
+    return "";
+  }
+  return (
+    (wetWeightValue * 1_000_000_000) /
+    (lengthValue * widthValue * heightValue)
+  ).toFixed(2);
 };
 
 export const sieveSizeNumber = (value: string) => {
@@ -239,6 +274,9 @@ export const toFormRow = (row: unknown, id: number): TestRow => {
     testAge: numericInputValue(values.testAge),
     load: numericInputValue(values.load),
     strength: numericInputValue(values.strength ?? values.calculatedStrength ?? values.compressiveStrength),
+    airDryStrength: numericInputValue(values.airDryStrength ?? values.dryAirStrength),
+    normalizedStrength: numericInputValue(values.normalizedStrength),
+    density: numericInputValue(values.density ?? values.densityKgM3),
     waterAbsorption: calculateWaterAbsorption(values.dryWeight, values.wetWeight),
     sieveSize: stringValue(values.sieveSize),
     sieveSizeReferenceItemId: numericInputValue(values.sieveSizeReferenceItemId)

@@ -765,7 +765,7 @@ export const DeleteSieveStandardResponse = zod.void()
  * @summary List quality control records
  */
 export const listRecordsQueryLimitDefault = 50;
-export const listRecordsQueryLimitMax = 100;
+export const listRecordsQueryLimitMax = 1000;
 
 
 
