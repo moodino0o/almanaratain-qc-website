@@ -1,5 +1,5 @@
 import reportImage from '@assets/image_1788071780139.png';
-import { Bullet, SectionTag, SlideFooter, SlideFrame, SlideHeader, SlideTitle } from './SlideFrame';
+import { Bullet, SectionTag, SlideFooter, SlideFrame, SlideHeader, SlideTitle } from '../../components/SlideFrame';
 
 export default function Slide14() {
   return (

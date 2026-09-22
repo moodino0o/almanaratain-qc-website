@@ -1,4 +1,4 @@
-import { Bullet, SlideFooter, SlideFrame, SlideHeader, SlideTitle } from './SlideFrame';
+import { Bullet, SlideFooter, SlideFrame, SlideHeader, SlideTitle } from '../../components/SlideFrame';
 
 export default function Slide12() {
   return (

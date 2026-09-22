@@ -1,4 +1,4 @@
-import { SectionTag, SlideFooter, SlideFrame, SlideHeader, SlideTitle } from './SlideFrame';
+import { SectionTag, SlideFooter, SlideFrame, SlideHeader, SlideTitle } from '../../components/SlideFrame';
 
 export default function Slide15() {
   return (

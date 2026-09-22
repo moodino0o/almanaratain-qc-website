@@ -1,4 +1,4 @@
-import { SlideFrame, SlideFooter, SlideHeader } from './SlideFrame';
+import { SlideFrame, SlideFooter, SlideHeader } from '../../components/SlideFrame';
 
 const base = import.meta.env.BASE_URL;
 
@@ -20,12 +20,12 @@ export default function Slide1() {
         <div className="relative h-[34vh] w-[31vw] shrink-0 overflow-hidden border border-line bg-soft">
           <img src={`${base}qc-material-texture.png`} crossOrigin="anonymous" className="h-full w-full object-cover" alt="Construction quality-control material texture" />
           <div className="absolute inset-0 bg-primary/20" />
-          <div className="absolute bottom-[2.5vh] left-[2vw] right-[2vw] border-t border-white/50 pt-[1.2vh] font-mono text-[0.9vw] text-white/90">
+          <div className="absolute bottom-[2.5vh] left-[2vw] right-[2vw] border-t border-white/50 pt-[1.2vh] font-mono text-[1.5vw] text-white/90">
             MATERIAL / MEASURE / VERIFY
           </div>
         </div>
       </div>
-      <div className="absolute right-[5vw] top-[12vh] text-right font-mono text-[1vw] leading-[2] text-muted">
+      <div className="absolute right-[5vw] top-[12vh] text-right font-mono text-[1.5vw] leading-[2] text-muted">
         <div><span className="mr-[1vw] text-[#A0AEC0]">Project:</span>Al Manaratain QC</div>
         <div><span className="mr-[1vw] text-[#A0AEC0]">Scope:</span>Web application</div>
         <div><span className="mr-[1vw] text-[#A0AEC0]">Status:</span>Ready for publishing</div>

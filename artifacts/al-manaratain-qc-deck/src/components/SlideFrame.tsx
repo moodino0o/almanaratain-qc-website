@@ -29,10 +29,10 @@ export function SlideHeader({
 }) {
   return (
     <div className="absolute left-[5vw] right-[5vw] top-[5vh] flex items-start justify-between">
-      <div className={`font-display text-[1.2vw] font-extrabold tracking-[-0.02em] ${dark ? 'text-white' : 'text-primary'}`}>
+      <div className={`font-display text-[1.5vw] font-extrabold tracking-[-0.02em] ${dark ? 'text-white' : 'text-primary'}`}>
         AL MANARATAIN
       </div>
-      <div className={`font-mono text-[1vw] ${dark ? 'text-white/60' : 'text-muted'}`}>
+      <div className={`font-mono text-[1.5vw] ${dark ? 'text-white/60' : 'text-muted'}`}>
         <span className={dark ? 'text-white/35' : 'text-[#A0AEC0]'}>{section}</span>
         <span className="mx-[0.8vw]">/</span>
         {number}
@@ -51,7 +51,7 @@ export function SlideFooter({
   dark?: boolean;
 }) {
   return (
-    <div className={`absolute bottom-[5vh] left-[5vw] right-[5vw] flex items-center justify-between border-t pt-[1.8vh] font-mono text-[0.9vw] ${dark ? 'border-white/20 text-white/50' : 'border-line text-[#A0AEC0]'}`}>
+    <div className={`absolute bottom-[5vh] left-[5vw] right-[5vw] flex items-center justify-between border-t pt-[1.8vh] font-mono text-[1.5vw] ${dark ? 'border-white/50 text-white/60' : 'border-line text-[#718096]'}`}>
       <span>{label}</span>
       <span className={dark ? 'text-white' : 'text-primary'}>{number}</span>
     </div>
@@ -90,12 +90,12 @@ export function Bullet({
 }) {
   return (
     <div className="flex gap-[1.4vw]">
-      <span className={`shrink-0 pt-[0.25vh] font-mono text-[1.2vw] ${dark ? 'text-white/40' : 'text-[#A0AEC0]'}`}>{number}</span>
+      <span className={`shrink-0 pt-[0.25vh] font-mono text-[1.5vw] ${dark ? 'text-white/55' : 'text-[#718096]'}`}>{number}</span>
       <span className={`text-[1.7vw] leading-[1.3] ${dark ? 'text-white/85' : 'text-muted'}`}>{children}</span>
     </div>
   );
 }
 
 export function SectionTag({ children, dark = false }: { children: ReactNode; dark?: boolean }) {
-  return <div className={`mb-[2vh] font-mono text-[1vw] uppercase tracking-[0.16em] ${dark ? 'text-white/45' : 'text-[#A0AEC0]'}`}>{children}</div>;
+  return <div className={`mb-[2vh] font-mono text-[1.5vw] uppercase tracking-[0.16em] ${dark ? 'text-white/60' : 'text-[#718096]'}`}>{children}</div>;
 }

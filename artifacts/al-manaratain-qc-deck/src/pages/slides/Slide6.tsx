@@ -1,4 +1,4 @@
-import { Bullet, Rule, SlideFooter, SlideFrame, SlideHeader, SlideTitle } from './SlideFrame';
+import { Bullet, Rule, SlideFooter, SlideFrame, SlideHeader, SlideTitle } from '../../components/SlideFrame';
 
 export default function Slide6() {
   return (
@@ -21,7 +21,7 @@ export default function Slide6() {
           <div className="space-y-[2.6vh] border-l-2 border-accent pl-[3vw]">
             <Bullet number="04">Copy-from-existing-record support for repeat work</Bullet>
             <Bullet number="05">Controlled reference values to reduce inconsistent entry</Bullet>
-            <div className="pt-[3vh] font-mono text-[1vw] uppercase tracking-[0.14em] text-[#A0AEC0]">
+            <div className="pt-[3vh] font-mono text-[1.5vw] uppercase tracking-[0.14em] text-[#718096]">
               CONSISTENT INPUT / REPEATABLE REVIEW
             </div>
           </div>

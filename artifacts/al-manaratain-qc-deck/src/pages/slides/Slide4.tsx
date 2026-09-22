@@ -1,4 +1,4 @@
-import { Bullet, SectionTag, SlideFooter, SlideFrame, SlideHeader, SlideTitle } from './SlideFrame';
+import { Bullet, SectionTag, SlideFooter, SlideFrame, SlideHeader, SlideTitle } from '../../components/SlideFrame';
 
 export default function Slide4() {
   return (
@@ -12,7 +12,7 @@ export default function Slide4() {
             <p className="font-display text-[3.1vw] font-black leading-[1.02] tracking-[-0.04em]">
               From first entry to final review.
             </p>
-            <div className="mt-[8vh] border-t border-white/25 pt-[2vh] font-mono text-[1vw] text-white/55">
+            <div className="mt-[8vh] border-t border-white/25 pt-[2vh] font-mono text-[1.5vw] text-white/65">
               DASHBOARD / RECORDS / STANDARDS / ARCHIVE
             </div>
           </div>
