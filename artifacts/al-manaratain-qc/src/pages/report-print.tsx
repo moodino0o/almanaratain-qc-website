@@ -1318,7 +1318,7 @@ export default function ReportPrint() {
           </div>
           <div>
             <span>Approved by:</span>
-            <strong>{record.reviewedBy || "________________"}</strong>
+            <strong>{record.reviewedBy || "ADEL ABBAS EBRAHIM"}</strong>
           </div>
           <small>
             {companyName} · {companySubtitle}
