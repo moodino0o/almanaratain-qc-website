@@ -211,9 +211,9 @@ export default function RecordForm() {
       previousShapeFactorRef.current = "";
       return;
     }
-    const blockType = String(details.blockType ?? "").trim();
+    const blockSize = String(details.blockSize ?? "").trim();
     const configuredShapeFactor = shapeFactors?.find((shapeFactor) =>
-      blockTypeMatches(shapeFactor.blockType, blockType),
+      blockSizeMatches(shapeFactor.blockSize, blockSize),
     );
     const nextDefault =
       configuredShapeFactor?.shapeFactor == null
@@ -230,7 +230,7 @@ export default function RecordForm() {
       });
     }
     previousShapeFactorRef.current = nextDefault;
-  }, [details.blockType, shapeFactors, testType]);
+  }, [details.blockSize, shapeFactors, testType]);
 
   const materialReferenceItems = useMemo(
     () => referenceData?.categories.find((category) => category.key === "materials")?.items ?? [],
@@ -240,6 +240,45 @@ export default function RecordForm() {
     () => referenceData?.categories.find((category) => category.key === "sieveSizes")?.items ?? [],
     [referenceData],
   );
+  const sampleTypeOptions = useMemo(
+    () => referenceData?.categories.find((category) => category.key === "sampleTypes")?.items.map((item) => item.value) ?? [],
+    [referenceData],
+  );
+  const conditioningMethodOptions = useMemo(
+    () => referenceData?.categories.find((category) => category.key === "conditioningMethods")?.items.map((item) => item.value) ?? [],
+    [referenceData],
+  );
+  const preparationMethodOptions = useMemo(
+    () => referenceData?.categories.find((category) => category.key === "preparationMethods")?.items.map((item) => item.value) ?? [],
+    [referenceData],
+  );
+
+  useEffect(() => {
+    if (testType !== TestType.Blocks) return;
+    const sampleType = sampleTypeOptions.includes("CUBER")
+      ? "CUBER"
+      : sampleTypeOptions[0] ?? "";
+    const conditioningMethod = conditioningMethodOptions[0] ?? "";
+    const preparationMethod = preparationMethodOptions[0] ?? "";
+    if (!sampleType && !conditioningMethod && !preparationMethod) return;
+    setDetails((current) => ({
+      ...current,
+      ...(String(current.sampleType ?? "").trim() || !sampleType
+        ? {}
+        : { sampleType }),
+      ...(String(current.conditioningMethod ?? "").trim() || !conditioningMethod
+        ? {}
+        : { conditioningMethod }),
+      ...(String(current.preparationMethod ?? "").trim() || !preparationMethod
+        ? {}
+        : { preparationMethod }),
+    }));
+  }, [
+    conditioningMethodOptions,
+    preparationMethodOptions,
+    sampleTypeOptions,
+    testType,
+  ]);
 
   const updateTestRow = (rowIndex: number, key: keyof Omit<TestRow, "id">, value: string) => {
     setTestRows(prev => prev.map((row, index) => (
@@ -889,33 +928,39 @@ export default function RecordForm() {
                   </div>
                   <div className="space-y-2">
                     <Label>Sample Type</Label>
-                    <Input
+                    <TypeaheadInput
                       value={String(details.sampleType ?? "")}
-                      onChange={(event) => handleDetailChange("sampleType", event.target.value)}
-                      placeholder="e.g. CUBER"
+                      onChange={(value) => handleDetailChange("sampleType", value)}
+                      options={sampleTypeOptions}
+                      placeholder="Select sample type..."
+                      onCreateOption={createReferenceOption("sampleTypes")}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label>Method of Conditioning</Label>
-                    <Input
+                    <TypeaheadInput
                       value={String(details.conditioningMethod ?? "")}
-                      onChange={(event) => handleDetailChange("conditioningMethod", event.target.value)}
-                      placeholder="e.g. WATER at 20±5 C"
+                      onChange={(value) => handleDetailChange("conditioningMethod", value)}
+                      options={conditioningMethodOptions}
+                      placeholder="Select conditioning method..."
+                      onCreateOption={createReferenceOption("conditioningMethods")}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label>Method of Preparation</Label>
-                    <Input
+                    <TypeaheadInput
                       value={String(details.preparationMethod ?? "")}
-                      onChange={(event) => handleDetailChange("preparationMethod", event.target.value)}
-                      placeholder="e.g. GRINDING"
+                      onChange={(value) => handleDetailChange("preparationMethod", value)}
+                      options={preparationMethodOptions}
+                      placeholder="Select preparation method..."
+                      onCreateOption={createReferenceOption("preparationMethods")}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label>
                       Shape Factor
                       <span className="ml-1 text-xs font-normal text-muted-foreground">
-                        (default from Standards)
+                        (default from Standards by block size)
                       </span>
                     </Label>
                     <Input

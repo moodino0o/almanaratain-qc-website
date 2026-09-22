@@ -231,14 +231,15 @@ export interface ReferenceItemInput {
 
 export interface ShapeFactor {
   id: number;
-  blockType: string;
+  /** @minLength 1 */
+  blockSize: string;
   /** @nullable */
   shapeFactor: number | null;
 }
 
 export interface ShapeFactorInput {
   /** @minLength 1 */
-  blockType: string;
+  blockSize: string;
   /**
      * @minimum 0
      * @nullable
@@ -248,7 +249,7 @@ export interface ShapeFactorInput {
 
 export interface ShapeFactorUpdate {
   /** @minLength 1 */
-  blockType?: string;
+  blockSize?: string;
   /**
      * @minimum 0
      * @nullable

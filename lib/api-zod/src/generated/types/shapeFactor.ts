@@ -8,7 +8,8 @@
 
 export interface ShapeFactor {
   id: number;
-  blockType: string;
+  /** @minLength 1 */
+  blockSize: string;
   /** @nullable */
   shapeFactor: number | null;
 }

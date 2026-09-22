@@ -1388,21 +1388,22 @@ components:
       type: object
       required:
         - id
-        - blockType
+        - blockSize
         - shapeFactor
       properties:
         id:
           type: number
-        blockType:
+        blockSize:
           type: string
+          minLength: 1
         shapeFactor:
           type: ["number", "null"]
     ShapeFactorInput:
       type: object
       required:
-        - blockType
+        - blockSize
       properties:
-        blockType:
+        blockSize:
           type: string
           minLength: 1
         shapeFactor:
@@ -1411,7 +1412,7 @@ components:
     ShapeFactorUpdate:
       type: object
       properties:
-        blockType:
+        blockSize:
           type: string
           minLength: 1
         shapeFactor:

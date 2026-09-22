@@ -8,7 +8,9 @@ import {
 
 export const qcShapeFactorsTable = pgTable("qc_shape_factors", {
   id: serial("id").primaryKey(),
-  blockType: text("block_type").notNull().unique(),
+  // blockType is retained for compatibility with the first per-type version.
+  blockType: text("block_type"),
+  blockSize: text("block_size").unique(),
   shapeFactor: numeric("shape_factor", { precision: 10, scale: 3 }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

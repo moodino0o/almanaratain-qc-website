@@ -148,6 +148,21 @@ const REFERENCE_SEED = [
     ],
   },
   {
+    key: "sampleTypes",
+    label: "Block Sample Types",
+    values: ["CUBER", "MANUAL"],
+  },
+  {
+    key: "conditioningMethods",
+    label: "Block Conditioning Methods",
+    values: ["WATER at 20±5 C"],
+  },
+  {
+    key: "preparationMethods",
+    label: "Block Preparation Methods",
+    values: ["GRINDING"],
+  },
+  {
     key: "mixStrengths",
     label: "Mix Strengths",
     values: [
@@ -202,7 +217,6 @@ const REFERENCE_SEED = [
 
 let referenceSeedPromise: Promise<void> | null = null;
 let strengthSeedPromise: Promise<void> | null = null;
-let shapeFactorSeedPromise: Promise<void> | null = null;
 
 const READY_MIX_DEFAULT_DESIGNS = [
   "20 N OPC",
@@ -243,16 +257,6 @@ const BLOCK_DEFAULT_STANDARDS = [
   { blockType: "Lined Block", blockSize: '8"', requiredStrength: "7.5" },
   { blockType: "Sandwich Insulation Block", blockSize: '8"', requiredStrength: "5" },
   { blockType: "Sandwich Insulation Block", blockSize: '12"', requiredStrength: "5" },
-] as const;
-
-const DEFAULT_SHAPE_FACTOR_BLOCK_TYPES = [
-  "Plain Block",
-  "Lined Block",
-  "Sandwich Insulation Block",
-  "8'' Two Piston Block",
-  "8'' Three Piston Block",
-  "8'' Solid Block",
-  "8'' Slotted Insulation Block",
 ] as const;
 
 const strengthStandardKey = (value: {
@@ -327,23 +331,25 @@ async function ensureDefaultStrengthStandards() {
 }
 
 async function ensureDefaultShapeFactors() {
-  if (!shapeFactorSeedPromise) {
-    shapeFactorSeedPromise = (async () => {
-      const existing = await db.select().from(qcShapeFactorsTable);
-      const existingTypes = new Set(
-        existing.map((row) => row.blockType.trim().toLocaleLowerCase()),
-      );
-      for (const blockType of DEFAULT_SHAPE_FACTOR_BLOCK_TYPES) {
-        if (existingTypes.has(blockType.toLocaleLowerCase())) continue;
-        await db.insert(qcShapeFactorsTable).values({ blockType, shapeFactor: null });
-        existingTypes.add(blockType.toLocaleLowerCase());
-      }
-    })().catch((error) => {
-      shapeFactorSeedPromise = null;
-      throw error;
-    });
+  const [category] = await db
+    .select()
+    .from(qcReferenceCategoriesTable)
+    .where(eq(qcReferenceCategoriesTable.key, "blockSizes"));
+  if (!category) return;
+  const blockSizes = await db
+    .select()
+    .from(qcReferenceItemsTable)
+    .where(eq(qcReferenceItemsTable.categoryId, category.id));
+  for (const blockSize of blockSizes) {
+    await db
+      .insert(qcShapeFactorsTable)
+      .values({
+        blockType: null,
+        blockSize: blockSize.value,
+        shapeFactor: null,
+      })
+      .onConflictDoNothing({ target: qcShapeFactorsTable.blockSize });
   }
-  await shapeFactorSeedPromise;
 }
 
 export async function ensureReferenceData() {
@@ -524,7 +530,7 @@ const toStrengthStandard = (row: typeof qcStrengthStandardsTable.$inferSelect) =
 
 const toShapeFactor = (row: typeof qcShapeFactorsTable.$inferSelect) => ({
   id: row.id,
-  blockType: row.blockType,
+  blockSize: row.blockSize ?? "",
   shapeFactor: row.shapeFactor === null ? null : Number(row.shapeFactor),
 });
 
@@ -927,7 +933,8 @@ router.get("/shape-factors", async (_req, res): Promise<void> => {
   const shapeFactors = await db
     .select()
     .from(qcShapeFactorsTable)
-    .orderBy(asc(qcShapeFactorsTable.blockType), asc(qcShapeFactorsTable.id));
+    .where(sql`${qcShapeFactorsTable.blockSize} IS NOT NULL`)
+    .orderBy(asc(qcShapeFactorsTable.blockSize), asc(qcShapeFactorsTable.id));
   res.json(ListShapeFactorsResponse.parse(shapeFactors.map(toShapeFactor)));
 });
 
@@ -940,7 +947,8 @@ router.post("/shape-factors", requireAdministrator, async (req, res): Promise<vo
   const [shapeFactor] = await db
     .insert(qcShapeFactorsTable)
     .values({
-      blockType: body.data.blockType.trim(),
+      blockType: null,
+      blockSize: body.data.blockSize.trim(),
       shapeFactor:
         body.data.shapeFactor == null ? null : String(body.data.shapeFactor),
     })
@@ -975,8 +983,8 @@ router.patch("/shape-factors/:id", requireAdministrator, async (req, res): Promi
   const [shapeFactor] = await db
     .update(qcShapeFactorsTable)
     .set({
-      ...(body.data.blockType !== undefined
-        ? { blockType: body.data.blockType.trim() }
+      ...(body.data.blockSize !== undefined
+        ? { blockSize: body.data.blockSize.trim() }
         : {}),
       ...(body.data.shapeFactor !== undefined
         ? {

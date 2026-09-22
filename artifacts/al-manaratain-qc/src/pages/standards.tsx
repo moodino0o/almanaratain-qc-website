@@ -65,7 +65,7 @@ type AutomatedTestType = "Ready Mix" | "Blocks";
 type SieveTestType = "Sand Sieve" | "Aggregate Sieve";
 
 type ShapeFactorForm = {
-  blockType: string;
+  blockSize: string;
   shapeFactor: string;
 };
 
@@ -121,7 +121,7 @@ const emptySieveForm: SieveForm = {
 };
 
 const emptyShapeFactorForm: ShapeFactorForm = {
-  blockType: "",
+  blockSize: "",
   shapeFactor: "",
 };
 
@@ -156,7 +156,7 @@ function formFromSieveStandards(standards: SieveStandard[]): SieveForm {
 
 function formFromShapeFactor(shapeFactor: ShapeFactor): ShapeFactorForm {
   return {
-    blockType: shapeFactor.blockType,
+    blockSize: shapeFactor.blockSize,
     shapeFactor:
       shapeFactor.shapeFactor === null ? "" : String(shapeFactor.shapeFactor),
   };
@@ -779,7 +779,7 @@ function ShapeFactorsFolder({
               Block shape factors
             </span>
             <span className="block text-xs text-muted-foreground">
-              {shapeFactors.length} {shapeFactors.length === 1 ? "block type" : "block types"}
+              {shapeFactors.length} {shapeFactors.length === 1 ? "block size" : "block sizes"}
             </span>
           </span>
         </span>
@@ -795,7 +795,7 @@ function ShapeFactorsFolder({
             <table className="w-full min-w-[560px] text-xs sm:text-sm">
               <thead className="bg-muted/40 text-left text-foreground">
                 <tr className="border-b">
-                  <th className="px-4 py-3 font-semibold">Block Type</th>
+                  <th className="px-4 py-3 font-semibold">Block Size</th>
                   <th className="px-4 py-3 font-semibold">Default Shape Factor</th>
                   <th className="px-4 py-3 text-right font-semibold">Actions</th>
                 </tr>
@@ -803,7 +803,7 @@ function ShapeFactorsFolder({
               <tbody>
                 {shapeFactors.map((shapeFactor) => (
                   <tr key={shapeFactor.id} className="border-b last:border-b-0">
-                    <td className="px-4 py-3 font-medium">{shapeFactor.blockType}</td>
+                    <td className="px-4 py-3 font-medium">{shapeFactor.blockSize}</td>
                     <td className="px-4 py-3 font-semibold">
                       {shapeFactor.shapeFactor === null ? "Not configured" : shapeFactor.shapeFactor}
                     </td>
@@ -814,7 +814,7 @@ function ShapeFactorsFolder({
                             variant="ghost"
                             size="icon"
                             onClick={() => onEdit(shapeFactor)}
-                            aria-label={`Edit shape factor for ${shapeFactor.blockType}`}
+                            aria-label={`Edit shape factor for ${shapeFactor.blockSize}`}
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
@@ -823,7 +823,7 @@ function ShapeFactorsFolder({
                             size="icon"
                             className="text-destructive"
                             onClick={() => onDelete(shapeFactor)}
-                            aria-label={`Delete shape factor for ${shapeFactor.blockType}`}
+                            aria-label={`Delete shape factor for ${shapeFactor.blockSize}`}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -861,7 +861,7 @@ function ShapeFactorEditor({
   onCancel,
   onSave,
   isSaving,
-  blockTypes,
+  blockSizes,
 }: {
   form: ShapeFactorForm;
   setForm: (value: ShapeFactorForm) => void;
@@ -869,7 +869,7 @@ function ShapeFactorEditor({
   onCancel: () => void;
   onSave: () => void;
   isSaving: boolean;
-  blockTypes: string[];
+  blockSizes: string[];
 }) {
   return (
     <Card className="border-primary/20 bg-card text-foreground shadow-sm">
@@ -878,7 +878,7 @@ function ShapeFactorEditor({
           <div>
             <CardTitle>{editing ? "Edit shape factor" : "Add shape factor"}</CardTitle>
             <CardDescription>
-              Set the default used for Block entries of this type. Existing records with a saved value are not changed.
+              Set the default used for Block entries of this size. Existing records with a saved value are not changed.
             </CardDescription>
           </div>
           <Button variant="ghost" size="icon" onClick={onCancel} aria-label="Close shape factor editor">
@@ -888,12 +888,12 @@ function ShapeFactorEditor({
       </CardHeader>
       <CardContent className="grid grid-cols-1 gap-4 pt-5 md:grid-cols-2">
         <div className="space-y-2">
-          <Label>Block Type</Label>
+          <Label>Block Size</Label>
           <TypeaheadInput
-            value={form.blockType}
-            onChange={(value) => setForm({ ...form, blockType: value })}
-            options={blockTypes}
-            placeholder="Select or type a block type..."
+            value={form.blockSize}
+            onChange={(value) => setForm({ ...form, blockSize: value })}
+            options={blockSizes}
+            placeholder="Select or type a block size..."
           />
         </div>
         <div className="space-y-2">
@@ -1182,15 +1182,15 @@ export default function Standards() {
         ? null
         : Number(shapeFactorForm.shapeFactor);
     if (
-      !shapeFactorForm.blockType.trim() ||
+      !shapeFactorForm.blockSize.trim() ||
       (shapeFactor !== null &&
         (!Number.isFinite(shapeFactor) || shapeFactor < 0))
     ) {
-      toast.error("Enter a block type and a valid shape factor.");
+      toast.error("Enter a block size and a valid shape factor.");
       return;
     }
     const data = {
-      blockType: shapeFactorForm.blockType.trim(),
+      blockSize: shapeFactorForm.blockSize.trim(),
       shapeFactor,
     };
     const options = {
@@ -1333,7 +1333,7 @@ export default function Standards() {
   };
 
   const handleDeleteShapeFactor = (shapeFactor: ShapeFactor) => {
-    if (!confirm(`Delete the shape factor for ${shapeFactor.blockType}?`)) return;
+    if (!confirm(`Delete the shape factor for ${shapeFactor.blockSize}?`)) return;
     deleteShapeFactor.mutate(
       { id: shapeFactor.id },
       {
@@ -1422,7 +1422,7 @@ export default function Standards() {
           onCancel={() => setShapeFactorEditorOpen(false)}
           onSave={handleSaveShapeFactor}
           isSaving={createShapeFactor.isPending || updateShapeFactor.isPending}
-          blockTypes={lookups?.blockTypes ?? []}
+           blockSizes={lookups?.blockSizes ?? []}
         />
       )}
 

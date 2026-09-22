@@ -29,7 +29,8 @@ const blockShapeFactor = (
   overrides: Partial<QcShapeFactorRow> = {},
 ): QcShapeFactorRow => ({
   id: 1,
-  blockType: "8'' Solid Block",
+  blockType: null,
+  blockSize: "400 x 200 x 200",
   shapeFactor: "1.15",
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   updatedAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -186,7 +187,7 @@ test("calculates Block air-dry and normalized strength with one-decimal rounding
   assert.equal(row.normalizedStrength, 4.5);
 });
 
-test("applies a configured Block shape factor only when no saved value exists", () => {
+test("applies a configured Block-size shape factor only when no saved value exists", () => {
   const result = evaluateStrengthRecord(
     blockRecord([
       { length: 400, width: 200, height: 200, load: 1000 },
@@ -218,6 +219,21 @@ test("applies a configured Block shape factor only when no saved value exists", 
   const legacyRows = legacyDetails.testRows as Array<Record<string, unknown>>;
   assert.equal(legacyDetails.shapeFactor, "1.3");
   assert.equal(legacyRows[0].normalizedStrength, 19.5);
+});
+
+test("does not apply a shape factor configured for a different Block size", () => {
+  const result = evaluateStrengthRecord(
+    blockRecord([
+      { length: 400, width: 200, height: 200, load: 1000 },
+    ]),
+    [blockStandard()],
+    [blockShapeFactor({ blockSize: "400 x 100 x 200", shapeFactor: "1.3" })],
+  );
+
+  const resultDetails = result.details as Record<string, unknown>;
+  const resultRows = resultDetails.testRows as Array<Record<string, unknown>>;
+  assert.equal("shapeFactor" in resultDetails, false);
+  assert.equal("normalizedStrength" in resultRows[0], false);
 });
 
 test("keeps legacy manual Block strengths when calculation inputs are incomplete", () => {

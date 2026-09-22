@@ -10,4 +10,4 @@
 - [Complaint completion workflow](complaint-completion-workflow.md) — complaint completion is an explicit Open/Complete status, independent of whether solution notes are filled.
 - [Complaint material categories](complaint-material-categories.md) — derive complaint categories from material labels using OPC/SRC, inch sizes, and 60/80mm rules.
 - [Block derived strengths](block-derived-strengths.md) — calculate air-dry and normalized Block strengths from wet strength and shape factor, rounded to one decimal.
-- [Shape factor defaults](shape-factor-defaults.md) — seed one editable row per Block type, but keep the numeric value empty until an approved standard is provided.
+- [Shape factor defaults](shape-factor-defaults.md) — seed one editable row per Block size, but keep the numeric value empty until an approved standard is provided.

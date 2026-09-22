@@ -8,7 +8,7 @@
 
 export interface ShapeFactorUpdate {
   /** @minLength 1 */
-  blockType?: string;
+  blockSize?: string;
   /**
      * @minimum 0
      * @nullable

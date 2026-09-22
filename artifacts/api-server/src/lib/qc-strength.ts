@@ -180,8 +180,8 @@ export function normalizeBlockDetails(
   const blockType = textValue(details.blockType);
   const configuredShapeFactor = numericValue(details.shapeFactor);
   const defaultShapeFactor =
-    configuredShapeFactor === null && blockType
-      ? shapeFactors.find((factor) => blockTypeMatches(factor.blockType, blockType))
+    configuredShapeFactor === null && details.blockSize
+      ? shapeFactors.find((factor) => blockSizeMatches(factor.blockSize, details.blockSize))
           ?.shapeFactor ?? null
       : null;
 
