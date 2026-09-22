@@ -295,8 +295,10 @@ function blockDensity(values: ValueMap) {
 
 function BlockCompressionRowsTable({
   rows,
+  useDryStrength,
 }: {
   rows: unknown[];
+  useDryStrength: boolean;
 }) {
   const rowValues = rows.map((row) => (
     typeof row === "object" && row !== null ? row as ValueMap : {}
@@ -322,7 +324,8 @@ function BlockCompressionRowsTable({
     density: numericSummary(columns.density).average,
     wetWeight: numericSummary(columns.wetWeight).average,
   };
-  const airDrySummary = numericSummary(columns.airDry);
+  const strengthSummary = numericSummary(useDryStrength ? columns.airDry : columns.water);
+  const strengthLabel = useDryStrength ? "Air Dry Strength" : "Water Strength";
   const displayNumber = (value: number | null, digits = 2) =>
     value === null ? "-" : formatNumber(value, digits);
   return (
@@ -382,18 +385,18 @@ function BlockCompressionRowsTable({
       <div className="block-report-statistics">
         <div>
           <strong>Maximum</strong>
-          <span>Air Dry Strength</span>
-          <b>{displayNumber(airDrySummary.maximum)}</b>
+          <span>{strengthLabel}</span>
+          <b>{displayNumber(strengthSummary.maximum)}</b>
         </div>
         <div>
           <strong>Minimum</strong>
-          <span>Air Dry Strength</span>
-          <b>{displayNumber(airDrySummary.minimum)}</b>
+          <span>{strengthLabel}</span>
+          <b>{displayNumber(strengthSummary.minimum)}</b>
         </div>
         <div>
           <strong>Stan.Dev.</strong>
-          <span>Air Dry Strength</span>
-          <b>{displayNumber(airDrySummary.standardDeviation)}</b>
+          <span>{strengthLabel}</span>
+          <b>{displayNumber(strengthSummary.standardDeviation)}</b>
         </div>
       </div>
     </>
@@ -502,6 +505,49 @@ function SpecimenRowsTable({
         </tbody>
       </table>
     </div>
+  );
+}
+
+function PavingStrengthStatistics({ rows }: { rows: unknown[] }) {
+  const correctedStrengths = rows.map((row) => {
+    const values = typeof row === "object" && row !== null
+      ? row as ValueMap
+      : {};
+    return numericValue(
+      values.correctedStrength ??
+      values.calculatedStrength ??
+      values.strength ??
+      values.compressiveStrength,
+    );
+  });
+  const summary = numericSummary(correctedStrengths);
+  const displayNumber = (value: number | null) =>
+    value === null ? "-" : formatNumber(value, 2);
+  return (
+    <>
+      <div className="block-report-section-heading block-report-statistics-heading">
+        <div>
+          <span>Summary statistics</span>
+        </div>
+      </div>
+      <div className="block-report-statistics">
+        <div>
+          <strong>Maximum</strong>
+          <span>Corrected Strength</span>
+          <b>{displayNumber(summary.maximum)}</b>
+        </div>
+        <div>
+          <strong>Minimum</strong>
+          <span>Corrected Strength</span>
+          <b>{displayNumber(summary.minimum)}</b>
+        </div>
+        <div>
+          <strong>Stan.Dev.</strong>
+          <span>Corrected Strength</span>
+          <b>{displayNumber(summary.standardDeviation)}</b>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -1001,7 +1047,7 @@ function BlocksReport({
         <strong>Remarks:</strong>
         <span>{record.remarks || ""}</span>
       </div>
-      <BlockCompressionRowsTable rows={testRows} />
+      <BlockCompressionRowsTable rows={testRows} useDryStrength={useDryStrength} />
       <div className={`block-report-result ${compliance.toLocaleLowerCase()}`}>
         <span>Overall result</span>
         <strong>{complianceLabel}</strong>
@@ -1122,6 +1168,7 @@ function PavingBlocksReport({ record, standards, layout }: {
         ageLabel="Sample Age"
         layout={layout}
       />
+      <PavingStrengthStatistics rows={Array.isArray(details.testRows) ? details.testRows : []} />
       <StrengthStandardsTable record={record} standards={standards} evaluation={evaluation} />
       <div className={`block-report-result ${resultClass}`}>
         <span>Overall result</span>
