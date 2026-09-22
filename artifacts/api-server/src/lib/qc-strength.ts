@@ -45,6 +45,7 @@ export type SieveEvaluation = {
 type RecordForStrength = {
   testType: string;
   material: string;
+  location?: string;
   details: Record<string, unknown>;
 };
 
@@ -53,6 +54,10 @@ export type BlockDimensions = {
   width: number;
   height: number;
 };
+
+export function isDammamLocation(value: unknown) {
+  return normalizedText(value) === "dammam";
+}
 
 const AUTOMATED_TEST_TYPES = new Set(["Ready Mix", "Blocks", "Paving Blocks"]);
 const DEFAULT_STRENGTH_UNIT = "N/mm²";
@@ -472,14 +477,18 @@ export function evaluateStrengthRecord(
         : null) === 28)
       : calculatedRows;
   const measuredStrengths = evaluatedRows
-    .map((row) => (
-      record.testType === "Paving Blocks" &&
-      typeof row.row === "object" &&
-      row.row !== null &&
-      numericValue((row.row as Record<string, unknown>).correctedStrength) !== null
-        ? numericValue((row.row as Record<string, unknown>).correctedStrength)
-        : row.calculatedStrength
-    ))
+    .map((row) => {
+      const values = typeof row.row === "object" && row.row !== null
+        ? row.row as Record<string, unknown>
+        : {};
+      if (record.testType === "Paving Blocks") {
+        return numericValue(values.correctedStrength) ?? row.calculatedStrength;
+      }
+      if (record.testType === "Blocks" && isDammamLocation(record.location)) {
+        return numericValue(values.airDryStrength ?? values.dryAirStrength);
+      }
+      return row.calculatedStrength;
+    })
     .filter((strength): strength is number => strength !== null);
   const averageStrength = measuredStrengths.length
     ? rounded(measuredStrengths.reduce((sum, strength) => sum + strength, 0) / measuredStrengths.length)
@@ -488,7 +497,15 @@ export function evaluateStrengthRecord(
   const maximumStrength = measuredStrengths.length ? Math.max(...measuredStrengths) : null;
   const hasIncompleteMeasurements =
     evaluatedRows.length === 0 ||
-    evaluatedRows.some((row) => !row.complete) ||
+    evaluatedRows.some((row) => {
+      if (record.testType === "Blocks" && isDammamLocation(record.location)) {
+        const values = typeof row.row === "object" && row.row !== null
+          ? row.row as Record<string, unknown>
+          : {};
+        return numericValue(values.airDryStrength ?? values.dryAirStrength) === null;
+      }
+      return !row.complete;
+    }) ||
     (record.testType === "Blocks" &&
       (dayAge(normalizedDetails.blockAge) === null || dayAge(normalizedDetails.blockAge)! <= 0));
   const averageBelowRequired =
@@ -516,7 +533,9 @@ export function evaluateStrengthRecord(
     status = "Failed";
     reason =
       record.testType === "Blocks"
-        ? "The average block strength is below the configured minimum."
+        ? isDammamLocation(record.location)
+          ? "The average Block dry strength is below the configured minimum."
+          : "The average block strength is below the configured minimum."
         : record.testType === "Paving Blocks"
           ? "The corrected paving block strength is below the configured minimum."
           : "The measured strength is below the configured minimum.";

@@ -567,6 +567,24 @@ test("evaluates block compliance using the average sample strength", () => {
   assert.equal(result.evaluation.reason, null);
 });
 
+test("uses Air Dry strength for Dammam Block compliance", () => {
+  const result = evaluateStrengthRecord(
+    {
+      ...blockRecord([
+        { rowNo: 1, length: 100, width: 100, load: 125 },
+        { rowNo: 2, length: 100, width: 100, load: 150 },
+      ]),
+      location: "Dammam",
+    },
+    [blockStandard({ requiredStrength: "16.5" })],
+  );
+
+  assert.equal(result.status, "Passed");
+  assert.equal(result.evaluation.averageStrength, 16.5);
+  assert.equal(result.evaluation.minimumStrength, 15);
+  assert.equal(result.evaluation.maximumStrength, 18);
+});
+
 test("fails block compliance when the average sample strength is below the standard", () => {
   const result = evaluateStrengthRecord(
     blockRecord([

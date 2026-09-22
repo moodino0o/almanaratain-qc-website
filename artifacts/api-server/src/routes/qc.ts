@@ -717,6 +717,7 @@ async function refreshRecordEvaluations(testTypes: string[]) {
     const candidate = {
       testType: record.testType,
       material: record.material,
+      location: record.location,
       details: record.details as Record<string, unknown>,
     };
     const evaluated =
@@ -1760,6 +1761,7 @@ router.post("/records", requireQcEditor, async (req, res): Promise<void> => {
     {
       testType: parsed.data.testType,
       material: parsed.data.material,
+      location: parsed.data.location,
       details: parsed.data.details,
     },
           strengthStandards,
@@ -1840,6 +1842,7 @@ router.patch("/records/:id", requireQcEditor, async (req, res): Promise<void> =>
   const candidate = {
     testType: body.data.testType ?? existing.testType,
     material: body.data.material ?? existing.material,
+    location: body.data.location ?? existing.location,
     details: body.data.details ?? existing.details,
   };
   const [strengthStandards, sieveStandards, shapeFactors] = await Promise.all([

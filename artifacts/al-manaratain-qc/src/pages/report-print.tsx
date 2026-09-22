@@ -68,6 +68,10 @@ function normalizedText(value: unknown) {
   return String(value ?? "").trim().toLocaleLowerCase();
 }
 
+function isDammamLocation(value: unknown) {
+  return normalizedText(value) === "dammam";
+}
+
 function matchesText(left: unknown, right: unknown) {
   return normalizedText(left) === normalizedText(right);
 }
@@ -289,7 +293,13 @@ function blockDensity(values: ValueMap) {
   return (wetWeight * 1_000_000_000) / (length * width * height);
 }
 
-function BlockCompressionRowsTable({ rows }: { rows: unknown[] }) {
+function BlockCompressionRowsTable({
+  rows,
+  useDryStrength,
+}: {
+  rows: unknown[];
+  useDryStrength: boolean;
+}) {
   const rowValues = rows.map((row) => (
     typeof row === "object" && row !== null ? row as ValueMap : {}
   ));
@@ -378,6 +388,11 @@ function BlockCompressionRowsTable({ rows }: { rows: unknown[] }) {
           <b>{displayNumber(airDrySummary.standardDeviation)}</b>
         </div>
       </div>
+      {useDryStrength && (
+        <p className="block-report-strength-basis">
+          PASS / NOT PASS is based on Air Dry strength for Dammam records.
+        </p>
+      )}
     </>
   );
 }
@@ -927,6 +942,7 @@ function BlocksReport({
     .sort((left, right) => left.id - right.id)[0];
   const requiredStrength = configuredStandard?.requiredStrength ??
     numericValue(evaluation?.requiredStrength);
+  const useDryStrength = isDammamLocation(record.location);
   const compliance = textValue(evaluation?.status, record.status);
   const complianceLabel = compliance === "Passed"
     ? "PASS"
@@ -943,6 +959,7 @@ function BlocksReport({
             ["TESTING DATE:", formatReportDate(testingDate)],
             ["SP. Strength (N/mm2):", requiredStrength === null ? "-" : formatNumber(requiredStrength)],
             ["Factory:", record.location],
+            ["STRENGTH BASIS:", useDryStrength ? "AIR DRY STRENGTH" : "WATER STRENGTH"],
           ]}
         />
         <ReportFields
@@ -967,7 +984,7 @@ function BlocksReport({
         <strong>Remarks:</strong>
         <span>{record.remarks || ""}</span>
       </div>
-      <BlockCompressionRowsTable rows={testRows} />
+      <BlockCompressionRowsTable rows={testRows} useDryStrength={useDryStrength} />
       <div className={`block-report-result ${compliance.toLocaleLowerCase()}`}>
         {complianceLabel}
       </div>
@@ -1197,6 +1214,15 @@ export default function ReportPrint() {
     strengthEvaluation?.bsStandard ??
     configuredSieveStandards[0]?.standardReference ??
     null;
+  const accordingTo = record.testType === "Blocks"
+    ? isDammamLocation(record.location)
+      ? "ASTM C140/C140M:2020a"
+      : "BS EN 771-3:2003 (BS EN 772-1:2011)"
+    : configuredStandard
+      ? configuredStandard
+      : record.testType === "Ready Mix"
+        ? "BS EN 12390-3:2009"
+        : null;
   const paperStyle = layout
     ? {
         fontFamily: layout.config.fontFamily,
@@ -1269,11 +1295,9 @@ export default function ReportPrint() {
           className="report-standard report-layout-section"
           style={{ order: layoutSectionOrder(layout, "standard") }}
         >
-          {configuredStandard
-            ? `ACCORDING TO ${String(configuredStandard)}`
-            : record.testType === "Ready Mix"
-              ? "ACCORDING TO BS EN 12390-3:2009"
-              : "QUALITY CONTROL TEST REPORT"}
+          {accordingTo
+            ? `ACCORDING TO ${accordingTo}`
+            : "QUALITY CONTROL TEST REPORT"}
         </p>}
         {layoutSectionVisible(layout, "results") && <div
           className="report-layout-section"
