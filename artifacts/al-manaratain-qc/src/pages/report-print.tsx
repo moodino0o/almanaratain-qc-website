@@ -295,10 +295,8 @@ function blockDensity(values: ValueMap) {
 
 function BlockCompressionRowsTable({
   rows,
-  useDryStrength,
 }: {
   rows: unknown[];
-  useDryStrength: boolean;
 }) {
   const rowValues = rows.map((row) => (
     typeof row === "object" && row !== null ? row as ValueMap : {}
@@ -332,9 +330,7 @@ function BlockCompressionRowsTable({
       <div className="block-report-section-heading">
         <div>
           <span>Specimen results</span>
-          <small>Measured values for each tested block</small>
         </div>
-        <small>Values in N/mm² unless stated</small>
       </div>
       <div className="block-report-table-wrap">
         <table className="report-table block-report-table">
@@ -381,7 +377,6 @@ function BlockCompressionRowsTable({
       <div className="block-report-section-heading block-report-statistics-heading">
         <div>
           <span>Summary statistics</span>
-          <small>Air Dry strength</small>
         </div>
       </div>
       <div className="block-report-statistics">
@@ -401,11 +396,6 @@ function BlockCompressionRowsTable({
           <b>{displayNumber(airDrySummary.standardDeviation)}</b>
         </div>
       </div>
-      {useDryStrength && (
-        <p className="block-report-strength-basis">
-          PASS / NOT PASS is based on Air Dry strength for Dammam records.
-        </p>
-      )}
     </>
   );
 }
@@ -480,9 +470,13 @@ function SpecimenRowsTable({
     { key: "strength", label: "Calculated Strength", visible: true, order: 8, width: 14 },
   ]);
   return (
-    <div className="report-specimen-block">
-      <p className="report-centered-title">Specimen Dimensions and Weights:</p>
-      <table className="report-table report-specimen-table">
+    <div className="report-specimen-block paving-report-table-wrap">
+      <div className="block-report-section-heading">
+        <div>
+          <span>Specimen results</span>
+        </div>
+      </div>
+      <table className="report-table report-specimen-table paving-report-table">
         <thead>
           <tr>{tableColumns.map((column) => <th key={column.key}>{column.label}</th>)}</tr>
         </thead>
@@ -631,9 +625,9 @@ function StrengthStandardsTable({
   if (!rows.length) return null;
 
   return (
-    <div className="report-standard-block">
+    <div className="report-standard-block paving-report-standard-block">
       <p className="report-centered-title">Standard Required Strength:</p>
-      <table className="report-table report-strength-table">
+      <table className="report-table report-strength-table paving-report-standard-table">
         <thead>
           <tr>
             {isBlocks ? (
@@ -761,9 +755,10 @@ function ReadyMixComplianceBlock({
 }
 
 function ReportField({ label, value }: { label: string; value: string }) {
+  const normalizedLabel = label.replace(/:+$/, "");
   return (
     <div className="report-field">
-      <span>{label}:</span>
+      <span>{normalizedLabel}:</span>
       <strong>{value}</strong>
     </div>
   );
@@ -1006,7 +1001,7 @@ function BlocksReport({
         <strong>Remarks:</strong>
         <span>{record.remarks || ""}</span>
       </div>
-      <BlockCompressionRowsTable rows={testRows} useDryStrength={useDryStrength} />
+      <BlockCompressionRowsTable rows={testRows} />
       <div className={`block-report-result ${compliance.toLocaleLowerCase()}`}>
         <span>Overall result</span>
         <strong>{complianceLabel}</strong>
@@ -1079,56 +1074,60 @@ function PavingBlocksReport({ record, standards, layout }: {
 }) {
   const details = record.details;
   const evaluation = objectValue(details.strengthEvaluation);
+  const status = textValue(evaluation?.status, record.status);
+  const resultLabel = status === "Passed"
+    ? "PASS"
+    : status === "Failed"
+      ? "NOT PASS"
+      : "REVIEW";
+  const resultClass = status.toLocaleLowerCase();
   return (
-    <>
-      <div className="report-two-column">
-        <section>
-          <SectionHeading>Paving Block Details</SectionHeading>
-          <ReportFields
-            entries={[
-              ["Sample Date", formatReportDate(record.sampleDate)],
-              ["Location", record.location],
-              ["Block Type", detailValue(details, ["blockType"])],
-              ["Block Size (mm)", detailValue(details, ["blockSize"])],
-              ["Machine", detailValue(details, ["machine"])],
-            ]}
-          />
-        </section>
-        <section className="report-summary">
-          <SectionHeading>Test Result</SectionHeading>
-          <ReportFields
-            entries={[
-              ["Target", detailValue(details, ["target"])],
-              ["Strength", detailValue(details, ["strength", "compressiveStrength"])],
-              ["Correction Factor", detailValue(details, ["correctionFactor"])],
-              ["Evaluation", textValue(evaluation?.status ?? record.status)],
-            ]}
-          />
-        </section>
+    <div className="paving-block-report">
+      <div className="block-report-section-heading">
+        <div>
+          <span>Test details</span>
+        </div>
       </div>
-      <div className="report-two-column report-test-details">
-        <section>
-          <SectionHeading>Test Information</SectionHeading>
-          <RecordContextFields record={record} />
-        </section>
-        <section className="report-test-measures">
-          <ReportFields
-            entries={[
-              ["Required Minimum", evaluation?.requiredStrength == null
-                ? "-"
-                : `${textValue(evaluation.requiredStrength)} ${textValue(evaluation.strengthUnit, "N/mm²")}`],
-              ["Applicable BS", textValue(evaluation?.bsStandard)],
-            ]}
-          />
-        </section>
+      <div className="block-report-fields">
+        <ReportFields
+          entries={[
+            ["Sample Date", formatReportDate(record.sampleDate)],
+            ["Location", record.location],
+            ["Block Type", detailValue(details, ["blockType"])],
+            ["Block Size (mm)", detailValue(details, ["blockSize"])],
+            ["Machine", detailValue(details, ["machine"])],
+            ["Tested By", record.testedBy],
+          ]}
+        />
+        <ReportFields
+          entries={[
+            ["Target", detailValue(details, ["target"])],
+            ["Strength", detailValue(details, ["strength", "compressiveStrength"])],
+            ["Correction Factor", detailValue(details, ["correctionFactor"])],
+            ["Required Minimum", evaluation?.requiredStrength == null
+              ? "-"
+              : `${textValue(evaluation.requiredStrength)} ${textValue(evaluation.strengthUnit, "N/mm²")}`],
+            ["Applicable BS", textValue(evaluation?.bsStandard)],
+          ]}
+        />
       </div>
+      {layoutSectionVisible(layout, "remarks") && record.remarks && (
+        <div className="block-report-remarks">
+          <strong>Remarks:</strong>
+          <span>{record.remarks}</span>
+        </div>
+      )}
       <SpecimenRowsTable
         rows={Array.isArray(details.testRows) ? details.testRows : []}
         ageLabel="Sample Age"
         layout={layout}
       />
       <StrengthStandardsTable record={record} standards={standards} evaluation={evaluation} />
-    </>
+      <div className={`block-report-result ${resultClass}`}>
+        <span>Overall result</span>
+        <strong>{resultLabel}</strong>
+      </div>
+    </div>
   );
 }
 
@@ -1346,7 +1345,10 @@ export default function ReportPrint() {
           )}
         </div>}
 
-        {layoutSectionVisible(layout, "remarks") && record.testType !== "Blocks" && record.remarks && (
+        {layoutSectionVisible(layout, "remarks") &&
+          record.testType !== "Blocks" &&
+          record.testType !== "Paving Blocks" &&
+          record.remarks && (
           <div
             className="report-remarks report-layout-section"
             style={{ order: layoutSectionOrder(layout, "remarks") }}

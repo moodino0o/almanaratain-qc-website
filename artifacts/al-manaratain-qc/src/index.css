@@ -568,6 +568,16 @@
   font-size: 9px;
 }
 
+.paving-block-report .block-report-fields {
+  grid-template-columns: 1fr 1fr;
+  gap: 2mm 8mm;
+}
+
+.paving-block-report .block-report-fields .report-field,
+.paving-block-report .block-report-fields > div:last-child .report-field {
+  grid-template-columns: 38mm minmax(0, 1fr);
+}
+
 .block-report-section-heading {
   display: flex;
   align-items: end;
@@ -582,6 +592,10 @@
   display: flex;
   align-items: baseline;
   gap: 3mm;
+}
+
+.block-report-section-heading > div:only-child {
+  width: 100%;
 }
 
 .block-report-section-heading span {
@@ -736,6 +750,57 @@
   margin-top: 4mm;
   border-bottom: 0;
   padding-bottom: 0;
+}
+
+.paving-report-table-wrap {
+  margin-top: 1mm;
+}
+
+.paving-report-table {
+  table-layout: auto;
+}
+
+.paving-report-table th,
+.paving-report-table td {
+  border: 0;
+  border-bottom: 1px solid #e0e4e8;
+  padding: 1.4mm 0.7mm;
+  font-size: 7.5px;
+}
+
+.paving-report-table th {
+  border-bottom: 1.5px solid #263342;
+  background: #f1f3f5;
+  color: #263342;
+  font-size: 7.5px;
+}
+
+.report-standard-block.paving-report-standard-block {
+  width: 100%;
+  margin: 4mm 0 0;
+}
+
+.paving-report-standard-block .report-centered-title {
+  margin-bottom: 1.5mm;
+  color: #263342;
+  text-align: left;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.paving-report-standard-table th,
+.paving-report-standard-table td {
+  border: 0;
+  border-bottom: 1px solid #e0e4e8;
+  padding: 1.4mm 0.7mm;
+  font-size: 8px;
+}
+
+.paving-report-standard-table th {
+  border-bottom: 1.5px solid #263342;
+  background: #f1f3f5;
+  color: #263342;
 }
 
 .report-strength-block {
