@@ -12,6 +12,7 @@ export const qcShapeFactorsTable = pgTable("qc_shape_factors", {
   blockType: text("block_type"),
   blockSize: text("block_size").unique(),
   shapeFactor: numeric("shape_factor", { precision: 10, scale: 3 }),
+  correctionFactor: numeric("correction_factor", { precision: 10, scale: 3 }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

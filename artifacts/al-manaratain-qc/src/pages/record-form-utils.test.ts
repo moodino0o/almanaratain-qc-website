@@ -8,6 +8,8 @@ import {
   blockTypeMatches,
   calculateBlockDensity,
   calculateBlockStrengths,
+  calculatePavingStrengths,
+  pavingCorrectionFactorFromSize,
   calculateSieveSampleWeight,
   calculateSieveResults,
   prepareRecordForForm,
@@ -149,10 +151,14 @@ test("copies Ready Mix fields, reference information, and cube rows", () => {
     height: "150",
     dryWeight: "8.2",
     wetWeight: "8.7",
+    weight: "",
     load: "550",
     strength: "24.44",
     airDryStrength: "",
     normalizedStrength: "",
+    compressiveStrength: "24.44",
+    correctionFactor: "",
+    correctedStrength: "",
     density: "",
     waterAbsorption: "6.10",
     sieveSize: "",
@@ -203,10 +209,14 @@ test("copies Blocks fields and every block specimen row", () => {
     height: "200",
     dryWeight: "18",
     wetWeight: "19",
+    weight: "",
     load: "800",
     strength: "10",
     airDryStrength: "11.25",
     normalizedStrength: "12.4",
+    compressiveStrength: "10",
+    correctionFactor: "",
+    correctedStrength: "",
     density: "1187.5",
     waterAbsorption: "5.56",
     sieveSize: "",
@@ -243,12 +253,16 @@ for (const testType of [TestType.Sand_Sieve, TestType.Aggregate_Sieve]) {
       height: "",
       dryWeight: "",
       wetWeight: "",
+      weight: "",
       sampleAge: "",
       testAge: "",
       load: "",
       strength: "",
       airDryStrength: "",
       normalizedStrength: "",
+      compressiveStrength: "",
+      correctionFactor: "",
+      correctedStrength: "",
       density: "",
       waterAbsorption: "",
       sieveSize: "5 mm",
@@ -291,12 +305,16 @@ test("copies Paving Blocks material details", () => {
     height: "",
     dryWeight: "",
     wetWeight: "",
+      weight: "",
     sampleAge: "",
     testAge: "",
     load: "",
     strength: "",
     airDryStrength: "",
     normalizedStrength: "",
+      compressiveStrength: "",
+      correctionFactor: "",
+      correctedStrength: "",
     density: "",
     waterAbsorption: "",
     sieveSize: "",
@@ -305,6 +323,24 @@ test("copies Paving Blocks material details", () => {
     passingAmount: "",
     passingPercentage: "",
   }]);
+});
+
+test("applies paving correction factors by the size suffix", () => {
+  assert.equal(pavingCorrectionFactorFromSize("200*100*60"), "0.87");
+  assert.equal(pavingCorrectionFactorFromSize("200x100x80 mm"), "1");
+  assert.equal(pavingCorrectionFactorFromSize("200*100*50"), "");
+  assert.deepEqual(
+    calculatePavingStrengths(
+      {
+        length: "200",
+        width: "100",
+        load: "",
+        compressiveStrength: "42",
+      },
+      "0.87",
+    ),
+    { compressiveStrength: "42.00", correctedStrength: "36.54" },
+  );
 });
 
 test("copies Water material details", () => {

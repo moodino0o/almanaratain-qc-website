@@ -8,6 +8,7 @@ import {
   evaluateSieveRecord,
   evaluateStrengthRecord,
   normalizeBlockDetails,
+  pavingCorrectionFactorFromSize,
 } from "./qc-strength";
 
 const blockStandard = (
@@ -33,6 +34,7 @@ const blockShapeFactor = (
   blockType: null,
   blockSize: "400 x 200 x 200",
   shapeFactor: "1.15",
+  correctionFactor: null,
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   updatedAt: new Date("2026-01-01T00:00:00.000Z"),
   ...overrides,
@@ -117,6 +119,49 @@ test("maps Block sizes to the supplied height and width shape factor table", () 
   assert.equal(blockShapeFactorFromSize("400*250*200"), 1.1);
   assert.equal(blockShapeFactorFromSize("400*200*100"), 0.8);
   assert.equal(blockShapeFactorFromSize("400*200*80"), null);
+});
+
+test("maps paving sizes ending in 60 and 80 to correction factors", () => {
+  assert.equal(pavingCorrectionFactorFromSize("200*200*60"), 0.87);
+  assert.equal(pavingCorrectionFactorFromSize("200 x 200 x 80 mm"), 1);
+  assert.equal(pavingCorrectionFactorFromSize("200 x 200 x 50"), null);
+});
+
+test("evaluates multiple paving rows using the configured correction factor", () => {
+  const result = evaluateStrengthRecord(
+    {
+      testType: "Paving Blocks",
+      material: "Concrete Block",
+      details: {
+        pavingBlockSize: "200*200*60",
+        testRows: [
+          { rowNo: 1, length: 200, width: 200, load: 400 },
+          { rowNo: 2, length: 200, width: 200, load: 800 },
+        ],
+      },
+    },
+    [{
+      ...blockStandard(),
+      testType: "Paving Blocks",
+      blockType: null,
+      blockSize: "200 x 200 x 60",
+      requiredStrength: "13",
+    }],
+    [{
+      ...blockShapeFactor(),
+      blockSize: "200*200*60",
+      shapeFactor: null,
+      correctionFactor: "0.87",
+    }],
+  );
+
+  const details = result.details as Record<string, unknown>;
+  const rows = details.testRows as Array<Record<string, unknown>>;
+  assert.equal(result.status, "Passed");
+  assert.equal(result.evaluation.averageStrength, 13.05);
+  assert.equal(rows[0].compressiveStrength, "10.00");
+  assert.equal(rows[0].correctedStrength, 8.7);
+  assert.equal(rows[1].correctedStrength, 17.4);
 });
 
 test("normalizes Block age once and fills only missing dimensions", () => {

@@ -12,4 +12,6 @@ export interface ShapeFactor {
   blockSize: string;
   /** @nullable */
   shapeFactor: number | null;
+  /** @nullable */
+  correctionFactor: number | null;
 }

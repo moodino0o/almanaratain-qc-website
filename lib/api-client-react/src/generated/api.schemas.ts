@@ -235,6 +235,8 @@ export interface ShapeFactor {
   blockSize: string;
   /** @nullable */
   shapeFactor: number | null;
+  /** @nullable */
+  correctionFactor: number | null;
 }
 
 export interface ShapeFactorInput {
@@ -245,6 +247,11 @@ export interface ShapeFactorInput {
      * @nullable
      */
   shapeFactor?: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  correctionFactor?: number | null;
 }
 
 export interface ShapeFactorUpdate {
@@ -255,6 +262,11 @@ export interface ShapeFactorUpdate {
      * @nullable
      */
   shapeFactor?: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  correctionFactor?: number | null;
 }
 
 export interface StrengthStandard {

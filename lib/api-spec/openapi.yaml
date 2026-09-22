@@ -1424,6 +1424,7 @@ components:
         - id
         - blockSize
         - shapeFactor
+        - correctionFactor
       properties:
         id:
           type: number
@@ -1431,6 +1432,8 @@ components:
           type: string
           minLength: 1
         shapeFactor:
+          type: ["number", "null"]
+        correctionFactor:
           type: ["number", "null"]
     ShapeFactorInput:
       type: object
@@ -1443,6 +1446,9 @@ components:
         shapeFactor:
           type: ["number", "null"]
           minimum: 0
+        correctionFactor:
+          type: ["number", "null"]
+          minimum: 0
     ShapeFactorUpdate:
       type: object
       properties:
@@ -1450,6 +1456,9 @@ components:
           type: string
           minLength: 1
         shapeFactor:
+          type: ["number", "null"]
+          minimum: 0
+        correctionFactor:
           type: ["number", "null"]
           minimum: 0
     StrengthStandard:

@@ -85,6 +85,7 @@ import {
 import { isConfiguredAdministrator } from "../lib/auth";
 import {
   blockShapeFactorFromSize,
+  pavingCorrectionFactorFromSize,
   evaluateSieveRecord,
   evaluateStrengthRecord,
   type SieveStandardForEvaluation,
@@ -541,12 +542,15 @@ async function ensureDefaultShapeFactors() {
   let changed = false;
   for (const blockSize of blockSizes) {
     const defaultShapeFactor = blockShapeFactorFromSize(blockSize.value);
+    const defaultCorrectionFactor = pavingCorrectionFactorFromSize(blockSize.value);
     const [inserted] = await db
       .insert(qcShapeFactorsTable)
       .values({
         blockType: null,
         blockSize: blockSize.value,
         shapeFactor: defaultShapeFactor === null ? null : String(defaultShapeFactor),
+        correctionFactor:
+          defaultCorrectionFactor === null ? null : String(defaultCorrectionFactor),
       })
       .onConflictDoNothing({ target: qcShapeFactorsTable.blockSize })
       .returning({ id: qcShapeFactorsTable.id });
@@ -554,19 +558,30 @@ async function ensureDefaultShapeFactors() {
       changed = true;
       continue;
     }
-    if (defaultShapeFactor === null) continue;
+    if (defaultShapeFactor !== null) {
+      const [updated] = await db
+        .update(qcShapeFactorsTable)
+        .set({ shapeFactor: String(defaultShapeFactor) })
+        .where(and(
+          eq(qcShapeFactorsTable.blockSize, blockSize.value),
+          sql`${qcShapeFactorsTable.shapeFactor} IS NULL`,
+        ))
+        .returning({ id: qcShapeFactorsTable.id });
+      if (updated) changed = true;
+    }
+    if (defaultCorrectionFactor === null) continue;
     const [updated] = await db
       .update(qcShapeFactorsTable)
-      .set({ shapeFactor: String(defaultShapeFactor) })
+      .set({ correctionFactor: String(defaultCorrectionFactor) })
       .where(and(
         eq(qcShapeFactorsTable.blockSize, blockSize.value),
-        sql`${qcShapeFactorsTable.shapeFactor} IS NULL`,
+        sql`${qcShapeFactorsTable.correctionFactor} IS NULL`,
       ))
       .returning({ id: qcShapeFactorsTable.id });
     if (updated) changed = true;
   }
   if (changed) {
-    await refreshRecordEvaluations(["Blocks"]);
+    await refreshRecordEvaluations(["Blocks", "Paving Blocks"]);
   }
 }
 
@@ -789,6 +804,8 @@ const toShapeFactor = (row: typeof qcShapeFactorsTable.$inferSelect) => ({
   id: row.id,
   blockSize: row.blockSize ?? "",
   shapeFactor: row.shapeFactor === null ? null : Number(row.shapeFactor),
+  correctionFactor:
+    row.correctionFactor === null ? null : Number(row.correctionFactor),
 });
 
 const withSieveReferenceValues = (
@@ -1208,13 +1225,22 @@ router.post("/shape-factors", requireAdministrator, async (req, res): Promise<vo
       blockSize: body.data.blockSize.trim(),
       shapeFactor:
         body.data.shapeFactor == null ? null : String(body.data.shapeFactor),
+      correctionFactor:
+        body.data.correctionFactor === undefined
+          ? (() => {
+              const value = pavingCorrectionFactorFromSize(body.data.blockSize);
+              return value === null ? null : String(value);
+            })()
+          : body.data.correctionFactor == null
+            ? null
+            : String(body.data.correctionFactor),
     })
     .returning();
   if (!shapeFactor) {
     res.status(500).json({ error: "Unable to create shape factor" });
     return;
   }
-  await refreshRecordEvaluations(["Blocks"]);
+   await refreshRecordEvaluations(["Blocks", "Paving Blocks"]);
   res.status(201).json(CreateShapeFactorResponse.parse(toShapeFactor(shapeFactor)));
 });
 
@@ -1249,6 +1275,14 @@ router.patch("/shape-factors/:id", requireAdministrator, async (req, res): Promi
               body.data.shapeFactor == null ? null : String(body.data.shapeFactor),
           }
         : {}),
+      ...(body.data.correctionFactor !== undefined
+        ? {
+            correctionFactor:
+              body.data.correctionFactor == null
+                ? null
+                : String(body.data.correctionFactor),
+          }
+        : {}),
     })
     .where(eq(qcShapeFactorsTable.id, params.data.id))
     .returning();
@@ -1256,7 +1290,7 @@ router.patch("/shape-factors/:id", requireAdministrator, async (req, res): Promi
     res.status(404).json({ error: "Shape factor not found" });
     return;
   }
-  await refreshRecordEvaluations(["Blocks"]);
+  await refreshRecordEvaluations(["Blocks", "Paving Blocks"]);
   res.json(UpdateShapeFactorResponse.parse(toShapeFactor(shapeFactor)));
 });
 
@@ -1274,7 +1308,7 @@ router.delete("/shape-factors/:id", requireAdministrator, async (req, res): Prom
     res.status(404).json({ error: "Shape factor not found" });
     return;
   }
-  await refreshRecordEvaluations(["Blocks"]);
+  await refreshRecordEvaluations(["Blocks", "Paving Blocks"]);
   res.sendStatus(204);
 });
 

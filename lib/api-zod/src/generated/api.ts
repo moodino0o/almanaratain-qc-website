@@ -770,7 +770,8 @@ export const DeleteSieveStandardResponse = zod.void()
 export const ListShapeFactorsResponseItem = zod.object({
   "id": zod.number(),
   "blockSize": zod.string().min(1),
-  "shapeFactor": zod.number().nullable()
+  "shapeFactor": zod.number().nullable(),
+  "correctionFactor": zod.number().nullable()
 })
 export const ListShapeFactorsResponse = zod.array(ListShapeFactorsResponseItem)
 
@@ -781,11 +782,14 @@ export const ListShapeFactorsResponse = zod.array(ListShapeFactorsResponseItem)
 
 export const createShapeFactorBodyShapeFactorMin = 0;
 
+export const createShapeFactorBodyCorrectionFactorMin = 0;
+
 
 
 export const CreateShapeFactorBody = zod.object({
   "blockSize": zod.string().min(1),
-  "shapeFactor": zod.number().min(createShapeFactorBodyShapeFactorMin).nullish()
+  "shapeFactor": zod.number().min(createShapeFactorBodyShapeFactorMin).nullish(),
+  "correctionFactor": zod.number().min(createShapeFactorBodyCorrectionFactorMin).nullish()
 })
 
 
@@ -794,7 +798,8 @@ export const CreateShapeFactorBody = zod.object({
 export const CreateShapeFactorResponse = zod.object({
   "id": zod.number(),
   "blockSize": zod.string().min(1),
-  "shapeFactor": zod.number().nullable()
+  "shapeFactor": zod.number().nullable(),
+  "correctionFactor": zod.number().nullable()
 })
 
 
@@ -808,11 +813,14 @@ export const UpdateShapeFactorParams = zod.object({
 
 export const updateShapeFactorBodyShapeFactorMin = 0;
 
+export const updateShapeFactorBodyCorrectionFactorMin = 0;
+
 
 
 export const UpdateShapeFactorBody = zod.object({
   "blockSize": zod.string().min(1).optional(),
-  "shapeFactor": zod.number().min(updateShapeFactorBodyShapeFactorMin).nullish()
+  "shapeFactor": zod.number().min(updateShapeFactorBodyShapeFactorMin).nullish(),
+  "correctionFactor": zod.number().min(updateShapeFactorBodyCorrectionFactorMin).nullish()
 })
 
 
@@ -821,7 +829,8 @@ export const UpdateShapeFactorBody = zod.object({
 export const UpdateShapeFactorResponse = zod.object({
   "id": zod.number(),
   "blockSize": zod.string().min(1),
-  "shapeFactor": zod.number().nullable()
+  "shapeFactor": zod.number().nullable(),
+  "correctionFactor": zod.number().nullable()
 })
 
 

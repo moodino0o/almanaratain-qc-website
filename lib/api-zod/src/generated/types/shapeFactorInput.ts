@@ -14,4 +14,9 @@ export interface ShapeFactorInput {
      * @nullable
      */
   shapeFactor?: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  correctionFactor?: number | null;
 }

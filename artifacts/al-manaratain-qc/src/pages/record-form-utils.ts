@@ -7,12 +7,16 @@ export type TestRow = {
   height: string;
   dryWeight: string;
   wetWeight: string;
+  weight: string;
   sampleAge: string;
   testAge: string;
   load: string;
   strength: string;
   airDryStrength: string;
   normalizedStrength: string;
+  compressiveStrength: string;
+  correctionFactor: string;
+  correctedStrength: string;
   density: string;
   waterAbsorption: string;
   sieveSize: string;
@@ -68,12 +72,16 @@ export const createEmptyRow = (id: number): TestRow => ({
   height: "",
   dryWeight: "",
   wetWeight: "",
+  weight: "",
   sampleAge: "",
   testAge: "",
   load: "",
   strength: "",
   airDryStrength: "",
   normalizedStrength: "",
+  compressiveStrength: "",
+  correctionFactor: "",
+  correctedStrength: "",
   density: "",
   waterAbsorption: "",
   sieveSize: "",
@@ -219,6 +227,45 @@ export const calculateBlockStrengths = (
   };
 };
 
+export const pavingCorrectionFactorFromSize = (value: unknown) => {
+  const text = stringValue(value).trim();
+  if (/(?:^|[^0-9])60\s*(?:mm)?$/i.test(text)) return "0.87";
+  if (/(?:^|[^0-9])80\s*(?:mm)?$/i.test(text)) return "1";
+  return "";
+};
+
+export const calculatePavingStrengths = (
+  row: Pick<TestRow, "length" | "width" | "load" | "compressiveStrength">,
+  correctionFactorValue: unknown,
+) => {
+  const length = Number(numericInputValue(row.length));
+  const width = Number(numericInputValue(row.width));
+  const loadText = numericInputValue(row.load);
+  const directStrengthText = numericInputValue(row.compressiveStrength);
+  const load = Number(loadText);
+  const directStrength = Number(directStrengthText);
+  const rawStrength =
+    loadText && Number.isFinite(load) && load >= 0 && length > 0 && width > 0
+      ? (load * 1000) / (length * width)
+      : directStrengthText && Number.isFinite(directStrength) && directStrength >= 0
+        ? directStrength
+        : null;
+  const correctionText = numericInputValue(correctionFactorValue);
+  const correctionFactor = Number(correctionText);
+  const correctedStrength =
+    rawStrength !== null &&
+    correctionText &&
+    Number.isFinite(correctionFactor) &&
+    correctionFactor >= 0
+      ? Math.round((rawStrength * correctionFactor + Number.EPSILON) * 100) / 100
+      : null;
+
+  return {
+    compressiveStrength: rawStrength === null ? "" : rawStrength.toFixed(2),
+    correctedStrength: correctedStrength === null ? "" : correctedStrength.toFixed(2),
+  };
+};
+
 export const sieveSizeNumber = (value: string) => {
   const parsed = Number(numericInputValue(value));
   return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
@@ -305,12 +352,18 @@ export const toFormRow = (row: unknown, id: number): TestRow => {
     height: numericInputValue(values.height),
     dryWeight: numericInputValue(values.dryWeight),
     wetWeight: numericInputValue(values.wetWeight),
+    weight: numericInputValue(values.weight),
     sampleAge: numericInputValue(values.sampleAge),
     testAge: numericInputValue(values.testAge),
     load: numericInputValue(values.load),
     strength: numericInputValue(values.strength ?? values.calculatedStrength ?? values.compressiveStrength),
     airDryStrength: numericInputValue(values.airDryStrength ?? values.dryAirStrength),
     normalizedStrength: numericInputValue(values.normalizedStrength),
+    compressiveStrength: numericInputValue(
+      values.compressiveStrength ?? values.strength ?? values.calculatedStrength,
+    ),
+    correctionFactor: numericInputValue(values.correctionFactor),
+    correctedStrength: numericInputValue(values.correctedStrength),
     density: numericInputValue(values.density ?? values.densityKgM3),
     waterAbsorption: calculateWaterAbsorption(values.dryWeight, values.wetWeight),
     sieveSize: stringValue(values.sieveSize),

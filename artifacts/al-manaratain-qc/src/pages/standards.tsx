@@ -61,12 +61,13 @@ import {
 } from "@/components/ui/select";
 import { TypeaheadInput } from "@/components/ui/typeahead-input";
 
-type AutomatedTestType = "Ready Mix" | "Blocks";
+type AutomatedTestType = "Ready Mix" | "Blocks" | "Paving Blocks";
 type SieveTestType = "Sand Sieve" | "Aggregate Sieve";
 
 type ShapeFactorForm = {
   blockSize: string;
   shapeFactor: string;
+  correctionFactor: string;
 };
 
 type StandardForm = {
@@ -123,6 +124,7 @@ const emptySieveForm: SieveForm = {
 const emptyShapeFactorForm: ShapeFactorForm = {
   blockSize: "",
   shapeFactor: "",
+  correctionFactor: "",
 };
 
 function formFromStandard(standard: StrengthStandard): StandardForm {
@@ -159,6 +161,8 @@ function formFromShapeFactor(shapeFactor: ShapeFactor): ShapeFactorForm {
     blockSize: shapeFactor.blockSize,
     shapeFactor:
       shapeFactor.shapeFactor === null ? "" : String(shapeFactor.shapeFactor),
+    correctionFactor:
+      shapeFactor.correctionFactor === null ? "" : String(shapeFactor.correctionFactor),
   };
 }
 
@@ -211,7 +215,7 @@ function StandardEditor({
               {editing ? "Edit strength standard" : "Add strength standard"}
             </CardTitle>
             <CardDescription>
-              Set the minimum compressive strength used when Ready Mix or Blocks
+               Set the minimum compressive strength used when Ready Mix, Blocks, or Paving Blocks
               records are checked.
             </CardDescription>
           </div>
@@ -245,6 +249,7 @@ function StandardEditor({
             <SelectContent>
               <SelectItem value={TestType.Ready_Mix}>Ready Mix</SelectItem>
               <SelectItem value={TestType.Blocks}>Blocks</SelectItem>
+                <SelectItem value={TestType.Paving_Blocks}>Paving Blocks</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -260,9 +265,9 @@ function StandardEditor({
             }
           />
         </div>
-        {form.testType === TestType.Blocks && (
+        {(form.testType === TestType.Blocks || form.testType === TestType.Paving_Blocks) && (
           <>
-            <div className="space-y-2">
+            {form.testType === TestType.Blocks && <div className="space-y-2">
               <Label>Block Type</Label>
               <TypeaheadInput
                 value={form.blockType}
@@ -273,7 +278,7 @@ function StandardEditor({
                   onCreateReferenceItem("blockTypes", value)
                 }
               />
-            </div>
+            </div>}
             <div className="space-y-2">
               <Label>Block Size</Label>
               <TypeaheadInput
@@ -281,9 +286,7 @@ function StandardEditor({
                 onChange={(value) => setForm({ ...form, blockSize: value })}
                 options={lookups?.blockSizes ?? []}
                 placeholder="Select block size..."
-                onCreateOption={(value) =>
-                  onCreateReferenceItem("blockSizes", value)
-                }
+                  onCreateOption={(value) => onCreateReferenceItem("blockSizes", value)}
               />
             </div>
           </>
@@ -615,7 +618,7 @@ function SieveEditor({
   );
 }
 
-type StrengthFolderKey = "readyMix" | "blocks";
+type StrengthFolderKey = "readyMix" | "blocks" | "paving";
 
 function StrengthStandardsFolder({
   label,
@@ -797,6 +800,7 @@ function ShapeFactorsFolder({
                 <tr className="border-b">
                   <th className="px-4 py-3 font-semibold">Block Size</th>
                   <th className="px-4 py-3 font-semibold">Default Shape Factor</th>
+                  <th className="px-4 py-3 font-semibold">Paving Correction Factor</th>
                   <th className="px-4 py-3 text-right font-semibold">Actions</th>
                 </tr>
               </thead>
@@ -806,6 +810,9 @@ function ShapeFactorsFolder({
                     <td className="px-4 py-3 font-medium">{shapeFactor.blockSize}</td>
                     <td className="px-4 py-3 font-semibold">
                       {shapeFactor.shapeFactor === null ? "Not configured" : shapeFactor.shapeFactor}
+                    </td>
+                    <td className="px-4 py-3 font-semibold">
+                      {shapeFactor.correctionFactor === null ? "Not configured" : shapeFactor.correctionFactor}
                     </td>
                     <td className="px-4 py-3">
                       {canEdit && (
@@ -878,7 +885,7 @@ function ShapeFactorEditor({
           <div>
             <CardTitle>{editing ? "Edit shape factor" : "Add shape factor"}</CardTitle>
             <CardDescription>
-              Set the default used for Block entries of this size. Existing records with a saved value are not changed.
+               Set the default used for Block entries and the Paving correction factor for this size. Existing records with a saved value are not changed.
             </CardDescription>
           </div>
           <Button variant="ghost" size="icon" onClick={onCancel} aria-label="Close shape factor editor">
@@ -905,6 +912,17 @@ function ShapeFactorEditor({
             value={form.shapeFactor}
             onChange={(event) => setForm({ ...form, shapeFactor: event.target.value })}
             placeholder="Leave blank until configured"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Paving Correction Factor</Label>
+          <Input
+            type="number"
+            min="0"
+            step="0.001"
+            value={form.correctionFactor}
+            onChange={(event) => setForm({ ...form, correctionFactor: event.target.value })}
+            placeholder="0.87 for 60 mm, 1.00 for 80 mm"
           />
         </div>
         <div className="flex items-end justify-end gap-2 md:col-span-2">
@@ -972,7 +990,7 @@ export default function Standards() {
   );
   const [expandedStrengthFolders, setExpandedStrengthFolders] = useState<
     Record<StrengthFolderKey, boolean>
-  >({ readyMix: false, blocks: false });
+  >({ readyMix: false, blocks: false, paving: false });
   const [shapeFactorsExpanded, setShapeFactorsExpanded] = useState(true);
 
   const materialItems = useMemo(
@@ -1019,6 +1037,14 @@ export default function Standards() {
         standards:
           strengthStandards?.filter(
             (standard) => standard.testType === TestType.Blocks,
+          ) ?? [],
+      },
+      {
+        key: "paving" as const,
+        label: "Paving Blocks standards",
+        standards:
+          strengthStandards?.filter(
+            (standard) => standard.testType === TestType.Paving_Blocks,
           ) ?? [],
       },
     ],
@@ -1141,8 +1167,9 @@ export default function Standards() {
       !form.strengthUnit.trim() ||
       !Number.isFinite(requiredStrength) ||
       requiredStrength < 0 ||
-      (form.testType === TestType.Blocks &&
-        (!form.blockType.trim() || !form.blockSize.trim()))
+      ((form.testType === TestType.Blocks &&
+        (!form.blockType.trim() || !form.blockSize.trim())) ||
+        (form.testType === TestType.Paving_Blocks && !form.blockSize.trim()))
     ) {
       toast.error("Complete the strength standard fields before saving.");
       return;
@@ -1153,7 +1180,9 @@ export default function Standards() {
       blockType:
         form.testType === TestType.Blocks ? form.blockType.trim() : null,
       blockSize:
-        form.testType === TestType.Blocks ? form.blockSize.trim() : null,
+        form.testType === TestType.Blocks || form.testType === TestType.Paving_Blocks
+          ? form.blockSize.trim()
+          : null,
       bsStandard: form.bsStandard.trim(),
       requiredStrength,
       strengthUnit: form.strengthUnit.trim(),
@@ -1166,7 +1195,11 @@ export default function Standards() {
         setEditorOpen(false);
         setExpandedStrengthFolders((current) => ({
           ...current,
-          [data.testType === TestType.Blocks ? "blocks" : "readyMix"]: true,
+           [data.testType === TestType.Blocks
+             ? "blocks"
+             : data.testType === TestType.Paving_Blocks
+               ? "paving"
+               : "readyMix"]: true,
         }));
         invalidateStandards();
       },
@@ -1181,10 +1214,16 @@ export default function Standards() {
       shapeFactorForm.shapeFactor.trim() === ""
         ? null
         : Number(shapeFactorForm.shapeFactor);
+    const correctionFactor =
+      shapeFactorForm.correctionFactor.trim() === ""
+        ? null
+        : Number(shapeFactorForm.correctionFactor);
     if (
       !shapeFactorForm.blockSize.trim() ||
       (shapeFactor !== null &&
-        (!Number.isFinite(shapeFactor) || shapeFactor < 0))
+        (!Number.isFinite(shapeFactor) || shapeFactor < 0)) ||
+      (correctionFactor !== null &&
+        (!Number.isFinite(correctionFactor) || correctionFactor < 0))
     ) {
       toast.error("Enter a block size and a valid shape factor.");
       return;
@@ -1192,6 +1231,7 @@ export default function Standards() {
     const data = {
       blockSize: shapeFactorForm.blockSize.trim(),
       shapeFactor,
+      correctionFactor,
     };
     const options = {
       onSuccess: () => {
@@ -1519,9 +1559,11 @@ export default function Standards() {
                 setForm({
                   ...emptyForm,
                   testType:
-                    folder.key === "blocks"
-                      ? TestType.Blocks
-                      : TestType.Ready_Mix,
+                     folder.key === "blocks"
+                       ? TestType.Blocks
+                       : folder.key === "paving"
+                         ? TestType.Paving_Blocks
+                         : TestType.Ready_Mix,
                 });
                 setEditorOpen(true);
                 setSieveEditorOpen(false);
