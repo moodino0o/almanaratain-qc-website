@@ -292,11 +292,21 @@
   margin: 0 auto;
   background: white;
   padding: 11mm 13mm;
-  color: #111;
+  color: var(--report-text-color, #111);
   font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
   font-size: 11px;
   line-height: 1.4;
   box-shadow: 0 8px 30px rgb(0 0 0 / 0.12);
+}
+
+.report-layout-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.report-layout-section {
+  width: 100%;
 }
 
 .report-header {
@@ -340,7 +350,7 @@
 
 .report-standard {
   margin: 1mm 0 3.5mm;
-  border-bottom: 1.5px solid #111;
+  border-bottom: 1.5px solid var(--report-accent-color, #111);
   padding-bottom: 3mm;
   text-align: center;
   font-size: 8px;

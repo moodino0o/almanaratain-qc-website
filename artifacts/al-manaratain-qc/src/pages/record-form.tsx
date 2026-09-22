@@ -33,6 +33,7 @@ import {
 } from "./record-form-utils";
 
 const REFERENCE_NUMBER_MAX_LENGTH = 32;
+const DEFAULT_APPROVED_BY = "ADEL ABBAS EBRAHIM";
 
 export default function RecordForm() {
   const [, setLocation] = useLocation();
@@ -41,6 +42,7 @@ export default function RecordForm() {
   const isEditing = Number.isInteger(recordId) && recordId > 0;
   const { role } = useAuth();
   const canEditQc = role === "technician" || role === "managerial" || role === "administrator";
+  const canEditApprovedBy = role === "administrator";
   const canEditReferenceData = role === "administrator";
   const queryClient = useQueryClient();
   
@@ -71,6 +73,7 @@ export default function RecordForm() {
   const [locationValue, setLocationValue] = useState("");
   const [material, setMaterial] = useState("");
   const [testedBy, setTestedBy] = useState("");
+  const [reviewedBy, setReviewedBy] = useState(DEFAULT_APPROVED_BY);
   const [machine, setMachine] = useState("");
   const [blockAge, setBlockAge] = useState("");
   const [referenceNumber, setReferenceNumber] = useState("");
@@ -126,6 +129,7 @@ export default function RecordForm() {
     setLocationValue(existingRecord.location);
     setMaterial(existingRecord.material);
     setTestedBy(existingRecord.testedBy);
+    setReviewedBy(existingRecord.reviewedBy || DEFAULT_APPROVED_BY);
     setRemarks(existingRecord.remarks ?? "");
     setReferenceNumber(stringValue(savedDetails.referenceNumber));
     setCustomerName(stringValue(savedDetails.customerName));
@@ -614,6 +618,7 @@ export default function RecordForm() {
       material,
       status: RecordStatus.Review, 
       testedBy,
+      ...(canEditApprovedBy ? { reviewedBy: reviewedBy.trim() } : {}),
       remarks,
       details: payloadDetails
     };
@@ -926,6 +931,16 @@ export default function RecordForm() {
                       onChange={(event) => handleDetailChange("testingDate", event.target.value)}
                     />
                   </div>
+                  {canEditApprovedBy && (
+                    <div className="space-y-2">
+                      <Label>Approved By</Label>
+                      <Input
+                        value={reviewedBy}
+                        onChange={(event) => setReviewedBy(event.target.value)}
+                        placeholder="Enter approving person"
+                      />
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label>Sample Type</Label>
                     <TypeaheadInput

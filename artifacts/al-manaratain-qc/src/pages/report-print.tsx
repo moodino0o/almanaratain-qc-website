@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useParams, Link } from "wouter";
 import {
   useGetReport,
@@ -7,6 +7,7 @@ import {
 } from "@workspace/api-client-react";
 import type {
   QcRecord,
+  ReportLayout,
   StrengthStandard,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,28 @@ import { blockMaterialMatches, blockSizeMatches, blockTypeMatches } from "./reco
 
 type DetailMap = QcRecord["details"];
 type ValueMap = Record<string, unknown>;
+type LayoutColumn = ReportLayout["config"]["columns"][string][number];
+
+function layoutSectionVisible(layout: ReportLayout | undefined, key: string) {
+  const section = layout?.config.sections.find((item) => item.key === key);
+  return section?.visible ?? true;
+}
+
+function layoutSectionOrder(layout: ReportLayout | undefined, key: string) {
+  const section = layout?.config.sections.find((item) => item.key === key);
+  return section?.order ?? 0;
+}
+
+function layoutColumns(
+  layout: ReportLayout | undefined,
+  tableKey: string,
+  fallback: LayoutColumn[],
+) {
+  const configured = layout?.config.columns[tableKey];
+  return (configured?.length ? configured : fallback)
+    .filter((column) => column.visible)
+    .sort((left, right) => left.order - right.order);
+}
 
 function textValue(value: unknown, fallback = "-") {
   if (value === null || value === undefined || value === "") return fallback;
@@ -266,7 +289,13 @@ function blockDensity(values: ValueMap) {
   return (wetWeight * 1_000_000_000) / (length * width * height);
 }
 
-function BlockCompressionRowsTable({ rows }: { rows: unknown[] }) {
+function BlockCompressionRowsTable({
+  rows,
+  layout,
+}: {
+  rows: unknown[];
+  layout?: ReportLayout;
+}) {
   const rowValues = rows.map((row) => (
     typeof row === "object" && row !== null ? row as ValueMap : {}
   ));
@@ -294,6 +323,44 @@ function BlockCompressionRowsTable({ rows }: { rows: unknown[] }) {
   const airDrySummary = numericSummary(columns.airDry);
   const displayNumber = (value: number | null, digits = 2) =>
     value === null ? "-" : formatNumber(value, digits);
+  const tableColumns = layoutColumns(layout, "blockCompression", [
+    { key: "no", label: "No.", visible: true, order: 0, width: 7 },
+    { key: "length", label: "Length (mm)", visible: true, order: 1, width: 10 },
+    { key: "width", label: "Width (mm)", visible: true, order: 2, width: 10 },
+    { key: "height", label: "Height (mm)", visible: true, order: 3, width: 10 },
+    { key: "load", label: "Load (kN)", visible: true, order: 4, width: 10 },
+    { key: "water", label: "Water (N/mm2)", visible: true, order: 5, width: 12 },
+    { key: "airDry", label: "Air Dry (N/mm2)", visible: true, order: 6, width: 12 },
+    { key: "normalized", label: "Normalized (N/mm2)", visible: true, order: 7, width: 13 },
+    { key: "density", label: "Density (kg/m3)", visible: true, order: 8, width: 13 },
+    { key: "wetWeight", label: "Wet Weight (kg)", visible: true, order: 9, width: 13 },
+  ]);
+  const cellValue = (key: string, values: ValueMap, index: number) => {
+    switch (key) {
+      case "no": return textValue(values.rowNo, String(index + 1));
+      case "length": return textValue(values.length);
+      case "width": return textValue(values.width);
+      case "height": return textValue(values.height);
+      case "load": return textValue(values.load);
+      case "water": return displayNumber(columns.water[index]);
+      case "airDry": return displayNumber(columns.airDry[index]);
+      case "normalized": return displayNumber(columns.normalized[index]);
+      case "density": return displayNumber(columns.density[index]);
+      case "wetWeight": return displayNumber(columns.wetWeight[index], 3);
+      default: return "-";
+    }
+  };
+  const averageValue = (key: string) => {
+    switch (key) {
+      case "no": return "AVERAGE:";
+      case "water": return displayNumber(averages.water);
+      case "airDry": return displayNumber(averages.airDry);
+      case "normalized": return displayNumber(averages.normalized);
+      case "density": return displayNumber(averages.density);
+      case "wetWeight": return displayNumber(averages.wetWeight, 3);
+      default: return "";
+    }
+  };
 
   return (
     <>
@@ -301,40 +368,25 @@ function BlockCompressionRowsTable({ rows }: { rows: unknown[] }) {
         <table className="report-table block-report-table">
           <thead>
             <tr>
-              <th>No.</th>
-              <th>Length<br />(mm)</th>
-              <th>Width<br />(mm)</th>
-              <th>Height<br />(mm)</th>
-              <th>Load<br />(kN)</th>
-              <th>Water<br />(N/mm2)</th>
-              <th>Air Dry<br />(N/mm2)</th>
-              <th>Normalized<br />(N/mm2)</th>
-              <th>Density<br />(kg/m3)</th>
-              <th>Wet Weight<br />(kg)</th>
+              {tableColumns.map((column) => (
+                <th key={column.key} style={{ width: `${column.width}%` }}>
+                  {column.label}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {rowValues.map((values, index) => (
               <tr key={index}>
-                <td>{textValue(values.rowNo, String(index + 1))}</td>
-                <td>{textValue(values.length)}</td>
-                <td>{textValue(values.width)}</td>
-                <td>{textValue(values.height)}</td>
-                <td>{textValue(values.load)}</td>
-                <td>{displayNumber(columns.water[index])}</td>
-                <td>{displayNumber(columns.airDry[index])}</td>
-                <td>{displayNumber(columns.normalized[index])}</td>
-                <td>{displayNumber(columns.density[index])}</td>
-                <td>{displayNumber(columns.wetWeight[index], 3)}</td>
+                {tableColumns.map((column) => (
+                  <td key={column.key}>{cellValue(column.key, values, index)}</td>
+                ))}
               </tr>
             ))}
             <tr className="block-report-average-row">
-              <td colSpan={5}>AVERAGE:</td>
-              <td>{displayNumber(averages.water)}</td>
-              <td>{displayNumber(averages.airDry)}</td>
-              <td>{displayNumber(averages.normalized)}</td>
-              <td>{displayNumber(averages.density)}</td>
-              <td>{displayNumber(averages.wetWeight, 3)}</td>
+              {tableColumns.map((column) => (
+                <td key={column.key}>{averageValue(column.key)}</td>
+              ))}
             </tr>
           </tbody>
         </table>
@@ -410,29 +462,31 @@ function SpecimenRowsTable({
   rows,
   ageLabel,
   showAge = true,
+  layout,
 }: {
   rows: unknown[];
   ageLabel: string;
   showAge?: boolean;
+  layout?: ReportLayout;
 }) {
   if (!hasSpecimenMeasurements(rows)) return null;
+  const tableColumns = layoutColumns(layout, "pavingResults", [
+    { key: "no", label: "No.", visible: true, order: 0, width: 7 },
+    { key: "age", label: ageLabel, visible: showAge, order: 1, width: 9 },
+    { key: "length", label: "Length (mm)", visible: true, order: 2, width: 10 },
+    { key: "width", label: "Width (mm)", visible: true, order: 3, width: 10 },
+    { key: "height", label: "Height (mm)", visible: true, order: 4, width: 10 },
+    { key: "dryWeight", label: "Dry Weight", visible: true, order: 5, width: 10 },
+    { key: "wetWeight", label: "Wet Weight", visible: true, order: 6, width: 10 },
+    { key: "load", label: "Load (kN)", visible: true, order: 7, width: 10 },
+    { key: "strength", label: "Calculated Strength", visible: true, order: 8, width: 14 },
+  ]);
   return (
     <div className="report-specimen-block">
       <p className="report-centered-title">Specimen Dimensions and Weights:</p>
       <table className="report-table report-specimen-table">
         <thead>
-          <tr>
-            <th>No.</th>
-            {showAge && <th>{ageLabel}</th>}
-            <th>Length (mm)</th>
-            <th>Width (mm)</th>
-            <th>Height (mm)</th>
-            <th>Dry Weight</th>
-            <th>Wet Weight</th>
-            <th>Load (kN)</th>
-            <th>Loaded Face Area (mm2)</th>
-            <th>Calculated Strength (N/mm2)</th>
-          </tr>
+          <tr>{tableColumns.map((column) => <th key={column.key}>{column.label}</th>)}</tr>
         </thead>
         <tbody>
           {rows.map((row, index) => {
@@ -441,18 +495,16 @@ function SpecimenRowsTable({
                 ? (row as Record<string, unknown>)
                 : {};
             return (
-              <tr key={index}>
-                <td>{textValue(values.rowNo, String(index + 1))}</td>
-                {showAge && <td>{textValue(values.testAge || values.sampleAge)}</td>}
-                <td>{textValue(values.length)}</td>
-                <td>{textValue(values.width)}</td>
-                <td>{textValue(values.height)}</td>
-                <td>{textValue(values.dryWeight)}</td>
-                <td>{textValue(values.wetWeight)}</td>
-                <td>{textValue(values.load)}</td>
-                <td>{textValue(values.loadedFaceArea)}</td>
-                <td>{textValue(values.calculatedStrength || values.strength || values.compressiveStrength)}</td>
-              </tr>
+              <tr key={index}>{tableColumns.map((column) => {
+                const value = column.key === "no"
+                  ? textValue(values.rowNo, String(index + 1))
+                  : column.key === "age"
+                    ? textValue(values.testAge || values.sampleAge)
+                    : column.key === "strength"
+                      ? textValue(values.calculatedStrength || values.strength || values.compressiveStrength)
+                      : textValue(values[column.key]);
+                return <td key={column.key}>{value}</td>;
+              })}</tr>
             );
           })}
         </tbody>
@@ -461,7 +513,13 @@ function SpecimenRowsTable({
   );
 }
 
-function SieveRowsTable({ rows }: { rows: unknown[] }) {
+function SieveRowsTable({
+  rows,
+  layout,
+}: {
+  rows: unknown[];
+  layout?: ReportLayout;
+}) {
   const visibleRows = rows.filter((row) => {
     const values = typeof row === "object" && row !== null
       ? row as Record<string, unknown> : {};
@@ -472,31 +530,37 @@ function SieveRowsTable({ rows }: { rows: unknown[] }) {
     ].some(hasSieveEntry);
   });
   if (!visibleRows.length) return null;
+  const tableColumns = layoutColumns(layout, "sieveResults", [
+    { key: "no", label: "No.", visible: true, order: 0, width: 7 },
+    { key: "size", label: "Sieve / Pore Size", visible: true, order: 1, width: 26 },
+    { key: "returned", label: "Amount Returned", visible: true, order: 2, width: 22 },
+    { key: "passing", label: "Amount Passing", visible: true, order: 3, width: 22 },
+    { key: "percentage", label: "% Passing", visible: true, order: 4, width: 23 },
+  ]);
   return (
     <div className="report-specimen-block">
       <p className="report-centered-title">Sieve Measurements:</p>
       <table className="report-table">
         <thead>
-          <tr>
-            <th>No.</th>
-            <th>Sieve / Pore Size</th>
-            <th>Amount Returned</th>
-            <th>Amount Passing</th>
-            <th>% Passing</th>
-          </tr>
+          <tr>{tableColumns.map((column) => <th key={column.key}>{column.label}</th>)}</tr>
         </thead>
         <tbody>
           {visibleRows.map((row, index) => {
             const values = typeof row === "object" && row !== null
               ? row as Record<string, unknown> : {};
             return (
-              <tr key={index}>
-                <td>{index + 1}</td>
-                <td>{textValue(values.sieveSize)}</td>
-                <td>{textValue(values.amountReturned)}</td>
-                <td>{textValue(values.passingAmount)}</td>
-                <td>{textValue(values.passingPercentage)}</td>
-              </tr>
+              <tr key={index}>{tableColumns.map((column) => {
+                const value = column.key === "no"
+                  ? index + 1
+                  : column.key === "size"
+                    ? textValue(values.sieveSize)
+                    : column.key === "returned"
+                      ? textValue(values.amountReturned)
+                      : column.key === "passing"
+                        ? textValue(values.passingAmount)
+                        : textValue(values.passingPercentage);
+                return <td key={column.key}>{value}</td>;
+              })}</tr>
             );
           })}
         </tbody>
@@ -731,10 +795,12 @@ function ReadyMixReport({
   record,
   standards,
   selectedStandard,
+  layout,
 }: {
   record: QcRecord;
   standards: StrengthStandard[];
   selectedStandard?: StrengthStandard;
+  layout?: ReportLayout;
 }) {
   const details = record.details;
   const testRows = Array.isArray(details.testRows)
@@ -754,6 +820,18 @@ function ReadyMixReport({
       ];
   const orderedTestRows = sortCubeRowsByAge(testRows);
   const average28DayStrength = averageStrengthForAge(orderedTestRows, 28);
+  const resultColumns = layoutColumns(layout, "readyMixResults", [
+    { key: "no", label: "No.", visible: true, order: 0, width: 7 },
+    { key: "age", label: "Test Age", visible: true, order: 1, width: 9 },
+    { key: "length", label: "Length (mm)", visible: true, order: 2, width: 10 },
+    { key: "width", label: "Width (mm)", visible: true, order: 3, width: 10 },
+    { key: "height", label: "Height (mm)", visible: true, order: 4, width: 10 },
+    { key: "dryWeight", label: "Dry Weight", visible: true, order: 5, width: 10 },
+    { key: "wetWeight", label: "Wet Weight", visible: true, order: 6, width: 10 },
+    { key: "absorption", label: "Water Absorption (%)", visible: true, order: 7, width: 13 },
+    { key: "load", label: "Load (kN)", visible: true, order: 8, width: 10 },
+    { key: "strength", label: "Calculated Strength", visible: true, order: 9, width: 11 },
+  ]);
 
   return (
     <>
@@ -784,18 +862,7 @@ function ReadyMixReport({
         <SectionHeading>Specimen Measurements</SectionHeading>
         <table className="report-table report-results-table">
           <thead>
-            <tr>
-              <th>No.</th>
-              <th>Test Age</th>
-              <th>Length (mm)</th>
-              <th>Width (mm)</th>
-              <th>Height (mm)</th>
-              <th>Dry Weight</th>
-              <th>Wet Weight</th>
-              <th>Water Absorption (%)</th>
-              <th>Load (kN)</th>
-              <th>Calculated Strength</th>
-            </tr>
+            <tr>{resultColumns.map((column) => <th key={column.key}>{column.label}</th>)}</tr>
           </thead>
           <tbody>
             {orderedTestRows.map((row, index) => {
@@ -824,18 +891,16 @@ function ReadyMixReport({
                   detailValue(details, ["strength", "compressiveStrength"], ""),
               };
               return (
-                <tr key={index}>
-                  <td>{index + 1}</td>
-                  <td>{textValue(displayValues.testAge)}</td>
-                  <td>{textValue(displayValues.length)}</td>
-                  <td>{textValue(displayValues.width)}</td>
-                  <td>{textValue(displayValues.height)}</td>
-                  <td>{textValue(displayValues.dryWeight)}</td>
-                  <td>{textValue(displayValues.wetWeight)}</td>
-                  <td>{calculatedWaterAbsorption(displayValues)}</td>
-                  <td>{textValue(displayValues.load)}</td>
-                  <td>{textValue(displayValues.strength)}</td>
-                </tr>
+                <tr key={index}>{resultColumns.map((column) => {
+                  const value = column.key === "no"
+                    ? index + 1
+                    : column.key === "age"
+                      ? textValue(displayValues.testAge)
+                      : column.key === "absorption"
+                        ? calculatedWaterAbsorption(displayValues)
+                        : textValue(displayValues[column.key]);
+                  return <td key={column.key}>{value}</td>;
+                })}</tr>
               );
             })}
           </tbody>
@@ -875,9 +940,11 @@ function RecordContextFields({
 function BlocksReport({
   record,
   standards,
+  layout,
 }: {
   record: QcRecord;
   standards: StrengthStandard[];
+  layout?: ReportLayout;
 }) {
   const details = record.details;
   const evaluation = objectValue(details.strengthEvaluation);
@@ -903,6 +970,7 @@ function BlocksReport({
       <div className="block-report-fields">
         <ReportFields
           entries={[
+            ["APPROVED BY:", record.reviewedBy || "ADEL ABBAS EBRAHIM"],
             ["BLOCK SIZE:", detailValue(details, ["blockSize"])],
             ["CASTING DATE:", formatReportDate(record.sampleDate)],
             ["TESTING DATE:", formatReportDate(testingDate)],
@@ -928,11 +996,11 @@ function BlocksReport({
           ]}
         />
       </div>
-      <div className="block-report-remarks">
-        <strong>Remarks:</strong>
-        <span>{record.remarks || ""}</span>
-      </div>
-      <BlockCompressionRowsTable rows={testRows} />
+      {layoutSectionVisible(layout, "remarks") && <div className="block-report-remarks">
+          <strong>Remarks:</strong>
+          <span>{record.remarks || ""}</span>
+        </div>}
+      <BlockCompressionRowsTable rows={testRows} layout={layout} />
       <div className={`block-report-result ${compliance.toLocaleLowerCase()}`}>
         {complianceLabel}
       </div>
@@ -942,8 +1010,10 @@ function BlocksReport({
 
 function SieveReport({
   record,
+  layout,
 }: {
   record: QcRecord;
+  layout?: ReportLayout;
 }) {
   const details = record.details;
   const sieveRows = Array.isArray(details.sieveRows) ? details.sieveRows : [];
@@ -987,7 +1057,7 @@ function SieveReport({
         </section>
       </div>
 
-      <SieveRowsTable rows={sieveRows} />
+      <SieveRowsTable rows={sieveRows} layout={layout} />
       {evaluation && (
         <SieveEvaluationTable value={evaluation} />
       )}
@@ -995,9 +1065,10 @@ function SieveReport({
   );
 }
 
-function PavingBlocksReport({ record, standards }: {
+function PavingBlocksReport({ record, standards, layout }: {
   record: QcRecord;
   standards: StrengthStandard[];
+  layout?: ReportLayout;
 }) {
   const details = record.details;
   const evaluation = objectValue(details.strengthEvaluation);
@@ -1047,6 +1118,7 @@ function PavingBlocksReport({ record, standards }: {
       <SpecimenRowsTable
         rows={Array.isArray(details.testRows) ? details.testRows : []}
         ageLabel="Sample Age"
+        layout={layout}
       />
       <StrengthStandardsTable record={record} standards={standards} evaluation={evaluation} />
     </>
@@ -1139,7 +1211,7 @@ export default function ReportPrint() {
     );
   }
 
-  const { record, companyName, companySubtitle } = report;
+  const { record, companyName, companySubtitle, layout } = report;
   const strengthEvaluation = objectValue(record.details.strengthEvaluation);
   const configuredSieveStandards = sieveStandards
     .filter(
@@ -1158,6 +1230,21 @@ export default function ReportPrint() {
     strengthEvaluation?.bsStandard ??
     configuredSieveStandards[0]?.standardReference ??
     null;
+  const paperStyle = layout
+    ? {
+        fontFamily: layout.config.fontFamily,
+        fontSize: `${layout.config.fontSize}px`,
+        color: layout.config.textColor,
+        padding: `${layout.config.paperPadding}mm`,
+        "--report-accent-color": layout.config.accentColor,
+      } as CSSProperties
+    : undefined;
+  const defaultTitle =
+    record.testType === "Ready Mix"
+      ? "Readymix Cube Test Report"
+      : record.testType === "Blocks"
+        ? "Block Compression Test"
+        : `${record.testType} Test Report`;
 
   return (
     <div className="report-page">
@@ -1192,8 +1279,12 @@ export default function ReportPrint() {
         </div>
       </div>
 
-      <main className="report-paper">
-        <header className="report-header">
+      <main className="report-paper" style={paperStyle}>
+        <div className="report-layout-content">
+        {layoutSectionVisible(layout, "header") && <header
+          className="report-header report-layout-section"
+          style={{ order: layoutSectionOrder(layout, "header") }}
+        >
           <div className="report-company">{companySubtitle}</div>
           <img
             src="/al-manaratain-logo.webp"
@@ -1202,48 +1293,59 @@ export default function ReportPrint() {
           />
           <div className="report-title">
             <strong>
-              {record.testType === "Ready Mix"
-                ? "Readymix Cube Test Report"
-                : record.testType === "Blocks"
-                  ? "Block Compression Test"
-                : `${record.testType} Test Report`}
+              {layout?.config.title || defaultTitle}
             </strong>
             <span>Ref: {record.recordNo}</span>
           </div>
-        </header>
-        <p className="report-standard">
+        </header>}
+        {layoutSectionVisible(layout, "standard") && <p
+          className="report-standard report-layout-section"
+          style={{ order: layoutSectionOrder(layout, "standard") }}
+        >
           {configuredStandard
             ? `ACCORDING TO ${String(configuredStandard)}`
             : record.testType === "Ready Mix"
               ? "ACCORDING TO BS EN 12390-3:2009"
               : "QUALITY CONTROL TEST REPORT"}
-        </p>
+        </p>}
 
-        {record.testType === "Ready Mix" ? (
-          <ReadyMixReport
-            record={record}
-            standards={strengthStandards}
-            selectedStandard={reportStrengthStandard}
-          />
-        ) : record.testType === "Blocks" ? (
-          <BlocksReport record={record} standards={strengthStandards} />
-        ) : record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve" ? (
-          <SieveReport record={record} />
-        ) : record.testType === "Paving Blocks" ? (
-          <PavingBlocksReport record={record} standards={strengthStandards} />
-        ) : record.testType === "Water" ? (
-          <WaterReport record={record} />
-        ) : (
-          <FallbackReport record={record} />
-        )}
+        {layoutSectionVisible(layout, "results") && <div
+          className="report-layout-section"
+          style={{ order: layoutSectionOrder(layout, "results") }}
+        >
+          {record.testType === "Ready Mix" ? (
+            <ReadyMixReport
+              record={record}
+              standards={strengthStandards}
+              selectedStandard={reportStrengthStandard}
+              layout={layout}
+            />
+          ) : record.testType === "Blocks" ? (
+            <BlocksReport record={record} standards={strengthStandards} layout={layout} />
+          ) : record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve" ? (
+            <SieveReport record={record} layout={layout} />
+          ) : record.testType === "Paving Blocks" ? (
+            <PavingBlocksReport record={record} standards={strengthStandards} layout={layout} />
+          ) : record.testType === "Water" ? (
+            <WaterReport record={record} />
+          ) : (
+            <FallbackReport record={record} />
+          )}
+        </div>}
 
-        {record.testType !== "Blocks" && record.remarks && (
-          <div className="report-remarks">
+        {layoutSectionVisible(layout, "remarks") && record.testType !== "Blocks" && record.remarks && (
+          <div
+            className="report-remarks report-layout-section"
+            style={{ order: layoutSectionOrder(layout, "remarks") }}
+          >
             <span>Remarks:</span> {record.remarks}
           </div>
         )}
 
-        <footer className="report-signatures">
+        {layoutSectionVisible(layout, "signatures") && <footer
+          className="report-signatures report-layout-section"
+          style={{ order: layoutSectionOrder(layout, "signatures") }}
+        >
           <div>
             <span>Tested by:</span>
             <strong>{record.testedBy}</strong>
@@ -1255,7 +1357,8 @@ export default function ReportPrint() {
           <small>
             {companyName} · {companySubtitle}
           </small>
-        </footer>
+        </footer>}
+        </div>
       </main>
     </div>
   );
