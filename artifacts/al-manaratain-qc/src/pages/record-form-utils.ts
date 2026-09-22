@@ -246,7 +246,7 @@ export const blockDimensionsFromSize = (value: unknown): BlockDimensions | null 
     "4": "100",
     "6": "150",
     "8": "200",
-    "12": "250",
+    "12": "300",
   };
   return {
     length: "400",

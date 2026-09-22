@@ -3,6 +3,7 @@ import test from "node:test";
 import type { QcShapeFactorRow, QcStrengthStandardRow } from "@workspace/db";
 import type { SieveStandardForEvaluation } from "./qc-strength";
 import {
+  blockShapeFactorFromSize,
   blockDimensionsFromSize,
   evaluateSieveRecord,
   evaluateStrengthRecord,
@@ -104,8 +105,18 @@ test("maps inch Block sizes to the existing specimen dimensions", () => {
   assert.deepEqual(blockDimensionsFromSize('4"'), { length: 400, width: 100, height: 200 });
   assert.deepEqual(blockDimensionsFromSize('6"'), { length: 400, width: 150, height: 200 });
   assert.deepEqual(blockDimensionsFromSize('8"'), { length: 400, width: 200, height: 200 });
-  assert.deepEqual(blockDimensionsFromSize('12"'), { length: 400, width: 250, height: 200 });
+  assert.deepEqual(blockDimensionsFromSize('12"'), { length: 400, width: 300, height: 200 });
   assert.deepEqual(blockDimensionsFromSize("400*150*200"), { length: 400, width: 150, height: 200 });
+});
+
+test("maps Block sizes to the supplied height and width shape factor table", () => {
+  assert.equal(blockShapeFactorFromSize('4"'), 1.35);
+  assert.equal(blockShapeFactorFromSize('6"'), 1.25);
+  assert.equal(blockShapeFactorFromSize('8"'), 1.15);
+  assert.equal(blockShapeFactorFromSize('12"'), 1.1);
+  assert.equal(blockShapeFactorFromSize("400*250*200"), 1.1);
+  assert.equal(blockShapeFactorFromSize("400*200*100"), 0.8);
+  assert.equal(blockShapeFactorFromSize("400*200*80"), null);
 });
 
 test("normalizes Block age once and fills only missing dimensions", () => {

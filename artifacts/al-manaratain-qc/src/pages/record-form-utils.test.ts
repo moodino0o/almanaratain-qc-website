@@ -42,7 +42,7 @@ test("maps Block inch sizes to default dimensions", () => {
   });
   assert.deepEqual(blockDimensionsFromSize('12"'), {
     length: "400",
-    width: "250",
+    width: "300",
     height: "200",
   });
 });

@@ -84,6 +84,7 @@ import {
 } from "../middlewares/requireAuthenticated";
 import { isConfiguredAdministrator } from "../lib/auth";
 import {
+  blockShapeFactorFromSize,
   evaluateSieveRecord,
   evaluateStrengthRecord,
   type SieveStandardForEvaluation,
@@ -537,15 +538,35 @@ async function ensureDefaultShapeFactors() {
     .select()
     .from(qcReferenceItemsTable)
     .where(eq(qcReferenceItemsTable.categoryId, category.id));
+  let changed = false;
   for (const blockSize of blockSizes) {
-    await db
+    const defaultShapeFactor = blockShapeFactorFromSize(blockSize.value);
+    const [inserted] = await db
       .insert(qcShapeFactorsTable)
       .values({
         blockType: null,
         blockSize: blockSize.value,
-        shapeFactor: null,
+        shapeFactor: defaultShapeFactor === null ? null : String(defaultShapeFactor),
       })
-      .onConflictDoNothing({ target: qcShapeFactorsTable.blockSize });
+      .onConflictDoNothing({ target: qcShapeFactorsTable.blockSize })
+      .returning({ id: qcShapeFactorsTable.id });
+    if (inserted) {
+      changed = true;
+      continue;
+    }
+    if (defaultShapeFactor === null) continue;
+    const [updated] = await db
+      .update(qcShapeFactorsTable)
+      .set({ shapeFactor: String(defaultShapeFactor) })
+      .where(and(
+        eq(qcShapeFactorsTable.blockSize, blockSize.value),
+        sql`${qcShapeFactorsTable.shapeFactor} IS NULL`,
+      ))
+      .returning({ id: qcShapeFactorsTable.id });
+    if (updated) changed = true;
+  }
+  if (changed) {
+    await refreshRecordEvaluations(["Blocks"]);
   }
 }
 

@@ -112,13 +112,43 @@ export function blockDimensionsFromSize(value: unknown): BlockDimensions | null 
     "4": 100,
     "6": 150,
     "8": 200,
-    "12": 250,
+    "12": 300,
   };
   return {
     length: 400,
     width: widthByInchSize[inchSize],
     height: 200,
   };
+}
+
+const BLOCK_SHAPE_FACTOR_TABLE = [
+  { height: 40, factors: [0.8, 0.7, null, null, null] },
+  { height: 50, factors: [0.85, 0.75, 0.7, null, null] },
+  { height: 65, factors: [0.95, 0.85, 0.75, 0.7, 0.65] },
+  { height: 100, factors: [1.15, 1, 0.9, 0.8, 0.75] },
+  { height: 150, factors: [1.3, 1.2, 1.1, 1, 0.95] },
+  { height: 200, factors: [1.45, 1.35, 1.25, 1.15, 1.1] },
+  { height: 250, factors: [1.55, 1.45, 1.35, 1.25, 1.15] },
+] as const;
+
+export function blockShapeFactorFromSize(value: unknown): number | null {
+  const dimensions = blockDimensionsFromSize(value);
+  if (!dimensions) return null;
+
+  const height = dimensions.height;
+  const width = dimensions.width;
+  const heightRow =
+    BLOCK_SHAPE_FACTOR_TABLE.find((row) => row.height === height) ??
+    (height >= 250
+      ? BLOCK_SHAPE_FACTOR_TABLE[BLOCK_SHAPE_FACTOR_TABLE.length - 1]
+      : undefined);
+  if (!heightRow) return null;
+
+  const widthColumn =
+    width >= 250
+      ? 4
+      : [50, 100, 150, 200].indexOf(width);
+  return widthColumn < 0 ? null : heightRow.factors[widthColumn] ?? null;
 }
 
 function normalizedBlockType(value: unknown) {
