@@ -5,7 +5,7 @@ import {
   buildDailyReportRows,
   buildDailyStrengthRows,
   dailyReportProductOptions,
-  firstTwoWords,
+  firstWords,
   groupDailyResults,
   sortByReferenceNumber,
 } from "./reports-utils";
@@ -220,7 +220,7 @@ const qcRecord = ({
   details,
 });
 
-test("groups Ready Mix products by their first two words and summarizes each day", () => {
+test("groups Ready Mix products by their first three words and summarizes each day", () => {
   const records = [
     qcRecord({
       id: 10,
@@ -249,9 +249,9 @@ test("groups Ready Mix products by their first two words and summarizes each day
     }),
   ];
 
-  assert.equal(firstTwoWords("25 N OPC 20mm"), "25 N");
+  assert.equal(firstWords("25 N OPC 20mm", 3), "25 N OPC");
   assert.deepEqual(dailyReportProductOptions(records), [
-    { key: "Ready Mix\u000025 N", category: "Ready Mix", product: "25 N" },
+    { key: "Ready Mix\u000025 N OPC", category: "Ready Mix", product: "25 N OPC" },
   ]);
   assert.deepEqual(
     buildDailyReportRows(records, "2026-09-29", "2026-09-29"),
@@ -259,7 +259,7 @@ test("groups Ready Mix products by their first two words and summarizes each day
       date: "2026-09-29",
       category: "Ready Mix",
       plant: "Plant A",
-      product: "25 N",
+      product: "25 N OPC",
       averageStrength: 42,
       minimumStrength: 40,
       maximumStrength: 44,

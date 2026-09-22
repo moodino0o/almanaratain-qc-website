@@ -521,7 +521,7 @@ export default function Reports() {
           <DialogHeader>
             <DialogTitle>Choose daily results</DialogTitle>
               <DialogDescription>
-                Choose an inclusive date range and optionally select multiple product groups. Ready Mix results are grouped by the first two words of the mix design.
+                Choose an inclusive date range and optionally select multiple product groups. Ready Mix results are grouped by the first three words of the mix design.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-5 py-2">

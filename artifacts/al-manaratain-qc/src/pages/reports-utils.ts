@@ -75,8 +75,8 @@ const detailsValue = (details: Record<string, unknown>, keys: string[]) => {
   return "";
 };
 
-export function firstTwoWords(value: string) {
-  return value.trim().split(/\s+/).filter(Boolean).slice(0, 2).join(" ") || "Unspecified";
+export function firstWords(value: string, count: number) {
+  return value.trim().split(/\s+/).filter(Boolean).slice(0, count).join(" ") || "Unspecified";
 }
 
 const addDays = (value: string, days: number) => {
@@ -88,11 +88,12 @@ const addDays = (value: string, days: number) => {
 
 const recordProduct = (record: QcRecord, details: Record<string, unknown>) => {
   if (record.testType === "Ready Mix") {
-    return firstTwoWords(detailsValue(details, ["designStrength", "mixStrength", "mixType"]) || record.material);
+    return firstWords(detailsValue(details, ["designStrength", "mixStrength", "mixType"]) || record.material, 3);
   }
-  return firstTwoWords(
+  return firstWords(
     detailsValue(details, ["blockType", "blockSize", "sampleType", "sieveSize", "materialCondition"])
       || record.material,
+    2,
   );
 };
 
