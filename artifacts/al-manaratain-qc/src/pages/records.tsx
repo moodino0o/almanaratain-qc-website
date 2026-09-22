@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { CheckCircle2, AlertTriangle, XCircle, Search, Plus, Filter, Printer } from "lucide-react";
+import { CheckCircle2, AlertTriangle, XCircle, Search, Plus, Filter, Printer, Edit2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { useAuth } from "@workspace/replit-auth-web";
 
@@ -88,7 +88,7 @@ export default function Records() {
                 <TableHead>Sample Date</TableHead>
                 <TableHead>Tested By</TableHead>
                 <TableHead className="w-[100px]">Status</TableHead>
-                <TableHead className="text-right w-[100px]">Actions</TableHead>
+                <TableHead className="text-right w-[180px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -132,6 +132,16 @@ export default function Records() {
                         >
                           View
                         </Link>
+                        {canEditQc && (
+                          <Link
+                            href={`/records/${record.id}/edit`}
+                            aria-label={`Edit ${record.recordNo}`}
+                            className="inline-flex h-8 items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+                          >
+                            <Edit2 className="mr-1.5 h-3.5 w-3.5" />
+                            Edit
+                          </Link>
+                        )}
                         <Link
                           href={`/reports/${record.id}`}
                           className="inline-flex h-8 items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
