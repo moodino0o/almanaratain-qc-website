@@ -1,0 +1,187 @@
+{
+  "application": {
+    "name": "Al Manaratain Quality Control",
+    "type": "full-stack",
+    "sourceRepository": "https://github.com/moodino0o/almanaratain-qc-website",
+    "defaultBranch": "main",
+    "monorepo": true,
+    "note": "This is not a standalone index.html website. It requires a Node.js API, PostgreSQL, object storage, and same-origin /api routing."
+  },
+  "requirements": {
+    "node": {
+      "version": "22.x or newer",
+      "environmentVariable": "NODE_VERSION",
+      "recommendedValue": "22.16.0"
+    },
+    "packageManager": {
+      "name": "pnpm",
+      "version": "10.26.1",
+      "environmentVariable": "PNPM_VERSION",
+      "installCommand": "pnpm install --frozen-lockfile"
+    },
+    "database": {
+      "type": "PostgreSQL",
+      "required": true,
+      "environmentVariable": "DATABASE_URL",
+      "secret": true,
+      "schemaCommand": "pnpm --filter @workspace/db run push",
+      "warning": "Run the schema command against the intended database before starting the API. Do not use a development database URL for production."
+    },
+    "objectStorage": {
+      "required": true,
+      "purpose": "Complaint pictures, archive documents, and other uploaded files",
+      "requiredEnvironmentVariables": [
+        {
+          "name": "PUBLIC_OBJECT_SEARCH_PATHS",
+          "secret": false,
+          "description": "Comma-separated public object-storage paths used by the API"
+        },
+        {
+          "name": "PRIVATE_OBJECT_DIR",
+          "secret": false,
+          "description": "Private object-storage directory used by the API"
+        }
+      ],
+      "providerNote": "If using a provider other than Replit Object Storage, configure that provider's credentials and map its public/private locations to these application variables."
+    }
+  },
+  "environmentVariables": {
+    "build": [
+      {
+        "name": "NODE_VERSION",
+        "value": "22.16.0",
+        "secret": false
+      },
+      {
+        "name": "PNPM_VERSION",
+        "value": "10.26.1",
+        "secret": false
+      },
+      {
+        "name": "PORT",
+        "value": "4173",
+        "secret": false,
+        "usedBy": "frontend build configuration"
+      },
+      {
+        "name": "BASE_PATH",
+        "value": "/",
+        "secret": false,
+        "usedBy": "frontend build configuration"
+      }
+    ],
+    "apiRequired": [
+      {
+        "name": "DATABASE_URL",
+        "secret": true,
+        "description": "PostgreSQL connection string"
+      },
+      {
+        "name": "PORT",
+        "value": "8080",
+        "secret": false,
+        "description": "Port used by the API process"
+      },
+      {
+        "name": "NODE_ENV",
+        "value": "production",
+        "secret": false
+      },
+      {
+        "name": "PUBLIC_OBJECT_SEARCH_PATHS",
+        "secret": false
+      },
+      {
+        "name": "PRIVATE_OBJECT_DIR",
+        "secret": false
+      }
+    ],
+    "apiOptional": [
+      {
+        "name": "ARCHIVE_MANAGER_EMAILS",
+        "secret": false,
+        "description": "Comma-separated email allowlist for archive retirement"
+      },
+      {
+        "name": "ARCHIVE_MANAGER_EMPLOYEE_IDS",
+        "secret": false,
+        "description": "Comma-separated registered employee ID allowlist for archive retirement"
+      },
+      {
+        "name": "QC_ADMIN_EMPLOYEE_IDS",
+        "secret": false,
+        "description": "Comma-separated registered employee ID allowlist for QC employee administration"
+      },
+      {
+        "name": "LOG_LEVEL",
+        "value": "info",
+        "secret": false
+      }
+    ],
+    "providerSpecific": [
+      {
+        "name": "DEFAULT_OBJECT_STORAGE_BUCKET_ID",
+        "secret": true,
+        "description": "Replit Object Storage identifier. Use the equivalent bucket/project setting when deploying to another provider."
+      },
+      {
+        "name": "SESSION_SECRET",
+        "secret": true,
+        "description": "Keep available if the selected hosting/authentication adapter requires it. The current employee session implementation stores sessions in PostgreSQL."
+      }
+    ]
+  },
+  "frontend": {
+    "sourceDirectory": "artifacts/al-manaratain-qc",
+    "buildCommand": "PORT=4173 BASE_PATH=/ pnpm --filter @workspace/al-manaratain-qc run build",
+    "outputDirectory": "artifacts/al-manaratain-qc/dist/public",
+    "runtime": "static",
+    "spaFallback": {
+      "from": "/*",
+      "to": "/index.html"
+    },
+    "apiBasePath": "/api",
+    "requiresSameOriginApi": true
+  },
+  "api": {
+    "sourceDirectory": "artifacts/api-server",
+    "buildCommand": "pnpm --filter @workspace/api-server run build",
+    "startCommand": "node --enable-source-maps artifacts/api-server/dist/index.mjs",
+    "port": 8080,
+    "healthCheckPath": "/api/healthz",
+    "runtime": "Node.js",
+    "mustNotRunAs": "Cloudflare Pages deployment command"
+  },
+  "fullStackHost": {
+    "installCommand": "pnpm install --frozen-lockfile",
+    "frontendBuildCommand": "PORT=4173 BASE_PATH=/ pnpm --filter @workspace/al-manaratain-qc run build",
+    "apiBuildCommand": "pnpm --filter @workspace/api-server run build",
+    "apiStartCommand": "node --enable-source-maps artifacts/api-server/dist/index.mjs",
+    "routing": {
+      "frontend": "Serve artifacts/al-manaratain-qc/dist/public for all non-API routes",
+      "api": "Proxy /api/* to the Node API process on port 8080",
+      "cookies": "Keep frontend and API on the same site/domain so employee session cookies work"
+    }
+  },
+  "staticHostOnly": {
+    "buildCommand": "PORT=4173 BASE_PATH=/ pnpm --filter @workspace/al-manaratain-qc run build",
+    "outputDirectory": "artifacts/al-manaratain-qc/dist/public",
+    "warning": "A static-only deployment will show the interface but login, records, reports, uploads, and database operations will not work without a separately hosted API and /api proxy."
+  },
+  "cloudflarePages": {
+    "rootDirectory": "/",
+    "buildCommand": "PORT=4173 BASE_PATH=/ pnpm --filter @workspace/al-manaratain-qc run build",
+    "deploymentCommand": "npx wrangler pages deploy artifacts/al-manaratain-qc/dist/public --project-name almanaratain-qc-website",
+    "outputDirectory": "artifacts/al-manaratain-qc/dist/public",
+    "warning": "Use Cloudflare Pages for the frontend only. Do not run the Express API with pnpm --filter @workspace/api-server run start on Cloudflare Pages."
+  },
+  "secretsPolicy": {
+    "neverCommit": [
+      "DATABASE_URL",
+      "DEFAULT_OBJECT_STORAGE_BUCKET_ID",
+      "SESSION_SECRET",
+      "providerCredentials"
+    ],
+    "configureIn": "The destination host's secret/environment-variable settings"
+  }
+}
