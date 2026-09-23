@@ -1,7 +1,7 @@
 {
   "application": {
     "name": "Al Manaratain Quality Control",
-    "type": "full-stack",
+    "type": "single-domain-full-stack-website",
     "sourceRepository": "https://github.com/moodino0o/almanaratain-qc-website",
     "defaultBranch": "main",
     "monorepo": true,
@@ -150,13 +150,31 @@
     "port": 8080,
     "healthCheckPath": "/api/healthz",
     "runtime": "Node.js",
-    "mustNotRunAs": "Cloudflare Pages deployment command"
+    "singleDomainMode": "The API process also serves the built frontend when SERVE_FRONTEND=true."
+  },
+  "singleDomainWebsite": {
+    "description": "One normal website URL serves the React frontend and the Express API behind /api.",
+    "buildCommand": "pnpm run build:website",
+    "startCommand": "pnpm run start:website",
+    "port": "$PORT",
+    "requiredRuntimeEnvironment": {
+      "SERVE_FRONTEND": "true",
+      "NODE_ENV": "production",
+      "DATABASE_URL": "<secret PostgreSQL connection string>",
+      "PUBLIC_OBJECT_SEARCH_PATHS": "<public object-storage paths>",
+      "PRIVATE_OBJECT_DIR": "<private object-storage directory>"
+    },
+    "routing": {
+      "frontend": "/*",
+      "api": "/api/*",
+      "healthCheck": "/api/healthz",
+      "spaFallback": "Unknown non-API GET routes return the frontend index.html"
+    }
   },
   "fullStackHost": {
     "installCommand": "pnpm install --frozen-lockfile",
-    "frontendBuildCommand": "PORT=4173 BASE_PATH=/ pnpm --filter @workspace/al-manaratain-qc run build",
-    "apiBuildCommand": "pnpm --filter @workspace/api-server run build",
-    "apiStartCommand": "node --enable-source-maps artifacts/api-server/dist/index.mjs",
+    "buildCommand": "pnpm run build:website",
+    "startCommand": "pnpm run start:website",
     "routing": {
       "frontend": "Serve artifacts/al-manaratain-qc/dist/public for all non-API routes",
       "api": "Proxy /api/* to the Node API process on port 8080",
