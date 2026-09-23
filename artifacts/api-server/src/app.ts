@@ -1,3 +1,4 @@
+import path from "node:path";
 import express, { type Express } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -34,5 +35,27 @@ app.use(express.urlencoded({ extended: true }));
 app.use(authMiddleware);
 
 app.use("/api", router);
+
+if (process.env.SERVE_FRONTEND === "true") {
+  const frontendDirectory = path.resolve(
+    process.cwd(),
+    process.env.FRONTEND_DIST_DIR ?? "artifacts/al-manaratain-qc/dist/public",
+  );
+  const frontendEntry = path.join(frontendDirectory, "index.html");
+
+  app.use(express.static(frontendDirectory));
+  app.get("/{*splat}", (req, res, next) => {
+    if (req.path === "/api" || req.path.startsWith("/api/")) {
+      next();
+      return;
+    }
+
+    res.sendFile(frontendEntry, (error) => {
+      if (error) {
+        next(error);
+      }
+    });
+  });
+}
 
 export default app;
