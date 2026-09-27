@@ -358,12 +358,6 @@ export default function RecordForm() {
     setTestRows(prev => prev.length === 1 ? prev : prev.filter((_, index) => index !== rowIndex));
   };
 
-  const handleTestRowKeyDown = (event: React.KeyboardEvent<HTMLInputElement>, rowIndex: number) => {
-    if (event.key !== "Enter") return;
-    event.preventDefault();
-    insertTestRow(rowIndex);
-  };
-
   const getDynamicFields = () => {
     switch (testType) {
       case TestType.Ready_Mix:
@@ -822,9 +816,22 @@ export default function RecordForm() {
         ref={formRef}
         onSubmit={handleSubmit}
         onKeyDown={(event) => {
-          if (event.key === "Enter" && event.target instanceof HTMLInputElement) {
-            event.preventDefault();
-          }
+          if (
+            event.key !== "Enter" ||
+            event.nativeEvent.isComposing ||
+            !(event.target instanceof HTMLInputElement)
+          ) return;
+
+          const fields = Array.from(
+            formRef.current?.querySelectorAll<HTMLElement>(
+              'input:not([type="hidden"]):not(:disabled):not([readonly]), textarea:not(:disabled):not([readonly]), button[role="combobox"]:not(:disabled):not([aria-disabled="true"]), button[type="submit"]:not(:disabled)',
+            ) ?? [],
+          ).filter((field) => field.getClientRects().length > 0);
+          const currentIndex = fields.indexOf(event.target);
+          if (currentIndex === -1) return;
+
+          event.preventDefault();
+          fields[currentIndex + 1]?.focus();
         }}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1350,7 +1357,6 @@ export default function RecordForm() {
                                 inputMode="numeric"
                                 value={testType === TestType.Ready_Mix ? row.testAge : row.sampleAge}
                                 onChange={event => updateTestRow(rowIndex, testType === TestType.Ready_Mix ? "testAge" : "sampleAge", event.target.value)}
-                                onKeyDown={event => handleTestRowKeyDown(event, rowIndex)}
                                 placeholder="Days"
                                 aria-label={`${testType === TestType.Ready_Mix ? "Test" : "Sample"} age for row ${rowIndex + 1}`}
                               />
@@ -1363,7 +1369,6 @@ export default function RecordForm() {
                                   inputMode="decimal"
                                   value={row[key] ?? ""}
                                   onChange={event => updateTestRow(rowIndex, key, event.target.value)}
-                                  onKeyDown={event => handleTestRowKeyDown(event, rowIndex)}
                                    placeholder={
                                       (testType === TestType.Blocks || testType === TestType.Paving_Blocks) &&
                                         ["length", "width", "height"].includes(key)
@@ -1398,7 +1403,6 @@ export default function RecordForm() {
                                     inputMode="decimal"
                                     value={row.load}
                                     onChange={event => updateTestRow(rowIndex, "load", event.target.value)}
-                                    onKeyDown={event => handleTestRowKeyDown(event, rowIndex)}
                                     placeholder="kN"
                                     aria-label={`Load for row ${rowIndex + 1}`}
                                   />
@@ -1412,7 +1416,6 @@ export default function RecordForm() {
                                      onChange={event =>
                                        updateTestRow(rowIndex, "compressiveStrength", event.target.value)
                                      }
-                                     onKeyDown={event => handleTestRowKeyDown(event, rowIndex)}
                                      placeholder="N/mm²"
                                      aria-label={`Compressive strength for row ${rowIndex + 1}`}
                                    />
@@ -1515,7 +1518,7 @@ export default function RecordForm() {
                         + Add row
                       </Button>
                       <p className="text-xs text-muted-foreground">
-                        Pressing Enter adds a new numbered row after the current row.
+                        Use + Add row to add another numbered entry.
                       </p>
                     </>
                   )}
