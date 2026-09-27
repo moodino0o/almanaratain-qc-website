@@ -114,9 +114,10 @@ const cubeRowFromSaved = (row: unknown): CubeResultRow => {
 };
 
 const handleCubeInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-  if (event.key !== "Enter") return;
+  if (event.key !== "Enter" && event.code !== "NumpadEnter") return;
 
   event.preventDefault();
+  const dialog = event.currentTarget.closest<HTMLElement>('[role="dialog"]');
   const currentRow = event.currentTarget.closest<HTMLElement>("[data-cube-result-row]");
   if (!currentRow) return;
 
@@ -134,10 +135,14 @@ const handleCubeInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     ...currentRowInputs.slice(currentInputIndex + 1),
     ...rows.slice(currentRowIndex + 1).flatMap(getNavigableInputs),
   ];
-  const nextInput = candidateInputs.find((input) => input.value.trim() === "");
-  if (!nextInput) return;
-  nextInput.scrollIntoView({ block: "nearest", inline: "nearest" });
-  nextInput.focus({ preventScroll: true });
+  const nextInput = candidateInputs[0];
+  if (nextInput) {
+    nextInput.focus();
+    return;
+  }
+  dialog
+    ?.querySelector<HTMLButtonElement>("[data-cube-results-save]")
+    ?.focus();
 };
 
 export default function Reports() {
@@ -784,6 +789,7 @@ export default function Reports() {
                   Back
                 </Button>
                 <Button
+                  data-cube-results-save
                   onClick={saveResults}
                   disabled={!resultEntries.length || isSavingResults}
                 >
