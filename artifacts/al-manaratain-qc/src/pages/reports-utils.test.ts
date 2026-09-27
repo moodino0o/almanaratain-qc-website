@@ -306,7 +306,7 @@ test("includes non-Ready Mix categories, date ranges, and selected product group
       category: "Blocks",
       plant: "Plant B",
       product: "Hollow Concrete",
-      cubeAge: null,
+      cubeAge: 28,
       averageStrength: 10.8,
       minimumStrength: 9.6,
       maximumStrength: 12,
@@ -314,6 +314,31 @@ test("includes non-Ready Mix categories, date ranges, and selected product group
       strengthUnit: "N/mm²",
     }],
   );
+});
+
+test("uses an entered Block testing date before the age-derived date", () => {
+  const rows = buildDailyReportRows(
+    [
+      qcRecord({
+        id: 17,
+        testType: "Blocks",
+        sampleDate: "2026-09-01",
+        location: "Plant A",
+        material: "4 inch Block",
+        details: {
+          blockType: "Hollow Concrete Block",
+          blockAge: 28,
+          testingDate: "2026-10-02",
+          testRows: [{ calculatedStrength: 10 }],
+        },
+      }),
+    ],
+    "2026-09-01",
+    "2026-09-01",
+  );
+
+  assert.equal(rows[0]?.castingDate, "2026-09-01");
+  assert.equal(rows[0]?.testingDate, "2026-10-02");
 });
 
 test("uses Block Age for block results and orders Ready Mix ages 7 days before 28 days per plant", () => {
