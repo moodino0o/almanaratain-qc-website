@@ -971,6 +971,250 @@ function BlockStandardAssignmentFlow({
   );
 }
 
+type ProductStrengthTestType =
+  | typeof TestType.Ready_Mix
+  | typeof TestType.Paving_Blocks;
+
+function ProductStrengthStandardAssignmentFlow({
+  testType,
+  standards,
+  productOptions,
+  blockSizes,
+  onCreateReferenceItem,
+  onCreateStandard,
+  onLinkStandard,
+  isLinking,
+}: {
+  testType: ProductStrengthTestType;
+  standards: StrengthStandard[];
+  productOptions: string[];
+  blockSizes: string[];
+  onCreateReferenceItem: (
+    categoryKey: string,
+    value: string,
+  ) => Promise<string | void>;
+  onCreateStandard: (product: string, blockSize: string) => void;
+  onLinkStandard: (
+    standard: StrengthStandard,
+    product: string,
+    blockSize: string,
+  ) => void;
+  isLinking: boolean;
+}) {
+  const isPaving = testType === TestType.Paving_Blocks;
+  const [productInput, setProductInput] = useState("");
+  const [blockSizeInput, setBlockSizeInput] = useState("");
+  const [manualStandardId, setManualStandardId] = useState("");
+  const productStandards = useMemo(
+    () => standards.filter((standard) => standard.testType === testType),
+    [standards, testType],
+  );
+  const availableProducts = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          ...productOptions,
+          ...productStandards.map((standard) => standard.material),
+        ]),
+      ).filter(Boolean),
+    [productOptions, productStandards],
+  );
+  const availableBlockSizes = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          ...blockSizes,
+          ...productStandards.map((standard) => standard.blockSize ?? ""),
+        ]),
+      ).filter(Boolean),
+    [blockSizes, productStandards],
+  );
+  const product = productInput || availableProducts[0] || "";
+  const blockSize = isPaving
+    ? blockSizeInput || availableBlockSizes[0] || ""
+    : "";
+  const matchingStandards = useMemo(
+    () =>
+      productStandards
+        .filter(
+          (standard) =>
+            standard.material.trim().toLocaleLowerCase() ===
+              product.trim().toLocaleLowerCase() &&
+            (!isPaving ||
+              !standard.blockSize ||
+              blockSizeMatches(standard.blockSize, blockSize)),
+        )
+        .sort((left, right) => left.id - right.id),
+    [blockSize, isPaving, product, productStandards],
+  );
+  const manualStandard =
+    productStandards.find(
+      (standard) => String(standard.id) === manualStandardId,
+    ) ?? productStandards[0];
+  const manualStandardAlreadyLinked =
+    Boolean(manualStandard) &&
+    manualStandard?.material.trim().toLocaleLowerCase() ===
+      product.trim().toLocaleLowerCase() &&
+    (!isPaving || blockSizeMatches(manualStandard?.blockSize, blockSize));
+  const productLabel = isPaving ? "Paving product" : "Mix design";
+  const flowTitle = isPaving
+    ? "Paving Blocks Product → Standard Flow"
+    : "Ready Mix Product → Standard Flow";
+
+  return (
+    <Card className="border-primary/20 shadow-sm">
+      <CardHeader className="border-b border-border/70 bg-muted/30">
+        <CardTitle>{flowTitle}</CardTitle>
+        <CardDescription>
+          Link standards to a specific {isPaving ? "paving product and size" : "mix design"}.
+          Matching records will use the linked standard automatically.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5 pt-5">
+        <div
+          className={`grid items-center gap-3 ${
+            isPaving
+              ? "md:grid-cols-[1fr_auto_1fr_auto_1.25fr]"
+              : "md:grid-cols-[1fr_auto_1fr_auto_1.25fr]"
+          }`}
+        >
+          <div className="space-y-2 rounded-lg border bg-background p-3">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              1 · {productLabel}
+            </span>
+            <TypeaheadInput
+              value={product}
+              onChange={setProductInput}
+              options={availableProducts}
+              placeholder={`Select or type a ${productLabel}`}
+              onCreateOption={(value) =>
+                onCreateReferenceItem("materials", value)
+              }
+            />
+          </div>
+          {isPaving && (
+            <>
+              <ArrowRight className="mx-auto hidden h-5 w-5 text-muted-foreground md:block" aria-hidden="true" />
+              <div className="space-y-2 rounded-lg border bg-background p-3">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  2 · Block Size
+                </span>
+                <TypeaheadInput
+                  value={blockSize}
+                  onChange={setBlockSizeInput}
+                  options={availableBlockSizes}
+                  placeholder="Select or type a Block Size"
+                  onCreateOption={(value) =>
+                    onCreateReferenceItem("blockSizes", value)
+                  }
+                />
+              </div>
+            </>
+          )}
+          <ArrowRight className="mx-auto hidden h-5 w-5 text-muted-foreground md:block" aria-hidden="true" />
+          <div className="space-y-2 rounded-lg border bg-background p-3">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {isPaving ? "3" : "2"} · Automatic Match
+            </span>
+            {matchingStandards[0] ? (
+              <div className="text-sm">
+                <p className="font-semibold">{matchingStandards[0].bsStandard}</p>
+                <p className="text-muted-foreground">
+                  {matchingStandards[0].requiredStrength} {matchingStandards[0].strengthUnit}
+                  {isPaving && matchingStandards[0].blockSize
+                    ? ` · ${matchingStandards[0].blockSize}`
+                    : ""}
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No standard is linked yet.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="rounded-lg border p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                Automatic
+              </span>
+              <span className="text-sm font-semibold">Match by {productLabel}{isPaving ? " + Size" : ""}</span>
+            </div>
+            <p className="mb-4 text-sm text-muted-foreground">
+              Add a new product-specific standard without changing the existing standards.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!product || (isPaving && !blockSize)}
+              onClick={() => onCreateStandard(product, blockSize)}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add a standard for this product
+            </Button>
+          </div>
+
+          <div className="rounded-lg border p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">
+                Manual link
+              </span>
+              <span className="text-sm font-semibold">Choose the standard to link</span>
+            </div>
+            {productStandards.length ? (
+              <>
+                <select
+                  aria-label={`Strength standard to link to this ${productLabel}`}
+                  value={manualStandard ? String(manualStandard.id) : ""}
+                  onChange={(event) => setManualStandardId(event.target.value)}
+                  className="mb-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  {productStandards.map((standard) => (
+                    <option key={standard.id} value={standard.id}>
+                      {standard.bsStandard} — {standard.requiredStrength} {standard.strengthUnit}
+                      {` · ${standard.material}`}
+                      {isPaving ? ` · ${standard.blockSize || "All sizes"}` : ""}
+                    </option>
+                  ))}
+                </select>
+                {manualStandard && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={
+                      !product ||
+                      (isPaving && !blockSize) ||
+                      manualStandardAlreadyLinked ||
+                      isLinking
+                    }
+                    onClick={() =>
+                      onLinkStandard(manualStandard, product, blockSize)
+                    }
+                  >
+                    {isLinking
+                      ? "Linking..."
+                      : manualStandardAlreadyLinked
+                        ? "Already linked"
+                        : `Link to ${product}${isPaving ? ` · ${blockSize}` : ""}`}
+                  </Button>
+                )}
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Linking updates the selected standard’s product assignment; its reference and strength stay unchanged.
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Add a {isPaving ? "Paving Blocks" : "Ready Mix"} standard first, then link it to a product.
+              </p>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function ShapeFactorsFolder({
   shapeFactors,
   canEdit,
@@ -1355,6 +1599,24 @@ export default function Standards() {
     setShapeFactorEditorOpen(false);
   };
 
+  const openCreateProductStandardFor = (
+    testType: ProductStrengthTestType,
+    product: string,
+    blockSize: string,
+  ) => {
+    setEditing(null);
+    setForm({
+      ...emptyForm,
+      testType,
+      material: product,
+      blockSize: testType === TestType.Paving_Blocks ? blockSize : "",
+    });
+    setStandardView("strength");
+    setEditorOpen(true);
+    setSieveEditorOpen(false);
+    setShapeFactorEditorOpen(false);
+  };
+
   const openEdit = (standard: StrengthStandard) => {
     setEditing(standard);
     setForm(formFromStandard(standard));
@@ -1489,6 +1751,58 @@ export default function Standards() {
       invalidateStandards();
     } catch {
       toast.error("Unable to link the Block standard.");
+    }
+  };
+
+  const handleLinkProductStandard = async (
+    standard: StrengthStandard,
+    testType: ProductStrengthTestType,
+    product: string,
+    blockSize: string,
+  ) => {
+    const sameProduct =
+      standard.material.trim().toLocaleLowerCase() ===
+        product.trim().toLocaleLowerCase() &&
+      (testType !== TestType.Paving_Blocks ||
+        blockSizeMatches(standard.blockSize, blockSize));
+    if (sameProduct) return;
+
+    const currentProduct = testType === TestType.Paving_Blocks
+      ? `${standard.material} / ${standard.blockSize || "all sizes"}`
+      : standard.material;
+    const nextProduct = testType === TestType.Paving_Blocks
+      ? `${product} / ${blockSize}`
+      : product;
+    if (
+      (standard.material.trim() || standard.blockSize?.trim()) &&
+      !confirm(
+        `Move ${standard.bsStandard} from ${currentProduct} to ${nextProduct}?`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await updateStandard.mutateAsync({
+        id: standard.id,
+        data: {
+          testType,
+          material: product,
+          blockType: null,
+          blockSize: testType === TestType.Paving_Blocks ? blockSize : null,
+          bsStandard: standard.bsStandard,
+          requiredStrength: standard.requiredStrength,
+          strengthUnit: standard.strengthUnit,
+        },
+      });
+      toast.success(`${standard.bsStandard} linked to ${nextProduct}.`);
+      setExpandedStrengthFolders((current) => ({
+        ...current,
+        [testType === TestType.Ready_Mix ? "readyMix" : "paving"]: true,
+      }));
+      invalidateStandards();
+    } catch {
+      toast.error("Unable to link the strength standard to this product.");
     }
   };
 
@@ -1826,15 +2140,62 @@ export default function Standards() {
         ) : (
           <>
             {canEditStandards && (
-              <BlockStandardAssignmentFlow
-                standards={strengthStandards ?? []}
-                blockTypes={lookups?.blockTypes ?? []}
-                blockSizes={lookups?.blockSizes ?? []}
-                onCreateReferenceItem={addReferenceDataItem}
-                onCreateBlockStandard={openCreateBlockStandardFor}
-                onLinkStandard={handleLinkBlockStandard}
-                isLinking={updateStandard.isPending}
-              />
+              <>
+                <BlockStandardAssignmentFlow
+                  standards={strengthStandards ?? []}
+                  blockTypes={lookups?.blockTypes ?? []}
+                  blockSizes={lookups?.blockSizes ?? []}
+                  onCreateReferenceItem={addReferenceDataItem}
+                  onCreateBlockStandard={openCreateBlockStandardFor}
+                  onLinkStandard={handleLinkBlockStandard}
+                  isLinking={updateStandard.isPending}
+                />
+                <ProductStrengthStandardAssignmentFlow
+                  testType={TestType.Ready_Mix}
+                  standards={strengthStandards ?? []}
+                  productOptions={[
+                    ...(lookups?.materials ?? []),
+                    ...(lookups?.mixStrengths ?? []),
+                  ]}
+                  blockSizes={[]}
+                  onCreateReferenceItem={addReferenceDataItem}
+                  onCreateStandard={(product) =>
+                    openCreateProductStandardFor(TestType.Ready_Mix, product, "")
+                  }
+                  onLinkStandard={(standard, product) =>
+                    void handleLinkProductStandard(
+                      standard,
+                      TestType.Ready_Mix,
+                      product,
+                      "",
+                    )
+                  }
+                  isLinking={updateStandard.isPending}
+                />
+                <ProductStrengthStandardAssignmentFlow
+                  testType={TestType.Paving_Blocks}
+                  standards={strengthStandards ?? []}
+                  productOptions={lookups?.materials ?? []}
+                  blockSizes={lookups?.blockSizes ?? []}
+                  onCreateReferenceItem={addReferenceDataItem}
+                  onCreateStandard={(product, blockSize) =>
+                    openCreateProductStandardFor(
+                      TestType.Paving_Blocks,
+                      product,
+                      blockSize,
+                    )
+                  }
+                  onLinkStandard={(standard, product, blockSize) =>
+                    void handleLinkProductStandard(
+                      standard,
+                      TestType.Paving_Blocks,
+                      product,
+                      blockSize,
+                    )
+                  }
+                  isLinking={updateStandard.isPending}
+                />
+              </>
             )}
             {strengthFolders.map((folder) => (
               <StrengthStandardsFolder
