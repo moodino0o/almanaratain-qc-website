@@ -40,10 +40,41 @@ function layoutColumns(
     .sort((left, right) => left.order - right.order);
 }
 
-function textValue(value: unknown, fallback = "-") {
+function layoutColumnsWithRequired(
+  layout: ReportLayout | undefined,
+  tableKey: string,
+  fallback: LayoutColumn[],
+  requiredKeys: string[],
+) {
+  const configured = layout?.config.columns[tableKey] ?? [];
+  const columns = layoutColumns(layout, tableKey, fallback);
+  for (const key of requiredKeys) {
+    if (columns.some((column) => column.key === key)) continue;
+    const savedColumn = configured.find((column) => column.key === key);
+    const defaultColumn = fallback.find((column) => column.key === key);
+    const requiredColumn = savedColumn ?? defaultColumn;
+    if (requiredColumn) columns.push({ ...requiredColumn, visible: true });
+  }
+  return columns.sort((left, right) => left.order - right.order);
+}
+
+function rawTextValue(value: unknown, fallback = "-") {
   if (value === null || value === undefined || value === "") return fallback;
   if (typeof value === "object") return JSON.stringify(value);
   return String(value);
+}
+
+function textValue(value: unknown, fallback = "-") {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return formatNumber(value);
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(trimmed)) {
+      return formatNumber(Number(trimmed));
+    }
+  }
+  return rawTextValue(value, fallback);
 }
 
 function detailValue(details: DetailMap, keys: string[], fallback = "-") {
@@ -99,8 +130,8 @@ function strengthStandardMatchesRecord(standard: StrengthStandard, record: QcRec
     blockSizeMatches(standard.blockSize, blockSize);
 }
 
-function formatNumber(value: number, digits = 1) {
-  return Number.isInteger(value) ? String(value) : value.toFixed(digits);
+function formatNumber(value: number) {
+  return value.toFixed(1);
 }
 
 function formatReportDate(value: string | undefined | null) {
@@ -337,8 +368,8 @@ function BlockCompressionRowsTable({
   };
   const strengthSummary = numericSummary(columns.airDry);
   const strengthLabel = "Air Dry Strength";
-  const displayNumber = (value: number | null, digits = 2) =>
-    value === null ? "-" : formatNumber(value, digits);
+  const displayNumber = (value: number | null) =>
+    value === null ? "-" : formatNumber(value);
   return (
     <>
       <div className="block-report-section-heading">
@@ -365,7 +396,7 @@ function BlockCompressionRowsTable({
           <tbody>
             {rowValues.map((values, index) => (
               <tr key={index}>
-                <td>{textValue(values.rowNo, String(index + 1))}</td>
+                <td>{rawTextValue(values.rowNo, String(index + 1))}</td>
                 <td>{textValue(values.length)}</td>
                 <td>{textValue(values.width)}</td>
                 <td>{textValue(values.height)}</td>
@@ -374,7 +405,7 @@ function BlockCompressionRowsTable({
                 <td>{displayNumber(columns.airDry[index])}</td>
                 <td>{displayNumber(columns.normalized[index])}</td>
                 <td>{displayNumber(columns.density[index])}</td>
-                <td>{displayNumber(columns.wetWeight[index], 3)}</td>
+                <td>{displayNumber(columns.wetWeight[index])}</td>
               </tr>
             ))}
             <tr className="block-report-average-row">
@@ -383,7 +414,7 @@ function BlockCompressionRowsTable({
               <td>{displayNumber(averages.airDry)}</td>
               <td>{displayNumber(averages.normalized)}</td>
               <td>{displayNumber(averages.density)}</td>
-              <td>{displayNumber(averages.wetWeight, 3)}</td>
+              <td>{displayNumber(averages.wetWeight)}</td>
             </tr>
           </tbody>
         </table>
@@ -446,11 +477,11 @@ function ReadyMixAverageStrengthTable({ rows }: { rows: unknown[] }) {
         <tbody>
           {ages.map((age) => (
             <tr key={age}>
-              <td>{age} days</td>
+              <td>{formatNumber(age)} days</td>
               <td>
                 {averageStrengthForAge(rows, age) === null
                   ? "-"
-                  : `${formatNumber(averageStrengthForAge(rows, age) ?? 0, 2)} N/mm2`}
+                  : `${formatNumber(averageStrengthForAge(rows, age) ?? 0)} N/mm2`}
               </td>
             </tr>
           ))}
@@ -503,7 +534,7 @@ function SpecimenRowsTable({
             return (
               <tr key={index}>{tableColumns.map((column) => {
                 const value = column.key === "no"
-                  ? textValue(values.rowNo, String(index + 1))
+                  ? rawTextValue(values.rowNo, String(index + 1))
                   : column.key === "age"
                     ? textValue(values.testAge || values.sampleAge)
                     : column.key === "strength"
@@ -533,7 +564,7 @@ function PavingStrengthStatistics({ rows }: { rows: unknown[] }) {
   });
   const summary = numericSummary(correctedStrengths);
   const displayNumber = (value: number | null) =>
-    value === null ? "-" : formatNumber(value, 2);
+    value === null ? "-" : formatNumber(value);
   return (
     <>
       <div className="block-report-section-heading block-report-statistics-heading">
@@ -602,7 +633,7 @@ function SieveRowsTable({
                 const value = column.key === "no"
                   ? index + 1
                   : column.key === "size"
-                    ? textValue(values.sieveSize)
+                    ? rawTextValue(values.sieveSize)
                     : column.key === "returned"
                       ? textValue(values.amountReturned)
                       : column.key === "passing"
@@ -639,7 +670,7 @@ function SieveEvaluationTable({ value }: { value: unknown }) {
             const item = typeof criterion === "object" && criterion !== null
               ? criterion as Record<string, unknown> : {};
             return <tr key={index}>
-              <td>{textValue(item.sieveSize)}</td>
+              <td>{rawTextValue(item.sieveSize)}</td>
               <td>{item.measuredValue == null ? "Missing" : `${textValue(item.measuredValue)} ${textValue(item.unit)}`}</td>
               <td>{item.minimum == null ? "—" : textValue(item.minimum)} to {item.maximum == null ? "—" : textValue(item.maximum)} {textValue(item.unit)}</td>
               <td>{item.withinLimits === true ? "Pass" : item.withinLimits === false ? "Fail" : "Review"}</td>
@@ -798,7 +829,7 @@ function ReadyMixComplianceBlock({
           <strong>
             {reportedStrength === null
               ? "—"
-              : `${formatNumber(reportedStrength, 2)} ${strengthUnit}`}
+                    : `${formatNumber(reportedStrength)} ${strengthUnit}`}
           </strong>
         </div>
         <div>
@@ -870,7 +901,8 @@ function ReadyMixReport({
       ];
   const orderedTestRows = sortCubeRowsByAge(testRows);
   const average28DayStrength = averageStrengthForAge(orderedTestRows, 28);
-  const resultColumns = layoutColumns(layout, "readyMixResults", [
+  const requiredStrengthEvaluation = objectValue(details.strengthEvaluation);
+  const defaultResultColumns: LayoutColumn[] = [
     { key: "no", label: "No.", visible: true, order: 0, width: 7 },
     { key: "age", label: "Test Age", visible: true, order: 1, width: 9 },
     { key: "length", label: "Length (mm)", visible: true, order: 2, width: 10 },
@@ -881,7 +913,13 @@ function ReadyMixReport({
     { key: "absorption", label: "Water Absorption (%)", visible: true, order: 7, width: 13 },
     { key: "load", label: "Load (kN)", visible: true, order: 8, width: 10 },
     { key: "strength", label: "Calculated Strength", visible: true, order: 9, width: 11 },
-  ]);
+  ];
+  const resultColumns = layoutColumnsWithRequired(
+    layout,
+    "readyMixResults",
+    defaultResultColumns,
+    ["length", "width", "height"],
+  );
 
   return (
     <>
@@ -907,6 +945,12 @@ function ReadyMixReport({
           <ReportField label="Temperature (°C)" value={detailValue(details, ["temperature"])} />
         </div>
       </section>
+
+      <StrengthStandardsTable
+        record={record}
+        standards={standards}
+        evaluation={requiredStrengthEvaluation}
+      />
 
       <section className="report-ready-mix-results">
         <SectionHeading>Specimen Measurements</SectionHeading>
