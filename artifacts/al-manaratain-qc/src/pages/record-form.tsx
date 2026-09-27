@@ -1423,7 +1423,7 @@ export default function RecordForm() {
                                 testType === TestType.Blocks ||
                                 testType === TestType.Paving_Blocks) && (
                               <>
-                                <td className="px-2 py-2">
+                                <td className={compactBlockCellClass}>
                                   <Input
                                     type="text"
                                     inputMode="decimal"
@@ -1461,7 +1461,8 @@ export default function RecordForm() {
                                    />
                                  </td>
                                )}
-                                <td className="px-2 py-2">
+                                {testType !== TestType.Blocks && (
+                                 <td className="px-2 py-2">
                                    <div
                                      className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground"
                                      aria-label={`Calculated strength for row ${rowIndex + 1}`}
@@ -1475,6 +1476,7 @@ export default function RecordForm() {
                                          : "Enter load and dimensions"}
                                    </div>
                                 </td>
+                                )}
                                  {testType === TestType.Paving_Blocks && (
                                    <>
                                      <td className="px-2 py-2">
@@ -1496,7 +1498,6 @@ export default function RecordForm() {
                                  )}
                                 {testType === TestType.Blocks && (
                                   <>
-                                 {testType === TestType.Blocks && (
                                  <td className={compactBlockCellClass}>
                                     <div
                                       className="flex h-8 items-center rounded-md border bg-muted/40 px-1.5 text-[11px] font-semibold leading-tight text-foreground"
@@ -1517,7 +1518,6 @@ export default function RecordForm() {
                                         {calculateBlockDensity(row) || "Enter wet weight and dimensions"}
                                       </div>
                                     </td>
-                                 )}
                                   </>
                                 )}
                               </>
