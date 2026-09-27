@@ -31,8 +31,16 @@ export default function Records() {
     }
   };
 
-  const getRecordDetail = (details: Record<string, unknown>, key: string) => {
-    const value = details[key];
+  const getRecordDetail = (details: Record<string, unknown>, keys: string[]) => {
+    const normalized = new Map(
+      Object.entries(details).map(([key, value]) => [
+        key.toLowerCase().replace(/[^a-z0-9]/g, ""),
+        value,
+      ]),
+    );
+    const value = keys
+      .map((key) => normalized.get(key.toLowerCase().replace(/[^a-z0-9]/g, "")))
+      .find((candidate) => candidate !== undefined && candidate !== null);
     return typeof value === "string" && value.trim() ? value : "—";
   };
 
@@ -95,8 +103,8 @@ export default function Records() {
                 <TableHead className="w-[8%] px-1.5 py-2 text-[10px] leading-tight">Record No.</TableHead>
                 <TableHead className="w-[11%] px-1.5 py-2 text-[10px] leading-tight">Test Type</TableHead>
                 <TableHead className="w-[9%] px-1.5 py-2 text-[10px] leading-tight">Location</TableHead>
-                <TableHead className="w-[11%] px-1.5 py-2 text-[10px] leading-tight">Customer</TableHead>
-                <TableHead className="w-[10%] px-1.5 py-2 text-[10px] leading-tight">Site</TableHead>
+                <TableHead className="w-[11%] px-1.5 py-2 text-[10px] leading-tight">Customer Name</TableHead>
+                <TableHead className="w-[10%] px-1.5 py-2 text-[10px] leading-tight">Site Location</TableHead>
                 <TableHead className="w-[12%] px-1.5 py-2 text-[10px] leading-tight">Material</TableHead>
                 <TableHead className="w-[8%] px-1.5 py-2 text-[10px] leading-tight">Sample Date</TableHead>
                 <TableHead className="w-[9%] px-1.5 py-2 text-[10px] leading-tight">Tested By</TableHead>
@@ -134,10 +142,10 @@ export default function Records() {
                     </TableCell>
                     <TableCell className="whitespace-normal break-words px-1.5 py-2">{record.location}</TableCell>
                     <TableCell className="whitespace-normal break-words px-1.5 py-2">
-                      {getRecordDetail(record.details, "customerName")}
+                      {getRecordDetail(record.details, ["customerName", "customer"])}
                     </TableCell>
                     <TableCell className="whitespace-normal break-words px-1.5 py-2">
-                      {getRecordDetail(record.details, "customerLocation")}
+                      {getRecordDetail(record.details, ["customerLocation", "siteLocation", "site"])}
                     </TableCell>
                     <TableCell className="whitespace-normal break-words px-1.5 py-2">{record.material}</TableCell>
                     <TableCell className="whitespace-normal break-words px-1.5 py-2">{formatDate(record.sampleDate)}</TableCell>
