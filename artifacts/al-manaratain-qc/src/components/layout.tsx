@@ -28,8 +28,12 @@ export function Layout({ children }: LayoutProps) {
     { href: "/reports", label: "Reports", icon: FileText },
     { href: "/archive", label: "Archive", icon: Archive },
     { href: "/standards", label: "Standards", icon: FileCheck2 },
-    ...(role === "administrator"
-      ? [{ href: "/settings", label: "Settings", icon: Settings }]
+    ...(role
+      ? [{
+          href: "/settings",
+          label: role === "administrator" ? "Settings" : "Shared Values",
+          icon: Settings,
+        }]
       : []),
   ];
 

@@ -911,6 +911,167 @@ function ReportLayoutsSection() {
   );
 }
 
+const EMPLOYEE_REFERENCE_VALUE_OPTIONS = [
+  { key: "customers", label: "Customer name", placeholder: "Enter customer name" },
+  {
+    key: "customerLocations",
+    label: "Customer location",
+    placeholder: "Enter customer location",
+  },
+  {
+    key: "locations",
+    label: "Plant / production location",
+    placeholder: "Enter plant or production location",
+  },
+  { key: "mixStrengths", label: "Mix design", placeholder: "Enter mix design" },
+] as const;
+
+function EmployeeSharedValues({
+  categories,
+  isLoading,
+  isError,
+  onRetry,
+}: {
+  categories: ReferenceCategory[];
+  isLoading: boolean;
+  isError: boolean;
+  onRetry: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const createItem = useCreateReferenceItem();
+  const [categoryKey, setCategoryKey] = useState<string>("customers");
+  const [value, setValue] = useState("");
+  const availableOptions = EMPLOYEE_REFERENCE_VALUE_OPTIONS.flatMap((option) => {
+    const category = categories.find((item) => item.key === option.key);
+    return category ? [{ ...option, category }] : [];
+  });
+  const selectedOption = availableOptions.find(
+    (option) => option.key === categoryKey,
+  );
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const normalizedValue = value.trim();
+    if (!selectedOption || !normalizedValue) return;
+    createItem.mutate(
+      {
+        categoryId: selectedOption.category.id,
+        data: { value: normalizedValue },
+      },
+      {
+        onSuccess: (createdItem) => {
+          setValue("");
+          toast.success(`Added “${createdItem.value}” for everyone to use.`);
+          void queryClient.invalidateQueries({
+            queryKey: getGetReferenceDataQueryKey(),
+          });
+          void queryClient.invalidateQueries({
+            queryKey: getGetLookupsQueryKey(),
+          });
+        },
+        onError: () =>
+          toast.error("Could not add this value. It may already exist."),
+      },
+    );
+  };
+
+  return (
+    <div className="mx-auto mt-8 w-full max-w-3xl">
+      <Card>
+        <div className="border-b p-6">
+          <h1 className="text-xl font-semibold">Add shared values</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Any approved employee can add customer names, customer and plant
+            locations, or Ready Mix mix designs. New values become available
+            to everyone.
+          </p>
+        </div>
+        <div className="p-6">
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground">
+              Loading shared values…
+            </p>
+          ) : isError ? (
+            <div className="space-y-3">
+              <p className="text-sm text-destructive">
+                Shared values could not be loaded.
+              </p>
+              <Button type="button" variant="outline" onClick={onRetry}>
+                Try again
+              </Button>
+            </div>
+          ) : (
+            <form
+              onSubmit={handleSubmit}
+              className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto]"
+            >
+              <div className="space-y-2">
+                <label
+                  htmlFor="shared-reference-category"
+                  className="text-sm font-medium"
+                >
+                  Value type
+                </label>
+                <select
+                  id="shared-reference-category"
+                  value={categoryKey}
+                  onChange={(event) => setCategoryKey(event.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  disabled={!availableOptions.length}
+                >
+                  {availableOptions.map((option) => (
+                    <option key={option.key} value={option.key}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label
+                  htmlFor="shared-reference-value"
+                  className="text-sm font-medium"
+                >
+                  New value
+                </label>
+                <Input
+                  id="shared-reference-value"
+                  value={value}
+                  onChange={(event) => setValue(event.target.value)}
+                  placeholder={
+                    selectedOption?.placeholder ?? "Enter a new value"
+                  }
+                  maxLength={120}
+                  required
+                  disabled={!selectedOption}
+                />
+              </div>
+              <div className="flex items-end">
+                <Button
+                  type="submit"
+                  className="w-full sm:w-auto"
+                  disabled={
+                    !selectedOption ||
+                    !value.trim() ||
+                    createItem.isPending
+                  }
+                >
+                  {createItem.isPending ? "Adding…" : "Add value"}
+                </Button>
+              </div>
+              {!availableOptions.length && (
+                <p className="text-sm text-destructive sm:col-span-3">
+                  The shared-value categories are not configured. Ask an
+                  administrator to restore them.
+                </p>
+              )}
+            </form>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 export default function Settings() {
   const queryClient = useQueryClient();
   const { isAdmin } = useAuth();
@@ -923,14 +1084,12 @@ export default function Settings() {
 
   if (!isAdmin) {
     return (
-      <Card className="mx-auto mt-12 max-w-lg text-center">
-        <CardContent className="space-y-3 p-10">
-          <h1 className="text-lg font-semibold">Administrator access required</h1>
-          <p className="text-sm text-muted-foreground">
-            Settings and employee access are only available to administrators.
-          </p>
-        </CardContent>
-      </Card>
+      <EmployeeSharedValues
+        categories={referenceData?.categories ?? []}
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => void refetch()}
+      />
     );
   }
 

@@ -38,6 +38,12 @@ import {
 
 const REFERENCE_NUMBER_MAX_LENGTH = 32;
 const DEFAULT_APPROVED_BY = "ADEL ABBAS EBRAHIM";
+const EMPLOYEE_ADDABLE_REFERENCE_CATEGORIES = new Set([
+  "locations",
+  "customers",
+  "customerLocations",
+  "mixStrengths",
+]);
 
 export default function RecordForm() {
   const { id } = useParams();
@@ -123,10 +129,16 @@ export default function RecordForm() {
     }
   };
 
-  const createReferenceOption = (categoryKey?: string) =>
-    canEditReferenceData && categoryKey
+  const createReferenceOption = (categoryKey?: string) => {
+    const canAddCategory =
+      canEditReferenceData ||
+      (Boolean(role) &&
+        categoryKey !== undefined &&
+        EMPLOYEE_ADDABLE_REFERENCE_CATEGORIES.has(categoryKey));
+    return canAddCategory && categoryKey
       ? (value: string) => addReferenceDataItem(categoryKey, value)
       : undefined;
+  };
 
   useEffect(() => {
     if (!isEditing || !existingRecord || initializedRecordId.current === recordId) return;

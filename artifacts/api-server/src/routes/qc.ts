@@ -79,10 +79,12 @@ import {
   UpdateShapeFactorResponse,
 } from "@workspace/api-zod";
 import {
+  requireAuthenticated,
   requireAdministrator,
   requireQcEditor,
 } from "../middlewares/requireAuthenticated";
 import { isConfiguredAdministrator } from "../lib/auth";
+import { canEmployeeAddReferenceCategory } from "../lib/employee-reference-permissions";
 import {
   blockShapeFactorFromSize,
   pavingCorrectionFactorFromSize,
@@ -1020,7 +1022,7 @@ router.delete("/reference-data/categories/:id", requireAdministrator, async (req
   res.sendStatus(204);
 });
 
-router.post("/reference-data/categories/:categoryId/items", requireAdministrator, async (req, res): Promise<void> => {
+router.post("/reference-data/categories/:categoryId/items", requireAuthenticated, async (req, res): Promise<void> => {
   const params = CreateReferenceItemParams.safeParse(req.params);
   const body = CreateReferenceItemBody.safeParse(req.body);
   if (!params.success) {
@@ -1037,6 +1039,17 @@ router.post("/reference-data/categories/:categoryId/items", requireAdministrator
     .where(eq(qcReferenceCategoriesTable.id, params.data.categoryId));
   if (!category) {
     res.status(404).json({ error: "Reference category not found" });
+    return;
+  }
+  const isAdministrator = await isConfiguredAdministrator(req.user);
+  if (
+    !isAdministrator &&
+    !canEmployeeAddReferenceCategory(category.key)
+  ) {
+    res.status(403).json({
+      code: "REFERENCE_DATA_ADMIN_REQUIRED",
+      error: "Administrator access is required to add values to this category.",
+    });
     return;
   }
   try {
