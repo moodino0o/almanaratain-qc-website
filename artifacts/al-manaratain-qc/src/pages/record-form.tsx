@@ -842,7 +842,9 @@ export default function RecordForm() {
           const currentIndex = fields.indexOf(event.target);
           if (currentIndex === -1) return;
 
-          const nextField = fields[currentIndex + 1];
+          const nextField = fields
+            .slice(currentIndex + 1)
+            .find((field) => field.dataset.enterSkip !== "true");
           if (!nextField) return;
           nextField.scrollIntoView({ block: "nearest", inline: "nearest" });
           nextField.focus({ preventScroll: true });
@@ -1382,6 +1384,7 @@ export default function RecordForm() {
                                   type="text"
                                   inputMode="decimal"
                                   value={row[key] ?? ""}
+                                  data-enter-skip={["length", "width", "height"].includes(key) ? "true" : undefined}
                                   onChange={event => updateTestRow(rowIndex, key, event.target.value)}
                                    placeholder={
                                       (testType === TestType.Blocks || testType === TestType.Paving_Blocks) &&

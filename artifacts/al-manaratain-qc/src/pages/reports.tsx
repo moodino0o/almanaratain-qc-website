@@ -130,12 +130,11 @@ const handleCubeInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     Array.from(row.querySelectorAll<HTMLInputElement>("[data-cube-navigation-input]"));
   const currentRowInputs = getNavigableInputs(currentRow);
   const currentInputIndex = currentRowInputs.indexOf(event.currentTarget);
-  if (currentInputIndex < 0) return;
   const candidateInputs = [
     ...currentRowInputs.slice(currentInputIndex + 1),
     ...rows.slice(currentRowIndex + 1).flatMap(getNavigableInputs),
   ];
-  const nextInput = candidateInputs[0];
+  const nextInput = candidateInputs.find((input) => input.value.trim() === "");
   if (!nextInput) return;
   nextInput.scrollIntoView({ block: "nearest", inline: "nearest" });
   nextInput.focus({ preventScroll: true });
@@ -756,7 +755,7 @@ export default function Reports() {
                                     step="any"
                                     value={row[key]}
                                     onKeyDown={handleCubeInputKeyDown}
-                                    data-cube-navigation-input="true"
+                                    data-cube-navigation-input={key === "dryWeight" || key === "wetWeight" || key === "load" ? "true" : undefined}
                                     onChange={(event) => updateResultRow(
                                       entry.record.id,
                                       rowIndex as 0 | 1,
