@@ -207,6 +207,9 @@ function StandardEditor({
           ...(form.testType === TestType.Ready_Mix
             ? (lookups?.mixStrengths ?? [])
             : []),
+          ...(form.testType === TestType.Paving_Blocks
+            ? (lookups?.blockTypes ?? [])
+            : []),
         ]),
       ),
     [form.testType, lookups],
@@ -267,14 +270,27 @@ function StandardEditor({
         </div>
         {form.testType !== TestType.Blocks && (
           <div className="space-y-2">
-            <Label>Material or mix design</Label>
+            <Label>
+              {form.testType === TestType.Paving_Blocks
+                ? "Block Type"
+                : "Material or mix design"}
+            </Label>
             <TypeaheadInput
               value={form.material}
               onChange={(value) => setForm({ ...form, material: value })}
               options={materialOptions}
-              placeholder="Select or type a material..."
+              placeholder={
+                form.testType === TestType.Paving_Blocks
+                  ? "Select or type a Block Type..."
+                  : "Select or type a material..."
+              }
               onCreateOption={(value) =>
-                onCreateReferenceItem("materials", value)
+                onCreateReferenceItem(
+                  form.testType === TestType.Paving_Blocks
+                    ? "blockTypes"
+                    : "materials",
+                  value,
+                )
               }
             />
           </div>
@@ -1065,7 +1081,7 @@ function ProductStrengthStandardAssignmentFlow({
     manualStandard?.material.trim().toLocaleLowerCase() ===
       product.trim().toLocaleLowerCase() &&
     (!isPaving || blockSizeMatches(manualStandard?.blockSize, blockSize));
-  const productLabel = isPaving ? "Paving product" : "Mix design";
+  const productLabel = isPaving ? "Block Type" : "Mix design";
   return (
     <Card className="border-primary/20 shadow-sm">
       <CardHeader className="border-b border-border/70 bg-muted/30">
@@ -1098,7 +1114,10 @@ function ProductStrengthStandardAssignmentFlow({
               options={availableProducts}
               placeholder={`Select or type a ${productLabel}`}
               onCreateOption={(value) =>
-                onCreateReferenceItem("materials", value)
+                onCreateReferenceItem(
+                  isPaving ? "blockTypes" : "materials",
+                  value,
+                )
               }
             />
           </div>
@@ -1318,7 +1337,7 @@ function StrengthStandardAssignmentFlow({
       productOptions={
         testType === TestType.Ready_Mix
           ? [...materials, ...mixStrengths]
-          : materials
+          : blockTypes
       }
       blockSizes={blockSizes}
       onCreateReferenceItem={onCreateReferenceItem}
