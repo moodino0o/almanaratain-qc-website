@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { Link } from "wouter";
 import {
   getListSieveStandardsQueryKey,
   getListShapeFactorsQueryKey,
@@ -50,6 +49,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useAppBack } from "@/hooks/use-app-back";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -938,6 +938,7 @@ function ShapeFactorEditor({
 }
 
 export default function Standards() {
+  const goBack = useAppBack("/");
   const queryClient = useQueryClient();
   const { role } = useAuth();
   const canEditStandards = role === "administrator";
@@ -1390,13 +1391,14 @@ export default function Standards() {
     <div className="mx-auto max-w-6xl space-y-5 pb-12">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
-          <Link
-            href="/"
+          <button
+            type="button"
+            onClick={goBack}
             className="rounded-md p-2 hover:bg-muted"
-            aria-label="Back to dashboard"
+            aria-label="Go back"
           >
             <ArrowLeft className="h-5 w-5 text-muted-foreground" />
-          </Link>
+          </button>
           <div>
             <h1 className="flex items-center gap-3 text-3xl font-bold tracking-tight text-foreground">
               <FileCheck2 className="h-8 w-8 text-foreground" /> Quality standards

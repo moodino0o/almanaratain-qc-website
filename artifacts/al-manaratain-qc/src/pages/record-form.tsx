@@ -12,6 +12,7 @@ import { Save, ArrowLeft, Copy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@workspace/replit-auth-web";
 import { Link } from "wouter";
+import { useAppBack } from "@/hooks/use-app-back";
 import { TypeaheadInput } from "@/components/ui/typeahead-input";
 import {
   calculateWaterAbsorption,
@@ -38,10 +39,12 @@ const REFERENCE_NUMBER_MAX_LENGTH = 32;
 const DEFAULT_APPROVED_BY = "ADEL ABBAS EBRAHIM";
 
 export default function RecordForm() {
-  const [, setLocation] = useLocation();
   const { id } = useParams();
   const recordId = id ? Number(id) : 0;
   const isEditing = Number.isInteger(recordId) && recordId > 0;
+  const [, setLocation] = useLocation();
+  const fallbackRoute = isEditing ? `/records/${recordId}` : "/records";
+  const goBack = useAppBack(fallbackRoute);
   const { role } = useAuth();
   const canEditQc = role === "technician" || role === "managerial" || role === "administrator";
   const canEditApprovedBy = role === "administrator";
@@ -770,8 +773,8 @@ export default function RecordForm() {
           <p className="text-sm text-muted-foreground">
             Your access role can view QC records but cannot add or change them.
           </p>
-          <Button asChild variant="outline">
-            <Link href={isEditing ? `/records/${recordId}` : "/records"}>Back to QC Register</Link>
+          <Button variant="outline" onClick={goBack}>
+            Back
           </Button>
         </CardContent>
       </Card>
@@ -786,9 +789,9 @@ export default function RecordForm() {
     <div className="space-y-6 max-w-4xl mx-auto pb-12">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-center gap-4">
-          <Link href={isEditing ? `/records/${recordId}` : "/records"} className="p-2 rounded-md hover:bg-muted transition-colors">
+          <button type="button" onClick={goBack} aria-label="Go back" className="p-2 rounded-md hover:bg-muted transition-colors">
             <ArrowLeft className="w-5 h-5 text-muted-foreground" />
-          </Link>
+          </button>
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">
               {isEditing ? "Edit QC Record" : "New QC Record"}

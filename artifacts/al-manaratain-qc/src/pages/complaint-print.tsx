@@ -1,8 +1,9 @@
 import { useEffect } from "react";
-import { Link, useParams } from "wouter";
+import { useParams } from "wouter";
 import { ArrowLeft, Printer } from "lucide-react";
 import { useGetComplaint } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
+import { useAppBack } from "@/hooks/use-app-back";
 
 function displayDate(value: string) {
   const date = new Date(value);
@@ -17,6 +18,7 @@ function PrintRow({ label, children }: { label: string; children: React.ReactNod
 export default function ComplaintPrint() {
   const { id } = useParams();
   const complaintId = Number(id);
+  const goBack = useAppBack(`/complaints/${complaintId}`);
   const complaintQuery = useGetComplaint(complaintId);
   useEffect(() => {
     if (complaintQuery.data) {
@@ -30,10 +32,8 @@ export default function ComplaintPrint() {
   return (
     <main className="complaint-print-shell min-h-screen bg-muted/50 p-4 sm:p-8">
       <div className="print-hide mx-auto mb-4 flex max-w-[210mm] items-center justify-between gap-3">
-        <Button variant="outline" asChild>
-          <Link href={`/complaints/${complaintId}`}>
-            <ArrowLeft className="mr-2 h-4 w-4" />Back to complaint
-          </Link>
+        <Button variant="outline" onClick={goBack}>
+          <ArrowLeft className="mr-2 h-4 w-4" />Back
         </Button>
         <Button onClick={() => window.print()}>
           <Printer className="mr-2 h-4 w-4" />Print form

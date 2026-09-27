@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react';
+import { useAppNavigationTracking } from '@/hooks/use-app-back';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuth } from '@workspace/replit-auth-web';
 import { ErrorBoundary } from '@/components/error-boundary';
@@ -39,6 +40,7 @@ function PrintLayout({ children }: { children: ReactNode }) {
 
 function Router() {
   const [location] = useLocation();
+  useAppNavigationTracking(location);
   const { role } = useAuth();
   const canViewComplaints = role !== "technician";
   const isPrint = location.match(/^\/reports\/\d+$/) || (canViewComplaints && location.match(/^\/complaints\/\d+\/print$/));

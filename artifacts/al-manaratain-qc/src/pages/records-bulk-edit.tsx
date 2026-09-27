@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Link } from "wouter";
 import { useAuth } from "@workspace/replit-auth-web";
 import {
   TestType,
@@ -22,6 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { useAppBack } from "@/hooks/use-app-back";
 import { Card, CardContent } from "@/components/ui/card";
 import { TypeaheadInput } from "@/components/ui/typeahead-input";
 import {
@@ -290,6 +290,7 @@ function DraftRow({
 }
 
 export default function RecordsBulkEdit() {
+  const goBack = useAppBack("/records");
   const { role } = useAuth();
   const canEditQc = role === "technician" || role === "managerial" || role === "administrator";
   const canEditApprovedBy = role === "administrator";
@@ -434,7 +435,7 @@ export default function RecordsBulkEdit() {
         <CardContent className="p-8 text-center">
           <h1 className="text-xl font-semibold">Editing access required</h1>
           <p className="mt-2 text-sm text-muted-foreground">You can view records, but your role cannot edit them.</p>
-          <Button asChild className="mt-5"><Link href="/records">Back to QC Register</Link></Button>
+          <Button className="mt-5" onClick={goBack}>Back</Button>
         </CardContent>
       </Card>
     );
@@ -444,8 +445,8 @@ export default function RecordsBulkEdit() {
     <div className="space-y-4 pb-24">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex items-start gap-3">
-          <Button asChild variant="outline" size="icon" aria-label="Back to QC Register">
-            <Link href="/records"><ArrowLeft className="h-4 w-4" /></Link>
+          <Button variant="outline" size="icon" aria-label="Go back" onClick={goBack}>
+            <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
             <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight">

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { useParams, Link } from "wouter";
+import { useParams } from "wouter";
 import {
   useGetReport,
   useListSieveStandards,
@@ -12,6 +12,7 @@ import type {
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer } from "lucide-react";
+import { useAppBack } from "@/hooks/use-app-back";
 import { blockMaterialMatches, blockSizeMatches, blockTypeMatches } from "./record-form-utils";
 
 type DetailMap = QcRecord["details"];
@@ -1042,14 +1043,8 @@ function BlocksReport({
             ["MACHINE TYPE:", detailValue(details, ["machine"])],
             ["SAMPLE TYPE:", detailValue(details, ["sampleType"])],
             ["METHOD OF CONDITIONING:", detailValue(details, ["conditioningMethod"])],
-            [
-              "METHOD OF PREPARATION:",
-              [
-                detailValue(details, ["preparationMethod"]),
-                detailValue(details, ["shapeFactor"], "") &&
-                  `Shape factor ${detailValue(details, ["shapeFactor"], "")}`,
-              ].filter(Boolean).join(" "),
-            ],
+            ["METHOD OF PREPARATION:", detailValue(details, ["preparationMethod"])],
+            ["SHAPE FACTOR:", detailValue(details, ["shapeFactor"])],
             ["BLOCK TYPE:", detailValue(details, ["blockType"], record.material)],
           ]}
         />
@@ -1229,6 +1224,7 @@ function FallbackReport({ record }: { record: QcRecord }) {
 
 export default function ReportPrint() {
   const { id } = useParams();
+  const goBack = useAppBack("/reports");
   const reportId = Number(id);
   const { data: report, isLoading: reportLoading, error } = useGetReport(reportId);
   const { data: strengthStandards = [], isLoading: strengthStandardsLoading } =
@@ -1322,12 +1318,13 @@ export default function ReportPrint() {
   return (
     <div className="report-page">
       <div className="report-toolbar print-hide">
-        <Link
-          href="/reports"
+        <button
+          type="button"
+          onClick={goBack}
           className="flex items-center text-sm font-medium text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="w-4 h-4 mr-2" /> Back to Reports
-        </Link>
+          <ArrowLeft className="w-4 h-4 mr-2" /> Back
+        </button>
         <div className="flex items-center gap-3">
           {record.testType === "Ready Mix" && matchingStrengthStandards.length > 0 && (
             <label className="flex items-center gap-2 text-sm text-muted-foreground">

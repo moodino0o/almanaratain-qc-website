@@ -10,6 +10,7 @@ import { useAuth } from "@workspace/replit-auth-web";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListRecordsQueryKey, getGetDashboardQueryKey, getGetRecordQueryKey } from "@workspace/api-client-react";
 import { useState } from "react";
+import { useAppBack } from "@/hooks/use-app-back";
 
 function calculatedWaterAbsorption(values: Record<string, unknown>) {
   const dryWeight = Number(values.dryWeight);
@@ -394,6 +395,7 @@ export default function RecordDetail() {
   const canEditApprovedBy = role === "administrator";
   const recordId = Number(id);
   const [, setLocation] = useLocation();
+  const goBack = useAppBack("/records");
   const queryClient = useQueryClient();
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -524,9 +526,9 @@ export default function RecordDetail() {
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Link href="/records" className="p-2 rounded-md hover:bg-muted transition-colors">
+          <button type="button" onClick={goBack} aria-label="Go back" className="p-2 rounded-md hover:bg-muted transition-colors">
             <ArrowLeft className="w-5 h-5 text-muted-foreground" />
-          </Link>
+          </button>
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold tracking-tight text-foreground">{record.recordNo}</h1>
