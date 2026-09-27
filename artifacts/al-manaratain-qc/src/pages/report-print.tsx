@@ -40,24 +40,6 @@ function layoutColumns(
     .sort((left, right) => left.order - right.order);
 }
 
-function layoutColumnsWithRequired(
-  layout: ReportLayout | undefined,
-  tableKey: string,
-  fallback: LayoutColumn[],
-  requiredKeys: string[],
-) {
-  const configured = layout?.config.columns[tableKey] ?? [];
-  const columns = layoutColumns(layout, tableKey, fallback);
-  for (const key of requiredKeys) {
-    if (columns.some((column) => column.key === key)) continue;
-    const savedColumn = configured.find((column) => column.key === key);
-    const defaultColumn = fallback.find((column) => column.key === key);
-    const requiredColumn = savedColumn ?? defaultColumn;
-    if (requiredColumn) columns.push({ ...requiredColumn, visible: true });
-  }
-  return columns.sort((left, right) => left.order - right.order);
-}
-
 function rawTextValue(value: unknown, fallback = "-") {
   if (value === null || value === undefined || value === "") return fallback;
   if (typeof value === "object") return JSON.stringify(value);
@@ -85,6 +67,19 @@ function detailValue(details: DetailMap, keys: string[], fallback = "-") {
     const value = normalized.get(key.toLowerCase());
     if (value !== undefined && value !== null && value !== "") {
       return textValue(value, fallback);
+    }
+  }
+  return fallback;
+}
+
+function detailRawValue(details: DetailMap, keys: string[], fallback = "-") {
+  const normalized = new Map(
+    Object.entries(details).map(([key, value]) => [key.toLowerCase(), value]),
+  );
+  for (const key of keys) {
+    const value = normalized.get(key.toLowerCase());
+    if (value !== undefined && value !== null && value !== "") {
+      return rawTextValue(value, fallback);
     }
   }
   return fallback;
@@ -153,11 +148,6 @@ function addDaysToDate(value: string, days: number) {
   if (Number.isNaN(date.getTime())) return null;
   date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString();
-}
-
-function numericStrength(value: string) {
-  const number = Number.parseFloat(value);
-  return Number.isFinite(number) ? number : null;
 }
 
 function numericValue(value: unknown) {
@@ -259,30 +249,30 @@ function cubeRowStrength(row: unknown) {
   const values = typeof row === "object" && row !== null
     ? row as Record<string, unknown>
     : {};
-  return numericValue(values.calculatedStrength ?? values.strength ?? values.compressiveStrength);
+  const storedStrength = numericValue(
+    values.calculatedStrength ?? values.strength ?? values.compressiveStrength,
+  );
+  if (storedStrength !== null) return storedStrength;
+
+  const load = numericValue(values.load);
+  const length = numericValue(values.length);
+  const width = numericValue(values.width);
+  if (load === null || length === null || width === null || length <= 0 || width <= 0) {
+    return null;
+  }
+  return (load * 1000) / (length * width);
 }
 
-function averageStrengthForAge(rows: unknown[], age: number) {
+function averageStrengthForAgeRange(rows: unknown[], minimumAge: number, maximumAge: number) {
   const strengths = rows
-    .filter((row) => cubeRowAge(row) === age)
+    .filter((row) => {
+      const age = cubeRowAge(row);
+      return age !== null && age >= minimumAge && age <= maximumAge;
+    })
     .map(cubeRowStrength)
     .filter((strength): strength is number => strength !== null);
   if (!strengths.length) return null;
   return strengths.reduce((total, strength) => total + strength, 0) / strengths.length;
-}
-
-function strengthSummary(rows: unknown[]) {
-  const strengths = rows
-    .map(cubeRowStrength)
-    .filter((strength): strength is number => strength !== null);
-  if (!strengths.length) {
-    return { average: null, minimum: null, maximum: null };
-  }
-  return {
-    average: strengths.reduce((total, strength) => total + strength, 0) / strengths.length,
-    minimum: Math.min(...strengths),
-    maximum: Math.max(...strengths),
-  };
 }
 
 function numericSummary(values: Array<number | null>) {
@@ -456,35 +446,35 @@ function blockAgeFromRecord(details: DetailMap, rows: unknown[]) {
 }
 
 function ReadyMixAverageStrengthTable({ rows }: { rows: unknown[] }) {
-  const ages = [...new Set(
-    rows
-      .map(cubeRowAge)
-      .filter((age): age is number => age !== null),
-  )].sort((left, right) => left - right);
-
-  if (!ages.length) return null;
-
+  const ranges = [
+    { label: "3–5 Days", minimum: 3, maximum: 5 },
+    { label: "6–8 Days", minimum: 6, maximum: 8 },
+    { label: "28–29 Days", minimum: 28, maximum: 29 },
+  ];
   return (
-    <div className="report-average-block">
-      <p className="report-centered-title">Average Strength by Cube Age:</p>
+    <div className="report-average-block ready-mix-average-block">
+      <p className="report-centered-title">Average Strength</p>
       <table className="report-table report-average-table">
         <thead>
           <tr>
-            <th>Test Age</th>
-            <th>Average Strength (N/mm2)</th>
+            <th>Cube Age</th>
+            <th>Average Strength (N/mm²)</th>
           </tr>
         </thead>
         <tbody>
-          {ages.map((age) => (
-            <tr key={age}>
-              <td>{formatNumber(age)} days</td>
+          {ranges.map((range) => {
+            const average = averageStrengthForAgeRange(rows, range.minimum, range.maximum);
+            return (
+            <tr key={range.label}>
+              <td>{range.label}</td>
               <td>
-                {averageStrengthForAge(rows, age) === null
+                {average === null
                   ? "-"
-                  : `${formatNumber(averageStrengthForAge(rows, age) ?? 0)} N/mm2`}
+                  : formatNumber(average)}
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -692,9 +682,10 @@ function StrengthStandardsTable({
   evaluation: ValueMap | null;
 }) {
   const isBlocks = record.testType === "Blocks";
-  const configuredStandards = standards
-    .filter((standard) => strengthStandardMatchesRecord(standard, record))
-    .sort((left, right) => left.id - right.id);
+  const configuredStandards = (record.testType === "Ready Mix"
+    ? standards.filter((standard) => standard.testType === "Ready Mix")
+    : standards.filter((standard) => strengthStandardMatchesRecord(standard, record))
+  ).sort((left, right) => left.id - right.id);
   const rows = configuredStandards.length
     ? configuredStandards
     : evaluation?.requiredStrength != null
@@ -713,7 +704,9 @@ function StrengthStandardsTable({
   if (!rows.length) return null;
 
   return (
-    <div className="report-standard-block paving-report-standard-block">
+    <div className={`report-standard-block ${
+      record.testType === "Ready Mix" ? "ready-mix-standard-block" : ""
+    } paving-report-standard-block`}>
       <p className="report-centered-title">Standard Required Strength:</p>
       <table className="report-table report-strength-table paving-report-standard-table">
         <thead>
@@ -730,7 +723,7 @@ function StrengthStandardsTable({
                 <th>MIX TYPE</th>
                 <th>7 DAYS</th>
                 <th>28 DAYS</th>
-                <th>BS STANDARD</th>
+                {record.testType !== "Ready Mix" && <th>BS STANDARD</th>}
               </>
             )}
           </tr>
@@ -756,7 +749,7 @@ function StrengthStandardsTable({
                   <td>
                     {formatNumber(standard.requiredStrength)} {standard.strengthUnit}
                   </td>
-                  <td>{standard.bsStandard}</td>
+                  {record.testType !== "Ready Mix" && <td>{standard.bsStandard}</td>}
                 </>
               )}
             </tr>
@@ -789,6 +782,11 @@ function ReadyMixComplianceBlock({
   const activeStandard = selectedStandard ?? configuredStandard;
   const status = textValue(evaluation?.status, record.status);
   const statusClass = status.toLocaleLowerCase();
+  const complianceLabel = statusClass === "passed"
+    ? "Compliant with BS"
+    : statusClass === "failed"
+      ? "Not Compliant with BS"
+      : status;
   const standardReference = textValue(
     activeStandard?.bsStandard ?? evaluation?.bsStandard,
     "Not configured",
@@ -809,8 +807,8 @@ function ReadyMixComplianceBlock({
         : "The result cannot be confirmed against a configured BS strength standard.");
 
   return (
-    <section className="report-compliance-block">
-      <SectionHeading>BS Standard Compliance</SectionHeading>
+    <section className="report-compliance-block ready-mix-compliance-block">
+      <SectionHeading>28–29 Days Compliance with BS</SectionHeading>
       <div className="report-compliance-grid">
         <div>
           <span>BS Standard</span>
@@ -834,7 +832,7 @@ function ReadyMixComplianceBlock({
         </div>
         <div>
           <span>Compliance</span>
-          <strong className={`report-compliance-status ${statusClass}`}>{status}</strong>
+          <strong className={`report-compliance-status ${statusClass}`}>{complianceLabel}</strong>
         </div>
       </div>
       <p className="report-compliance-reason">{reason}</p>
@@ -872,6 +870,57 @@ function ReportFields({
   );
 }
 
+function firstPresentValue(values: unknown[]) {
+  return values.find((value) => value !== undefined && value !== null && String(value).trim() !== "");
+}
+
+function readyMixCubeSize(details: DetailMap, rows: unknown[]) {
+  const specimenRows = rows
+    .filter((row) => typeof row === "object" && row !== null)
+    .map((row) => row as ValueMap);
+  const length = firstPresentValue([
+    details.length,
+    ...specimenRows.map((row) => row.length),
+  ]);
+  const width = firstPresentValue([
+    details.width,
+    ...specimenRows.map((row) => row.width),
+  ]);
+  const height = firstPresentValue([
+    details.height,
+    ...specimenRows.map((row) => row.height),
+  ]);
+  if (length !== undefined && width !== undefined && height !== undefined) {
+    return `${textValue(length)} × ${textValue(width)} × ${textValue(height)}`;
+  }
+  return detailValue(details, ["cubeSize", "cubeDimensions"], "-");
+}
+
+function readyMixWeightInGrams(value: unknown) {
+  const weight = numericValue(value);
+  if (weight === null) return textValue(value);
+  return formatNumber(weight < 100 ? weight * 1_000 : weight);
+}
+
+function readyMixTestingDate(row: unknown, sampleDate: string) {
+  const values = typeof row === "object" && row !== null
+    ? row as ValueMap
+    : {};
+  const explicitDate = firstPresentValue([
+    values.testingDate,
+    values.testDate,
+    values.testedDate,
+    values.date,
+  ]);
+  if (explicitDate !== undefined) {
+    return formatReportDate(String(explicitDate));
+  }
+  const age = cubeRowAge(row);
+  return age === null
+    ? "-"
+    : formatReportDate(addDaysToDate(sampleDate, age));
+}
+
 function ReadyMixReport({
   record,
   standards,
@@ -900,50 +949,134 @@ function ReadyMixReport({
         },
       ];
   const orderedTestRows = sortCubeRowsByAge(testRows);
-  const average28DayStrength = averageStrengthForAge(orderedTestRows, 28);
+  const average28DayStrength = averageStrengthForAgeRange(orderedTestRows, 28, 29);
   const requiredStrengthEvaluation = objectValue(details.strengthEvaluation);
-  const defaultResultColumns: LayoutColumn[] = [
-    { key: "no", label: "No.", visible: true, order: 0, width: 7 },
-    { key: "age", label: "Test Age", visible: true, order: 1, width: 9 },
-    { key: "length", label: "Length (mm)", visible: true, order: 2, width: 10 },
-    { key: "width", label: "Width (mm)", visible: true, order: 3, width: 10 },
-    { key: "height", label: "Height (mm)", visible: true, order: 4, width: 10 },
-    { key: "dryWeight", label: "Dry Weight", visible: true, order: 5, width: 10 },
-    { key: "wetWeight", label: "Wet Weight", visible: true, order: 6, width: 10 },
-    { key: "absorption", label: "Water Absorption (%)", visible: true, order: 7, width: 13 },
-    { key: "load", label: "Load (kN)", visible: true, order: 8, width: 10 },
-    { key: "strength", label: "Calculated Strength", visible: true, order: 9, width: 11 },
+  const resultColumnDefaults: LayoutColumn[] = [
+    { key: "testingDate", label: "Testing Date", visible: true, order: 0, width: 18 },
+    { key: "age", label: "Cube Age", visible: true, order: 1, width: 12 },
+    { key: "weight", label: "Cube Weight (g)", visible: true, order: 2, width: 16 },
+    { key: "load", label: "Load (kN)", visible: true, order: 3, width: 16 },
+    { key: "strength", label: "Strength (N/mm²)", visible: true, order: 4, width: 19 },
+    { key: "absorption", label: "Water Absorption (%)", visible: true, order: 5, width: 19 },
   ];
-  const resultColumns = layoutColumnsWithRequired(
-    layout,
-    "readyMixResults",
-    defaultResultColumns,
-    ["length", "width", "height"],
+  const savedResultColumns = layout?.config.columns.readyMixResults ?? [];
+  const resultColumns = resultColumnDefaults
+    .map((fallback) => {
+      const saved = savedResultColumns.find((column) => column.key === fallback.key);
+      return saved ? { ...fallback, label: saved.label, order: saved.order, width: saved.width } : fallback;
+    })
+    .sort((left, right) => left.order - right.order);
+  const customerName = detailRawValue(details, ["customerName", "customer"], "-");
+  const customerLocation = detailRawValue(
+    details,
+    ["customerLocation", "location"],
+    record.location,
   );
+  const projectName = detailRawValue(details, ["projectName"], "");
+  const otherDetails = detailRawValue(details, ["otherDetails"], "");
+  const castedBy = detailRawValue(details, ["castedBy", "castBy", "castedByName"], "");
+  const sampleNumber = detailRawValue(
+    details,
+    ["sampleNumber", "sampleNo", "sampleReference", "referenceNumber"],
+    "-",
+  );
+  const cubeSize = readyMixCubeSize(details, orderedTestRows);
+  const visibleCustomerEntries: Array<readonly [string, string]> = [
+    ...(customerName ? [["Customer Name", customerName] as const] : []),
+    ...(customerLocation ? [["Customer Location", customerLocation] as const] : []),
+    ...(record.material ? [["Mix Type", record.material] as const] : []),
+    ...(projectName ? [["Project Name", projectName] as const] : []),
+    ...(otherDetails ? [["Other Details", otherDetails] as const] : []),
+  ];
 
   return (
-    <>
-      <section className="report-ready-mix-info">
-        <SectionHeading>General Information</SectionHeading>
-        <ReportFields
-          entries={[
-            ["Sample Date", formatReportDate(record.sampleDate)],
-            ["Plant / Production Location", record.location],
-            ["Material / Product", record.material],
-            ["Tested By (Technician)", record.testedBy],
-            ["Reference Number", detailValue(details, ["referenceNumber"])],
-            ["Ready Mix Customer Name", detailValue(details, ["customerName", "customer"], record.location)],
-            ["Customer Location", detailValue(details, ["customerLocation"], record.location)],
-          ]}
+    <div className="ready-mix-report">
+      <div className="ready-mix-overview">
+        <section className="report-ready-mix-info">
+          <SectionHeading>Customer and Mix Details</SectionHeading>
+          <ReportFields
+            entries={visibleCustomerEntries}
+          />
+        </section>
+        <ReadyMixAverageStrengthTable rows={orderedTestRows} />
+      </div>
+
+      <div className="ready-mix-test-summary">
+        <section className="report-ready-mix-test-details">
+          <SectionHeading>Test Details</SectionHeading>
+          <ReportFields
+            entries={[
+              ["Casting Date", formatReportDate(record.sampleDate)],
+              ...(castedBy ? [["Casted By", castedBy] as const] : []),
+              ["Cube Size (L × W × H, mm)", cubeSize],
+              ["Sample No.", sampleNumber],
+            ]}
+          />
+        </section>
+        <ReadyMixComplianceBlock
+          record={record}
+          standards={standards}
+          selectedStandard={selectedStandard}
+          reportedStrength={average28DayStrength}
         />
-      </section>
+      </div>
 
       <section className="report-ready-mix-measures">
-        <SectionHeading>Measurement Details: Ready Mix</SectionHeading>
+        <SectionHeading>Test Result</SectionHeading>
         <div className="report-measure-grid">
-          <ReportField label="Slump (mm)" value={detailValue(details, ["slump", "slumpTest"])} />
-          <ReportField label="Temperature (°C)" value={detailValue(details, ["temperature"])} />
+          <ReportField label="Slump Test (mm)" value={detailValue(details, ["slump", "slumpTest"])} />
+          <ReportField label="Temperature" value={detailValue(details, ["temperature"])} />
+          <ReportField label="Compaction Type" value={detailValue(details, ["compactionType", "compaction"])} />
         </div>
+      </section>
+
+      <section className="report-ready-mix-results">
+        <table className="report-table report-results-table">
+          <thead>
+            <tr>{resultColumns.map((column) => <th key={column.key}>{column.label}</th>)}</tr>
+          </thead>
+          <tbody>
+            {orderedTestRows.map((row, index) => {
+              const values = typeof row === "object" && row !== null
+                ? row as Record<string, unknown>
+                : {};
+              const weight = firstPresentValue([values.dryWeight, values.wetWeight]);
+              const strength = cubeRowStrength(row);
+              const displayValues: ValueMap = {
+                ...values,
+                testAge: firstPresentValue([
+                  values.testAge,
+                  values.sampleAge,
+                  values.cubeAge,
+                  values.age,
+                  details.cubeAge,
+                  details.age,
+                ]),
+                weight,
+                load: firstPresentValue([values.load, details.load]),
+                calculatedStrength: strength,
+                dryWeight: values.dryWeight,
+                wetWeight: values.wetWeight,
+              };
+              return (
+                <tr key={index}>{resultColumns.map((column) => {
+                  const value = column.key === "testingDate"
+                    ? readyMixTestingDate(row, record.sampleDate)
+                    : column.key === "age"
+                      ? textValue(displayValues.testAge)
+                    : column.key === "weight"
+                      ? readyMixWeightInGrams(displayValues.weight)
+                      : column.key === "strength"
+                        ? strength === null ? "-" : formatNumber(strength)
+                        : column.key === "absorption"
+                          ? calculatedWaterAbsorption(displayValues)
+                          : textValue(displayValues[column.key]);
+                  return <td key={column.key}>{value}</td>;
+                })}</tr>
+              );
+            })}
+          </tbody>
+        </table>
       </section>
 
       <StrengthStandardsTable
@@ -951,63 +1084,7 @@ function ReadyMixReport({
         standards={standards}
         evaluation={requiredStrengthEvaluation}
       />
-
-      <section className="report-ready-mix-results">
-        <SectionHeading>Specimen Measurements</SectionHeading>
-        <table className="report-table report-results-table">
-          <thead>
-            <tr>{resultColumns.map((column) => <th key={column.key}>{column.label}</th>)}</tr>
-          </thead>
-          <tbody>
-            {orderedTestRows.map((row, index) => {
-              const values =
-                typeof row === "object" && row !== null
-                  ? (row as Record<string, unknown>)
-                  : {};
-              const displayValues: ValueMap = {
-                ...values,
-                testAge:
-                  values.testAge ||
-                  values.sampleAge ||
-                  values.cubeAge ||
-                  values.age ||
-                  detailValue(details, ["cubeAge", "age"]),
-                length: values.length || detailValue(details, ["length"], ""),
-                width: values.width || detailValue(details, ["width"], ""),
-                height: values.height || detailValue(details, ["height"], ""),
-                dryWeight: values.dryWeight || detailValue(details, ["dryWeight"], ""),
-                wetWeight: values.wetWeight || detailValue(details, ["wetWeight"], ""),
-                load: values.load || detailValue(details, ["load"], ""),
-                strength:
-                  values.calculatedStrength ||
-                  values.strength ||
-                  values.compressiveStrength ||
-                  detailValue(details, ["strength", "compressiveStrength"], ""),
-              };
-              return (
-                <tr key={index}>{resultColumns.map((column) => {
-                  const value = column.key === "no"
-                    ? index + 1
-                    : column.key === "age"
-                      ? textValue(displayValues.testAge)
-                      : column.key === "absorption"
-                        ? calculatedWaterAbsorption(displayValues)
-                        : textValue(displayValues[column.key]);
-                  return <td key={column.key}>{value}</td>;
-                })}</tr>
-              );
-            })}
-          </tbody>
-        </table>
-        <ReadyMixAverageStrengthTable rows={orderedTestRows} />
-      </section>
-      <ReadyMixComplianceBlock
-        record={record}
-        standards={standards}
-        selectedStandard={selectedStandard}
-        reportedStrength={average28DayStrength}
-      />
-    </>
+    </div>
   );
 }
 
@@ -1360,7 +1437,7 @@ export default function ReportPrint() {
         : `${record.testType} Test Report`;
 
   return (
-    <div className="report-page">
+    <div className={`report-page ${record.testType === "Ready Mix" ? "ready-mix-page" : ""}`}>
       <div className="report-toolbar print-hide">
         <button
           type="button"
@@ -1393,7 +1470,10 @@ export default function ReportPrint() {
         </div>
       </div>
 
-      <main className="report-paper" style={paperStyle}>
+      <main
+        className={`report-paper ${record.testType === "Ready Mix" ? "ready-mix-paper" : ""}`}
+        style={paperStyle}
+      >
         <div className="report-layout-content">
         {layoutSectionVisible(layout, "header") && <header
           className="report-header report-layout-section"
