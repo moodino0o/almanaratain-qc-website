@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   getListSieveStandardsQueryKey,
   getListShapeFactorsQueryKey,
@@ -768,6 +768,7 @@ function BlockStandardAssignmentFlow({
   onCreateBlockStandard,
   onLinkStandard,
   isLinking,
+  typeSelector,
 }: {
   standards: StrengthStandard[];
   blockTypes: string[];
@@ -783,6 +784,7 @@ function BlockStandardAssignmentFlow({
     blockSize: string,
   ) => void;
   isLinking: boolean;
+  typeSelector: ReactNode;
 }) {
   const [blockTypeInput, setBlockTypeInput] = useState("");
   const [blockSizeInput, setBlockSizeInput] = useState("");
@@ -836,11 +838,16 @@ function BlockStandardAssignmentFlow({
   return (
     <Card className="border-primary/20 shadow-sm">
       <CardHeader className="border-b border-border/70 bg-muted/30">
-        <CardTitle>Block Type → Standard Flow</CardTitle>
-        <CardDescription>
-          Link a standard to a Block Type and Size here. Block records then match it automatically,
-          or a user can choose a different matching standard manually.
-        </CardDescription>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle>Product Type → Standard Flow</CardTitle>
+            <CardDescription>
+              Choose a product type and link its standard to the specific product. Matching records
+              use it automatically, or users can choose another matching standard manually.
+            </CardDescription>
+          </div>
+          {typeSelector}
+        </div>
       </CardHeader>
       <CardContent className="space-y-5 pt-5">
         <div className="grid items-center gap-3 md:grid-cols-[1fr_auto_1fr_auto_1.25fr]">
@@ -984,6 +991,7 @@ function ProductStrengthStandardAssignmentFlow({
   onCreateStandard,
   onLinkStandard,
   isLinking,
+  typeSelector,
 }: {
   testType: ProductStrengthTestType;
   standards: StrengthStandard[];
@@ -1000,6 +1008,7 @@ function ProductStrengthStandardAssignmentFlow({
     blockSize: string,
   ) => void;
   isLinking: boolean;
+  typeSelector: ReactNode;
 }) {
   const isPaving = testType === TestType.Paving_Blocks;
   const [productInput, setProductInput] = useState("");
@@ -1057,18 +1066,19 @@ function ProductStrengthStandardAssignmentFlow({
       product.trim().toLocaleLowerCase() &&
     (!isPaving || blockSizeMatches(manualStandard?.blockSize, blockSize));
   const productLabel = isPaving ? "Paving product" : "Mix design";
-  const flowTitle = isPaving
-    ? "Paving Blocks Product → Standard Flow"
-    : "Ready Mix Product → Standard Flow";
-
   return (
     <Card className="border-primary/20 shadow-sm">
       <CardHeader className="border-b border-border/70 bg-muted/30">
-        <CardTitle>{flowTitle}</CardTitle>
-        <CardDescription>
-          Link standards to a specific {isPaving ? "paving product and size" : "mix design"}.
-          Matching records will use the linked standard automatically.
-        </CardDescription>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle>Product Type → Standard Flow</CardTitle>
+            <CardDescription>
+              Choose a product type and link its standard to the specific product. Matching records
+              use it automatically, or users can choose another matching standard manually.
+            </CardDescription>
+          </div>
+          {typeSelector}
+        </div>
       </CardHeader>
       <CardContent className="space-y-5 pt-5">
         <div
@@ -1212,6 +1222,115 @@ function ProductStrengthStandardAssignmentFlow({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+type StrengthAssignmentTestType =
+  | ProductStrengthTestType
+  | typeof TestType.Blocks;
+
+function StrengthStandardAssignmentFlow({
+  standards,
+  blockTypes,
+  blockSizes,
+  materials,
+  mixStrengths,
+  onCreateReferenceItem,
+  onCreateBlockStandard,
+  onLinkBlockStandard,
+  onCreateProductStandard,
+  onLinkProductStandard,
+  isLinking,
+}: {
+  standards: StrengthStandard[];
+  blockTypes: string[];
+  blockSizes: string[];
+  materials: string[];
+  mixStrengths: string[];
+  onCreateReferenceItem: (
+    categoryKey: string,
+    value: string,
+  ) => Promise<string | void>;
+  onCreateBlockStandard: (blockType: string, blockSize: string) => void;
+  onLinkBlockStandard: (
+    standard: StrengthStandard,
+    blockType: string,
+    blockSize: string,
+  ) => void;
+  onCreateProductStandard: (
+    testType: ProductStrengthTestType,
+    product: string,
+    blockSize: string,
+  ) => void;
+  onLinkProductStandard: (
+    standard: StrengthStandard,
+    testType: ProductStrengthTestType,
+    product: string,
+    blockSize: string,
+  ) => void;
+  isLinking: boolean;
+}) {
+  const [testType, setTestType] = useState<StrengthAssignmentTestType>(
+    TestType.Blocks,
+  );
+  const typeSelector = (
+    <div className="w-full space-y-1.5 sm:w-56">
+      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Product Type
+      </span>
+      <Select
+        value={testType}
+        onValueChange={(value: StrengthAssignmentTestType) =>
+          setTestType(value)
+        }
+      >
+        <SelectTrigger aria-label="Product type for standard assignment">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={TestType.Ready_Mix}>Ready Mix</SelectItem>
+          <SelectItem value={TestType.Blocks}>Blocks</SelectItem>
+          <SelectItem value={TestType.Paving_Blocks}>Paving Blocks</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+
+  if (testType === TestType.Blocks) {
+    return (
+      <BlockStandardAssignmentFlow
+        standards={standards}
+        blockTypes={blockTypes}
+        blockSizes={blockSizes}
+        onCreateReferenceItem={onCreateReferenceItem}
+        onCreateBlockStandard={onCreateBlockStandard}
+        onLinkStandard={onLinkBlockStandard}
+        isLinking={isLinking}
+        typeSelector={typeSelector}
+      />
+    );
+  }
+
+  return (
+    <ProductStrengthStandardAssignmentFlow
+      testType={testType}
+      standards={standards}
+      productOptions={
+        testType === TestType.Ready_Mix
+          ? [...materials, ...mixStrengths]
+          : materials
+      }
+      blockSizes={blockSizes}
+      onCreateReferenceItem={onCreateReferenceItem}
+      onCreateStandard={(product, blockSize) =>
+        onCreateProductStandard(testType, product, blockSize)
+      }
+      onLinkStandard={(standard, product, blockSize) =>
+        onLinkProductStandard(standard, testType, product, blockSize)
+      }
+      isLinking={isLinking}
+      typeSelector={typeSelector}
+    />
   );
 }
 
@@ -2140,62 +2259,19 @@ export default function Standards() {
         ) : (
           <>
             {canEditStandards && (
-              <>
-                <BlockStandardAssignmentFlow
-                  standards={strengthStandards ?? []}
-                  blockTypes={lookups?.blockTypes ?? []}
-                  blockSizes={lookups?.blockSizes ?? []}
-                  onCreateReferenceItem={addReferenceDataItem}
-                  onCreateBlockStandard={openCreateBlockStandardFor}
-                  onLinkStandard={handleLinkBlockStandard}
-                  isLinking={updateStandard.isPending}
-                />
-                <ProductStrengthStandardAssignmentFlow
-                  testType={TestType.Ready_Mix}
-                  standards={strengthStandards ?? []}
-                  productOptions={[
-                    ...(lookups?.materials ?? []),
-                    ...(lookups?.mixStrengths ?? []),
-                  ]}
-                  blockSizes={[]}
-                  onCreateReferenceItem={addReferenceDataItem}
-                  onCreateStandard={(product) =>
-                    openCreateProductStandardFor(TestType.Ready_Mix, product, "")
-                  }
-                  onLinkStandard={(standard, product) =>
-                    void handleLinkProductStandard(
-                      standard,
-                      TestType.Ready_Mix,
-                      product,
-                      "",
-                    )
-                  }
-                  isLinking={updateStandard.isPending}
-                />
-                <ProductStrengthStandardAssignmentFlow
-                  testType={TestType.Paving_Blocks}
-                  standards={strengthStandards ?? []}
-                  productOptions={lookups?.materials ?? []}
-                  blockSizes={lookups?.blockSizes ?? []}
-                  onCreateReferenceItem={addReferenceDataItem}
-                  onCreateStandard={(product, blockSize) =>
-                    openCreateProductStandardFor(
-                      TestType.Paving_Blocks,
-                      product,
-                      blockSize,
-                    )
-                  }
-                  onLinkStandard={(standard, product, blockSize) =>
-                    void handleLinkProductStandard(
-                      standard,
-                      TestType.Paving_Blocks,
-                      product,
-                      blockSize,
-                    )
-                  }
-                  isLinking={updateStandard.isPending}
-                />
-              </>
+              <StrengthStandardAssignmentFlow
+                standards={strengthStandards ?? []}
+                blockTypes={lookups?.blockTypes ?? []}
+                blockSizes={lookups?.blockSizes ?? []}
+                materials={lookups?.materials ?? []}
+                mixStrengths={lookups?.mixStrengths ?? []}
+                onCreateReferenceItem={addReferenceDataItem}
+                onCreateBlockStandard={openCreateBlockStandardFor}
+                onLinkBlockStandard={handleLinkBlockStandard}
+                onCreateProductStandard={openCreateProductStandardFor}
+                onLinkProductStandard={handleLinkProductStandard}
+                isLinking={updateStandard.isPending}
+              />
             )}
             {strengthFolders.map((folder) => (
               <StrengthStandardsFolder
