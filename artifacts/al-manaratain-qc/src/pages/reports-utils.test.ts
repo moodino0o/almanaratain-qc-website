@@ -258,6 +258,8 @@ test("groups Ready Mix products by their first three words and summarizes each d
     buildDailyReportRows(records, "2026-09-29", "2026-09-29"),
     [{
       date: "2026-09-29",
+      castingDate: "2026-09-01",
+      testingDate: "2026-09-29",
       category: "Ready Mix",
       plant: "Plant A",
       product: "25 N OPC",
@@ -281,6 +283,7 @@ test("includes non-Ready Mix categories, date ranges, and selected product group
       material: "4 inch Block",
       details: {
         blockType: "Hollow Concrete Block",
+        blockAge: "28",
         testRows: [{ calculatedStrength: 8 }, { calculatedStrength: 10 }],
       },
     }),
@@ -298,6 +301,8 @@ test("includes non-Ready Mix categories, date ranges, and selected product group
     buildDailyReportRows(records, "2026-09-10", "2026-09-11", ["Blocks\u0000Hollow Concrete"]),
     [{
       date: "2026-09-10",
+      castingDate: "2026-09-10",
+      testingDate: "2026-10-08",
       category: "Blocks",
       plant: "Plant B",
       product: "Hollow Concrete",
@@ -356,6 +361,18 @@ test("uses Block Age for block results and orders Ready Mix ages 7 days before 2
       { category: "Blocks", plant: "Plant B", cubeAge: 28 },
       { category: "Ready Mix", plant: "Plant A", cubeAge: 7 },
       { category: "Ready Mix", plant: "Plant A", cubeAge: 28 },
+    ],
+  );
+  assert.deepEqual(
+    rows.map(({ category, castingDate, testingDate }) => ({
+      category,
+      castingDate,
+      testingDate,
+    })),
+    [
+      { category: "Blocks", castingDate: "2026-09-01", testingDate: "2026-09-29" },
+      { category: "Ready Mix", castingDate: "2026-09-01", testingDate: "2026-09-08" },
+      { category: "Ready Mix", castingDate: "2026-09-01", testingDate: "2026-09-29" },
     ],
   );
 });

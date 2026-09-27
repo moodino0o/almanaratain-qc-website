@@ -33,6 +33,8 @@ export type DailyStrengthTableRow = {
 
 export type DailyReportRow = {
   date: string;
+  castingDate: string;
+  testingDate: string;
   category: string;
   plant: string;
   product: string;
@@ -52,6 +54,8 @@ export type DailyReportProductOption = {
 
 type StrengthGroup = {
   date: string;
+  castingDate: string;
+  testingDate: string;
   category: string;
   plant: string;
   product: string;
@@ -94,6 +98,11 @@ const addDays = (value: string, days: number) => {
   if (Number.isNaN(date.getTime())) return null;
   date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
+};
+
+const dateOnly = (value: unknown) => {
+  const match = String(value ?? "").trim().match(/^\d{4}-\d{2}-\d{2}/);
+  return match?.[0] ?? "";
 };
 
 const recordProduct = (record: QcRecord, details: Record<string, unknown>) => {
@@ -199,16 +208,20 @@ export function buildDailyReportRows(
   const addStrengths = (
     record: QcRecord,
     date: string | null,
+    testingDate: string | null,
     product: string,
     cubeAge: number | null,
     strengths: number[],
   ) => {
-    if (!date || !inRange(date) || !strengths.length) return;
+    if (!date || !testingDate || !inRange(date) || !strengths.length) return;
+    const castingDate = record.sampleDate.slice(0, 10);
     const category = record.testType;
-    const key = `${date}\u0000${category}\u0000${record.location}\u0000${product}\u0000${cubeAge ?? ""}`;
+    const key = `${date}\u0000${castingDate}\u0000${testingDate}\u0000${category}\u0000${record.location}\u0000${product}\u0000${cubeAge ?? ""}`;
     if (selected.size && !selected.has(`${category}\u0000${product}`)) return;
     const current = groups.get(key) ?? {
       date,
+      castingDate,
+      testingDate,
       category,
       plant: record.location,
       product,
@@ -239,18 +252,34 @@ export function buildDailyReportRows(
       }
       if (ageGroups.size) {
         for (const [age, strengths] of ageGroups) {
-          addStrengths(record, addDays(record.sampleDate, age), product, age, strengths);
+          const testingDate = addDays(record.sampleDate, age);
+          addStrengths(record, testingDate, testingDate, product, age, strengths);
         }
       } else {
-        addStrengths(record, record.sampleDate.slice(0, 10), product, null, recordStrengths(record, details));
+        const castingDate = record.sampleDate.slice(0, 10);
+        addStrengths(
+          record,
+          castingDate,
+          castingDate,
+          product,
+          null,
+          recordStrengths(record, details),
+        );
       }
       continue;
     }
+    const castingDate = record.sampleDate.slice(0, 10);
+    const age = recordAge(record, details);
+    const testingDate =
+      dateOnly(detailsValue(details, ["testingDate"])) ||
+      (age === null ? null : addDays(castingDate, age)) ||
+      castingDate;
     addStrengths(
       record,
-      record.sampleDate.slice(0, 10),
+      castingDate,
+      testingDate,
       product,
-      recordAge(record, details),
+      age,
       recordStrengths(record, details),
     );
   }
@@ -258,6 +287,8 @@ export function buildDailyReportRows(
   return [...groups.values()]
     .map((group) => ({
       date: group.date,
+      castingDate: group.castingDate,
+      testingDate: group.testingDate,
       category: group.category,
       plant: group.plant,
       product: group.product,
@@ -395,8 +426,8 @@ const createZip = (files: Array<{ name: string; content: string }>) => {
 
 export function downloadDailyReportWorkbook(rows: DailyReportRow[]) {
   if (!rows.length) return;
-  const headers = ["Category", "Age (days)", "Date", "Plant", "Type / Mix Design", "Average", "Minimum", "Maximum", "Std. Dev."];
-  const columns = ["A", "B", "C", "D", "E", "F", "G", "H", "I"];
+  const headers = ["Category", "Age (days)", "Casting Date", "Testing Date", "Plant", "Type / Mix Design", "Average", "Minimum", "Maximum", "Std. Dev."];
+  const columns = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
   const sheetRows = [
     `<row r="1">${inlineStringCell("A1", "Al Manaratain Daily QC Results", 1)}</row>`,
     `<row r="2">${inlineStringCell("A2", `Generated ${new Date().toLocaleDateString("en-GB")}`)}</row>`,
@@ -408,29 +439,31 @@ export function downloadDailyReportWorkbook(rows: DailyReportRow[]) {
         (row.cubeAge === null
           ? inlineStringCell(`B${rowNumber}`, "—")
           : numberCell(`B${rowNumber}`, row.cubeAge, 0)) +
-        inlineStringCell(`C${rowNumber}`, row.date) +
-        inlineStringCell(`D${rowNumber}`, row.plant) +
-        inlineStringCell(`E${rowNumber}`, row.product) +
-        numberCell(`F${rowNumber}`, row.averageStrength) +
-        numberCell(`G${rowNumber}`, row.minimumStrength) +
-        numberCell(`H${rowNumber}`, row.maximumStrength) +
-        numberCell(`I${rowNumber}`, row.standardDeviation)
+        inlineStringCell(`C${rowNumber}`, row.castingDate) +
+        inlineStringCell(`D${rowNumber}`, row.testingDate) +
+        inlineStringCell(`E${rowNumber}`, row.plant) +
+        inlineStringCell(`F${rowNumber}`, row.product) +
+        numberCell(`G${rowNumber}`, row.averageStrength) +
+        numberCell(`H${rowNumber}`, row.minimumStrength) +
+        numberCell(`I${rowNumber}`, row.maximumStrength) +
+        numberCell(`J${rowNumber}`, row.standardDeviation)
       }</row>`;
     }),
   ].join("");
   const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <dimension ref="A1:I${rows.length + 4}"/>
+  <dimension ref="A1:J${rows.length + 4}"/>
   <cols>
     <col min="1" max="1" width="18" customWidth="1"/>
     <col min="2" max="2" width="12" customWidth="1"/>
     <col min="3" max="3" width="14" customWidth="1"/>
-    <col min="4" max="4" width="18" customWidth="1"/>
-    <col min="5" max="5" width="24" customWidth="1"/>
-    <col min="6" max="9" width="15" customWidth="1"/>
+    <col min="4" max="4" width="14" customWidth="1"/>
+    <col min="5" max="5" width="18" customWidth="1"/>
+    <col min="6" max="6" width="24" customWidth="1"/>
+    <col min="7" max="10" width="15" customWidth="1"/>
   </cols>
   <sheetData>${sheetRows}</sheetData>
-  <mergeCells count="1"><mergeCell ref="A1:I1"/></mergeCells>
+  <mergeCells count="1"><mergeCell ref="A1:J1"/></mergeCells>
 </worksheet>`;
   const files = [
     {

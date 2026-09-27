@@ -130,11 +130,15 @@ const handleCubeInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     Array.from(row.querySelectorAll<HTMLInputElement>("[data-cube-navigation-input]"));
   const currentRowInputs = getNavigableInputs(currentRow);
   const currentInputIndex = currentRowInputs.indexOf(event.currentTarget);
+  if (currentInputIndex < 0) return;
   const candidateInputs = [
     ...currentRowInputs.slice(currentInputIndex + 1),
     ...rows.slice(currentRowIndex + 1).flatMap(getNavigableInputs),
   ];
-  candidateInputs.find((input) => input.value.trim() === "")?.focus();
+  const nextInput = candidateInputs[0];
+  if (!nextInput) return;
+  nextInput.scrollIntoView({ block: "nearest", inline: "nearest" });
+  nextInput.focus({ preventScroll: true });
 };
 
 export default function Reports() {
@@ -466,12 +470,13 @@ export default function Reports() {
                     </span>
                   </div>
                   <div className="overflow-x-auto rounded-md border">
-                     <Table className="min-w-[1180px]">
+                      <Table className="min-w-[1320px]">
                       <TableHeader>
                         <TableRow>
                           <TableHead>Category</TableHead>
                            <TableHead className="text-center">Age (days)</TableHead>
-                           <TableHead>Date</TableHead>
+                           <TableHead>Casting Date</TableHead>
+                           <TableHead>Testing Date</TableHead>
                           <TableHead>Plant</TableHead>
                           <TableHead>Type / Mix Design</TableHead>
                           <TableHead className="border-l bg-emerald-50 text-right text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">Average</TableHead>
@@ -482,10 +487,11 @@ export default function Reports() {
                       </TableHeader>
                       <TableBody>
                         {dailyReportRows.map((row) => (
-                           <TableRow key={`${row.date}-${row.category}-${row.plant}-${row.product}-${row.cubeAge ?? "none"}`}>
+                            <TableRow key={`${row.date}-${row.castingDate}-${row.testingDate}-${row.category}-${row.plant}-${row.product}-${row.cubeAge ?? "none"}`}>
                             <TableCell className="font-medium">{row.category}</TableCell>
                              <TableCell className="text-center">{row.cubeAge === null ? "—" : row.cubeAge}</TableCell>
-                             <TableCell className="whitespace-nowrap">{formatDate(row.date)}</TableCell>
+                              <TableCell className="whitespace-nowrap">{formatDate(row.castingDate)}</TableCell>
+                              <TableCell className="whitespace-nowrap">{formatDate(row.testingDate)}</TableCell>
                             <TableCell>{row.plant}</TableCell>
                             <TableCell>{row.product}</TableCell>
                             <TableCell className="border-l bg-emerald-50/50 text-right font-semibold text-emerald-900 dark:bg-emerald-950/10 dark:text-emerald-200">{formatStrength(row.averageStrength, row.strengthUnit)}</TableCell>
@@ -750,7 +756,7 @@ export default function Reports() {
                                     step="any"
                                     value={row[key]}
                                     onKeyDown={handleCubeInputKeyDown}
-                                    data-cube-navigation-input={key === "dryWeight" || key === "wetWeight" || key === "load" ? "true" : undefined}
+                                    data-cube-navigation-input="true"
                                     onChange={(event) => updateResultRow(
                                       entry.record.id,
                                       rowIndex as 0 | 1,
