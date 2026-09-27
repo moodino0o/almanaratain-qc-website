@@ -71,6 +71,14 @@ const numericValue = (value: unknown) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+const firstNumericValue = (values: Record<string, unknown>, keys: string[]) => {
+  for (const key of keys) {
+    const parsed = numericValue(values[key]);
+    if (parsed !== null) return parsed;
+  }
+  return null;
+};
+
 const populationStandardDeviation = (values: number[]) => {
   if (values.length < 2) return null;
   const average = values.reduce((sum, value) => sum + value, 0) / values.length;
@@ -121,17 +129,22 @@ const recordAge = (record: QcRecord, details: Record<string, unknown>) =>
     ? numericValue(detailsValue(details, ["blockAge"]))
     : null;
 
-const rowStrength = (row: unknown) => {
+const rowStrength = (row: unknown, testType: QcRecord["testType"]) => {
   if (typeof row !== "object" || row === null) return null;
   const values = row as Record<string, unknown>;
-  return numericValue(
-    values.correctedStrength ??
-    values.normalizedStrength ??
-    values.airDryStrength ??
-    values.calculatedStrength ??
-    values.strength ??
-    values.compressiveStrength,
-  );
+  const strengthKeys = testType === "Ready Mix"
+    ? ["calculatedStrength", "strength", "compressiveStrength"]
+    : testType === "Paving Blocks"
+      ? ["correctedStrength", "calculatedStrength", "compressiveStrength", "strength"]
+      : [
+          "correctedStrength",
+          "normalizedStrength",
+          "airDryStrength",
+          "calculatedStrength",
+          "strength",
+          "compressiveStrength",
+        ];
+  return firstNumericValue(values, strengthKeys);
 };
 
 const blockAirDryStrength = (row: unknown, location: string) => {
@@ -153,27 +166,43 @@ const recordStrengths = (record: QcRecord, details: Record<string, unknown>) => 
   const strengths = rows
     .map((row) => record.testType === "Blocks"
       ? blockAirDryStrength(row, record.location)
-      : rowStrength(row))
+      : rowStrength(row, record.testType))
     .filter((value): value is number => value !== null);
   if (strengths.length) return strengths;
-  const directStrength = numericValue(
-    record.testType === "Blocks"
-      ? details.averageStrength ??
-        details.airDryStrength ??
-        details.dryAirStrength ??
-        details.calculatedStrength ??
-        details.strength ??
-        details.compressiveStrength
-      : details.averageStrength ??
-        details.correctedStrength ??
-        details.normalizedStrength ??
-        details.airDryStrength ??
-        details.calculatedStrength ??
-        details.strength ??
-        details.compressiveStrength,
-  );
+  const directStrengthKeys = record.testType === "Ready Mix"
+    ? ["averageStrength", "calculatedStrength", "strength", "compressiveStrength"]
+    : record.testType === "Blocks"
+      ? [
+          "averageStrength",
+          "airDryStrength",
+          "dryAirStrength",
+          "calculatedStrength",
+          "strength",
+          "compressiveStrength",
+        ]
+      : record.testType === "Paving Blocks"
+        ? [
+            "averageStrength",
+            "correctedStrength",
+            "calculatedStrength",
+            "compressiveStrength",
+            "strength",
+          ]
+        : [
+            "averageStrength",
+            "correctedStrength",
+            "normalizedStrength",
+            "airDryStrength",
+            "calculatedStrength",
+            "strength",
+            "compressiveStrength",
+          ];
+  const directStrength = firstNumericValue(details, directStrengthKeys);
   if (directStrength === null) return [];
-  if (record.testType !== "Blocks" || details.averageStrength !== undefined || details.airDryStrength !== undefined) {
+  if (
+    record.testType !== "Blocks" ||
+    firstNumericValue(details, ["averageStrength", "airDryStrength", "dryAirStrength"]) !== null
+  ) {
     return [directStrength];
   }
   return [Number((directStrength * (record.location.trim().toLocaleLowerCase() === "dammam" ? 1 : 1.2)).toFixed(1))];
@@ -244,7 +273,7 @@ export function buildDailyReportRows(
         const age = numericValue((row as Record<string, unknown>).testAge ??
           (row as Record<string, unknown>).cubeAge ??
           (row as Record<string, unknown>).age);
-        const strength = rowStrength(row);
+        const strength = rowStrength(row, record.testType);
         if (age === null || strength === null) continue;
         const current = ageGroups.get(age) ?? [];
         current.push(strength);

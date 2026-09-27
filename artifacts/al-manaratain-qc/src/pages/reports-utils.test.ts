@@ -273,6 +273,35 @@ test("groups Ready Mix products by their first three words and summarizes each d
   );
 });
 
+test("daily Ready Mix results use calculated strength instead of air-dry strength", () => {
+  const rows = buildDailyReportRows(
+    [
+      qcRecord({
+        id: 28,
+        testType: "Ready Mix",
+        sampleDate: "2026-08-01",
+        location: "Eastern",
+        material: "45 N OPC Ice",
+        details: {
+          designStrength: "45 N OPC Ice",
+          testRows: [
+            { testAge: "", calculatedStrength: null, airDryStrength: null },
+            { testAge: "28", calculatedStrength: "54.96", strength: "54.96", airDryStrength: "66" },
+            { testAge: "28", calculatedStrength: "57.22", strength: "57.22", airDryStrength: "68.7" },
+          ],
+        },
+      }),
+    ],
+    "2026-08-29",
+    "2026-08-29",
+  );
+
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0]?.averageStrength, 56.09);
+  assert.equal(rows[0]?.minimumStrength, 54.96);
+  assert.equal(rows[0]?.maximumStrength, 57.22);
+});
+
 test("includes non-Ready Mix categories, date ranges, and selected product groups", () => {
   const records = [
     qcRecord({

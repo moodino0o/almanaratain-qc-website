@@ -41,7 +41,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 const today = () => new Date().toISOString().slice(0, 10);
 
 function formatStrength(value: number | null | undefined, unit = "N/mm²") {
-  return value == null ? "Missing" : `${value.toFixed(1)} ${unit}`;
+  return value == null ? "Missing" : `${value.toFixed(2)} ${unit}`;
 }
 
 function detailValue(details: Record<string, unknown>, keys: string[]) {
@@ -473,35 +473,35 @@ export default function Reports() {
                       One summary per day and group
                     </span>
                   </div>
-                  <div className="overflow-x-auto rounded-md border">
-                      <Table className="min-w-[1320px]">
+                   <div className="rounded-md border">
+                     <Table className="w-full table-fixed text-[11px] leading-tight">
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Category</TableHead>
-                           <TableHead className="text-center">Age (days)</TableHead>
-                           <TableHead>Casting Date</TableHead>
-                           <TableHead>Testing Date</TableHead>
-                          <TableHead>Plant</TableHead>
-                          <TableHead>Type / Mix Design</TableHead>
-                          <TableHead className="border-l bg-emerald-50 text-right text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">Average</TableHead>
-                          <TableHead className="bg-amber-50 text-right text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">Minimum</TableHead>
-                          <TableHead className="bg-sky-50 text-right text-sky-900 dark:bg-sky-950/30 dark:text-sky-200">Maximum</TableHead>
-                           <TableHead className="bg-violet-50 text-right text-violet-900 dark:bg-violet-950/30 dark:text-violet-200">Std. Dev.</TableHead>
+                           <TableHead className="w-[8%] px-1.5 py-2 text-[10px] leading-tight">Category</TableHead>
+                           <TableHead className="w-[5%] px-1 py-2 text-center text-[10px] leading-tight">Age</TableHead>
+                           <TableHead className="w-[8%] px-1 py-2 text-[10px] leading-tight">Casting Date</TableHead>
+                           <TableHead className="w-[8%] px-1 py-2 text-[10px] leading-tight">Testing Date</TableHead>
+                           <TableHead className="w-[9%] px-1.5 py-2 text-[10px] leading-tight">Plant</TableHead>
+                           <TableHead className="w-[12%] px-1.5 py-2 text-[10px] leading-tight">Type / Mix Design</TableHead>
+                           <TableHead className="w-[12%] border-l bg-emerald-50 px-1 py-2 text-right text-[10px] leading-tight text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">Average</TableHead>
+                           <TableHead className="w-[12%] bg-amber-50 px-1 py-2 text-right text-[10px] leading-tight text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">Minimum</TableHead>
+                           <TableHead className="w-[12%] bg-sky-50 px-1 py-2 text-right text-[10px] leading-tight text-sky-900 dark:bg-sky-950/30 dark:text-sky-200">Maximum</TableHead>
+                           <TableHead className="w-[14%] bg-violet-50 px-1 py-2 text-right text-[10px] leading-tight text-violet-900 dark:bg-violet-950/30 dark:text-violet-200">Std. Dev.</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {dailyReportRows.map((row) => (
-                            <TableRow key={`${row.date}-${row.castingDate}-${row.testingDate}-${row.category}-${row.plant}-${row.product}-${row.cubeAge ?? "none"}`}>
-                            <TableCell className="font-medium">{row.category}</TableCell>
-                             <TableCell className="text-center">{row.cubeAge === null ? "—" : row.cubeAge}</TableCell>
-                              <TableCell className="whitespace-nowrap">{formatDate(row.castingDate)}</TableCell>
-                              <TableCell className="whitespace-nowrap">{formatDate(row.testingDate)}</TableCell>
-                            <TableCell>{row.plant}</TableCell>
-                            <TableCell>{row.product}</TableCell>
-                            <TableCell className="border-l bg-emerald-50/50 text-right font-semibold text-emerald-900 dark:bg-emerald-950/10 dark:text-emerald-200">{formatStrength(row.averageStrength, row.strengthUnit)}</TableCell>
-                            <TableCell className="bg-amber-50/50 text-right text-amber-900 dark:bg-amber-950/10 dark:text-amber-200">{formatStrength(row.minimumStrength, row.strengthUnit)}</TableCell>
-                            <TableCell className="bg-sky-50/50 text-right text-sky-900 dark:bg-sky-950/10 dark:text-sky-200">{formatStrength(row.maximumStrength, row.strengthUnit)}</TableCell>
-                             <TableCell className="bg-violet-50/50 text-right text-violet-900 dark:bg-violet-950/10 dark:text-violet-200">{formatStrength(row.standardDeviation, row.strengthUnit)}</TableCell>
+                             <TableRow key={`${row.date}-${row.castingDate}-${row.testingDate}-${row.category}-${row.plant}-${row.product}-${row.cubeAge ?? "none"}`}>
+                             <TableCell className="whitespace-normal break-words px-1.5 py-2 text-[10px] leading-tight font-medium">{row.category}</TableCell>
+                             <TableCell className="whitespace-normal break-words px-1 py-2 text-center text-[10px] leading-tight">{row.cubeAge === null ? "—" : row.cubeAge}</TableCell>
+                             <TableCell className="whitespace-normal break-words px-1 py-2 text-[10px] leading-tight">{formatDate(row.castingDate)}</TableCell>
+                             <TableCell className="whitespace-normal break-words px-1 py-2 text-[10px] leading-tight">{formatDate(row.testingDate)}</TableCell>
+                             <TableCell className="whitespace-normal break-words px-1.5 py-2 text-[10px] leading-tight">{row.plant}</TableCell>
+                             <TableCell className="whitespace-normal break-words px-1.5 py-2 text-[10px] leading-tight">{row.product}</TableCell>
+                             <TableCell className="whitespace-normal break-words border-l bg-emerald-50/50 px-1 py-2 text-right text-[10px] leading-tight font-semibold tabular-nums text-emerald-900 dark:bg-emerald-950/10 dark:text-emerald-200">{formatStrength(row.averageStrength, row.strengthUnit)}</TableCell>
+                             <TableCell className="whitespace-normal break-words bg-amber-50/50 px-1 py-2 text-right text-[10px] leading-tight tabular-nums text-amber-900 dark:bg-amber-950/10 dark:text-amber-200">{formatStrength(row.minimumStrength, row.strengthUnit)}</TableCell>
+                             <TableCell className="whitespace-normal break-words bg-sky-50/50 px-1 py-2 text-right text-[10px] leading-tight tabular-nums text-sky-900 dark:bg-sky-950/10 dark:text-sky-200">{formatStrength(row.maximumStrength, row.strengthUnit)}</TableCell>
+                             <TableCell className="whitespace-normal break-words bg-violet-50/50 px-1 py-2 text-right text-[10px] leading-tight tabular-nums text-violet-900 dark:bg-violet-950/10 dark:text-violet-200">{formatStrength(row.standardDeviation, row.strengthUnit)}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
