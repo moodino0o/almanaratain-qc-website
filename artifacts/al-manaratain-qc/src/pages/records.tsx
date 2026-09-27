@@ -24,10 +24,10 @@ export default function Records() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case RecordStatus.Passed: return <Badge variant="success"><CheckCircle2 className="w-3 h-3 mr-1" /> Passed</Badge>;
-      case RecordStatus.Review: return <Badge variant="warning"><AlertTriangle className="w-3 h-3 mr-1" /> Review</Badge>;
-      case RecordStatus.Failed: return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" /> Failed</Badge>;
-      default: return <Badge variant="secondary">{status}</Badge>;
+      case RecordStatus.Passed: return <Badge variant="success" className="whitespace-normal px-1.5 py-0.5 text-[10px] leading-tight"><CheckCircle2 className="mr-1 h-3 w-3 shrink-0" /> Passed</Badge>;
+      case RecordStatus.Review: return <Badge variant="warning" className="whitespace-normal px-1.5 py-0.5 text-[10px] leading-tight"><AlertTriangle className="mr-1 h-3 w-3 shrink-0" /> Review</Badge>;
+      case RecordStatus.Failed: return <Badge variant="destructive" className="whitespace-normal px-1.5 py-0.5 text-[10px] leading-tight"><XCircle className="mr-1 h-3 w-3 shrink-0" /> Failed</Badge>;
+      default: return <Badge variant="secondary" className="whitespace-normal px-1.5 py-0.5 text-[10px] leading-tight">{status}</Badge>;
     }
   };
 
@@ -89,19 +89,19 @@ export default function Records() {
           </div>
         </CardHeader>
         <CardContent className="flex-1 overflow-auto p-0">
-          <Table className="min-w-[1180px]">
+          <Table className="w-full table-fixed text-[11px] leading-tight">
             <TableHeader className="sticky top-0 bg-card z-10 shadow-sm">
               <TableRow>
-                <TableHead className="w-[120px]">Record No.</TableHead>
-                <TableHead className="w-[150px]">Test Type</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead className="w-[180px]">Customer</TableHead>
-                <TableHead className="w-[160px]">Site</TableHead>
-                <TableHead>Material</TableHead>
-                <TableHead>Sample Date</TableHead>
-                <TableHead>Tested By</TableHead>
-                <TableHead className="w-[100px]">Status</TableHead>
-                <TableHead className="text-right w-[180px]">Actions</TableHead>
+                <TableHead className="w-[8%] px-1.5 py-2 text-[10px] leading-tight">Record No.</TableHead>
+                <TableHead className="w-[11%] px-1.5 py-2 text-[10px] leading-tight">Test Type</TableHead>
+                <TableHead className="w-[9%] px-1.5 py-2 text-[10px] leading-tight">Location</TableHead>
+                <TableHead className="w-[11%] px-1.5 py-2 text-[10px] leading-tight">Customer</TableHead>
+                <TableHead className="w-[10%] px-1.5 py-2 text-[10px] leading-tight">Site</TableHead>
+                <TableHead className="w-[12%] px-1.5 py-2 text-[10px] leading-tight">Material</TableHead>
+                <TableHead className="w-[8%] px-1.5 py-2 text-[10px] leading-tight">Sample Date</TableHead>
+                <TableHead className="w-[9%] px-1.5 py-2 text-[10px] leading-tight">Tested By</TableHead>
+                <TableHead className="w-[8%] px-1.5 py-2 text-[10px] leading-tight">Status</TableHead>
+                <TableHead className="w-[14%] px-1 py-2 text-right text-[10px] leading-tight">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -126,36 +126,36 @@ export default function Records() {
               ) : (
                 records?.map((record) => (
                   <TableRow key={record.id}>
-                    <TableCell className="font-semibold text-primary">{record.recordNo}</TableCell>
-                    <TableCell>
-                      <span className="font-medium bg-muted px-2 py-1 rounded-sm text-xs">
+                    <TableCell className="break-words px-1.5 py-2 font-semibold text-primary">{record.recordNo}</TableCell>
+                    <TableCell className="whitespace-normal break-words px-1.5 py-2">
+                      <span className="inline-block max-w-full break-words rounded-sm bg-muted px-1 py-0.5 text-[10px] font-medium leading-tight">
                         {record.testType}
                       </span>
                     </TableCell>
-                    <TableCell className="truncate max-w-[150px]">{record.location}</TableCell>
-                    <TableCell className="truncate max-w-[180px]">
+                    <TableCell className="whitespace-normal break-words px-1.5 py-2">{record.location}</TableCell>
+                    <TableCell className="whitespace-normal break-words px-1.5 py-2">
                       {getRecordDetail(record.details, "customerName")}
                     </TableCell>
-                    <TableCell className="truncate max-w-[160px]">
+                    <TableCell className="whitespace-normal break-words px-1.5 py-2">
                       {getRecordDetail(record.details, "customerLocation")}
                     </TableCell>
-                    <TableCell className="truncate max-w-[150px]">{record.material}</TableCell>
-                    <TableCell>{formatDate(record.sampleDate)}</TableCell>
-                    <TableCell>{record.testedBy}</TableCell>
-                    <TableCell>{getStatusBadge(record.status)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
+                    <TableCell className="whitespace-normal break-words px-1.5 py-2">{record.material}</TableCell>
+                    <TableCell className="whitespace-normal break-words px-1.5 py-2">{formatDate(record.sampleDate)}</TableCell>
+                    <TableCell className="whitespace-normal break-words px-1.5 py-2">{record.testedBy}</TableCell>
+                    <TableCell className="px-1.5 py-2">{getStatusBadge(record.status)}</TableCell>
+                    <TableCell className="px-1 py-2 text-right">
+                      <div className="flex flex-wrap justify-end gap-1">
                         <Link
                           href={`/records/${record.id}`}
-                          className="inline-flex h-8 items-center justify-center rounded-md bg-secondary text-secondary-foreground px-3 text-xs font-medium shadow-sm transition-colors hover:bg-secondary/80"
+                          className="inline-flex h-7 items-center justify-center whitespace-nowrap rounded-md bg-secondary px-1.5 text-[10px] font-medium text-secondary-foreground shadow-sm transition-colors hover:bg-secondary/80"
                         >
                           View
                         </Link>
                         <Link
                           href={`/reports/${record.id}`}
-                          className="inline-flex h-8 items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+                          className="inline-flex h-7 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-1.5 text-[10px] font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
                         >
-                          <Printer className="mr-1.5 h-3.5 w-3.5" />
+                          <Printer className="mr-1 h-3 w-3 shrink-0" />
                           Print
                         </Link>
                       </div>
