@@ -26,6 +26,7 @@ import {
   createEmptyRow,
   calculateSieveSampleWeight,
   calculateSieveResults,
+  applySizeDimensionDefaults,
   prepareDetailsForForm,
   sieveSizeNumber,
   stringValue,
@@ -93,6 +94,7 @@ export default function RecordForm() {
   const rowInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
   const sieveContextKeyRef = useRef("");
   const previousBlockSizeRef = useRef("");
+  const previousPavingSizeRef = useRef("");
   const previousShapeFactorRef = useRef("");
   const previousCorrectionFactorRef = useRef("");
 
@@ -201,29 +203,38 @@ export default function RecordForm() {
     if (!nextDimensions) return;
 
     setTestRows((previousRows) =>
-      previousRows.map((row) => {
-        const matchesPreviousDefaults = previousDimensions &&
-          row.length === String(previousDimensions.length) &&
-          row.width === String(previousDimensions.width) &&
-          row.height === String(previousDimensions.height);
-        const hasDimensions = Boolean(row.length || row.width || row.height);
-        if (hasDimensions && !matchesPreviousDefaults) {
-          return {
-            ...row,
-            length: row.length || String(nextDimensions.length),
-            width: row.width || String(nextDimensions.width),
-            height: row.height || String(nextDimensions.height),
-          };
-        }
-        return {
-          ...row,
-          length: String(nextDimensions.length),
-          width: String(nextDimensions.width),
-          height: String(nextDimensions.height),
-        };
-      }),
+      previousRows.map((row) =>
+        applySizeDimensionDefaults(
+          row,
+          nextDimensions,
+          previousDimensions,
+        ),
+      ),
     );
   }, [details.blockSize, testType]);
+
+  useEffect(() => {
+    if (testType !== TestType.Paving_Blocks) {
+      previousPavingSizeRef.current = "";
+      return;
+    }
+
+    const nextSize = String(details.pavingBlockSize ?? "").trim();
+    const nextDimensions = blockDimensionsFromSize(nextSize);
+    const previousDimensions = blockDimensionsFromSize(previousPavingSizeRef.current);
+    previousPavingSizeRef.current = nextSize;
+    if (!nextDimensions) return;
+
+    setTestRows((previousRows) =>
+      previousRows.map((row) =>
+        applySizeDimensionDefaults(
+          row,
+          nextDimensions,
+          previousDimensions,
+        ),
+      ),
+    );
+  }, [details.pavingBlockSize, testType]);
 
   useEffect(() => {
     if (testType !== TestType.Blocks) {
@@ -822,16 +833,19 @@ export default function RecordForm() {
             !(event.target instanceof HTMLInputElement)
           ) return;
 
+          event.preventDefault();
           const fields = Array.from(
             formRef.current?.querySelectorAll<HTMLElement>(
               'input:not([type="hidden"]):not(:disabled):not([readonly]), textarea:not(:disabled):not([readonly]), button[role="combobox"]:not(:disabled):not([aria-disabled="true"]), button[type="submit"]:not(:disabled)',
             ) ?? [],
-          ).filter((field) => field.getClientRects().length > 0);
+          );
           const currentIndex = fields.indexOf(event.target);
           if (currentIndex === -1) return;
 
-          event.preventDefault();
-          fields[currentIndex + 1]?.focus();
+          const nextField = fields[currentIndex + 1];
+          if (!nextField) return;
+          nextField.scrollIntoView({ block: "nearest", inline: "nearest" });
+          nextField.focus({ preventScroll: true });
         }}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

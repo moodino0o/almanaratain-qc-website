@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { RecordStatus, TestType, type QcRecord } from "@workspace/api-client-react";
 import {
+  applySizeDimensionDefaults,
   blockDimensionsFromSize,
   blockMaterialMatches,
   blockSizeMatches,
@@ -47,6 +48,43 @@ test("maps Block inch sizes to default dimensions", () => {
     width: "300",
     height: "200",
   });
+});
+
+test("uses selected block sizes as editable dimension defaults", () => {
+  const previousSize = blockDimensionsFromSize("200*100*60");
+  const nextSize = blockDimensionsFromSize("200*100*80");
+  assert.ok(previousSize);
+  assert.ok(nextSize);
+
+  const defaultedRow = applySizeDimensionDefaults(
+    { id: 1, length: "", width: "", height: "" },
+    previousSize,
+    null,
+  );
+  assert.deepEqual(
+    { length: defaultedRow.length, width: defaultedRow.width, height: defaultedRow.height },
+    previousSize,
+  );
+
+  const resizedRow = applySizeDimensionDefaults(defaultedRow, nextSize, previousSize);
+  assert.deepEqual(
+    { length: resizedRow.length, width: resizedRow.width, height: resizedRow.height },
+    nextSize,
+  );
+
+  const manuallyEditedRow = applySizeDimensionDefaults(
+    { ...defaultedRow, length: "210" },
+    nextSize,
+    previousSize,
+  );
+  assert.deepEqual(
+    {
+      length: manuallyEditedRow.length,
+      width: manuallyEditedRow.width,
+      height: manuallyEditedRow.height,
+    },
+    { length: "210", width: "100", height: "60" },
+  );
 });
 
 test("matches legacy Block labels to canonical standards", () => {

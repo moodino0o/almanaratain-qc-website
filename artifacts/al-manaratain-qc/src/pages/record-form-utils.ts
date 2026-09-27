@@ -306,6 +306,31 @@ export const blockDimensionsFromSize = (value: unknown): BlockDimensions | null 
   };
 };
 
+export const applySizeDimensionDefaults = <T extends BlockDimensions>(
+  row: T,
+  nextDimensions: BlockDimensions,
+  previousDimensions: BlockDimensions | null,
+): T => {
+  const matchesPreviousDefaults = Boolean(
+    previousDimensions &&
+    row.length === previousDimensions.length &&
+    row.width === previousDimensions.width &&
+    row.height === previousDimensions.height,
+  );
+  const hasDimensions = Boolean(row.length || row.width || row.height);
+
+  if (hasDimensions && !matchesPreviousDefaults) {
+    return {
+      ...row,
+      length: row.length || nextDimensions.length,
+      width: row.width || nextDimensions.width,
+      height: row.height || nextDimensions.height,
+    };
+  }
+
+  return { ...row, ...nextDimensions };
+};
+
 const normalizedBlockType = (value: unknown) => {
   const text = stringValue(value)
     .trim()
