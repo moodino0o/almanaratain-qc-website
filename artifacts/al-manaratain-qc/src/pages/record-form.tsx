@@ -545,8 +545,15 @@ export default function RecordForm() {
     testType === TestType.Ready_Mix
       ? ["length", "width", "height", "dryWeight", "wetWeight"]
       : testType === TestType.Blocks
-        ? ["length", "width", "height", "wetWeight"]
+        ? ["length", "width", "height"]
         : ["length", "width", "height", "weight"];
+  const isCompactBlockTable = testType === TestType.Blocks;
+  const compactBlockCellClass = isCompactBlockTable
+    ? "px-1 py-1.5 text-[11px] leading-tight"
+    : "px-2 py-2";
+  const compactBlockInputClass = isCompactBlockTable
+    ? "h-8 min-w-0 px-1.5 text-[11px]"
+    : undefined;
 
   const getMaterialSuggestions = () => {
     if (!lookups) return [];
@@ -1242,11 +1249,11 @@ export default function RecordForm() {
                       )}
                     </div>
                   )}
-                   {usesSieveRows && !sieveEntryItems.length ? null : <div className="overflow-x-auto rounded-md border">
-                     <table className={`w-full ${usesSieveRows ? "min-w-[760px]" : testType === TestType.Blocks || testType === TestType.Paving_Blocks ? "min-w-[1440px]" : "min-w-[1080px]"} text-sm`}>
+                   {usesSieveRows && !sieveEntryItems.length ? null : <div className={`${isCompactBlockTable ? "overflow-hidden" : "overflow-x-auto"} rounded-md border`}>
+                      <table className={`w-full ${usesSieveRows ? "min-w-[760px] text-sm" : isCompactBlockTable ? "table-fixed text-[11px]" : testType === TestType.Paving_Blocks ? "min-w-[1440px] text-sm" : "min-w-[1080px] text-sm"}`}>
                       <thead className="bg-muted/50">
                         <tr className="border-b">
-                          <th className="w-12 px-3 py-3 text-left font-semibold">No.</th>
+                           <th className={`${isCompactBlockTable ? "w-[4%] px-1 py-2 text-[10px]" : "w-12 px-3 py-3"} text-left font-semibold`}>No.</th>
                           {usesSieveRows ? (
                             <th className="px-3 py-3 text-left font-semibold">Sieve / Pore Size</th>
                           ) : testType === TestType.Ready_Mix ? (
@@ -1261,15 +1268,15 @@ export default function RecordForm() {
                             </>
                           ) : (
                             <>
-                              <th className="px-3 py-3 text-left font-semibold">Length (mm)</th>
-                              <th className="px-3 py-3 text-left font-semibold">Width (mm)</th>
-                              <th className="px-3 py-3 text-left font-semibold">Height (mm)</th>
+                               <th className={`${isCompactBlockTable ? "w-[12%] px-1 py-2 text-[10px]" : "px-3 py-3"} text-left font-semibold`}>Length (mm)</th>
+                               <th className={`${isCompactBlockTable ? "w-[12%] px-1 py-2 text-[10px]" : "px-3 py-3"} text-left font-semibold`}>Width (mm)</th>
+                               <th className={`${isCompactBlockTable ? "w-[12%] px-1 py-2 text-[10px]" : "px-3 py-3"} text-left font-semibold`}>Height (mm)</th>
                               {testType === TestType.Ready_Mix && (
                                 <th className="px-3 py-3 text-left font-semibold">Dry Weight</th>
                               )}
-                              <th className="px-3 py-3 text-left font-semibold">
+                              {testType !== TestType.Blocks && <th className="px-3 py-3 text-left font-semibold">
                                 {testType === TestType.Paving_Blocks ? "Weight (kg)" : "Wet Weight"}
-                              </th>
+                              </th>}
                                {testType === TestType.Ready_Mix && (
                                  <th className="px-3 py-3 text-left font-semibold">Water Absorption</th>
                                )}
@@ -1279,10 +1286,12 @@ export default function RecordForm() {
                               testType === TestType.Blocks ||
                               testType === TestType.Paving_Blocks) && (
                              <>
-                               <th className="px-3 py-3 text-left font-semibold">Load (kN)</th>
-                               <th className="px-3 py-3 text-left font-semibold">
-                                 {testType === TestType.Blocks ? "Water Strength" : "Calculated Strength"}
-                               </th>
+                               <th className={`${isCompactBlockTable ? "w-[10%] px-1 py-2 text-[10px]" : "px-3 py-3"} text-left font-semibold`}>Load (kN)</th>
+                               {testType === TestType.Blocks ? (
+                                 <th className="w-[12%] px-1 py-2 text-left text-[10px] font-semibold">Wet Weight (kg)</th>
+                               ) : (
+                                 <th className="px-3 py-3 text-left font-semibold">Calculated Strength</th>
+                               )}
                                 {testType === TestType.Paving_Blocks && (
                                   <th className="px-3 py-3 text-left font-semibold">
                                     Compressive Strength (N/mm²)
@@ -1290,20 +1299,19 @@ export default function RecordForm() {
                                 )}
                                {testType === TestType.Blocks && (
                                  <>
-                                   <th className="px-3 py-3 text-left font-semibold">Air Dry Strength</th>
-                                   <th className="px-3 py-3 text-left font-semibold">Normalized Strength</th>
-                                   <th className="px-3 py-3 text-left font-semibold">Density (kg/m³)</th>
+                                    <th className="w-[16%] px-1 py-2 text-left text-[10px] font-semibold">Air Dry Strength (N/mm²)</th>
+                                    <th className="w-[14%] px-1 py-2 text-left text-[10px] font-semibold">Density (kg/m³)</th>
                                  </>
                                )}
                              </>
                            )}
-                          <th className="w-20 px-3 py-3 text-left font-semibold">Action</th>
+                          <th className={`${isCompactBlockTable ? "w-[8%] px-1 py-2 text-[10px]" : "w-20 px-3 py-3"} text-left font-semibold`}>Action</th>
                         </tr>
                       </thead>
                       <tbody>
                         {testRows.map((row, rowIndex) => (
                           <tr key={row.id} className="border-b last:border-b-0">
-                            <td className="px-3 py-2 font-semibold text-muted-foreground">{rowIndex + 1}</td>
+                            <td className={isCompactBlockTable ? "px-1 py-1.5 text-center text-[10px] font-semibold text-muted-foreground" : "px-3 py-2 font-semibold text-muted-foreground"}>{rowIndex + 1}</td>
                             {usesSieveRows ? (
                               <>
                                 <td className="px-3 py-2 font-medium">
@@ -1379,11 +1387,12 @@ export default function RecordForm() {
                             </td>
                             )}
                             {measurementKeys.map(key => (
-                              <td key={key} className="px-2 py-2">
+                              <td key={key} className={compactBlockCellClass}>
                                 <Input
                                   type="text"
                                   inputMode="decimal"
                                   value={row[key] ?? ""}
+                                  className={compactBlockInputClass}
                                   data-enter-skip={["length", "width", "height"].includes(key) ? "true" : undefined}
                                   onChange={event => updateTestRow(rowIndex, key, event.target.value)}
                                    placeholder={
@@ -1422,8 +1431,22 @@ export default function RecordForm() {
                                     onChange={event => updateTestRow(rowIndex, "load", event.target.value)}
                                     placeholder="kN"
                                     aria-label={`Load for row ${rowIndex + 1}`}
+                                    className={compactBlockInputClass}
                                   />
                                 </td>
+                                {testType === TestType.Blocks && (
+                                  <td className={compactBlockCellClass}>
+                                    <Input
+                                      type="text"
+                                      inputMode="decimal"
+                                      value={row.wetWeight ?? ""}
+                                      onChange={event => updateTestRow(rowIndex, "wetWeight", event.target.value)}
+                                      placeholder="kg"
+                                      aria-label={`Wet weight for row ${rowIndex + 1}`}
+                                      className={compactBlockInputClass}
+                                    />
+                                  </td>
+                                )}
                                {testType === TestType.Paving_Blocks && (
                                  <td className="px-2 py-2">
                                    <Input
@@ -1473,9 +1496,10 @@ export default function RecordForm() {
                                  )}
                                 {testType === TestType.Blocks && (
                                   <>
-                                    <td className="px-2 py-2">
-                                      <div
-                                        className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground"
+                                 {testType === TestType.Blocks && (
+                                 <td className={compactBlockCellClass}>
+                                    <div
+                                      className="flex h-8 items-center rounded-md border bg-muted/40 px-1.5 text-[11px] font-semibold leading-tight text-foreground"
                                         aria-label={`Calculated air dry strength for row ${rowIndex + 1}`}
                                       >
                                         {calculateStrength(row).airDryStrength
@@ -1483,33 +1507,22 @@ export default function RecordForm() {
                                           : row.airDryStrength
                                             ? `${row.airDryStrength} N/mm²`
                                             : "Enter load and dimensions"}
-                                      </div>
-                                    </td>
-                                    <td className="px-2 py-2">
+                                    </div>
+                                 </td>
+                                 <td className={compactBlockCellClass}>
                                       <div
-                                        className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground"
-                                        aria-label={`Calculated normalized strength for row ${rowIndex + 1}`}
-                                      >
-                                        {calculateStrength(row).normalizedStrength
-                                          ? `${calculateStrength(row).normalizedStrength} N/mm²`
-                                          : row.normalizedStrength
-                                            ? `${row.normalizedStrength} N/mm²`
-                                            : "Enter shape factor"}
-                                      </div>
-                                    </td>
-                                    <td className="px-2 py-2">
-                                      <div
-                                        className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground"
+                                     className="flex h-8 items-center rounded-md border bg-muted/40 px-1.5 text-[11px] font-semibold leading-tight text-foreground"
                                         aria-label={`Calculated density for row ${rowIndex + 1}`}
                                       >
                                         {calculateBlockDensity(row) || "Enter wet weight and dimensions"}
                                       </div>
                                     </td>
+                                 )}
                                   </>
                                 )}
                               </>
                             )}
-                            <td className="px-2 py-2">
+                            <td className={isCompactBlockTable ? "px-1 py-1.5 text-center" : "px-2 py-2"}>
                               {usesSieveRows ? (
                                 <span className="text-xs text-muted-foreground">From standard</span>
                               ) : (
@@ -1519,6 +1532,7 @@ export default function RecordForm() {
                                   size="sm"
                                   onClick={() => removeTestRow(rowIndex)}
                                   disabled={testRows.length === 1}
+                                  className={isCompactBlockTable ? "h-7 px-1.5 text-[10px]" : undefined}
                                 >
                                   Remove
                                 </Button>
