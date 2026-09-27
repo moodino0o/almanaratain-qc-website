@@ -166,6 +166,34 @@
   white-space: normal;
 }
 
+.employee-activity-table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  overflow-wrap: anywhere;
+}
+
+.employee-activity-table th,
+.employee-activity-table td {
+  padding: 0.7rem 0.4rem;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.employee-activity-table th {
+  white-space: normal;
+}
+
+@media (max-width: 640px) {
+  .employee-activity-table {
+    font-size: 0.68rem;
+  }
+
+  .employee-activity-table th,
+  .employee-activity-table td {
+    padding: 0.6rem 0.28rem;
+  }
+}
+
 .complaint-photo-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));

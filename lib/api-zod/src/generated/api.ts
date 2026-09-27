@@ -73,6 +73,40 @@ export const GetLookupsResponse = zod.object({
 
 
 /**
+ * @summary Get employee activity for an inclusive date range
+ */
+export const GetEmployeeActivityQueryParams = zod.object({
+  "from": zod.coerce.string(),
+  "to": zod.coerce.string()
+})
+
+export const GetEmployeeActivityResponse = zod.object({
+  "records": zod.array(zod.object({
+  "employeeId": zod.string(),
+  "employeeName": zod.string(),
+  "date": zod.coerce.date(),
+  "loginCount": zod.number(),
+  "sessions": zod.array(zod.object({
+  "startedAt": zod.coerce.date(),
+  "lastSeenAt": zod.coerce.date(),
+  "expiresAt": zod.coerce.date(),
+  "endedAt": zod.coerce.date().nullable(),
+  "endReason": zod.union([zod.literal('logout'),zod.literal('expired'),zod.literal('revoked'),zod.literal(null)]).nullable()
+})),
+  "changes": zod.array(zod.object({
+  "id": zod.number(),
+  "occurredAt": zod.coerce.date(),
+  "action": zod.enum(['created', 'updated', 'deleted']),
+  "entityType": zod.string(),
+  "entityId": zod.string().nullable(),
+  "summary": zod.string(),
+  "details": zod.record(zod.string(), zod.unknown())
+}))
+}))
+})
+
+
+/**
  * @summary Get the currently authenticated user
  */
 export const GetCurrentAuthUserResponse = zod.object({

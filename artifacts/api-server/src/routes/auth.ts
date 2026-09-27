@@ -151,7 +151,7 @@ router.post('/mobile-auth/token-exchange', (_req: Request, res: Response) => {
 
 router.post('/mobile-auth/logout', async (req: Request, res: Response) => {
   const sid = getSessionId(req);
-  if (sid) await deleteSession(sid);
+  if (sid) await deleteSession(sid, 'logout');
   res.json(LogoutMobileSessionResponse.parse({ success: true }));
 });
 

@@ -35,7 +35,9 @@ import type {
   EmployeeAccessInput,
   EmployeeAccessList,
   EmployeeAccessUpdate,
+  EmployeeActivityResponse,
   GetDailyReadyMixResultsParams,
+  GetEmployeeActivityParams,
   HealthStatus,
   ListComplaintsParams,
   ListRecordsParams,
@@ -316,6 +318,90 @@ export function useGetLookups<TData = Awaited<ReturnType<typeof getLookups>>, TE
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetLookupsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetEmployeeActivityUrl = (params: GetEmployeeActivityParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/employee-activity?${stringifiedParams}` : `/api/employee-activity`
+}
+
+/**
+ * @summary Get employee activity for an inclusive date range
+ */
+export const getEmployeeActivity = async (params: GetEmployeeActivityParams, options?: Parameters<typeof customFetch>[1]): Promise<EmployeeActivityResponse> => {
+
+  return customFetch<EmployeeActivityResponse>(getGetEmployeeActivityUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEmployeeActivityQueryKey = (params?: GetEmployeeActivityParams,) => {
+    return [
+    `/api/employee-activity`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetEmployeeActivityQueryOptions = <TData = Awaited<ReturnType<typeof getEmployeeActivity>>, TError = ErrorType<void>>(params: GetEmployeeActivityParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEmployeeActivity>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEmployeeActivityQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEmployeeActivity>>> = ({ signal }) => getEmployeeActivity(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEmployeeActivity>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetEmployeeActivityQueryResult = NonNullable<Awaited<ReturnType<typeof getEmployeeActivity>>>
+export type GetEmployeeActivityQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get employee activity for an inclusive date range
+ */
+
+export function useGetEmployeeActivity<TData = Awaited<ReturnType<typeof getEmployeeActivity>>, TError = ErrorType<void>>(
+ params: GetEmployeeActivityParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEmployeeActivity>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetEmployeeActivityQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

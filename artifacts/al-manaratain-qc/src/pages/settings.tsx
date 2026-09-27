@@ -13,7 +13,11 @@ import {
   useGetEmployeeAccess,
   useCreateEmployeeAccess,
   useUpdateEmployeeAccess,
+  useGetEmployeeActivity,
+  getGetEmployeeActivityQueryKey,
   EmployeeAccess,
+  type EmployeeActivityDay,
+  type EmployeeActivityChange,
   UserRole,
   ReferenceCategory,
   ReferenceItem,
@@ -31,7 +35,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
   Settings2, Building2, Users, Package, MapPin, Truck, Plus, Trash2, Edit2, KeyRound,
-  Database, Check, X, Search, MoreVertical, UserPlus, ShieldAlert, Mail, ChevronDown
+  Database, Check, X, Search, MoreVertical, UserPlus, ShieldAlert, Mail, ChevronDown,
+  Activity, CalendarDays, RefreshCw, Clock3, FileJson, LogIn, LogOut,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -1072,6 +1077,399 @@ function EmployeeSharedValues({
   );
 }
 
+function toDateInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatActivityDate(value: string, includeDate = false) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not recorded";
+  return new Intl.DateTimeFormat("en-GB", includeDate
+    ? { dateStyle: "medium", timeStyle: "short" }
+    : { timeStyle: "short" }).format(date);
+}
+
+function formatActivityDay(value: string) {
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+function activitySessionExit(session: EmployeeActivityDay["sessions"][number]) {
+  if (session.endedAt) return formatActivityDate(session.endedAt);
+  if (session.endReason === "expired") return "Ended at expiry (inferred)";
+  if (session.endReason === "revoked") return "Ended when revoked (inferred)";
+  return "Open / no exit recorded";
+}
+
+function activityEndReasonLabel(
+  reason: EmployeeActivityDay["sessions"][number]["endReason"],
+  hasEndedAt = false,
+) {
+  if (reason === "logout") return "Logged out";
+  if (reason === "expired") return "Expired";
+  if (reason === "revoked") return "Revoked";
+  return hasEndedAt ? "Ended" : "Open";
+}
+
+function sanitizeActivityValue(value: unknown, key?: string): unknown {
+  if (key && /password|token|secret|authorization|cookie|credential/i.test(key)) {
+    return "[redacted]";
+  }
+  if (Array.isArray(value)) return value.map((item) => sanitizeActivityValue(item));
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([entryKey, entryValue]) => [
+        entryKey,
+        sanitizeActivityValue(entryValue, entryKey),
+      ]),
+    );
+  }
+  return value;
+}
+
+function activityDetailsText(details: Record<string, unknown>) {
+  const safeDetails = sanitizeActivityValue(details);
+  return JSON.stringify(safeDetails, null, 2) ?? "No additional details recorded.";
+}
+
+function EmployeeActivitySection({ isAdmin }: { isAdmin: boolean }) {
+  const today = useMemo(() => new Date(), []);
+  const defaultTo = toDateInputValue(today);
+  const defaultFrom = toDateInputValue(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6));
+  const [from, setFrom] = useState(defaultFrom);
+  const [to, setTo] = useState(defaultTo);
+  const [appliedRange, setAppliedRange] = useState({ from: defaultFrom, to: defaultTo });
+  const [selectedDay, setSelectedDay] = useState<EmployeeActivityDay | null>(null);
+  const [rangeError, setRangeError] = useState("");
+  const { data, isLoading, isFetching, isError, error, refetch } = useGetEmployeeActivity(
+    appliedRange,
+    {
+      query: {
+        enabled: isAdmin,
+        queryKey: getGetEmployeeActivityQueryKey(appliedRange),
+      },
+    },
+  );
+
+  if (!isAdmin) return null;
+
+  const records = data?.records ?? [];
+  const loginTotal = records.reduce((total, record) => total + record.loginCount, 0);
+  const changeTotal = records.reduce((total, record) => total + record.changes.length, 0);
+  const sessionTotal = records.reduce((total, record) => total + record.sessions.length, 0);
+
+  const applyRange = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!from || !to) {
+      setRangeError("Choose both a start date and an end date.");
+      return;
+    }
+    if (from > to) {
+      setRangeError("The start date must be on or before the end date.");
+      return;
+    }
+    setRangeError("");
+    setAppliedRange({ from, to });
+  };
+
+  const setPreset = (days: number) => {
+    const end = new Date();
+    const start = new Date(end.getFullYear(), end.getMonth(), end.getDate() - days + 1);
+    setFrom(toDateInputValue(start));
+    setTo(toDateInputValue(end));
+    setRangeError("");
+    setAppliedRange({
+      from: toDateInputValue(start),
+      to: toDateInputValue(end),
+    });
+  };
+
+  return (
+    <section className="space-y-4" data-testid="section-employee-activity">
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+        <div>
+          <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-foreground">
+            <Activity className="h-6 w-6 text-primary" /> Employee activity
+          </h2>
+          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+            Audit sign-ins, confirmed requests, session endings, and changes made by each employee.
+            Times are shown in your browser&apos;s local time.
+          </p>
+        </div>
+        <Badge variant="outline" className="w-fit gap-1.5 text-muted-foreground">
+          <ShieldAlert className="h-3.5 w-3.5" /> Administrator view
+        </Badge>
+      </div>
+
+      <Card className="border-primary/15 shadow-sm">
+        <CardContent className="space-y-4 p-4 sm:p-5">
+          <form className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]" onSubmit={applyRange}>
+            <label className="space-y-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              From
+              <div className="relative">
+                <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+                <Input
+                  type="date"
+                  value={from}
+                  onChange={(event) => setFrom(event.target.value)}
+                  className="pl-9 font-normal tracking-normal"
+                  aria-label="Activity from date"
+                  data-testid="input-activity-from"
+                />
+              </div>
+            </label>
+            <label className="space-y-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              To
+              <div className="relative">
+                <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+                <Input
+                  type="date"
+                  value={to}
+                  onChange={(event) => setTo(event.target.value)}
+                  className="pl-9 font-normal tracking-normal"
+                  aria-label="Activity to date"
+                  data-testid="input-activity-to"
+                />
+              </div>
+            </label>
+            <Button type="submit" className="self-end" disabled={isFetching} data-testid="button-apply-activity-range">
+              <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+              Apply range
+            </Button>
+          </form>
+          <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
+            <span className="mr-1 text-xs font-medium text-muted-foreground">Quick range</span>
+            {[1, 7, 30].map((days) => (
+              <Button
+                key={days}
+                type="button"
+                variant={days === 7 && from === appliedRange.from && to === appliedRange.to ? "secondary" : "outline"}
+                size="sm"
+                onClick={() => setPreset(days)}
+                data-testid={`button-activity-preset-${days}`}
+              >
+                {days === 1 ? "Today" : `${days} days`}
+              </Button>
+            ))}
+            <span className="ml-auto text-xs text-muted-foreground">
+              Showing {formatActivityDay(appliedRange.from)} – {formatActivityDay(appliedRange.to)}
+            </span>
+          </div>
+          {rangeError && <p className="text-sm text-destructive" role="alert" data-testid="status-activity-range-error">{rangeError}</p>}
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        {[
+          { label: "Daily login count", value: loginTotal, icon: LogIn },
+          { label: "Tracked sessions", value: sessionTotal, icon: Clock3 },
+          { label: "Recorded changes", value: changeTotal, icon: FileJson },
+        ].map(({ label, value, icon: Icon }) => (
+          <Card key={label} className="bg-card/80">
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className="rounded-md bg-primary/10 p-2 text-primary"><Icon className="h-4 w-4" /></div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">{label}</p>
+                <p className="mt-0.5 text-2xl font-semibold tabular-nums" data-testid={`text-activity-total-${label.toLowerCase().replaceAll(" ", "-")}`}>{value}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card className="overflow-hidden">
+        <CardHeader className="border-b border-border/60 bg-muted/20 px-4 py-4 sm:px-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <CardTitle className="text-base">Daily activity register</CardTitle>
+              <CardDescription className="mt-1">
+                One row per employee per day. Select a change count to inspect sanitized request and response details.
+              </CardDescription>
+            </div>
+            {isFetching && !isLoading && <span className="text-xs text-muted-foreground">Refreshing…</span>}
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="space-y-2 p-4" aria-label="Loading employee activity">
+              {[1, 2, 3, 4].map((item) => <div key={item} className="h-16 animate-pulse rounded-md bg-muted" />)}
+            </div>
+          ) : isError ? (
+            <div className="flex min-h-[230px] flex-col items-center justify-center gap-3 p-6 text-center">
+              <ShieldAlert className="h-8 w-8 text-destructive" />
+              <div>
+                <h3 className="font-semibold">Employee activity could not be loaded</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {errorStatus(error) === 403
+                    ? "This audit register is restricted to administrators."
+                    : "Check the connection and try the selected date range again."}
+                </p>
+              </div>
+              {errorStatus(error) !== 403 && (
+                <Button variant="outline" onClick={() => void refetch()} data-testid="button-retry-activity">
+                  Try again
+                </Button>
+              )}
+            </div>
+          ) : records.length === 0 ? (
+            <div className="flex min-h-[230px] flex-col items-center justify-center gap-2 p-6 text-center">
+              <div className="rounded-full bg-primary/10 p-3 text-primary"><Activity className="h-6 w-6" /></div>
+              <h3 className="font-semibold">No activity in this range</h3>
+              <p className="max-w-md text-sm text-muted-foreground">
+                No employee sign-ins or recorded changes were found from {formatActivityDay(appliedRange.from)} to {formatActivityDay(appliedRange.to)}.
+              </p>
+            </div>
+          ) : (
+            <div className="w-full overflow-hidden">
+              <table className="employee-activity-table w-full table-fixed text-xs" data-testid="table-employee-activity">
+                <colgroup>
+                  <col className="w-[22%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[29%]" />
+                  <col className="w-[17%]" />
+                  <col className="w-[11%]" />
+                </colgroup>
+                <thead className="bg-muted/35">
+                  <tr className="border-b text-left text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
+                    <th className="font-semibold">Employee</th>
+                    <th className="font-semibold">Date</th>
+                    <th className="font-semibold">Logins</th>
+                    <th className="font-semibold">Entry / exit</th>
+                    <th className="font-semibold">Last confirmed</th>
+                    <th className="text-right font-semibold">Changes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {records.map((record) => (
+                    <tr key={`${record.employeeId}-${record.date}`} className="border-b align-top last:border-0 hover:bg-muted/20" data-testid={`row-activity-${record.employeeId}-${record.date}`}>
+                      <td>
+                        <div className="break-words font-semibold text-foreground">{record.employeeName}</div>
+                        <div className="mt-0.5 break-all text-[10px] text-muted-foreground">{record.employeeId}</div>
+                      </td>
+                      <td className="break-words text-muted-foreground">{formatActivityDay(record.date)}</td>
+                      <td className="font-semibold tabular-nums">{record.loginCount}</td>
+                      <td>
+                        {record.sessions.length === 0 ? (
+                          <span className="text-muted-foreground">No session recorded</span>
+                        ) : (
+                          <div className="space-y-2">
+                            {record.sessions.map((session, index) => (
+                              <div key={`${session.startedAt}-${index}`} className="space-y-0.5">
+                                <div className="flex items-start gap-1.5">
+                                  <LogIn className="mt-0.5 h-3 w-3 shrink-0 text-success" />
+                                  <span className="break-words">In {formatActivityDate(session.startedAt)}</span>
+                                </div>
+                                <div className="flex items-start gap-1.5 text-muted-foreground">
+                                  <LogOut className="mt-0.5 h-3 w-3 shrink-0" />
+                                  <span className="break-words">
+                                    {activitySessionExit(session)}
+                                    <span className="ml-1">({activityEndReasonLabel(session.endReason, Boolean(session.endedAt))})</span>
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        {record.sessions.length === 0 ? (
+                          <span className="text-muted-foreground">No confirmed request</span>
+                        ) : (
+                          <div className="space-y-2">
+                            {record.sessions.map((session, index) => (
+                              <div key={`${session.lastSeenAt}-${index}`} className="space-y-0.5">
+                                <div className="flex items-start gap-1.5">
+                                  <Clock3 className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
+                                  <span className="break-words">{formatActivityDate(session.lastSeenAt)}</span>
+                                </div>
+                                <span className="block break-words text-[10px] text-muted-foreground">
+                                  Expires {formatActivityDate(session.expiresAt)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                      <td className="text-right">
+                        {record.changes.length ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 max-w-full whitespace-normal px-2 text-[11px]"
+                            onClick={() => setSelectedDay(record)}
+                            data-testid={`button-view-changes-${record.employeeId}-${record.date}`}
+                          >
+                            View {record.changes.length}
+                          </Button>
+                        ) : (
+                          <span className="text-muted-foreground">None</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={selectedDay !== null} onOpenChange={(open) => { if (!open) setSelectedDay(null); }}>
+        <DialogContent className="max-h-[calc(100vh-2rem)] w-[calc(100%-2rem)] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Changes by {selectedDay?.employeeName}</DialogTitle>
+            <DialogDescription>
+              {selectedDay && `${formatActivityDay(selectedDay.date)} · ${selectedDay.employeeId}`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {selectedDay?.changes.map((change) => (
+              <ActivityChangeItem key={change.id} change={change} />
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </section>
+  );
+}
+
+function ActivityChangeItem({ change }: { change: EmployeeActivityChange }) {
+  const actionLabel = change.action.charAt(0).toUpperCase() + change.action.slice(1);
+  return (
+    <article className="rounded-lg border bg-muted/15 p-3" data-testid={`activity-change-${change.id}`}>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={change.action === "deleted" ? "destructive" : change.action === "created" ? "default" : "secondary"}>
+              {actionLabel}
+            </Badge>
+            <span className="break-words font-medium">{change.entityType}{change.entityId ? ` #${change.entityId}` : ""}</span>
+          </div>
+          <p className="mt-2 break-words text-sm">{change.summary}</p>
+        </div>
+        <time className="shrink-0 text-xs text-muted-foreground">{formatActivityDate(change.occurredAt, true)}</time>
+      </div>
+      <div className="mt-3 rounded-md border border-dashed bg-background/70 p-2.5">
+        <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+          <FileJson className="h-3.5 w-3.5" /> Sanitized request / response details
+        </div>
+        <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-muted-foreground">
+          {activityDetailsText(change.details)}
+        </pre>
+      </div>
+    </article>
+  );
+}
+
 export default function Settings() {
   const queryClient = useQueryClient();
   const { isAdmin } = useAuth();
@@ -1143,7 +1541,7 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="report-layouts" className="flex min-h-0 flex-1 flex-col">
-        <TabsList className="grid h-auto w-full max-w-2xl shrink-0 grid-cols-3">
+        <TabsList className="grid h-auto w-full max-w-3xl shrink-0 grid-cols-2 sm:grid-cols-4">
           <TabsTrigger value="reference-data" className="gap-2 py-2.5">
             <Database className="h-4 w-4" /> Settings
           </TabsTrigger>
@@ -1152,6 +1550,9 @@ export default function Settings() {
           </TabsTrigger>
           <TabsTrigger value="report-layouts" className="gap-2 py-2.5">
             <Settings2 className="h-4 w-4" /> Report Layouts
+          </TabsTrigger>
+          <TabsTrigger value="employee-activity" className="gap-2 py-2.5">
+            <Activity className="h-4 w-4" /> Activity
           </TabsTrigger>
         </TabsList>
 
@@ -1193,6 +1594,10 @@ export default function Settings() {
 
         <TabsContent value="report-layouts" className="mt-4 min-h-0 flex-1 overflow-y-auto">
           <ReportLayoutsSection />
+        </TabsContent>
+
+        <TabsContent value="employee-activity" className="mt-4 min-h-0 flex-1 overflow-y-auto">
+          <EmployeeActivitySection isAdmin={isAdmin} />
         </TabsContent>
       </Tabs>
 

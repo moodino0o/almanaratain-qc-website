@@ -745,6 +745,63 @@ export interface ReportLayoutUpdate {
   config: ReportLayoutConfig;
 }
 
+/**
+ * @nullable
+ */
+export type EmployeeActivitySessionEndReason = typeof EmployeeActivitySessionEndReason[keyof typeof EmployeeActivitySessionEndReason] | null;
+
+
+export const EmployeeActivitySessionEndReason = {
+  logout: 'logout',
+  expired: 'expired',
+  revoked: 'revoked',
+} as const;
+
+export interface EmployeeActivitySession {
+  startedAt: string;
+  lastSeenAt: string;
+  expiresAt: string;
+  /** @nullable */
+  endedAt: string | null;
+  /** @nullable */
+  endReason: EmployeeActivitySessionEndReason;
+}
+
+export type EmployeeActivityChangeAction = typeof EmployeeActivityChangeAction[keyof typeof EmployeeActivityChangeAction];
+
+
+export const EmployeeActivityChangeAction = {
+  created: 'created',
+  updated: 'updated',
+  deleted: 'deleted',
+} as const;
+
+export type EmployeeActivityChangeDetails = { [key: string]: unknown };
+
+export interface EmployeeActivityChange {
+  id: number;
+  occurredAt: string;
+  action: EmployeeActivityChangeAction;
+  entityType: string;
+  /** @nullable */
+  entityId: string | null;
+  summary: string;
+  details: EmployeeActivityChangeDetails;
+}
+
+export interface EmployeeActivityDay {
+  employeeId: string;
+  employeeName: string;
+  date: string;
+  loginCount: number;
+  sessions: EmployeeActivitySession[];
+  changes: EmployeeActivityChange[];
+}
+
+export interface EmployeeActivityResponse {
+  records: EmployeeActivityDay[];
+}
+
 export type TestTypeParamParameter = TestType;
 
 export type SearchParamParameter = string;
@@ -752,6 +809,11 @@ export type SearchParamParameter = string;
 export type LimitParamParameter = number;
 
 export type AuthorizationSessionHeaderParameter = string;
+
+export type GetEmployeeActivityParams = {
+from: string;
+to: string;
+};
 
 export type BeginBrowserLoginParams = {
 returnTo?: string;

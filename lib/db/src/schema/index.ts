@@ -27,3 +27,4 @@ export * from "./qc-shape-factors";
 export * from "./qc-report-layouts";
 export * from "./employee-directory";
 export * from "./complaints";
+export * from "./employee-activity";

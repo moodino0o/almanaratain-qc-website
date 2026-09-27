@@ -56,6 +56,35 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Lookups"
+  /employee-activity:
+    get:
+      operationId: getEmployeeActivity
+      tags: [Auth]
+      summary: Get employee activity for an inclusive date range
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Daily employee sessions and recorded changes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeActivityResponse"
+        "400":
+          description: Invalid date range
+        "401":
+          description: Authentication required
+        "403":
+          description: Administrator access required
   /auth/user:
     get:
       tags: [Auth]
@@ -2191,3 +2220,72 @@ components:
           minLength: 1
         config:
           $ref: "#/components/schemas/ReportLayoutConfig"
+    EmployeeActivityResponse:
+      type: object
+      required: [records]
+      properties:
+        records:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmployeeActivityDay"
+    EmployeeActivityDay:
+      type: object
+      required: [employeeId, employeeName, date, loginCount, sessions, changes]
+      properties:
+        employeeId:
+          type: string
+        employeeName:
+          type: string
+        date:
+          type: string
+          format: date
+        loginCount:
+          type: number
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmployeeActivitySession"
+        changes:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmployeeActivityChange"
+    EmployeeActivitySession:
+      type: object
+      required: [startedAt, lastSeenAt, expiresAt, endedAt, endReason]
+      properties:
+        startedAt:
+          type: string
+          format: date-time
+        lastSeenAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        endedAt:
+          type: ["string", "null"]
+          format: date-time
+        endReason:
+          type: ["string", "null"]
+          enum: [logout, expired, revoked, null]
+    EmployeeActivityChange:
+      type: object
+      required: [id, occurredAt, action, entityType, entityId, summary, details]
+      properties:
+        id:
+          type: number
+        occurredAt:
+          type: string
+          format: date-time
+        action:
+          type: string
+          enum: [created, updated, deleted]
+        entityType:
+          type: string
+        entityId:
+          type: ["string", "null"]
+        summary:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
