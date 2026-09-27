@@ -185,7 +185,7 @@ export default function Home() {
   }
 
   const passRate =
-    (dashboard.passedRecords / Math.max(dashboard.totalRecords, 1)) * 100;
+    (dashboard.passedRecordsThisMonth / Math.max(dashboard.recordsThisMonth, 1)) * 100;
   const records = recordsQuery.data ?? [];
   const complaints = canViewComplaints ? complaintsQuery.data ?? [] : [];
   const searchLoading = recordsQuery.isLoading || (canViewComplaints && complaintsQuery.isLoading);
@@ -315,36 +315,36 @@ export default function Home() {
                 <CardTitle id="qc-heading" className="text-base">QC test status</CardTitle>
               </div>
               <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <CalendarDays className="h-3.5 w-3.5" /> {dashboard.recordsThisMonth.toLocaleString()} records this month
+                <CalendarDays className="h-3.5 w-3.5" /> {new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(new Date())}
               </p>
             </div>
           </CardHeader>
           <CardContent className="space-y-4 p-4">
             <div className="grid gap-3 sm:grid-cols-2">
               <StatusSummary
-                label="All records"
-                value={dashboard.totalRecords}
+                label="Records this month"
+                value={dashboard.recordsThisMonth}
                 detail="In the QC register"
                 icon={FileText}
                 tone="neutral"
               />
               <StatusSummary
                 label="Passed"
-                value={dashboard.passedRecords}
+                value={dashboard.passedRecordsThisMonth}
                 detail={`${passRate.toFixed(1)}% pass rate`}
                 icon={CheckCircle2}
                 tone="success"
               />
               <StatusSummary
                 label="Needs review"
-                value={dashboard.reviewRecords}
+                value={dashboard.reviewRecordsThisMonth}
                 detail="Supervisor approval needed"
                 icon={AlertTriangle}
                 tone="warning"
               />
               <StatusSummary
                 label="Failed"
-                value={dashboard.failedRecords}
+                value={dashboard.failedRecordsThisMonth}
                 detail="Immediate action required"
                 icon={XCircle}
                 tone="danger"
@@ -352,7 +352,7 @@ export default function Home() {
             </div>
             <div>
               <div className="mb-1.5 flex items-center justify-between text-xs text-muted-foreground">
-                <span>Overall pass rate</span>
+                <span>Pass rate this month</span>
                 <span className="font-semibold text-foreground">{passRate.toFixed(1)}%</span>
               </div>
               <div className="h-3 overflow-hidden rounded-full bg-muted">

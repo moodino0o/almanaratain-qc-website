@@ -863,13 +863,20 @@ async function listSieveStandards() {
 }
 
 router.get("/dashboard", async (_req, res): Promise<void> => {
+  const currentMonth = sql`
+    ${qcRecordsTable.sampleDate} >= date_trunc('month', current_date)
+    and ${qcRecordsTable.sampleDate} < date_trunc('month', current_date) + interval '1 month'
+  `;
   const [totals] = await db
     .select({
       totalRecords: count(),
       passedRecords: sql<number>`count(*) filter (where ${qcRecordsTable.status} = 'Passed')`,
       reviewRecords: sql<number>`count(*) filter (where ${qcRecordsTable.status} = 'Review')`,
       failedRecords: sql<number>`count(*) filter (where ${qcRecordsTable.status} = 'Failed')`,
-      recordsThisMonth: sql<number>`count(*) filter (where ${qcRecordsTable.sampleDate} >= date_trunc('month', current_date))`,
+      recordsThisMonth: sql<number>`count(*) filter (where ${currentMonth})`,
+      passedRecordsThisMonth: sql<number>`count(*) filter (where ${currentMonth} and ${qcRecordsTable.status} = 'Passed')`,
+      reviewRecordsThisMonth: sql<number>`count(*) filter (where ${currentMonth} and ${qcRecordsTable.status} = 'Review')`,
+      failedRecordsThisMonth: sql<number>`count(*) filter (where ${currentMonth} and ${qcRecordsTable.status} = 'Failed')`,
       totalComplaints: sql<number>`(select count(*) from ${complaintsTable})`,
       solvedComplaints: sql<number>`(select count(*) from ${complaintsTable} where ${complaintsTable.status} = 'complete')`,
       openComplaints: sql<number>`(select count(*) from ${complaintsTable} where ${complaintsTable.status} = 'open')`,
@@ -895,6 +902,9 @@ router.get("/dashboard", async (_req, res): Promise<void> => {
       reviewRecords: Number(totals?.reviewRecords ?? 0),
       failedRecords: Number(totals?.failedRecords ?? 0),
       recordsThisMonth: Number(totals?.recordsThisMonth ?? 0),
+      passedRecordsThisMonth: Number(totals?.passedRecordsThisMonth ?? 0),
+      reviewRecordsThisMonth: Number(totals?.reviewRecordsThisMonth ?? 0),
+      failedRecordsThisMonth: Number(totals?.failedRecordsThisMonth ?? 0),
       totalComplaints: Number(totals?.totalComplaints ?? 0),
       solvedComplaints: Number(totals?.solvedComplaints ?? 0),
       openComplaints: Number(totals?.openComplaints ?? 0),

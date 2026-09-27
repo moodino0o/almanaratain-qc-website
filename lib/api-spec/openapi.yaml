@@ -1245,6 +1245,9 @@ components:
         - reviewRecords
         - failedRecords
         - recordsThisMonth
+        - passedRecordsThisMonth
+        - reviewRecordsThisMonth
+        - failedRecordsThisMonth
         - totalComplaints
         - solvedComplaints
         - openComplaints
@@ -1260,6 +1263,12 @@ components:
         failedRecords:
           type: number
         recordsThisMonth:
+          type: number
+        passedRecordsThisMonth:
+          type: number
+        reviewRecordsThisMonth:
+          type: number
+        failedRecordsThisMonth:
           type: number
         totalComplaints:
           type: number
