@@ -668,15 +668,16 @@ const REPORT_LAYOUT_COLUMN_OPTIONS: Record<
     { key: "percentage", label: "% Passing" },
   ],
   pavingResults: [
-    { key: "no", label: "No." },
-    { key: "age", label: "Test Age" },
+    { key: "no", label: "Block No." },
     { key: "length", label: "Length (mm)" },
     { key: "width", label: "Width (mm)" },
     { key: "height", label: "Height (mm)" },
-    { key: "dryWeight", label: "Dry Weight" },
-    { key: "wetWeight", label: "Wet Weight" },
     { key: "load", label: "Load (kN)" },
-    { key: "strength", label: "Calculated Strength" },
+    { key: "tensileStrength", label: "Tensile Strength (N/mm²)" },
+    { key: "weightBefore", label: "Weight Before (kg)" },
+    { key: "weightAfter", label: "Weight After (kg)" },
+    { key: "density", label: "Density (kg/m³)" },
+    { key: "waterAbsorption", label: "% Water Absorption" },
   ],
 };
 

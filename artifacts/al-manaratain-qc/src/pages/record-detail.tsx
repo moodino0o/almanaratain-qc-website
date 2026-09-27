@@ -205,11 +205,13 @@ function TestRowsTable({
   includeAbsorption,
   includeAge = true,
   sortByAge = false,
+  strengthLabel = "Calculated Strength (N/mm²)",
 }: {
   rows: unknown[];
   includeAbsorption: boolean;
   includeAge?: boolean;
   sortByAge?: boolean;
+  strengthLabel?: string;
 }) {
   const displayRows = sortByAge ? sortCubeRowsByAge(rows) : rows;
   return (
@@ -227,7 +229,7 @@ function TestRowsTable({
             {includeAbsorption && <th className="p-2 text-left">Water Absorption (%)</th>}
             <th className="p-2 text-left">Load (kN)</th>
             <th className="p-2 text-left">Loaded Face Area (mm²)</th>
-            <th className="p-2 text-left">Calculated Strength (N/mm²)</th>
+            <th className="p-2 text-left">{strengthLabel}</th>
           </tr>
         </thead>
         <tbody>
@@ -250,7 +252,13 @@ function TestRowsTable({
                 <td className="p-2">{displayValue(values.load)}</td>
                 <td className="p-2">{displayValue(values.loadedFaceArea)}</td>
                 <td className="p-2 font-semibold">
-                  {displayValue(values.calculatedStrength ?? values.strength ?? values.compressiveStrength)}
+                  {displayValue(
+                    values.tensileStrength ??
+                      values.correctedStrength ??
+                      values.calculatedStrength ??
+                      values.strength ??
+                      values.compressiveStrength,
+                  )}
                 </td>
               </tr>
             );
@@ -654,29 +662,47 @@ export default function RecordDetail() {
             <Card>
               <CardHeader className="bg-muted/30 border-b">
                 <CardTitle>Paving Block Specimen Measurements</CardTitle>
-                <CardDescription>Saved specimen dimensions, weights, load, and calculated strength.</CardDescription>
+                <CardDescription>
+                  Saved specimen dimensions, dry and wet weights, load, and
+                  calculated tensile strength.
+                </CardDescription>
               </CardHeader>
               <CardContent className="p-0">
-                <TestRowsTable rows={specimenRows} includeAbsorption={false} />
+                <TestRowsTable
+                  rows={specimenRows}
+                  includeAbsorption
+                  strengthLabel="Tensile Strength (N/mm²)"
+                />
               </CardContent>
             </Card>
           ) : (
             <MeasurementTable
               title="Paving Block Measurements"
               entries={[
-                ["Weight (kg)", detailText(recordDetails, "weight")],
+                ["Dry Weight (kg)", detailText(recordDetails, "dryWeight")],
+                ["Wet Weight (kg)", detailText(recordDetails, "wetWeight")],
                 ["Length (mm)", detailText(recordDetails, "length")],
                 ["Width (mm)", detailText(recordDetails, "width")],
                 ["Height (mm)", detailText(recordDetails, "height")],
-                ["Compressive Strength (N/mm²)", detailText(recordDetails, "compressiveStrength")],
+                [
+                  "Tensile Strength (N/mm²)",
+                  detailText(
+                    recordDetails,
+                    "tensileStrength",
+                    detailText(recordDetails, "correctedStrength"),
+                  ),
+                ],
               ]}
             />
           )}
           <MeasurementTable
             title="Paving Block Test Result"
             entries={[
-              ["Target", detailText(recordDetails, "target")],
-              ["Strength", detailText(recordDetails, "strength", detailText(recordDetails, "compressiveStrength"))],
+              [
+                "Average Tensile Strength (N/mm²)",
+                formatStrengthMetric(strengthEvaluation.averageStrength),
+              ],
+              ["Result", displayValue(strengthEvaluation.status ?? record.status)],
               ["Correction Factor", detailText(recordDetails, "correctionFactor")],
             ]}
           />
@@ -733,7 +759,13 @@ export default function RecordDetail() {
           <CardContent>
             <StrengthEvaluation
               value={recordDetails.strengthEvaluation}
-              strengthName={record.testType === "Blocks" ? "air-dry strength" : "strength"}
+                strengthName={
+                  record.testType === "Blocks"
+                    ? "air-dry strength"
+                    : record.testType === "Paving Blocks"
+                      ? "tensile strength"
+                      : "strength"
+                }
             />
           </CardContent>
         </Card>

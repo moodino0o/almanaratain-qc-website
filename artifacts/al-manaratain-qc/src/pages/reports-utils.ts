@@ -135,7 +135,7 @@ const rowStrength = (row: unknown, testType: QcRecord["testType"]) => {
   const strengthKeys = testType === "Ready Mix"
     ? ["calculatedStrength", "strength", "compressiveStrength"]
     : testType === "Paving Blocks"
-      ? ["correctedStrength", "calculatedStrength", "compressiveStrength", "strength"]
+      ? ["tensileStrength", "correctedStrength", "calculatedStrength", "strength", "compressiveStrength"]
       : [
           "correctedStrength",
           "normalizedStrength",
@@ -186,6 +186,7 @@ const recordStrengths = (record: QcRecord, details: Record<string, unknown>) => 
       : record.testType === "Paving Blocks"
         ? [
             "averageStrength",
+              "tensileStrength",
             "correctedStrength",
             "calculatedStrength",
             "compressiveStrength",

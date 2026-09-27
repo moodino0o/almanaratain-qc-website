@@ -422,7 +422,14 @@ export default function RecordForm() {
           blockSizeMatches(standard.blockSize, selectedPavingSize);
       })
       .sort((left, right) => left.id - right.id);
-  }, [details.blockSize, details.blockType, material, strengthStandards, testType]);
+  }, [
+    details.blockSize,
+    details.blockType,
+    details.pavingBlockSize,
+    material,
+    strengthStandards,
+    testType,
+  ]);
 
   const applicableStandard =
     matchingStrengthStandards.find((standard) => String(standard.id) === selectedStrengthStandardId) ??
@@ -553,7 +560,10 @@ export default function RecordForm() {
   const calculateStrength = (row: Pick<TestRow, "length" | "width" | "load">) =>
     calculateBlockStrengths(row, details.shapeFactor, locationValue);
   const calculatePavingStrength = (
-    row: Pick<TestRow, "length" | "width" | "load" | "compressiveStrength">,
+    row: Pick<
+      TestRow,
+      "length" | "height" | "load" | "compressiveStrength" | "tensileStrength"
+    >,
   ) => calculatePavingStrengths(row, details.correctionFactor);
 
   const measurementKeys: Array<keyof Omit<TestRow, "id">> =
@@ -561,7 +571,9 @@ export default function RecordForm() {
       ? ["length", "width", "height", "dryWeight", "wetWeight"]
       : testType === TestType.Blocks
         ? ["length", "width", "height"]
-        : ["length", "width", "height", "weight"];
+        : testType === TestType.Paving_Blocks
+          ? ["length", "width", "height", "dryWeight", "wetWeight"]
+          : ["length", "width", "height", "weight"];
   const isCompactBlockTable = testType === TestType.Blocks;
   const compactBlockCellClass = isCompactBlockTable
     ? "px-1 py-1.5 text-[11px] leading-tight"
@@ -719,13 +731,19 @@ export default function RecordForm() {
               density: calculateBlockDensity(row),
             }
             : {
-              weight: row.weight,
               load: row.load,
-              compressiveStrength:
-                calculatePavingStrength(row).compressiveStrength || row.compressiveStrength,
+              tensileStrength:
+                calculatePavingStrength(row).tensileStrength ||
+                row.tensileStrength ||
+                row.correctedStrength,
               correctionFactor: details.correctionFactor,
               correctedStrength:
                 calculatePavingStrength(row).correctedStrength || row.correctedStrength,
+              density: calculateBlockDensity(row),
+              waterAbsorption: calculateWaterAbsorption(
+                row.dryWeight,
+                row.wetWeight,
+              ),
             }),
       }));
     }
@@ -921,7 +939,12 @@ export default function RecordForm() {
               </div>
 
               <div className="space-y-2">
-                <Label>{testType === TestType.Blocks ? "Casting Date" : "Sample Date"} <span className="text-destructive">*</span></Label>
+                <Label>
+                  {testType === TestType.Blocks || testType === TestType.Paving_Blocks
+                    ? "Casting Date"
+                    : "Sample Date"}{" "}
+                  <span className="text-destructive">*</span>
+                </Label>
                 <Input 
                   type="date" 
                   value={sampleDate} 
@@ -1248,6 +1271,36 @@ export default function RecordForm() {
       {testType === TestType.Paving_Blocks && (
         <>
           <div className="space-y-2">
+            <Label>Machine Type</Label>
+            <Input
+              value={String(details.machine ?? "")}
+              onChange={(event) =>
+                handleDetailChange("machine", event.target.value)
+              }
+              placeholder="Enter machine type"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Sample Type</Label>
+            <TypeaheadInput
+              value={String(details.sampleType ?? "")}
+              onChange={(value) => handleDetailChange("sampleType", value)}
+              options={sampleTypeOptions}
+              placeholder="Select sample type..."
+              onCreateOption={createReferenceOption("sampleTypes")}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Testing Date</Label>
+            <Input
+              type="date"
+              value={String(details.testingDate ?? "")}
+              onChange={(event) =>
+                handleDetailChange("testingDate", event.target.value)
+              }
+            />
+          </div>
+          <div className="space-y-2">
             <Label>Paving Block Size <span className="text-destructive">*</span></Label>
             <TypeaheadInput
               value={String(details.pavingBlockSize ?? "")}
@@ -1377,6 +1430,27 @@ export default function RecordForm() {
                       )}
                     </div>
                   )}
+                  {testType === TestType.Paving_Blocks && (
+                    <div className="rounded-md border border-primary/20 bg-primary/[0.04] px-4 py-3 text-sm">
+                      {applicableStandard ? (
+                        <span>
+                          Average tensile strength is compared with{" "}
+                          <strong>
+                            {applicableStandard.requiredStrength}{" "}
+                            {applicableStandard.strengthUnit}
+                          </strong>{" "}
+                          under <strong>{applicableStandard.bsStandard}</strong>.
+                          Tensile strength is calculated from load, length,
+                          specimen height, and the correction factor.
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          A matching strength standard and a correction factor
+                          are required for automatic Pass/Fail evaluation.
+                        </span>
+                      )}
+                    </div>
+                  )}
                   {usesSieveRows && (
                     <div className="rounded-md border border-amber-500/30 bg-amber-500/[0.04] px-4 py-3 text-sm">
                        {applicableSieveStandards.length ? (
@@ -1421,8 +1495,15 @@ export default function RecordForm() {
                                 <th className="px-3 py-3 text-left font-semibold">Dry Weight</th>
                               )}
                               {testType !== TestType.Blocks && <th className="px-3 py-3 text-left font-semibold">
-                                {testType === TestType.Paving_Blocks ? "Weight (kg)" : "Wet Weight"}
+                                {testType === TestType.Paving_Blocks
+                                  ? "Dry Weight (kg)"
+                                  : "Wet Weight"}
                               </th>}
+                              {testType === TestType.Paving_Blocks && (
+                                <th className="px-3 py-3 text-left font-semibold">
+                                  Wet Weight (kg)
+                                </th>
+                              )}
                                {testType === TestType.Ready_Mix && (
                                  <th className="px-3 py-3 text-left font-semibold">Water Absorption</th>
                                )}
@@ -1436,12 +1517,21 @@ export default function RecordForm() {
                                {testType === TestType.Blocks ? (
                                  <th className="w-[12%] px-1 py-2 text-left text-[10px] font-semibold">Wet Weight (kg)</th>
                                ) : (
-                                 <th className="px-3 py-3 text-left font-semibold">Calculated Strength</th>
+                                  <th className="px-3 py-3 text-left font-semibold">
+                                    {testType === TestType.Paving_Blocks
+                                      ? "Tensile Strength (N/mm²)"
+                                      : "Calculated Strength"}
+                                  </th>
                                )}
                                 {testType === TestType.Paving_Blocks && (
-                                  <th className="px-3 py-3 text-left font-semibold">
-                                    Compressive Strength (N/mm²)
-                                  </th>
+                                  <>
+                                    <th className="px-3 py-3 text-left font-semibold">
+                                      Density (kg/m³)
+                                    </th>
+                                    <th className="px-3 py-3 text-left font-semibold">
+                                      Water Absorption (%)
+                                    </th>
+                                  </>
                                 )}
                                {testType === TestType.Blocks && (
                                  <>
@@ -1593,20 +1683,6 @@ export default function RecordForm() {
                                     />
                                   </td>
                                 )}
-                               {testType === TestType.Paving_Blocks && (
-                                 <td className="px-2 py-2">
-                                   <Input
-                                     type="text"
-                                     inputMode="decimal"
-                                     value={row.compressiveStrength}
-                                     onChange={event =>
-                                       updateTestRow(rowIndex, "compressiveStrength", event.target.value)
-                                     }
-                                     placeholder="N/mm²"
-                                     aria-label={`Compressive strength for row ${rowIndex + 1}`}
-                                   />
-                                 </td>
-                               )}
                                 {testType !== TestType.Blocks && (
                                  <td className="px-2 py-2">
                                    <div
@@ -1614,9 +1690,9 @@ export default function RecordForm() {
                                      aria-label={`Calculated strength for row ${rowIndex + 1}`}
                                    >
                                      {testType === TestType.Paving_Blocks
-                                       ? calculatePavingStrength(row).compressiveStrength
-                                         ? `${calculatePavingStrength(row).compressiveStrength} N/mm²`
-                                         : "Enter compressive strength or load"
+                                        ? calculatePavingStrength(row).tensileStrength
+                                          ? `${calculatePavingStrength(row).tensileStrength} N/mm²`
+                                          : "Enter load, dimensions, and correction factor"
                                        : calculateStrength(row).waterStrength
                                          ? `${calculateStrength(row).waterStrength} N/mm²`
                                          : "Enter load and dimensions"}
@@ -1626,19 +1702,14 @@ export default function RecordForm() {
                                  {testType === TestType.Paving_Blocks && (
                                    <>
                                      <td className="px-2 py-2">
-                                       <div className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground">
-                                         {String(details.correctionFactor ?? "") || "—"}
-                                       </div>
+                                        {calculateBlockDensity(row) ||
+                                          "Enter wet weight and dimensions"}
                                      </td>
                                      <td className="px-2 py-2">
-                                       <div
-                                         className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground"
-                                         aria-label={`Corrected compressive strength for row ${rowIndex + 1}`}
-                                       >
-                                         {calculatePavingStrength(row).correctedStrength
-                                           ? `${calculatePavingStrength(row).correctedStrength} N/mm²`
-                                           : "Enter correction factor"}
-                                       </div>
+                                        {calculateWaterAbsorption(
+                                          row.dryWeight,
+                                          row.wetWeight,
+                                        ) || "Enter dry and wet weights"}
                                      </td>
                                    </>
                                  )}

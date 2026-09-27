@@ -35,7 +35,72 @@ function layoutColumns(
   fallback: LayoutColumn[],
 ) {
   const configured = layout?.config.columns[tableKey];
-  return (configured?.length ? configured : fallback)
+  const selectedColumns = configured?.length ? configured : fallback;
+  const compatibleColumns =
+    tableKey === "pavingResults" && configured?.length
+      ? (() => {
+          const legacyDefaultKeys = [
+            "no",
+            "age",
+            "length",
+            "width",
+            "height",
+            "dryWeight",
+            "wetWeight",
+            "load",
+            "strength",
+          ];
+          const isLegacyDefault =
+            configured.length === legacyDefaultKeys.length &&
+            configured.every(
+              (column, index) => column.key === legacyDefaultKeys[index],
+            );
+          const aliases: Record<string, string> = {
+            dryWeight: "weightBefore",
+            wetWeight: "weightAfter",
+            strength: "tensileStrength",
+            calculatedStrength: "tensileStrength",
+            correctedStrength: "tensileStrength",
+          };
+          const migrated = configured
+            .filter((column) => column.key !== "age")
+            .map((column) => {
+              const key = aliases[column.key] ?? column.key;
+              const standardColumn = fallback.find(
+                (candidate) => candidate.key === key,
+              );
+              return {
+                ...column,
+                key,
+                label: standardColumn?.label ?? column.label,
+                order: isLegacyDefault
+                  ? standardColumn?.order ?? column.order
+                  : column.order,
+              };
+            });
+          const deduplicated = migrated.filter(
+            (column, index) =>
+              migrated.findIndex((candidate) => candidate.key === column.key) ===
+              index,
+          );
+          const existingKeys = new Set(deduplicated.map((column) => column.key));
+          const lastOrder = Math.max(-1, ...deduplicated.map((column) => column.order));
+          const newlyAddedColumns = fallback
+            .filter(
+              (column) =>
+                !existingKeys.has(column.key) &&
+                ["density", "waterAbsorption"].includes(column.key),
+            )
+            .map((column, index) => ({
+              ...column,
+              order: isLegacyDefault
+                ? column.order
+                : lastOrder + index + 1,
+            }));
+          return [...deduplicated, ...newlyAddedColumns];
+        })()
+      : selectedColumns;
+  return compatibleColumns
     .filter((column) => column.visible)
     .sort((left, right) => left.order - right.order);
 }
@@ -483,34 +548,52 @@ function ReadyMixAverageStrengthTable({ rows }: { rows: unknown[] }) {
 
 function SpecimenRowsTable({
   rows,
-  ageLabel,
-  showAge = true,
+  status,
   layout,
 }: {
   rows: unknown[];
-  ageLabel: string;
-  showAge?: boolean;
+  status: string;
   layout?: ReportLayout;
 }) {
   if (!hasSpecimenMeasurements(rows)) return null;
   const tableColumns = layoutColumns(layout, "pavingResults", [
-    { key: "no", label: "No.", visible: true, order: 0, width: 7 },
-    { key: "age", label: ageLabel, visible: showAge, order: 1, width: 9 },
-    { key: "length", label: "Length (mm)", visible: true, order: 2, width: 10 },
-    { key: "width", label: "Width (mm)", visible: true, order: 3, width: 10 },
-    { key: "height", label: "Height (mm)", visible: true, order: 4, width: 10 },
-    { key: "dryWeight", label: "Dry Weight", visible: true, order: 5, width: 10 },
-    { key: "wetWeight", label: "Wet Weight", visible: true, order: 6, width: 10 },
-    { key: "load", label: "Load (kN)", visible: true, order: 7, width: 10 },
-    { key: "strength", label: "Calculated Strength", visible: true, order: 8, width: 14 },
+    { key: "no", label: "Block No.", visible: true, order: 0, width: 7 },
+    { key: "length", label: "Length (mm)", visible: true, order: 1, width: 9 },
+    { key: "width", label: "Width (mm)", visible: true, order: 2, width: 9 },
+    { key: "height", label: "Height (mm)", visible: true, order: 3, width: 9 },
+    { key: "load", label: "Load (kN)", visible: true, order: 4, width: 9 },
+    { key: "tensileStrength", label: "Tensile Strength (N/mm²)", visible: true, order: 5, width: 13 },
+    { key: "weightBefore", label: "Weight Before (kg)", visible: true, order: 6, width: 11 },
+    { key: "weightAfter", label: "Weight After (kg)", visible: true, order: 7, width: 11 },
+    { key: "density", label: "Density (kg/m³)", visible: true, order: 8, width: 11 },
+    { key: "waterAbsorption", label: "% Water Absorption", visible: true, order: 9, width: 11 },
   ]);
+  const strengths = rows.map((row) => {
+    const values = typeof row === "object" && row !== null ? row as ValueMap : {};
+    return (
+      numericValue(values.tensileStrength) ??
+      numericValue(values.correctedStrength) ??
+      numericValue(values.calculatedStrength) ??
+      numericValue(values.strength) ??
+      numericValue(values.compressiveStrength)
+    );
+  }).filter((value): value is number => value !== null);
+  const average = strengths.length
+    ? strengths.reduce((total, value) => total + value, 0) / strengths.length
+    : null;
+  const strengthColumnIndex = tableColumns.findIndex((column) =>
+    ["tensileStrength", "strength", "correctedStrength", "calculatedStrength"].includes(
+      column.key,
+    ),
+  );
+  const resultLabel = status === "Passed"
+    ? "PASS"
+    : status === "Failed"
+      ? "NOT PASS"
+      : "REVIEW";
+  const resultClass = status.toLocaleLowerCase();
   return (
     <div className="report-specimen-block paving-report-table-wrap">
-      <div className="block-report-section-heading">
-        <div>
-          <span>Specimen results</span>
-        </div>
-      </div>
       <table className="report-table report-specimen-table paving-report-table">
         <thead>
           <tr>{tableColumns.map((column) => <th key={column.key}>{column.label}</th>)}</tr>
@@ -521,65 +604,144 @@ function SpecimenRowsTable({
               typeof row === "object" && row !== null
                 ? (row as Record<string, unknown>)
                 : {};
-            return (
-              <tr key={index}>{tableColumns.map((column) => {
-                const value = column.key === "no"
-                  ? rawTextValue(values.rowNo, String(index + 1))
-                  : column.key === "age"
-                    ? textValue(values.testAge || values.sampleAge)
-                    : column.key === "strength"
-                      ? textValue(values.calculatedStrength || values.strength || values.compressiveStrength)
-                      : textValue(values[column.key]);
-                return <td key={column.key}>{value}</td>;
-              })}</tr>
-            );
+            const length = numericValue(values.length);
+            const width = numericValue(values.width);
+            const height = numericValue(values.height);
+            const dryWeight = numericValue(values.dryWeight);
+            const wetWeight = numericValue(values.wetWeight);
+            const density = numericValue(values.density) ??
+              (wetWeight !== null &&
+              length !== null &&
+              width !== null &&
+              height !== null &&
+              length > 0 &&
+              width > 0 &&
+              height > 0
+                ? (wetWeight * 1_000_000_000) / (length * width * height)
+                : null);
+            const absorption = numericValue(values.waterAbsorption) ??
+              (dryWeight !== null &&
+              wetWeight !== null &&
+              dryWeight > 0
+                ? ((wetWeight - dryWeight) / dryWeight) * 100
+                : null);
+            return <tr key={index}>{tableColumns.map((column) => {
+              const value = column.key === "no"
+                ? rawTextValue(values.rowNo, String(index + 1))
+              : column.key === "tensileStrength" ||
+                    column.key === "strength" ||
+                    column.key === "correctedStrength" ||
+                    column.key === "calculatedStrength"
+                  ? (() => {
+                      const strength =
+                        numericValue(values.tensileStrength) ??
+                        numericValue(values.correctedStrength) ??
+                        numericValue(values.calculatedStrength) ??
+                        numericValue(values.strength) ??
+                        numericValue(values.compressiveStrength);
+                      return strength === null ? "" : formatNumber(strength);
+                    })()
+                  : column.key === "weightBefore" || column.key === "dryWeight"
+                    ? textValue(values.dryWeight)
+                    : column.key === "weightAfter" || column.key === "wetWeight"
+                      ? textValue(values.wetWeight)
+                      : column.key === "density"
+                        ? density === null ? "" : formatNumber(density)
+                        : column.key === "waterAbsorption"
+                          ? absorption === null ? "" : formatNumber(absorption)
+                          : column.key === "age"
+                            ? textValue(values.testAge || values.sampleAge)
+                            : textValue(values[column.key]);
+              return <td key={column.key}>{value}</td>;
+            })}</tr>;
           })}
         </tbody>
+        {strengthColumnIndex >= 0 ? (
+          <tfoot>
+            <tr className="paving-average-row">
+              {strengthColumnIndex > 0 && (
+                <td colSpan={strengthColumnIndex}>AVERAGE:</td>
+              )}
+              <td>
+                {strengthColumnIndex === 0
+                  ? `AVERAGE: ${average === null ? "-" : average.toFixed(1)}`
+                  : average === null
+                    ? "-"
+                    : average.toFixed(1)}
+              </td>
+              {strengthColumnIndex < tableColumns.length - 1 && (
+                <td
+                  className={`paving-average-status ${resultClass}`}
+                  colSpan={tableColumns.length - strengthColumnIndex - 1}
+                >
+                  {resultLabel}
+                </td>
+              )}
+            </tr>
+          </tfoot>
+        ) : (
+          <tfoot>
+            <tr className="paving-average-row">
+              <td colSpan={tableColumns.length}>
+                <span>AVERAGE:</span>
+                <strong>{average === null ? "-" : average.toFixed(1)}</strong>
+                <b className={`paving-average-status ${resultClass}`}>
+                  {resultLabel}
+                </b>
+              </td>
+            </tr>
+          </tfoot>
+        )}
       </table>
     </div>
   );
 }
 
 function PavingStrengthStatistics({ rows }: { rows: unknown[] }) {
-  const correctedStrengths = rows.map((row) => {
+  const tensileStrengths = rows.map((row) => {
     const values = typeof row === "object" && row !== null
       ? row as ValueMap
       : {};
-    return numericValue(
-      values.correctedStrength ??
-      values.calculatedStrength ??
-      values.strength ??
-      values.compressiveStrength,
+    return (
+      numericValue(values.tensileStrength) ??
+      numericValue(values.correctedStrength) ??
+      numericValue(values.calculatedStrength) ??
+      numericValue(values.strength) ??
+      numericValue(values.compressiveStrength)
     );
   });
-  const summary = numericSummary(correctedStrengths);
+  const summary = numericSummary(tensileStrengths);
+  const numbers = tensileStrengths.filter(
+    (value): value is number => value !== null,
+  );
+  const sampleStandardDeviation = numbers.length > 1 && summary.average !== null
+    ? Math.sqrt(
+        numbers.reduce(
+          (total, value) => total + ((value - summary.average!) ** 2),
+          0,
+        ) / (numbers.length - 1),
+      )
+    : null;
   const displayNumber = (value: number | null) =>
     value === null ? "-" : formatNumber(value);
   return (
-    <>
-      <div className="block-report-section-heading block-report-statistics-heading">
-        <div>
-          <span>Summary statistics</span>
-        </div>
+    <div className="block-report-statistics paving-tensile-statistics">
+      <div>
+        <strong>Maximum</strong>
+        <span>Tensile Strength</span>
+        <b>{displayNumber(summary.maximum)}</b>
       </div>
-      <div className="block-report-statistics">
-        <div>
-          <strong>Maximum</strong>
-          <span>Corrected Strength</span>
-          <b>{displayNumber(summary.maximum)}</b>
-        </div>
-        <div>
-          <strong>Minimum</strong>
-          <span>Corrected Strength</span>
-          <b>{displayNumber(summary.minimum)}</b>
-        </div>
-        <div>
-          <strong>Stan.Dev.</strong>
-          <span>Corrected Strength</span>
-          <b>{displayNumber(summary.standardDeviation)}</b>
-        </div>
+      <div>
+        <strong>Minimum</strong>
+        <span>Tensile Strength</span>
+        <b>{displayNumber(summary.minimum)}</b>
       </div>
-    </>
+      <div>
+        <strong>Stan.Dev.</strong>
+        <span>Tensile Strength</span>
+        <b>{displayNumber(sampleStandardDeviation)}</b>
+      </div>
+    </div>
   );
 }
 
@@ -1274,60 +1436,81 @@ function PavingBlocksReport({ record, standards, layout }: {
 }) {
   const details = record.details;
   const evaluation = objectValue(details.strengthEvaluation);
+  const rows = Array.isArray(details.testRows) ? details.testRows : [];
+  const matchingStandard = standards
+    .filter((standard) => strengthStandardMatchesRecord(standard, record))
+    .sort((left, right) => left.id - right.id)[0];
+  const requiredStrength =
+    numericValue(evaluation?.requiredStrength) ??
+    numericValue(matchingStandard?.requiredStrength);
+  const strengthUnit = textValue(
+    evaluation?.strengthUnit,
+    matchingStandard?.strengthUnit || "N/mm²",
+  );
   const status = textValue(evaluation?.status, record.status);
-  const resultLabel = status === "Passed"
-    ? "PASS"
-    : status === "Failed"
-      ? "NOT PASS"
-      : "REVIEW";
-  const resultClass = status.toLocaleLowerCase();
+  const castingDate = record.sampleDate;
+  const testingDate = textValue(details.testingDate);
+  const configuredAge = numericValue(details.blockAge);
+  const castingTimestamp = Date.parse(castingDate);
+  const testingTimestamp = Date.parse(testingDate);
+  const dateAge =
+    Number.isFinite(castingTimestamp) && Number.isFinite(testingTimestamp)
+      ? Math.max(
+          0,
+          Math.floor((testingTimestamp - castingTimestamp) / 86_400_000),
+        )
+      : null;
+  const blockAge = configuredAge ?? dateAge;
   return (
     <div className="paving-block-report">
       <div className="block-report-section-heading">
         <div>
-          <span>Test details</span>
+          <span>Customer and Mix Details</span>
         </div>
       </div>
       <div className="block-report-fields">
         <ReportFields
           entries={[
-            ["Sample Date", formatReportDate(record.sampleDate)],
-            ["Location", record.location],
-            ["Block Type", detailValue(details, ["blockType"])],
-            ["Block Size (mm)", detailValue(details, ["blockSize"])],
-            ["Machine", detailValue(details, ["machine"])],
-            ["Tested By", record.testedBy],
+            ["Block Size:", detailValue(details, ["pavingBlockSize", "blockSize"])],
+            ["Casting Date:", formatReportDate(castingDate)],
+            ["Testing Date:", testingDate ? formatReportDate(testingDate) : "—"],
+            [
+              "SP. Strength:",
+              requiredStrength === null
+                ? "—"
+                : `${formatNumber(requiredStrength)} ${strengthUnit}`,
+            ],
+            ["Factory:", record.location],
           ]}
         />
         <ReportFields
           entries={[
-            ["Target", detailValue(details, ["target"])],
-            ["Strength", detailValue(details, ["strength", "compressiveStrength"])],
-            ["Correction Factor", detailValue(details, ["correctionFactor"])],
-            ["Required Minimum", evaluation?.requiredStrength == null
-              ? "-"
-              : `${textValue(evaluation.requiredStrength)} ${textValue(evaluation.strengthUnit, "N/mm²")}`],
-            ["Applicable BS", textValue(evaluation?.bsStandard)],
+            [
+              "Block Age:",
+              blockAge === null ? "—" : `${formatNumber(blockAge)} DAYS`,
+            ],
+            ["Machine Type:", detailValue(details, ["machineType", "machine"])],
+            ["Sample Type:", detailValue(details, ["sampleType"])],
+            ["Correction Factor:", detailValue(details, ["correctionFactor"])],
+            [
+              "Paving Block Type:",
+              detailValue(details, ["blockType"], record.material),
+            ],
           ]}
         />
       </div>
       {layoutSectionVisible(layout, "remarks") && record.remarks && (
         <div className="block-report-remarks">
-          <strong>Remarks:</strong>
+          <strong>Remark:</strong>
           <span>{record.remarks}</span>
         </div>
       )}
       <SpecimenRowsTable
-        rows={Array.isArray(details.testRows) ? details.testRows : []}
-        ageLabel="Sample Age"
+        rows={rows}
+        status={status}
         layout={layout}
       />
-      <PavingStrengthStatistics rows={Array.isArray(details.testRows) ? details.testRows : []} />
-      <StrengthStandardsTable record={record} standards={standards} evaluation={evaluation} />
-      <div className={`block-report-result ${resultClass}`}>
-        <span>Overall result</span>
-        <strong>{resultLabel}</strong>
-      </div>
+      <PavingStrengthStatistics rows={rows} />
     </div>
   );
 }
@@ -1442,7 +1625,9 @@ export default function ReportPrint() {
     ? isDammamLocation(record.location)
       ? "ASTM C140/C140M:2020a"
       : "BS EN 771-3:2003 (BS EN 772-1:2011)"
-    : configuredStandard
+    : record.testType === "Paving Blocks"
+      ? configuredStandard || "BS EN 1338:2003"
+      : configuredStandard
       ? configuredStandard
       : record.testType === "Ready Mix"
         ? "BS EN 12390-3:2009"
@@ -1461,6 +1646,8 @@ export default function ReportPrint() {
       ? "Readymix Cube Test Report"
       : record.testType === "Blocks"
         ? "Block Compression Test"
+        : record.testType === "Paving Blocks"
+          ? "Paving Block Test Report"
         : `${record.testType} Test Report`;
 
   return (

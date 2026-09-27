@@ -777,6 +777,73 @@
   font-size: 8.5px;
 }
 
+.paving-block-report .block-report-section-heading {
+  margin-top: 2mm;
+  border-bottom-color: #202020;
+}
+
+.paving-block-report .block-report-section-heading span {
+  color: #202020;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.paving-block-report .block-report-remarks {
+  grid-template-columns: 16mm minmax(0, 1fr);
+  min-height: 7mm;
+  margin-top: 1mm;
+  padding: 1.5mm 2mm;
+  background: #dce9ff;
+}
+
+.paving-average-row td {
+  border-top: 1.5px solid #202020 !important;
+  border-bottom: 1.5px solid #202020 !important;
+  background: #fff;
+  color: #202020;
+  font-size: 9px !important;
+  font-weight: 700;
+  text-align: center;
+}
+
+.paving-average-row td:first-child {
+  text-align: left;
+}
+
+.paving-average-status.failed {
+  color: #b42318;
+}
+
+.paving-average-status.passed {
+  color: #16733b;
+}
+
+.paving-average-status.review {
+  color: #996515;
+}
+
+.paving-tensile-statistics {
+  width: 76%;
+  margin: 3mm auto 0;
+  padding: 2mm 0;
+  background: transparent;
+}
+
+.paving-tensile-statistics strong {
+  font-size: 9px;
+  font-weight: 500;
+}
+
+.paving-tensile-statistics span {
+  color: #202020;
+  font-size: 8px;
+  font-style: italic;
+}
+
+.paving-tensile-statistics b {
+  font-size: 11px;
+}
+
 .report-standard-block.paving-report-standard-block {
   width: 100%;
   margin: 4mm 0 0;

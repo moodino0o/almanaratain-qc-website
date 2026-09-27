@@ -207,6 +207,7 @@ test("copies Ready Mix fields, reference information, and cube rows", () => {
     weight: "",
     load: "550",
     strength: "24.44",
+    tensileStrength: "",
     airDryStrength: "",
     normalizedStrength: "",
     compressiveStrength: "24.44",
@@ -265,6 +266,7 @@ test("copies Blocks fields and every block specimen row", () => {
     weight: "",
     load: "800",
     strength: "10",
+    tensileStrength: "10",
     airDryStrength: "11.25",
     normalizedStrength: "12.4",
     compressiveStrength: "10",
@@ -311,6 +313,7 @@ for (const testType of [TestType.Sand_Sieve, TestType.Aggregate_Sieve]) {
       testAge: "",
       load: "",
       strength: "",
+      tensileStrength: "",
       airDryStrength: "",
       normalizedStrength: "",
       compressiveStrength: "",
@@ -363,6 +366,7 @@ test("copies Paving Blocks material details", () => {
     testAge: "",
     load: "",
     strength: "",
+    tensileStrength: "",
     airDryStrength: "",
     normalizedStrength: "",
       compressiveStrength: "",
@@ -387,12 +391,12 @@ test("applies paving correction factors by the size suffix", () => {
       {
         length: "200",
         width: "100",
-        load: "",
-        compressiveStrength: "42",
+        height: "60",
+        load: "60.79",
       },
       "0.87",
     ),
-    { compressiveStrength: "42.00", correctedStrength: "36.54" },
+    { tensileStrength: "2.81", correctedStrength: "2.81" },
   );
 });
 

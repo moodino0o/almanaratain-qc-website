@@ -127,16 +127,50 @@ test("maps paving sizes ending in 60 and 80 to correction factors", () => {
   assert.equal(pavingCorrectionFactorFromSize("200 x 200 x 50"), null);
 });
 
-test("evaluates multiple paving rows using the configured correction factor", () => {
+test("calculates Paving tensile strength and evaluates the average against its standard", () => {
   const result = evaluateStrengthRecord(
     {
       testType: "Paving Blocks",
       material: "Concrete Block",
       details: {
-        pavingBlockSize: "200*200*60",
+        pavingBlockSize: "200*100*60",
         testRows: [
-          { rowNo: 1, length: 200, width: 200, load: 400 },
-          { rowNo: 2, length: 200, width: 200, load: 800 },
+          {
+            rowNo: 1,
+            length: 200,
+            width: 100,
+            height: 60,
+            load: 60.79,
+            dryWeight: 2.51,
+            wetWeight: 2.6,
+          },
+          {
+            rowNo: 2,
+            length: 200,
+            width: 100,
+            height: 60,
+            load: 62.47,
+            dryWeight: 2.5,
+            wetWeight: 2.6,
+          },
+          {
+            rowNo: 3,
+            length: 200,
+            width: 100,
+            height: 60,
+            load: 58.51,
+            dryWeight: 2.49,
+            wetWeight: 2.57,
+          },
+          {
+            rowNo: 4,
+            length: 200,
+            width: 100,
+            height: 60,
+            load: 58.42,
+            dryWeight: 2.48,
+            wetWeight: 2.56,
+          },
         ],
       },
     },
@@ -144,12 +178,12 @@ test("evaluates multiple paving rows using the configured correction factor", ()
       ...blockStandard(),
       testType: "Paving Blocks",
       blockType: null,
-      blockSize: "200 x 200 x 60",
-      requiredStrength: "13",
+      blockSize: "200 x 100 x 60",
+      requiredStrength: "3.6",
     }],
     [{
       ...blockShapeFactor(),
-      blockSize: "200*200*60",
+      blockSize: "200*100*60",
       shapeFactor: null,
       correctionFactor: "0.87",
     }],
@@ -157,11 +191,14 @@ test("evaluates multiple paving rows using the configured correction factor", ()
 
   const details = result.details as Record<string, unknown>;
   const rows = details.testRows as Array<Record<string, unknown>>;
-  assert.equal(result.status, "Passed");
-  assert.equal(result.evaluation.averageStrength, 13.05);
-  assert.equal(rows[0].compressiveStrength, "10.00");
-  assert.equal(rows[0].correctedStrength, 8.7);
-  assert.equal(rows[1].correctedStrength, 17.4);
+  assert.equal(result.status, "Failed");
+  assert.equal(result.evaluation.averageStrength, 2.78);
+  assert.equal(rows[0].tensileStrength, "2.81");
+  assert.equal(rows[0].correctedStrength, 2.81);
+  assert.equal(rows[1].tensileStrength, "2.89");
+  assert.equal(rows[2].tensileStrength, "2.70");
+  assert.equal(rows[0].density, "2166.67");
+  assert.equal(rows[0].waterAbsorption, "3.59");
 });
 
 test("normalizes Block age once and fills only missing dimensions", () => {

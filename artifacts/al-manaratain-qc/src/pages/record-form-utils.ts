@@ -14,6 +14,7 @@ export type TestRow = {
   testAge: string;
   load: string;
   strength: string;
+  tensileStrength: string;
   airDryStrength: string;
   normalizedStrength: string;
   compressiveStrength: string;
@@ -79,6 +80,7 @@ export const createEmptyRow = (id: number): TestRow => ({
   testAge: "",
   load: "",
   strength: "",
+  tensileStrength: "",
   airDryStrength: "",
   normalizedStrength: "",
   compressiveStrength: "",
@@ -241,33 +243,50 @@ export const pavingCorrectionFactorFromSize = (value: unknown) => {
 };
 
 export const calculatePavingStrengths = (
-  row: Pick<TestRow, "length" | "width" | "load" | "compressiveStrength">,
+  row: Pick<TestRow, "length" | "height" | "load"> &
+    Partial<Pick<TestRow, "compressiveStrength" | "tensileStrength">>,
   correctionFactorValue: unknown,
 ) => {
   const length = Number(numericInputValue(row.length));
-  const width = Number(numericInputValue(row.width));
+  const height = Number(numericInputValue(row.height));
   const loadText = numericInputValue(row.load);
-  const directStrengthText = numericInputValue(row.compressiveStrength);
+  const directTensileText = numericInputValue(row.tensileStrength);
+  const directRawStrengthText = numericInputValue(row.compressiveStrength);
   const load = Number(loadText);
-  const directStrength = Number(directStrengthText);
+  const directTensileStrength = Number(directTensileText);
+  const directRawStrength = Number(directRawStrengthText);
+  const hasLoadBasedStrength =
+    Boolean(loadText) &&
+    Number.isFinite(load) &&
+    load >= 0 &&
+    length > 0 &&
+    height > 0;
   const rawStrength =
-    loadText && Number.isFinite(load) && load >= 0 && length > 0 && width > 0
-      ? (load * 1000) / (length * width)
-      : directStrengthText && Number.isFinite(directStrength) && directStrength >= 0
-        ? directStrength
+    hasLoadBasedStrength
+      ? (0.637 * load * 1000) / (length * height)
+      : directRawStrengthText &&
+          Number.isFinite(directRawStrength) &&
+          directRawStrength >= 0
+        ? directRawStrength
+        : directTensileText &&
+            Number.isFinite(directTensileStrength) &&
+            directTensileStrength >= 0
+          ? directTensileStrength
         : null;
   const correctionText = numericInputValue(correctionFactorValue);
   const correctionFactor = Number(correctionText);
   const correctedStrength =
-    rawStrength !== null &&
-    correctionText &&
-    Number.isFinite(correctionFactor) &&
-    correctionFactor >= 0
-      ? Math.round((rawStrength * correctionFactor + Number.EPSILON) * 100) / 100
-      : null;
+    !hasLoadBasedStrength && directTensileText
+      ? directTensileStrength
+      : rawStrength !== null &&
+          correctionText &&
+          Number.isFinite(correctionFactor) &&
+          correctionFactor >= 0
+        ? Math.round((rawStrength * correctionFactor + Number.EPSILON) * 100) / 100
+        : null;
 
   return {
-    compressiveStrength: rawStrength === null ? "" : rawStrength.toFixed(2),
+    tensileStrength: correctedStrength === null ? "" : correctedStrength.toFixed(2),
     correctedStrength: correctedStrength === null ? "" : correctedStrength.toFixed(2),
   };
 };
@@ -388,6 +407,9 @@ export const toFormRow = (row: unknown, id: number): TestRow => {
     testAge: numericInputValue(values.testAge),
     load: numericInputValue(values.load),
     strength: numericInputValue(values.strength ?? values.calculatedStrength ?? values.compressiveStrength),
+    tensileStrength: numericInputValue(
+      values.tensileStrength ?? values.correctedStrength ?? values.strength,
+    ),
     airDryStrength: numericInputValue(values.airDryStrength ?? values.dryAirStrength),
     normalizedStrength: numericInputValue(values.normalizedStrength),
     compressiveStrength: numericInputValue(

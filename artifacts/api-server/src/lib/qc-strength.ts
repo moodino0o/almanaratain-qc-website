@@ -256,6 +256,8 @@ export function normalizePavingDetails(
   shapeFactors: QcShapeFactorRow[] = [],
 ) {
   const pavingBlockSize = textValue(details.pavingBlockSize ?? details.blockSize);
+  const dimensions = blockDimensionsFromSize(pavingBlockSize);
+  const rows = Array.isArray(details.testRows) ? details.testRows : null;
   const configuredCorrectionFactor = numericValue(details.correctionFactor);
   const configuredSizeFactor =
     configuredCorrectionFactor === null && pavingBlockSize
@@ -273,6 +275,18 @@ export function normalizePavingDetails(
     ...(pavingBlockSize ? { pavingBlockSize } : {}),
     ...(defaultCorrectionFactor !== null
       ? { correctionFactor: defaultCorrectionFactor }
+      : {}),
+    ...(rows
+      ? {
+          testRows: rows.map((row) => {
+            if (typeof row !== "object" || row === null || !dimensions) return row;
+            const values = { ...(row as Record<string, unknown>) };
+            if (numericValue(values.length) === null) values.length = dimensions.length;
+            if (numericValue(values.width) === null) values.width = dimensions.width;
+            if (numericValue(values.height) === null) values.height = dimensions.height;
+            return values;
+          }),
+        }
       : {}),
   };
 }
@@ -339,22 +353,37 @@ function calculateRow(
   const load = numericValue(values.load);
   const length = numericValue(values.length);
   const width = numericValue(values.width);
+  const height = numericValue(values.height);
   const loadedFaceArea =
-    length !== null && width !== null && length > 0 && width > 0
-      ? rounded(length * width)
+    length !== null &&
+    (isPaving
+      ? height !== null && length > 0 && height > 0
+      : width !== null && length > 0 && width > 0)
+      ? rounded(length * (isPaving ? height! : width!))
       : null;
-  const directStrength = isPaving
-    ? numericValue(values.compressiveStrength ?? values.strength)
+  const directPavingStrength = isPaving
+    ? numericValue(values.tensileStrength ?? values.correctedStrength ?? values.strength)
     : null;
-  const calculatedStrength =
+  const directPavingRawStrength = isPaving
+    ? numericValue(values.compressiveStrength)
+    : null;
+  const hasLoadBasedStrength =
     load !== null &&
     load >= 0 &&
     loadedFaceArea !== null &&
-    loadedFaceArea > 0
-      ? rounded((load * 1000) / loadedFaceArea)
-      : directStrength;
+    loadedFaceArea > 0;
+  const loadBasedStrength =
+    hasLoadBasedStrength
+      ? (load! * 1000 * (isPaving ? 0.637 : 1)) / loadedFaceArea!
+      : null;
+  const calculatedStrength =
+    loadBasedStrength !== null
+      ? rounded(loadBasedStrength)
+      : isPaving
+        ? directPavingRawStrength ?? directPavingStrength
+        : null;
   const airDryStrength =
-    calculatedStrength !== null
+    !isPaving && calculatedStrength !== null
       ? roundedToOneDecimal(isDammam ? calculatedStrength : calculatedStrength * 1.2)
       : null;
   const shapeFactor = numericValue(shapeFactorValue);
@@ -366,11 +395,15 @@ function calculateRow(
       : null;
   const correctionFactor = numericValue(correctionFactorValue);
   const correctedStrength =
-    isPaving &&
-    calculatedStrength !== null &&
-    correctionFactor !== null &&
-    correctionFactor >= 0
-      ? roundedToOneDecimal(calculatedStrength * correctionFactor)
+    isPaving && calculatedStrength !== null
+      ? loadBasedStrength !== null
+        ? correctionFactor !== null && correctionFactor >= 0
+          ? rounded(loadBasedStrength * correctionFactor)
+          : null
+        : directPavingStrength ??
+          (correctionFactor !== null && correctionFactor >= 0
+            ? rounded(calculatedStrength * correctionFactor)
+            : null)
       : null;
   const dryWeight = numericValue(values.dryWeight);
   const wetWeight = numericValue(values.wetWeight);
@@ -399,23 +432,29 @@ function calculateRow(
     row: {
       ...values,
       ...(loadedFaceArea !== null ? { loadedFaceArea } : {}),
+      ...(isPaving
+        ? {
+            calculatedStrength,
+            tensileStrength:
+              correctedStrength === null ? "" : correctedStrength.toFixed(2),
+            correctedStrength: correctedStrength ?? "",
+            strength:
+              correctedStrength === null ? "" : correctedStrength.toFixed(2),
+          }
+        : {}),
       ...(waterAbsorption !== null
         ? { waterAbsorption: waterAbsorption.toFixed(2) }
         : { waterAbsorption: "" }),
-      ...(calculatedStrength !== null
+      ...(!isPaving && calculatedStrength !== null
         ? {
             calculatedStrength,
-            ...(isPaving
-              ? { compressiveStrength: calculatedStrength.toFixed(2) }
-              : {
-                  waterStrength: calculatedStrength.toFixed(2),
-                  strength: calculatedStrength.toFixed(2),
-                }),
+            waterStrength: calculatedStrength.toFixed(2),
+            strength: calculatedStrength.toFixed(2),
           }
         : {}),
       ...(airDryStrength !== null ? { airDryStrength } : {}),
       ...(normalizedStrength !== null ? { normalizedStrength } : {}),
-      ...(correctedStrength !== null
+      ...(!isPaving && correctedStrength !== null
         ? {
             correctedStrength,
             strength: correctedStrength.toFixed(2),
@@ -425,7 +464,16 @@ function calculateRow(
     },
     calculatedStrength,
     loadedFaceArea,
-    complete: calculatedStrength !== null,
+    complete: isPaving
+      ? hasLoadBasedStrength &&
+        correctionFactor !== null &&
+        correctionFactor >= 0 &&
+        correctedStrength !== null &&
+        width !== null &&
+        width > 0 &&
+        density !== null &&
+        waterAbsorption !== null
+      : calculatedStrength !== null,
   };
 }
 
@@ -480,7 +528,8 @@ export function evaluateStrengthRecord(
         ? row.row as Record<string, unknown>
         : {};
       if (record.testType === "Paving Blocks") {
-        return numericValue(values.correctedStrength) ?? row.calculatedStrength;
+        return numericValue(values.tensileStrength) ??
+          numericValue(values.correctedStrength);
       }
       if (record.testType === "Blocks") {
         return numericValue(values.airDryStrength ?? values.dryAirStrength);
@@ -517,7 +566,7 @@ export function evaluateStrengthRecord(
       ? "A complete 28-day cube result is required."
       : record.testType === "Blocks"
         ? "Complete specimen load, dimensions, air-dry strength, and Block age are required."
-        : "Complete paving specimen dimensions and compressive strength are required.";
+        : "Enter each paving specimen's dimensions, dry and wet weights, load, and correction factor.";
   if (!standard) {
       reason =
         record.testType === "Blocks"
@@ -535,7 +584,7 @@ export function evaluateStrengthRecord(
           ? "The average Block air-dry strength is below the configured minimum."
           : "The average Block air-dry strength is below the configured minimum."
         : record.testType === "Paving Blocks"
-          ? "The corrected paving block strength is below the configured minimum."
+          ? "The average paving block tensile strength is below the configured minimum."
           : "The measured strength is below the configured minimum.";
   } else if (!hasIncompleteMeasurements) {
     status = "Passed";
