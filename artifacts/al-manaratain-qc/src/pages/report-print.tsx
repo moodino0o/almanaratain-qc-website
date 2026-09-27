@@ -672,6 +672,39 @@ function SieveEvaluationTable({ value }: { value: unknown }) {
   );
 }
 
+const readyMixReportStandards = [
+  { mixType: "45 N/mm2", sevenDay: 31, twentyEightDay: 45 },
+  { mixType: "35 N/mm2", sevenDay: 21, twentyEightDay: 35 },
+  { mixType: "SCREED N/mm2", sevenDay: 25, twentyEightDay: 30 },
+  { mixType: "20 N/mm2", sevenDay: 19, twentyEightDay: 25 },
+] as const;
+
+function ReadyMixStrengthStandardsTable() {
+  return (
+    <div className="report-standard-block ready-mix-standard-block">
+      <p className="report-centered-title">Standard Required Strength:</p>
+      <table className="report-table report-strength-table">
+        <thead>
+          <tr>
+            <th>MIX TYPE</th>
+            <th>7 DAYS</th>
+            <th>28 DAYS</th>
+          </tr>
+        </thead>
+        <tbody>
+          {readyMixReportStandards.map((standard) => (
+            <tr key={standard.mixType}>
+              <td>{standard.mixType}</td>
+              <td>{formatNumber(standard.sevenDay)} N/mm2</td>
+              <td>{formatNumber(standard.twentyEightDay)} N/mm2</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function StrengthStandardsTable({
   record,
   standards,
@@ -682,10 +715,9 @@ function StrengthStandardsTable({
   evaluation: ValueMap | null;
 }) {
   const isBlocks = record.testType === "Blocks";
-  const configuredStandards = (record.testType === "Ready Mix"
-    ? standards.filter((standard) => standard.testType === "Ready Mix")
-    : standards.filter((standard) => strengthStandardMatchesRecord(standard, record))
-  ).sort((left, right) => left.id - right.id);
+  const configuredStandards = standards
+    .filter((standard) => strengthStandardMatchesRecord(standard, record))
+    .sort((left, right) => left.id - right.id);
   const rows = configuredStandards.length
     ? configuredStandards
     : evaluation?.requiredStrength != null
@@ -950,7 +982,6 @@ function ReadyMixReport({
       ];
   const orderedTestRows = sortCubeRowsByAge(testRows);
   const average28DayStrength = averageStrengthForAgeRange(orderedTestRows, 28, 29);
-  const requiredStrengthEvaluation = objectValue(details.strengthEvaluation);
   const resultColumnDefaults: LayoutColumn[] = [
     { key: "testingDate", label: "Testing Date", visible: true, order: 0, width: 18 },
     { key: "age", label: "Cube Age", visible: true, order: 1, width: 12 },
@@ -1079,11 +1110,7 @@ function ReadyMixReport({
         </table>
       </section>
 
-      <StrengthStandardsTable
-        record={record}
-        standards={standards}
-        evaluation={requiredStrengthEvaluation}
-      />
+      <ReadyMixStrengthStandardsTable />
     </div>
   );
 }
