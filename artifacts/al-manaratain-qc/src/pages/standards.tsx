@@ -29,6 +29,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@workspace/replit-auth-web";
 import {
   ArrowLeft,
+  ArrowRight,
   Check,
   ChevronDown,
   Edit2,
@@ -60,6 +61,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TypeaheadInput } from "@/components/ui/typeahead-input";
+import {
+  BLOCK_RECORD_MATERIAL,
+  blockSizeMatches,
+  blockTypeMatches,
+} from "./record-form-utils";
 
 type AutomatedTestType = "Ready Mix" | "Blocks" | "Paving Blocks";
 type SieveTestType = "Sand Sieve" | "Aggregate Sieve";
@@ -238,6 +244,12 @@ function StandardEditor({
               setForm({
                 ...form,
                 testType: value,
+                material:
+                  value === TestType.Blocks
+                    ? BLOCK_RECORD_MATERIAL
+                    : form.testType === TestType.Blocks
+                      ? ""
+                      : form.material,
                 blockType: "",
                 blockSize: "",
               })
@@ -253,18 +265,20 @@ function StandardEditor({
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
-          <Label>Material or mix design</Label>
-          <TypeaheadInput
-            value={form.material}
-            onChange={(value) => setForm({ ...form, material: value })}
-            options={materialOptions}
-            placeholder="Select or type a material..."
-            onCreateOption={(value) =>
-              onCreateReferenceItem("materials", value)
-            }
-          />
-        </div>
+        {form.testType !== TestType.Blocks && (
+          <div className="space-y-2">
+            <Label>Material or mix design</Label>
+            <TypeaheadInput
+              value={form.material}
+              onChange={(value) => setForm({ ...form, material: value })}
+              options={materialOptions}
+              placeholder="Select or type a material..."
+              onCreateOption={(value) =>
+                onCreateReferenceItem("materials", value)
+              }
+            />
+          </div>
+        )}
         {(form.testType === TestType.Blocks || form.testType === TestType.Paving_Blocks) && (
           <>
             {form.testType === TestType.Blocks && <div className="space-y-2">
@@ -746,6 +760,217 @@ function StrengthStandardsFolder({
   );
 }
 
+function BlockStandardAssignmentFlow({
+  standards,
+  blockTypes,
+  blockSizes,
+  onCreateReferenceItem,
+  onCreateBlockStandard,
+  onLinkStandard,
+  isLinking,
+}: {
+  standards: StrengthStandard[];
+  blockTypes: string[];
+  blockSizes: string[];
+  onCreateReferenceItem: (
+    categoryKey: string,
+    value: string,
+  ) => Promise<string | void>;
+  onCreateBlockStandard: (blockType: string, blockSize: string) => void;
+  onLinkStandard: (
+    standard: StrengthStandard,
+    blockType: string,
+    blockSize: string,
+  ) => void;
+  isLinking: boolean;
+}) {
+  const [blockTypeInput, setBlockTypeInput] = useState("");
+  const [blockSizeInput, setBlockSizeInput] = useState("");
+  const [manualStandardId, setManualStandardId] = useState("");
+  const blockStandards = useMemo(
+    () => standards.filter((standard) => standard.testType === TestType.Blocks),
+    [standards],
+  );
+  const blockTypeOptions = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          ...blockTypes,
+          ...blockStandards.map((standard) => standard.blockType ?? ""),
+        ]),
+      ).filter(Boolean),
+    [blockStandards, blockTypes],
+  );
+  const blockSizeOptions = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          ...blockSizes,
+          ...blockStandards.map((standard) => standard.blockSize ?? ""),
+        ]),
+      ).filter(Boolean),
+    [blockStandards, blockSizes],
+  );
+  const blockType = blockTypeInput || blockTypeOptions[0] || "";
+  const blockSize = blockSizeInput || blockSizeOptions[0] || "";
+  const automaticMatches = useMemo(
+    () =>
+      blockStandards
+        .filter(
+          (standard) =>
+            blockTypeMatches(standard.blockType, blockType) &&
+            blockSizeMatches(standard.blockSize, blockSize),
+        )
+        .sort((left, right) => left.id - right.id),
+    [blockSize, blockStandards, blockType],
+  );
+  const manualStandard =
+    blockStandards.find(
+      (standard) => String(standard.id) === manualStandardId,
+    ) ?? blockStandards[0];
+  const manualStandardAlreadyLinked =
+    Boolean(manualStandard) &&
+    blockTypeMatches(manualStandard?.blockType, blockType) &&
+    blockSizeMatches(manualStandard?.blockSize, blockSize);
+
+  return (
+    <Card className="border-primary/20 shadow-sm">
+      <CardHeader className="border-b border-border/70 bg-muted/30">
+        <CardTitle>Block Type → Standard Flow</CardTitle>
+        <CardDescription>
+          Link a standard to a Block Type and Size here. Block records then match it automatically,
+          or a user can choose a different matching standard manually.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5 pt-5">
+        <div className="grid items-center gap-3 md:grid-cols-[1fr_auto_1fr_auto_1.25fr]">
+          <div className="space-y-2 rounded-lg border bg-background p-3">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              1 · Block Type
+            </span>
+            <TypeaheadInput
+              value={blockType}
+              onChange={setBlockTypeInput}
+              options={blockTypeOptions}
+              placeholder="Select or type a Block Type"
+              onCreateOption={(value) => onCreateReferenceItem("blockTypes", value)}
+            />
+          </div>
+          <ArrowRight className="mx-auto hidden h-5 w-5 text-muted-foreground md:block" aria-hidden="true" />
+          <div className="space-y-2 rounded-lg border bg-background p-3">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              2 · Block Size
+            </span>
+            <TypeaheadInput
+              value={blockSize}
+              onChange={setBlockSizeInput}
+              options={blockSizeOptions}
+              placeholder="Select or type a Block Size"
+              onCreateOption={(value) => onCreateReferenceItem("blockSizes", value)}
+            />
+          </div>
+          <ArrowRight className="mx-auto hidden h-5 w-5 text-muted-foreground md:block" aria-hidden="true" />
+          <div className="space-y-2 rounded-lg border bg-background p-3">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              3 · Automatic Match
+            </span>
+            {automaticMatches[0] ? (
+              <div className="text-sm">
+                <p className="font-semibold">{automaticMatches[0].bsStandard}</p>
+                <p className="text-muted-foreground">
+                  {automaticMatches[0].requiredStrength} {automaticMatches[0].strengthUnit}
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No standard is linked yet.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="rounded-lg border p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                Automatic
+              </span>
+              <span className="text-sm font-semibold">Match by Block Type + Size</span>
+            </div>
+            <p className="mb-4 text-sm text-muted-foreground">
+              Assigning these values to a standard makes it available for automatic record evaluation.
+            </p>
+            {automaticMatches.length > 1 && (
+              <p className="mb-3 text-xs text-amber-700">
+                {automaticMatches.length} standards match this type and size. Automatic matching uses
+                the first listed; users can choose another match in the Block record.
+              </p>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!blockType || !blockSize}
+              onClick={() => onCreateBlockStandard(blockType, blockSize)}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add a standard for this type and size
+            </Button>
+          </div>
+
+          <div className="rounded-lg border p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">
+                Manual link
+              </span>
+              <span className="text-sm font-semibold">Choose the standard to link</span>
+            </div>
+            {blockStandards.length ? (
+              <>
+                <select
+                  aria-label="Strength standard to link to this Block Type and Size"
+                  value={manualStandard ? String(manualStandard.id) : ""}
+                  onChange={(event) => setManualStandardId(event.target.value)}
+                  className="mb-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  {blockStandards.map((standard) => (
+                    <option key={standard.id} value={standard.id}>
+                      {standard.bsStandard} — {standard.requiredStrength} {standard.strengthUnit}
+                      {standard.blockType && standard.blockSize
+                        ? ` · ${standard.blockType} · ${standard.blockSize}`
+                        : ""}
+                    </option>
+                  ))}
+                </select>
+                {manualStandard && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={!blockType || !blockSize || manualStandardAlreadyLinked || isLinking}
+                    onClick={() => onLinkStandard(manualStandard, blockType, blockSize)}
+                  >
+                    {isLinking
+                      ? "Linking..."
+                      : manualStandardAlreadyLinked
+                        ? "Already linked"
+                        : `Link to ${blockType} · ${blockSize}`}
+                  </Button>
+                )}
+                <p className="mt-2 text-xs text-muted-foreground">
+                  This changes the selected standard’s Block Type and Size. A user can still choose
+                  among matching standards manually when entering a Block record.
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Add a Block standard first, then link it to a type and size.
+              </p>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function ShapeFactorsFolder({
   shapeFactors,
   canEdit,
@@ -1115,6 +1340,21 @@ export default function Standards() {
     setShapeFactorEditorOpen(false);
   };
 
+  const openCreateBlockStandardFor = (blockType: string, blockSize: string) => {
+    setEditing(null);
+    setForm({
+      ...emptyForm,
+      testType: TestType.Blocks,
+      material: BLOCK_RECORD_MATERIAL,
+      blockType,
+      blockSize,
+    });
+    setStandardView("strength");
+    setEditorOpen(true);
+    setSieveEditorOpen(false);
+    setShapeFactorEditorOpen(false);
+  };
+
   const openEdit = (standard: StrengthStandard) => {
     setEditing(standard);
     setForm(formFromStandard(standard));
@@ -1163,7 +1403,7 @@ export default function Standards() {
   const handleSave = () => {
     const requiredStrength = Number(form.requiredStrength);
     if (
-      !form.material.trim() ||
+      (form.testType !== TestType.Blocks && !form.material.trim()) ||
       !form.bsStandard.trim() ||
       !form.strengthUnit.trim() ||
       !Number.isFinite(requiredStrength) ||
@@ -1177,7 +1417,10 @@ export default function Standards() {
     }
     const data = {
       testType: form.testType,
-      material: form.material.trim(),
+      material:
+        form.testType === TestType.Blocks
+          ? BLOCK_RECORD_MATERIAL
+          : form.material.trim(),
       blockType:
         form.testType === TestType.Blocks ? form.blockType.trim() : null,
       blockSize:
@@ -1208,6 +1451,45 @@ export default function Standards() {
     };
     if (editing) updateStandard.mutate({ id: editing.id, data }, options);
     else createStandard.mutate({ data }, options);
+  };
+
+  const handleLinkBlockStandard = async (
+    standard: StrengthStandard,
+    blockType: string,
+    blockSize: string,
+  ) => {
+    const alreadyLinked =
+      blockTypeMatches(standard.blockType, blockType) &&
+      blockSizeMatches(standard.blockSize, blockSize);
+    if (alreadyLinked) return;
+    const hasPreviousLink = Boolean(standard.blockType || standard.blockSize);
+    if (
+      hasPreviousLink &&
+      !confirm(
+        `Move ${standard.bsStandard} from ${standard.blockType || "an unset Block Type"} / ${standard.blockSize || "an unset Block Size"} to ${blockType} / ${blockSize}?`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await updateStandard.mutateAsync({
+        id: standard.id,
+        data: {
+          testType: TestType.Blocks,
+          material: standard.material || BLOCK_RECORD_MATERIAL,
+          blockType,
+          blockSize,
+          bsStandard: standard.bsStandard,
+          requiredStrength: standard.requiredStrength,
+          strengthUnit: standard.strengthUnit,
+        },
+      });
+      toast.success(`${standard.bsStandard} linked to ${blockType} / ${blockSize}.`);
+      setExpandedStrengthFolders((current) => ({ ...current, blocks: true }));
+      invalidateStandards();
+    } catch {
+      toast.error("Unable to link the Block standard.");
+    }
   };
 
   const handleSaveShapeFactor = () => {
@@ -1542,38 +1824,51 @@ export default function Standards() {
             </CardContent>
           </Card>
         ) : (
-          strengthFolders.map((folder) => (
-            <StrengthStandardsFolder
-              key={folder.key}
-              label={folder.label}
-              standards={folder.standards}
-              expanded={expandedStrengthFolders[folder.key]}
-              onToggle={() =>
-                setExpandedStrengthFolders((current) => ({
-                  ...current,
-                  [folder.key]: !current[folder.key],
-                }))
-              }
-               onAdd={() => {
-                 if (!canEditStandards) return;
-                setStandardView("strength");
-                setEditing(null);
-                setForm({
-                  ...emptyForm,
-                  testType:
-                     folder.key === "blocks"
-                       ? TestType.Blocks
-                       : folder.key === "paving"
-                         ? TestType.Paving_Blocks
-                         : TestType.Ready_Mix,
-                });
-                setEditorOpen(true);
-                setSieveEditorOpen(false);
-              }}
-               onEdit={canEditStandards ? openEdit : () => undefined}
-               onDelete={canEditStandards ? handleDelete : () => undefined}
-            />
-          ))
+          <>
+            {canEditStandards && (
+              <BlockStandardAssignmentFlow
+                standards={strengthStandards ?? []}
+                blockTypes={lookups?.blockTypes ?? []}
+                blockSizes={lookups?.blockSizes ?? []}
+                onCreateReferenceItem={addReferenceDataItem}
+                onCreateBlockStandard={openCreateBlockStandardFor}
+                onLinkStandard={handleLinkBlockStandard}
+                isLinking={updateStandard.isPending}
+              />
+            )}
+            {strengthFolders.map((folder) => (
+              <StrengthStandardsFolder
+                key={folder.key}
+                label={folder.label}
+                standards={folder.standards}
+                expanded={expandedStrengthFolders[folder.key]}
+                onToggle={() =>
+                  setExpandedStrengthFolders((current) => ({
+                    ...current,
+                    [folder.key]: !current[folder.key],
+                  }))
+                }
+                onAdd={() => {
+                  if (!canEditStandards) return;
+                  setStandardView("strength");
+                  setEditing(null);
+                  setForm({
+                    ...emptyForm,
+                    testType:
+                      folder.key === "blocks"
+                        ? TestType.Blocks
+                        : folder.key === "paving"
+                          ? TestType.Paving_Blocks
+                          : TestType.Ready_Mix,
+                  });
+                  setEditorOpen(true);
+                  setSieveEditorOpen(false);
+                }}
+                onEdit={canEditStandards ? openEdit : () => undefined}
+                onDelete={canEditStandards ? handleDelete : () => undefined}
+              />
+            ))}
+          </>
         )}
       </div>
 

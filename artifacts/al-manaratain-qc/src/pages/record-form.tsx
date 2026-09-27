@@ -20,13 +20,13 @@ import {
   calculateBlockStrengths,
   calculatePavingStrengths,
   blockDimensionsFromSize,
-  blockMaterialMatches,
   blockSizeMatches,
   blockTypeMatches,
   createEmptyRow,
   calculateSieveSampleWeight,
   calculateSieveResults,
   applySizeDimensionDefaults,
+  BLOCK_RECORD_MATERIAL,
   prepareDetailsForForm,
   sieveSizeNumber,
   stringValue,
@@ -87,6 +87,7 @@ export default function RecordForm() {
   const [customerLocation, setCustomerLocation] = useState("");
   const [remarks, setRemarks] = useState("");
   const [selectedStrengthStandardId, setSelectedStrengthStandardId] = useState("");
+  const [strengthStandardMode, setStrengthStandardMode] = useState<"automatic" | "manual">("automatic");
   
   const [details, setDetails] = useState<Record<string, unknown>>({});
   const [testRows, setTestRows] = useState<TestRow[]>([createEmptyRow(1)]);
@@ -150,7 +151,14 @@ export default function RecordForm() {
       ? (legacyBlockAgeRow as Record<string, unknown>).sampleAge
       : "";
     setBlockAge(numericInputValue(savedDetails.blockAge ?? legacyBlockAge));
-    setSelectedStrengthStandardId(stringValue(savedDetails.strengthStandardId));
+    const savedStandardId = stringValue(savedDetails.strengthStandardId);
+    const savedAssignmentMode = stringValue(savedDetails.strengthStandardAssignmentMode);
+    setSelectedStrengthStandardId(savedStandardId);
+    setStrengthStandardMode(
+      savedAssignmentMode === "manual" || (!savedAssignmentMode && savedStandardId)
+        ? "manual"
+        : "automatic",
+    );
     setDetails(savedDetails);
     const loadedSourceRows =
       savedRows.length
@@ -400,20 +408,19 @@ export default function RecordForm() {
     const normalizedMaterial = material.trim().toLocaleLowerCase();
     const selectedPavingSize = String(details.pavingBlockSize ?? "").trim();
     return (strengthStandards ?? [])
-      .filter((standard) => (
-        standard.testType === testType &&
-        (testType === TestType.Blocks
-          ? blockMaterialMatches(standard.material, material, details.blockType)
-          : standard.material.trim().toLocaleLowerCase() === normalizedMaterial) &&
-        (testType === TestType.Blocks ||
-          testType === TestType.Paving_Blocks
-            ? (!standard.blockSize ||
-              blockSizeMatches(standard.blockSize, selectedPavingSize))
-            : true) &&
-        (testType !== TestType.Blocks ||
-          (blockTypeMatches(standard.blockType, details.blockType) &&
-            blockSizeMatches(standard.blockSize, details.blockSize)))
-      ))
+      .filter((standard) => {
+        if (standard.testType !== testType) return false;
+        if (testType === TestType.Blocks) {
+          return blockTypeMatches(standard.blockType, details.blockType) &&
+            blockSizeMatches(standard.blockSize, details.blockSize);
+        }
+        if (standard.material.trim().toLocaleLowerCase() !== normalizedMaterial) {
+          return false;
+        }
+        return testType !== TestType.Paving_Blocks ||
+          !standard.blockSize ||
+          blockSizeMatches(standard.blockSize, selectedPavingSize);
+      })
       .sort((left, right) => left.id - right.id);
   }, [details.blockSize, details.blockType, material, strengthStandards, testType]);
 
@@ -430,6 +437,14 @@ export default function RecordForm() {
     const selectedStillMatches = matchingStrengthStandards.some(
       (standard) => String(standard.id) === selectedStrengthStandardId,
     );
+    if (
+      testType === TestType.Blocks &&
+      strengthStandardMode === "manual" &&
+      selectedStrengthStandardId &&
+      !selectedStillMatches
+    ) {
+      setStrengthStandardMode("automatic");
+    }
     const nextStandardId = selectedStillMatches
       ? selectedStrengthStandardId
       : matchingStrengthStandards[0]
@@ -438,7 +453,7 @@ export default function RecordForm() {
     if (nextStandardId !== selectedStrengthStandardId) {
       setSelectedStrengthStandardId(nextStandardId);
     }
-  }, [matchingStrengthStandards, selectedStrengthStandardId, testType]);
+  }, [matchingStrengthStandards, selectedStrengthStandardId, strengthStandardMode, testType]);
 
   const applicableSieveStandards = useMemo(() => {
     if (!usesSieveRows) return [];
@@ -593,7 +608,7 @@ export default function RecordForm() {
     e.preventDefault();
     const requestedAction = submitAction.current;
     submitAction.current = "save";
-    if (!locationValue || !material || !testedBy) {
+    if (!locationValue || (testType !== TestType.Blocks && !material) || !testedBy) {
       toast.error("Please fill in all required fields.");
       return;
     }
@@ -602,6 +617,14 @@ export default function RecordForm() {
       referenceNumber.length > REFERENCE_NUMBER_MAX_LENGTH
     ) {
       toast.error(`Reference Number must be ${REFERENCE_NUMBER_MAX_LENGTH} characters or fewer.`);
+      return;
+    }
+    if (
+      testType === TestType.Blocks &&
+      (!stringValue(details.blockType).trim() ||
+        !stringValue(details.blockSize).trim())
+    ) {
+      toast.error("Please select a Block Type and Block Size.");
       return;
     }
     if (
@@ -650,11 +673,20 @@ export default function RecordForm() {
     }
     if (
       testType === TestType.Ready_Mix ||
-      testType === TestType.Blocks ||
       testType === TestType.Paving_Blocks
     ) {
       if (applicableStandard) payloadDetails.strengthStandardId = applicableStandard.id;
       else delete payloadDetails.strengthStandardId;
+      delete payloadDetails.strengthStandardAssignmentMode;
+    }
+    if (testType === TestType.Blocks) {
+      if (strengthStandardMode === "manual" && applicableStandard) {
+        payloadDetails.strengthStandardId = applicableStandard.id;
+        payloadDetails.strengthStandardAssignmentMode = "manual";
+      } else {
+        delete payloadDetails.strengthStandardId;
+        payloadDetails.strengthStandardAssignmentMode = "automatic";
+      }
     }
     if (testType === TestType.Blocks) {
       payloadDetails.machine = machine;
@@ -702,7 +734,9 @@ export default function RecordForm() {
       testType,
       sampleDate: new Date(sampleDate).toISOString(),
       location: locationValue,
-      material,
+      material: testType === TestType.Blocks
+        ? material.trim() || BLOCK_RECORD_MATERIAL
+        : material.trim(),
       status: RecordStatus.Review, 
       testedBy,
       ...(canEditApprovedBy ? { reviewedBy: reviewedBy.trim() } : {}),
@@ -868,8 +902,10 @@ export default function RecordForm() {
                 <Label>Test Type <span className="text-destructive">*</span></Label>
                 <Select value={testType} onValueChange={(val: TestType) => {
                   setTestType(val);
+                  if (val === TestType.Blocks || testType === TestType.Blocks) setMaterial("");
                   setDetails({});
                   setSelectedStrengthStandardId("");
+                  setStrengthStandardMode("automatic");
                   setTestRows([createEmptyRow(1)]);
                   nextRowId.current = 2;
                 }}>
@@ -905,42 +941,152 @@ export default function RecordForm() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label>Material / Product <span className="text-destructive">*</span></Label>
-                <TypeaheadInput
-                  value={material}
-                  onChange={setMaterial}
-                  options={getMaterialSuggestions()}
-                  placeholder="Select or type material..."
-                  onCreateOption={createReferenceOption(getMaterialReferenceCategory())}
-                />
-              </div>
-
-      {(testType === TestType.Ready_Mix ||
-        testType === TestType.Blocks ||
-        testType === TestType.Paving_Blocks) && (
+              {testType !== TestType.Blocks && (
                 <div className="space-y-2">
-                  <Label>Evaluation / Report Standard</Label>
-                  <select
-                    value={selectedStrengthStandardId}
-                    onChange={(event) => setSelectedStrengthStandardId(event.target.value)}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
-                    disabled={!matchingStrengthStandards.length}
-                  >
-                    <option value="">Automatic first matching standard</option>
-                    {matchingStrengthStandards.map((standard) => (
-                      <option key={standard.id} value={standard.id}>
-                        {standard.bsStandard} — {standard.requiredStrength} {standard.strengthUnit}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-muted-foreground">
-                    {matchingStrengthStandards.length
-                      ? "This standard will be saved with the record and used for evaluation and reporting."
-                      : "No matching standard is configured for this material yet."}
-                  </p>
+                  <Label>Material / Product <span className="text-destructive">*</span></Label>
+                  <TypeaheadInput
+                    value={material}
+                    onChange={setMaterial}
+                    options={getMaterialSuggestions()}
+                    placeholder="Select or type material..."
+                    onCreateOption={createReferenceOption(getMaterialReferenceCategory())}
+                  />
                 </div>
               )}
+
+      {testType === TestType.Blocks ? (
+        <div className="space-y-3 md:col-span-2">
+          <Label>Block standard assignment</Label>
+          <div
+            role="radiogroup"
+            aria-label="Block standard assignment mode"
+            className="grid gap-2 sm:grid-cols-2"
+          >
+            <button
+              type="button"
+              role="radio"
+              aria-checked={strengthStandardMode === "automatic"}
+              onClick={() => setStrengthStandardMode("automatic")}
+              className={`rounded-lg border p-3 text-left transition-colors ${
+                strengthStandardMode === "automatic"
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:bg-muted/40"
+              }`}
+            >
+              <span className="block text-sm font-semibold">Automatic match</span>
+              <span className="mt-1 block text-xs text-muted-foreground">
+                Use the standard linked to this Block Type and Block Size.
+              </span>
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={strengthStandardMode === "manual"}
+              onClick={() => {
+                setStrengthStandardMode("manual");
+                if (!selectedStrengthStandardId && matchingStrengthStandards[0]) {
+                  setSelectedStrengthStandardId(String(matchingStrengthStandards[0].id));
+                }
+              }}
+              className={`rounded-lg border p-3 text-left transition-colors ${
+                strengthStandardMode === "manual"
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:bg-muted/40"
+              }`}
+            >
+              <span className="block text-sm font-semibold">Choose manually</span>
+              <span className="mt-1 block text-xs text-muted-foreground">
+                Select a different standard linked to this Block Type and Size.
+              </span>
+            </button>
+          </div>
+
+          <div className="grid items-center gap-2 rounded-lg border bg-muted/20 p-3 text-xs sm:grid-cols-[1fr_auto_1fr_auto_1fr]">
+            <div>
+              <span className="block text-muted-foreground">1 · Block Type + Size</span>
+              <strong className="mt-1 block text-foreground">
+                {stringValue(details.blockType) || "Choose Block Type"} ·{" "}
+                {stringValue(details.blockSize) || "Choose Block Size"}
+              </strong>
+            </div>
+            <span className="hidden text-muted-foreground sm:block" aria-hidden="true">→</span>
+            <div>
+              <span className="block text-muted-foreground">2 · Match method</span>
+              <strong className="mt-1 block text-foreground">
+                {strengthStandardMode === "automatic" ? "Automatic" : "Manual"}
+              </strong>
+            </div>
+            <span className="hidden text-muted-foreground sm:block" aria-hidden="true">→</span>
+            <div>
+              <span className="block text-muted-foreground">3 · Evaluation</span>
+              <strong className="mt-1 block text-foreground">Standard saved with record</strong>
+            </div>
+          </div>
+
+          {strengthStandardMode === "manual" ? (
+            <div className="space-y-2">
+              <Label htmlFor="block-standard-selection">Evaluation / Report Standard</Label>
+              <select
+                id="block-standard-selection"
+                value={selectedStrengthStandardId}
+                onChange={(event) => setSelectedStrengthStandardId(event.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
+                disabled={!matchingStrengthStandards.length}
+              >
+                {matchingStrengthStandards.map((standard) => (
+                  <option key={standard.id} value={standard.id}>
+                    {standard.bsStandard} — {standard.requiredStrength} {standard.strengthUnit}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                {matchingStrengthStandards.length
+                  ? "The selected standard will be saved with this record."
+                  : "No standard is linked to this Block Type and Size yet. Ask an administrator to set it up in Quality Standards."}
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-md border bg-background p-3 text-sm" aria-live="polite">
+              <span className="text-muted-foreground">Automatically matched standard: </span>
+              {matchingStrengthStandards[0] ? (
+                <strong>
+                  {matchingStrengthStandards[0].bsStandard} —{" "}
+                  {matchingStrengthStandards[0].requiredStrength}{" "}
+                  {matchingStrengthStandards[0].strengthUnit}
+                </strong>
+              ) : (
+                <span className="text-muted-foreground">
+                  None linked yet. Ask an administrator to configure a Block standard.
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      ) : (
+        (testType === TestType.Ready_Mix || testType === TestType.Paving_Blocks) && (
+          <div className="space-y-2">
+            <Label>Evaluation / Report Standard</Label>
+            <select
+              value={selectedStrengthStandardId}
+              onChange={(event) => setSelectedStrengthStandardId(event.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
+              disabled={!matchingStrengthStandards.length}
+            >
+              <option value="">Automatic first matching standard</option>
+              {matchingStrengthStandards.map((standard) => (
+                <option key={standard.id} value={standard.id}>
+                  {standard.bsStandard} — {standard.requiredStrength} {standard.strengthUnit}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground">
+              {matchingStrengthStandards.length
+                ? "This standard will be saved with the record and used for evaluation and reporting."
+                : "No matching standard is configured for this material yet."}
+            </p>
+          </div>
+        )
+      )}
 
               <div className="space-y-2">
                 <Label>Tested By (Technician) <span className="text-destructive">*</span></Label>

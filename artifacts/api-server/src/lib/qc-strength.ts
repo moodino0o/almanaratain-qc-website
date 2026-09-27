@@ -283,16 +283,14 @@ function standardMatchesRecord(
 ) {
   const blockType = textValue(record.details.blockType);
   const blockSize = textValue(record.details.blockSize);
-  if (
-    standard.testType !== record.testType ||
-    !blockMaterialMatches(
-      standard.material,
-      record.material,
-      blockType,
-    )
-  ) {
-    return false;
+  if (standard.testType !== record.testType) return false;
+  if (record.testType === "Blocks") {
+    return (
+      blockTypeMatches(standard.blockType, blockType) &&
+      blockSizeMatches(standard.blockSize, blockSize)
+    );
   }
+  if (!blockMaterialMatches(standard.material, record.material, blockType)) return false;
   if (record.testType === "Paving Blocks") {
     const pavingBlockSize = textValue(
       record.details.pavingBlockSize ?? record.details.blockSize,
@@ -300,11 +298,7 @@ function standardMatchesRecord(
     return !standard.blockSize ||
       (Boolean(pavingBlockSize) && blockSizeMatches(standard.blockSize, pavingBlockSize));
   }
-  if (record.testType !== "Blocks") return true;
-  return (
-    blockTypeMatches(standard.blockType, blockType) &&
-    blockSizeMatches(standard.blockSize, blockSize)
-  );
+  return true;
 }
 
 function matchingStandard(
@@ -318,7 +312,9 @@ function matchingStandard(
         standard.id === selectedStandardId && standardMatchesRecord(standard, record),
     );
   }
-  return standards.find((standard) => standardMatchesRecord(standard, record));
+  return standards
+    .filter((standard) => standardMatchesRecord(standard, record))
+    .sort((left, right) => left.id - right.id)[0];
 }
 
 function dayAge(value: unknown) {

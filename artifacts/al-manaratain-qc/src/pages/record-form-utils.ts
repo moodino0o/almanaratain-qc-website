@@ -1,5 +1,7 @@
 import type { QcRecord } from "@workspace/api-client-react";
 
+export const BLOCK_RECORD_MATERIAL = "Concrete Block";
+
 export type TestRow = {
   id: number;
   length: string;

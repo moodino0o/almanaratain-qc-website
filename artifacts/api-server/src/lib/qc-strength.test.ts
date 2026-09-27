@@ -269,6 +269,39 @@ test("uses the air-dry result for Block pass and fail evaluation", () => {
   assert.equal(result.status, "Passed");
 });
 
+test("matches a Block standard by Block Type and Size without a material entry", () => {
+  const result = evaluateStrengthRecord(
+    {
+      ...blockRecord([{ length: 400, width: 200, height: 200, load: 1000 }]),
+      material: "",
+    },
+    [blockStandard()],
+  );
+
+  assert.equal(result.evaluation?.bsStandard, "BS EN 771-3");
+  assert.equal(result.status, "Passed");
+});
+
+test("allows a saved manual Block standard to override the automatic match", () => {
+  const selectedStandard = blockStandard({
+    id: 2,
+    bsStandard: "Manual block standard",
+    requiredStrength: "20",
+  });
+  const record = blockRecord([
+    { length: 400, width: 200, height: 200, load: 1000 },
+  ]);
+  record.details.strengthStandardId = selectedStandard.id;
+
+  const result = evaluateStrengthRecord(
+    { ...record, material: "" },
+    [blockStandard(), selectedStandard],
+  );
+
+  assert.equal(result.evaluation?.bsStandard, "Manual block standard");
+  assert.equal(result.status, "Failed");
+});
+
 test("passes Blocks when air-dry average meets the minimum even if wet average does not", () => {
   const result = evaluateStrengthRecord(
     blockRecord([
