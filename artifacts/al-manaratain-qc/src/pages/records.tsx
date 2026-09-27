@@ -31,6 +31,11 @@ export default function Records() {
     }
   };
 
+  const getRecordDetail = (details: Record<string, unknown>, key: string) => {
+    const value = details[key];
+    return typeof value === "string" && value.trim() ? value : "—";
+  };
+
   return (
     <div className="space-y-6 flex flex-col h-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -84,12 +89,14 @@ export default function Records() {
           </div>
         </CardHeader>
         <CardContent className="flex-1 overflow-auto p-0">
-          <Table className="min-w-[760px]">
+          <Table className="min-w-[1180px]">
             <TableHeader className="sticky top-0 bg-card z-10 shadow-sm">
               <TableRow>
                 <TableHead className="w-[120px]">Record No.</TableHead>
                 <TableHead className="w-[150px]">Test Type</TableHead>
                 <TableHead>Location</TableHead>
+                <TableHead className="w-[180px]">Customer</TableHead>
+                <TableHead className="w-[160px]">Site</TableHead>
                 <TableHead>Material</TableHead>
                 <TableHead>Sample Date</TableHead>
                 <TableHead>Tested By</TableHead>
@@ -100,7 +107,7 @@ export default function Records() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center h-48 text-muted-foreground">
+                  <TableCell colSpan={10} className="text-center h-48 text-muted-foreground">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
                       Loading register...
@@ -109,7 +116,7 @@ export default function Records() {
                 </TableRow>
               ) : records?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center h-48 text-muted-foreground">
+                  <TableCell colSpan={10} className="text-center h-48 text-muted-foreground">
                     <div className="flex flex-col items-center justify-center">
                       <Search className="w-10 h-10 text-muted-foreground/30 mb-2" />
                       <p>No records found matching your filters.</p>
@@ -126,6 +133,12 @@ export default function Records() {
                       </span>
                     </TableCell>
                     <TableCell className="truncate max-w-[150px]">{record.location}</TableCell>
+                    <TableCell className="truncate max-w-[180px]">
+                      {getRecordDetail(record.details, "customerName")}
+                    </TableCell>
+                    <TableCell className="truncate max-w-[160px]">
+                      {getRecordDetail(record.details, "customerLocation")}
+                    </TableCell>
                     <TableCell className="truncate max-w-[150px]">{record.material}</TableCell>
                     <TableCell>{formatDate(record.sampleDate)}</TableCell>
                     <TableCell>{record.testedBy}</TableCell>
