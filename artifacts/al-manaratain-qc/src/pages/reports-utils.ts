@@ -150,15 +150,18 @@ const rowStrength = (row: unknown, testType: QcRecord["testType"]) => {
 const blockAirDryStrength = (row: unknown, location: string) => {
   if (typeof row !== "object" || row === null) return null;
   const values = row as Record<string, unknown>;
-  const storedAirDryStrength = numericValue(values.airDryStrength ?? values.dryAirStrength);
+  const waterStrength = firstNumericValue(values, [
+    "waterStrength",
+    "calculatedStrength",
+    "strength",
+    "compressiveStrength",
+  ]);
+  const isDammam = location.trim().toLocaleLowerCase() === "dammam";
+  if (isDammam && waterStrength !== null) return waterStrength;
+  const storedAirDryStrength = firstNumericValue(values, ["airDryStrength", "dryAirStrength"]);
   if (storedAirDryStrength !== null) return storedAirDryStrength;
-  const waterStrength = numericValue(
-    values.calculatedStrength ??
-    values.strength ??
-    values.compressiveStrength,
-  );
   if (waterStrength === null) return null;
-  return Number((waterStrength * (location.trim().toLocaleLowerCase() === "dammam" ? 1 : 1.2)).toFixed(1));
+  return Number((waterStrength * 1.2).toFixed(1));
 };
 
 const recordStrengths = (record: QcRecord, details: Record<string, unknown>) => {

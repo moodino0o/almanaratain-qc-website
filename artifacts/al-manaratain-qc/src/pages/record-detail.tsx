@@ -74,21 +74,25 @@ function blockAirDryRowStrength(row: unknown, location: string) {
   const values = typeof row === "object" && row !== null
     ? row as Record<string, unknown>
     : {};
-  const storedAirDryStrength = Number.parseFloat(String(
-    values.airDryStrength ?? values.dryAirStrength ?? "",
-  ));
-  if (Number.isFinite(storedAirDryStrength)) return storedAirDryStrength;
-
-  const waterStrength = Number.parseFloat(String(
-    values.waterStrength ??
-      values.calculatedStrength ??
-      values.strength ??
-      values.compressiveStrength ??
-      "",
-  ));
-  if (!Number.isFinite(waterStrength)) return null;
-  const factor = location.trim().toLocaleLowerCase() === "dammam" ? 1 : 1.2;
-  return Number((waterStrength * factor).toFixed(1));
+  const firstNumericValue = (keys: string[]) => {
+    for (const key of keys) {
+      const candidate = Number.parseFloat(String(values[key] ?? ""));
+      if (Number.isFinite(candidate)) return candidate;
+    }
+    return null;
+  };
+  const waterStrength = firstNumericValue([
+    "waterStrength",
+    "calculatedStrength",
+    "strength",
+    "compressiveStrength",
+  ]);
+  const isDammam = location.trim().toLocaleLowerCase() === "dammam";
+  if (isDammam && waterStrength !== null) return waterStrength;
+  const storedAirDryStrength = firstNumericValue(["airDryStrength", "dryAirStrength"]);
+  if (storedAirDryStrength !== null) return storedAirDryStrength;
+  if (waterStrength === null) return null;
+  return Number((waterStrength * 1.2).toFixed(1));
 }
 
 function averageStrengthForAge(rows: unknown[], age: number) {
@@ -619,8 +623,8 @@ export default function RecordDetail() {
             entries={[
               ["Block No.", detailText(recordDetails, "blockNo", detailText(recordDetails, "blockNumber"))],
               ["Average Air-dry Strength (N/mm²)", formatStrengthMetric(strengthEvaluation.averageStrength ?? blockStrengthSummary.average)],
-              ["Minimum Air-dry Strength (N/mm²)", formatStrengthMetric(strengthEvaluation.minimumStrength ?? blockStrengthSummary.minimum)],
-              ["Maximum Air-dry Strength (N/mm²)", formatStrengthMetric(strengthEvaluation.maximumStrength ?? blockStrengthSummary.maximum)],
+              ["Minimum Air-dry Strength (N/mm²)", formatStrengthMetric(blockStrengthSummary.minimum ?? strengthEvaluation.minimumStrength)],
+              ["Maximum Air-dry Strength (N/mm²)", formatStrengthMetric(blockStrengthSummary.maximum ?? strengthEvaluation.maximumStrength)],
               ["Shape Factor", detailText(recordDetails, "shapeFactor")],
               ["Compliance", displayValue(strengthEvaluation.status ?? record.status)],
             ]}

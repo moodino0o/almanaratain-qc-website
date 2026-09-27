@@ -345,6 +345,52 @@ test("includes non-Ready Mix categories, date ranges, and selected product group
   );
 });
 
+test("Block daily report min and max use air-dry strength, including the Dammam basis", () => {
+  const rows = buildDailyReportRows(
+    [
+      qcRecord({
+        id: 40,
+        testType: "Blocks",
+        sampleDate: "2026-09-10",
+        location: "Plant A",
+        material: "4 inch Block",
+        details: {
+          blockType: "Hollow Concrete Block",
+          blockAge: 28,
+          testRows: [
+            { waterStrength: 8, calculatedStrength: 8, airDryStrength: "", dryAirStrength: 12 },
+            { waterStrength: 10, calculatedStrength: 10, airDryStrength: 14 },
+          ],
+        },
+      }),
+      qcRecord({
+        id: 41,
+        testType: "Blocks",
+        sampleDate: "2026-09-10",
+        location: "Dammam",
+        material: "4 inch Block",
+        details: {
+          blockType: "Hollow Concrete Block",
+          blockAge: 28,
+          testRows: [
+            { waterStrength: "", calculatedStrength: 8, airDryStrength: 9.6 },
+            { waterStrength: 10, calculatedStrength: 10, airDryStrength: 12 },
+          ],
+        },
+      }),
+    ],
+    "2026-09-10",
+    "2026-09-10",
+  );
+
+  const plantA = rows.find((row) => row.plant === "Plant A");
+  const dammam = rows.find((row) => row.plant === "Dammam");
+  assert.equal(plantA?.minimumStrength, 12);
+  assert.equal(plantA?.maximumStrength, 14);
+  assert.equal(dammam?.minimumStrength, 8);
+  assert.equal(dammam?.maximumStrength, 10);
+});
+
 test("uses an entered Block testing date before the age-derived date", () => {
   const rows = buildDailyReportRows(
     [
