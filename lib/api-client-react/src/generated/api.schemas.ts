@@ -171,6 +171,9 @@ export interface Dashboard {
   reviewRecords: number;
   failedRecords: number;
   recordsThisMonth: number;
+  passedRecordsThisMonth: number;
+  reviewRecordsThisMonth: number;
+  failedRecordsThisMonth: number;
   totalComplaints: number;
   solvedComplaints: number;
   openComplaints: number;
