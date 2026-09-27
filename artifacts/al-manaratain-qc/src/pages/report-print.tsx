@@ -1006,7 +1006,7 @@ function BlocksReport({
     .sort((left, right) => left.id - right.id)[0];
   const requiredStrength = configuredStandard?.requiredStrength ??
     numericValue(evaluation?.requiredStrength);
-  const useDryStrength = isDammamLocation(record.location);
+  const useDammamBasis = isDammamLocation(record.location);
   const compliance = textValue(evaluation?.status, record.status);
   const complianceLabel = compliance === "Passed"
     ? "PASS"
@@ -1019,8 +1019,10 @@ function BlocksReport({
         <div>
           <span>Test details</span>
         </div>
-        <strong className={useDryStrength ? "block-report-air-dry-note" : undefined}>
-          {useDryStrength ? "Dammam: Air Dry compliance basis" : "Water strength compliance basis"}
+        <strong className="block-report-air-dry-note">
+          {useDammamBasis
+            ? "Dammam: Air Dry compliance basis"
+            : "Air Dry strength compliance basis"}
         </strong>
       </div>
       <div className="block-report-fields">
@@ -1031,7 +1033,7 @@ function BlocksReport({
             ["TESTING DATE:", formatReportDate(testingDate)],
             ["Sp. Strength (N/mm²):", requiredStrength === null ? "-" : formatNumber(requiredStrength)],
             ["Factory:", record.location],
-            ["STRENGTH BASIS:", useDryStrength ? "AIR DRY STRENGTH" : "WATER STRENGTH"],
+            ["STRENGTH BASIS:", "AIR DRY STRENGTH"],
           ]}
         />
         <ReportFields
@@ -1056,7 +1058,7 @@ function BlocksReport({
         <strong>Remarks:</strong>
         <span>{record.remarks || ""}</span>
       </div>
-      <BlockCompressionRowsTable rows={testRows} hideWaterStrength={useDryStrength} />
+      <BlockCompressionRowsTable rows={testRows} hideWaterStrength={useDammamBasis} />
       <div className={`block-report-result ${compliance.toLocaleLowerCase()}`}>
         <span>Overall result</span>
         <strong>{complianceLabel}</strong>

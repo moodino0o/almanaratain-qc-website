@@ -69,6 +69,27 @@ function cubeRowStrength(row: unknown) {
   return Number.isFinite(strength) ? strength : null;
 }
 
+function blockAirDryRowStrength(row: unknown, location: string) {
+  const values = typeof row === "object" && row !== null
+    ? row as Record<string, unknown>
+    : {};
+  const storedAirDryStrength = Number.parseFloat(String(
+    values.airDryStrength ?? values.dryAirStrength ?? "",
+  ));
+  if (Number.isFinite(storedAirDryStrength)) return storedAirDryStrength;
+
+  const waterStrength = Number.parseFloat(String(
+    values.waterStrength ??
+      values.calculatedStrength ??
+      values.strength ??
+      values.compressiveStrength ??
+      "",
+  ));
+  if (!Number.isFinite(waterStrength)) return null;
+  const factor = location.trim().toLocaleLowerCase() === "dammam" ? 1 : 1.2;
+  return Number((waterStrength * factor).toFixed(1));
+}
+
 function averageStrengthForAge(rows: unknown[], age: number) {
   const strengths = rows
     .filter((row) => cubeRowAge(row) === age)
@@ -78,9 +99,12 @@ function averageStrengthForAge(rows: unknown[], age: number) {
   return strengths.reduce((total, strength) => total + strength, 0) / strengths.length;
 }
 
-function strengthSummary(rows: unknown[]) {
+function strengthSummary(
+  rows: unknown[],
+  strengthForRow: (row: unknown) => number | null = cubeRowStrength,
+) {
   const strengths = rows
-    .map(cubeRowStrength)
+    .map(strengthForRow)
     .filter((strength): strength is number => strength !== null);
   if (!strengths.length) return { average: null, minimum: null, maximum: null };
   return {
@@ -266,7 +290,13 @@ function SieveRowsTable({ rows }: { rows: unknown[] }) {
   );
 }
 
-function StrengthEvaluation({ value }: { value: unknown }) {
+function StrengthEvaluation({
+  value,
+  strengthName = "strength",
+}: {
+  value: unknown;
+  strengthName?: string;
+}) {
   if (typeof value !== "object" || value === null) {
     return (
       <span className="text-muted-foreground">
@@ -287,9 +317,9 @@ function StrengthEvaluation({ value }: { value: unknown }) {
       <p className={`font-bold ${statusClass}`}>{status}</p>
       {evaluation.averageStrength != null && (
         <>
-          <p>Average strength: {formatStrengthMetric(evaluation.averageStrength)} {String(evaluation.strengthUnit ?? "N/mm²")}</p>
-          <p>Minimum strength: {formatStrengthMetric(evaluation.minimumStrength)} {String(evaluation.strengthUnit ?? "N/mm²")}</p>
-          <p>Maximum strength: {formatStrengthMetric(evaluation.maximumStrength)} {String(evaluation.strengthUnit ?? "N/mm²")}</p>
+          <p>Average {strengthName}: {formatStrengthMetric(evaluation.averageStrength)} {String(evaluation.strengthUnit ?? "N/mm²")}</p>
+          <p>Minimum {strengthName}: {formatStrengthMetric(evaluation.minimumStrength)} {String(evaluation.strengthUnit ?? "N/mm²")}</p>
+          <p>Maximum {strengthName}: {formatStrengthMetric(evaluation.maximumStrength)} {String(evaluation.strengthUnit ?? "N/mm²")}</p>
         </>
       )}
       <p>
@@ -458,7 +488,10 @@ export default function RecordDetail() {
     recordDetails.strengthEvaluation !== null
     ? recordDetails.strengthEvaluation as Record<string, unknown>
     : {};
-  const blockStrengthSummary = strengthSummary(specimenRows);
+  const blockStrengthSummary = strengthSummary(
+    specimenRows,
+    (row) => blockAirDryRowStrength(row, record.location),
+  );
 
   const handleDelete = () => {
     if (!confirm("Are you sure you want to delete this record? This action cannot be undone.")) return;
@@ -583,9 +616,9 @@ export default function RecordDetail() {
             title="Block Test Result"
             entries={[
               ["Block No.", detailText(recordDetails, "blockNo", detailText(recordDetails, "blockNumber"))],
-              ["Average Strength (N/mm²)", formatStrengthMetric(strengthEvaluation.averageStrength ?? blockStrengthSummary.average)],
-              ["Minimum Strength (N/mm²)", formatStrengthMetric(strengthEvaluation.minimumStrength ?? blockStrengthSummary.minimum)],
-              ["Maximum Strength (N/mm²)", formatStrengthMetric(strengthEvaluation.maximumStrength ?? blockStrengthSummary.maximum)],
+              ["Average Air-dry Strength (N/mm²)", formatStrengthMetric(strengthEvaluation.averageStrength ?? blockStrengthSummary.average)],
+              ["Minimum Air-dry Strength (N/mm²)", formatStrengthMetric(strengthEvaluation.minimumStrength ?? blockStrengthSummary.minimum)],
+              ["Maximum Air-dry Strength (N/mm²)", formatStrengthMetric(strengthEvaluation.maximumStrength ?? blockStrengthSummary.maximum)],
               ["Shape Factor", detailText(recordDetails, "shapeFactor")],
               ["Compliance", displayValue(strengthEvaluation.status ?? record.status)],
             ]}
@@ -692,7 +725,10 @@ export default function RecordDetail() {
             <CardDescription>Status is based on the configured standard and measured values.</CardDescription>
           </CardHeader>
           <CardContent>
-            <StrengthEvaluation value={recordDetails.strengthEvaluation} />
+            <StrengthEvaluation
+              value={recordDetails.strengthEvaluation}
+              strengthName={record.testType === "Blocks" ? "air-dry strength" : "strength"}
+            />
           </CardContent>
         </Card>
       )}

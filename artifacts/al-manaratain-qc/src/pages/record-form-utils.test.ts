@@ -81,6 +81,21 @@ test("calculates and rounds Block air-dry and normalized strengths", () => {
   );
 });
 
+test("uses the Dammam Block compliance basis in the form preview", () => {
+  assert.deepEqual(
+    calculateBlockStrengths(
+      { length: "400", width: "100", load: "109.1" },
+      "1.35",
+      "Dammam",
+    ),
+    {
+      waterStrength: "2.73",
+      airDryStrength: "2.7",
+      normalizedStrength: "3.6",
+    },
+  );
+});
+
 test("calculates sieve passing mass from cumulative retained amounts", () => {
   const results = calculateSieveResults(
     [

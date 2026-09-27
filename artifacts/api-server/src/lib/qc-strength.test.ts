@@ -269,6 +269,22 @@ test("uses the air-dry result for Block pass and fail evaluation", () => {
   assert.equal(result.status, "Passed");
 });
 
+test("passes Blocks when air-dry average meets the minimum even if wet average does not", () => {
+  const result = evaluateStrengthRecord(
+    blockRecord([
+      { length: 400, width: 200, height: 200, load: 460.8 },
+      { length: 400, width: 200, height: 200, load: 447.3 },
+      { length: 400, width: 200, height: 200, load: 572.3 },
+      { length: 400, width: 200, height: 200, load: 590.3 },
+      { length: 400, width: 200, height: 200, load: 598.4 },
+    ]),
+    [blockStandard({ requiredStrength: "7.5" })],
+  );
+
+  assert.equal(result.evaluation!.averageStrength, 8.02);
+  assert.equal(result.status, "Passed");
+});
+
 test("applies a configured Block-size shape factor only when no saved value exists", () => {
   const result = evaluateStrengthRecord(
     blockRecord([

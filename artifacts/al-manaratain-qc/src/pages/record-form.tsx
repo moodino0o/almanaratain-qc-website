@@ -528,7 +528,7 @@ export default function RecordForm() {
   ]);
 
   const calculateStrength = (row: Pick<TestRow, "length" | "width" | "load">) =>
-    calculateBlockStrengths(row, details.shapeFactor);
+    calculateBlockStrengths(row, details.shapeFactor, locationValue);
   const calculatePavingStrength = (
     row: Pick<TestRow, "length" | "width" | "load" | "compressiveStrength">,
   ) => calculatePavingStrengths(row, details.correctionFactor);

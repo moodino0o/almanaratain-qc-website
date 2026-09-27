@@ -195,6 +195,7 @@ export const calculateBlockDensity = ({
 export const calculateBlockStrengths = (
   row: Pick<TestRow, "length" | "width" | "load">,
   shapeFactorValue: unknown,
+  locationValue?: unknown,
 ) => {
   const length = Number(numericInputValue(row.length));
   const width = Number(numericInputValue(row.width));
@@ -212,7 +213,10 @@ export const calculateBlockStrengths = (
   }
 
   const waterStrength = (load * 1000) / (length * width);
-  const airDryStrength = Math.round((waterStrength * 1.2 + Number.EPSILON) * 10) / 10;
+  const location = stringValue(locationValue).trim().toLocaleLowerCase();
+  const airDryFactor = location === "dammam" ? 1 : 1.2;
+  const airDryStrength =
+    Math.round((waterStrength * airDryFactor + Number.EPSILON) * 10) / 10;
   const shapeFactorText = numericInputValue(shapeFactorValue);
   const shapeFactor = Number(shapeFactorText);
   const normalizedStrength =
