@@ -17,6 +17,7 @@ import {
   calculateSieveSampleWeight,
   calculateSieveResults,
   sortSieveRowsByPoreSize,
+  evaluateContentAgainstLimit,
   prepareRecordForForm,
 } from "./record-form-utils";
 
@@ -41,10 +42,18 @@ test("calculates aggregate moisture content from dry and wet sample weights", ()
 });
 
 test("calculates aggregate chloride and sulphate content from the supplied equations", () => {
-  assert.equal(calculateChlorideContent("25", "1.2", "2.4"), "1.69");
-  assert.equal(calculateChlorideContent("25", "", "2.4"), "");
-  assert.equal(calculateSulphateContent("10", "10.25"), "2.86");
-  assert.equal(calculateSulphateContent("10", ""), "");
+  assert.equal(calculateChlorideContent("25", "1.2", "2.4")?.toFixed(2), "1.69");
+  assert.equal(calculateChlorideContent("25", "", "2.4"), null);
+  assert.equal(calculateSulphateContent("10", "10.25")?.toFixed(2), "2.86");
+  assert.equal(calculateSulphateContent("10", ""), null);
+});
+
+test("fails aggregate chemistry only when content exceeds its standard", () => {
+  assert.equal(evaluateContentAgainstLimit(0.06, 0.06), "Pass");
+  assert.equal(evaluateContentAgainstLimit(0.060001, 0.06), "Fail");
+  assert.equal(evaluateContentAgainstLimit(0.4, 0.4), "Pass");
+  assert.equal(evaluateContentAgainstLimit(0.400001, 0.4), "Fail");
+  assert.equal(evaluateContentAgainstLimit(null, 0.06), "Pending");
 });
 
 const baseRecord = (

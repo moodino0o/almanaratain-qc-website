@@ -191,30 +191,37 @@ export const calculateChlorideContent = (
   silverNitrateContent: unknown,
   firstTitrationPoint: unknown,
   secondTitrationPoint: unknown,
-) => {
+): number | null => {
   const silverNitrate = finiteNumericValue(silverNitrateContent);
   const firstPoint = finiteNumericValue(firstTitrationPoint);
   const secondPoint = finiteNumericValue(secondTitrationPoint);
   if (silverNitrate === null || firstPoint === null || secondPoint === null) {
-    return "";
+    return null;
   }
 
-  return (
+  const content =
     0.07092 *
-    (silverNitrate - 10 * 0.1 * (secondPoint - firstPoint))
-  ).toFixed(2);
+    (silverNitrate - 10 * 0.1 * (secondPoint - firstPoint));
+  return Number.isFinite(content) ? content : null;
 };
 
 export const calculateSulphateContent = (
   crucibleWeight: unknown,
   crucibleAshWeight: unknown,
-) => {
+): number | null => {
   const crucible = finiteNumericValue(crucibleWeight);
   const crucibleWithAsh = finiteNumericValue(crucibleAshWeight);
-  if (crucible === null || crucibleWithAsh === null) return "";
+  if (crucible === null || crucibleWithAsh === null) return null;
 
-  return (((crucibleWithAsh - crucible) * 34.3) / 3).toFixed(2);
+  const content = ((crucibleWithAsh - crucible) * 34.3) / 3;
+  return Number.isFinite(content) ? content : null;
 };
+
+export const evaluateContentAgainstLimit = (
+  content: number | null,
+  maximum: number,
+): "Pass" | "Fail" | "Pending" =>
+  content === null ? "Pending" : content > maximum ? "Fail" : "Pass";
 
 export const calculateBlockDensity = ({
   length,

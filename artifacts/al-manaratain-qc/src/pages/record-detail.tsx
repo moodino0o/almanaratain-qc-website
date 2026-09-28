@@ -499,18 +499,24 @@ export default function RecordDetail() {
         ["Fineness Modulus", detailText(recordDetails, "finenessModulus")],
         [
           "Chloride Content",
-          calculateChlorideContent(
-            recordDetails.silverNitrateContent,
-            recordDetails.firstChlorideTitrationPoint,
-            recordDetails.secondChlorideTitrationPoint,
-          ) || "—",
+          (() => {
+            const content = calculateChlorideContent(
+              recordDetails.silverNitrateContent,
+              recordDetails.firstChlorideTitrationPoint,
+              recordDetails.secondChlorideTitrationPoint,
+            );
+            return content === null ? "—" : `${content.toFixed(2)}%`;
+          })(),
         ],
         [
           "Sulphate Content",
-          calculateSulphateContent(
-            recordDetails.crucibleWeight,
-            recordDetails.crucibleAshWeight,
-          ) || "—",
+          (() => {
+            const content = calculateSulphateContent(
+              recordDetails.crucibleWeight,
+              recordDetails.crucibleAshWeight,
+            );
+            return content === null ? "—" : `${content.toFixed(2)}%`;
+          })(),
         ],
         ...AGGREGATE_CHEMISTRY_FIELDS.map(
           ({ key, label }) =>

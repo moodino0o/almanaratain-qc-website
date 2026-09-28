@@ -21,8 +21,12 @@ import {
   calculateChlorideContent,
   calculateMoistureContent,
   calculateSulphateContent,
+  evaluateContentAgainstLimit,
   sortSieveRowsByPoreSize,
 } from "./record-form-utils";
+
+const AGGREGATE_CHLORIDE_LIMIT = 0.06;
+const AGGREGATE_SULPHATE_LIMIT = 0.4;
 
 type DetailMap = QcRecord["details"];
 type ValueMap = Record<string, unknown>;
@@ -1408,6 +1412,14 @@ function SieveReport({
     details.crucibleWeight,
     details.crucibleAshWeight,
   );
+  const chlorideStatus = evaluateContentAgainstLimit(
+    chlorideContent,
+    AGGREGATE_CHLORIDE_LIMIT,
+  );
+  const sulphateStatus = evaluateContentAgainstLimit(
+    sulphateContent,
+    AGGREGATE_SULPHATE_LIMIT,
+  );
   const measurementEntries = isAggregate
     ? [
         ["Supplier", detailValue(details, ["supplier"])],
@@ -1449,8 +1461,14 @@ function SieveReport({
           <SectionHeading>Chloride and Sulphate Content</SectionHeading>
           <ReportFields
             entries={[
-              ["Chloride Content", chlorideContent || "-"],
-              ["Sulphate Content", sulphateContent || "-"],
+              [
+                "Chloride Content",
+                chlorideContent === null ? "-" : `${chlorideContent.toFixed(2)}%`,
+              ],
+              [
+                "Sulphate Content",
+                sulphateContent === null ? "-" : `${sulphateContent.toFixed(2)}%`,
+              ],
               ...AGGREGATE_CHEMISTRY_FIELDS.map(({ key, label }) => [
                 label,
                 detailValue(details, [key]),
@@ -1463,6 +1481,39 @@ function SieveReport({
       <SieveRowsTable rows={sieveRows} layout={layout} />
       {evaluation && (
         <SieveEvaluationTable value={evaluation} />
+      )}
+      {isAggregate && (
+        <section className="report-summary">
+          <SectionHeading>Chemical Content Acceptance</SectionHeading>
+          <table className="report-table">
+            <thead>
+              <tr>
+                <th>Test</th>
+                <th>Measured Content</th>
+                <th>Maximum Standard</th>
+                <th>Result</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Chloride Content</td>
+                <td>{chlorideContent === null ? "—" : `${chlorideContent.toFixed(2)}%`}</td>
+                <td>0.06%</td>
+                <td className={chlorideStatus === "Fail" ? "text-red-700 font-bold" : chlorideStatus === "Pass" ? "text-green-700 font-bold" : ""}>
+                  {chlorideStatus}
+                </td>
+              </tr>
+              <tr>
+                <td>Sulphate Content</td>
+                <td>{sulphateContent === null ? "—" : `${sulphateContent.toFixed(2)}%`}</td>
+                <td>0.40%</td>
+                <td className={sulphateStatus === "Fail" ? "text-red-700 font-bold" : sulphateStatus === "Pass" ? "text-green-700 font-bold" : ""}>
+                  {sulphateStatus}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
       )}
     </>
   );

@@ -1515,7 +1515,7 @@ export default function RecordForm() {
                       <div key={label} className="space-y-2">
                         <Label>{label}</Label>
                         <div className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground">
-                          {value || "—"}
+                          {value === null ? "—" : `${value.toFixed(2)}%`}
                         </div>
                       </div>
                     ))}
