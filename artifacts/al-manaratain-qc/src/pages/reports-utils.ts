@@ -52,6 +52,8 @@ export type DailyReportProductOption = {
   product: string;
 };
 
+export type DailyReadyMixReferenceFilter = "site" | "plant" | null;
+
 type StrengthGroup = {
   date: string;
   castingDate: string;
@@ -233,6 +235,7 @@ export function buildDailyReportRows(
   startDate: string,
   endDate: string,
   selectedProducts: string[] = [],
+  readyMixReferenceFilter: DailyReadyMixReferenceFilter = null,
 ): DailyReportRow[] {
   const groups = new Map<string, StrengthGroup>();
   const selected = new Set(selectedProducts);
@@ -268,6 +271,14 @@ export function buildDailyReportRows(
 
   for (const record of records) {
     const details = record.details as Record<string, unknown>;
+    if (record.testType === "Ready Mix" && readyMixReferenceFilter) {
+      const referenceNumber =
+        detailsValue(details, ["referenceNumber"]) || record.recordNo;
+      const requiredPrefix = readyMixReferenceFilter === "site" ? "S" : "H";
+      if (!referenceNumber.trim().toLocaleUpperCase().startsWith(requiredPrefix)) {
+        continue;
+      }
+    }
     const product = recordProduct(record, details);
     if (record.testType === "Ready Mix") {
       const rows = Array.isArray(details.testRows) ? details.testRows : [];

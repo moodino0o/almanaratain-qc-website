@@ -17,6 +17,7 @@ import {
   dailyReportProductOptions,
   downloadDailyReportWorkbook,
   sortByReferenceNumber,
+  type DailyReadyMixReferenceFilter,
   type DailyReportProductOption,
 } from "./reports-utils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -155,7 +156,10 @@ export default function Reports() {
     startDate: string;
     endDate: string;
     products: string[];
+    readyMixReferenceFilter: DailyReadyMixReferenceFilter;
   } | null>(null);
+  const [draftReadyMixReferenceFilter, setDraftReadyMixReferenceFilter] =
+    useState<DailyReadyMixReferenceFilter>(null);
   const [isAddResultsOpen, setIsAddResultsOpen] = useState(false);
   const [addResultsStep, setAddResultsStep] = useState<"setup" | "results">("setup");
   const [castingDate, setCastingDate] = useState(today);
@@ -337,6 +341,7 @@ export default function Reports() {
     setDraftStartDate(filters?.startDate ?? today());
     setDraftEndDate(filters?.endDate ?? filters?.startDate ?? today());
     setDraftProducts(filters?.products ?? []);
+    setDraftReadyMixReferenceFilter(filters?.readyMixReferenceFilter ?? null);
     setIsFilterOpen(true);
   };
 
@@ -349,6 +354,7 @@ export default function Reports() {
       startDate: draftStartDate,
       endDate: draftEndDate,
       products: draftProducts,
+      readyMixReferenceFilter: draftReadyMixReferenceFilter,
     });
     setIsFilterOpen(false);
   };
@@ -367,6 +373,7 @@ export default function Reports() {
       filters?.startDate ?? today(),
       filters?.endDate ?? today(),
       filters?.products ?? [],
+      filters?.readyMixReferenceFilter ?? null,
     ),
     [allRecords, filters],
   );
@@ -418,7 +425,7 @@ export default function Reports() {
                   <CardTitle className="text-lg">Daily results</CardTitle>
                   <CardDescription>
                     {hasFilters
-                      ? `${formatDate(filters.startDate)}${filters.startDate !== filters.endDate ? ` – ${formatDate(filters.endDate)}` : ""} · ${filters.products.length ? `${filters.products.length} product groups` : "All product groups"}`
+                      ? `${formatDate(filters.startDate)}${filters.startDate !== filters.endDate ? ` – ${formatDate(filters.endDate)}` : ""} · ${filters.products.length ? `${filters.products.length} product groups` : "All product groups"} · Ready Mix: ${filters.readyMixReferenceFilter === "site" ? "Site refs (S)" : filters.readyMixReferenceFilter === "plant" ? "Plant refs (H)" : "overall"}`
                       : "Choose a date range and one or more product groups to view daily summaries."}
                   </CardDescription>
                 </div>
@@ -544,7 +551,7 @@ export default function Reports() {
           <DialogHeader>
             <DialogTitle>Choose daily results</DialogTitle>
               <DialogDescription>
-                Choose an inclusive date range and optionally select multiple product groups. Ready Mix results are grouped by the first three words of the mix design.
+                Choose an inclusive date range and optionally select product groups. Ready Mix results are grouped by the first three words of the mix design; you can calculate them from Site (S) or Plant (H) references, or include all references.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-5 py-2">
@@ -568,6 +575,49 @@ export default function Reports() {
                   onChange={(event) => setDraftEndDate(event.target.value)}
                 />
               </div>
+            </div>
+            <div className="grid gap-2">
+              <Label>Ready Mix calculation basis</Label>
+              <div
+                className="flex flex-wrap gap-2"
+                role="group"
+                aria-label="Ready Mix reference type"
+              >
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={draftReadyMixReferenceFilter === null ? "default" : "outline"}
+                  aria-pressed={draftReadyMixReferenceFilter === null}
+                  onClick={() => setDraftReadyMixReferenceFilter(null)}
+                >
+                  Overall
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={draftReadyMixReferenceFilter === "site" ? "default" : "outline"}
+                  aria-pressed={draftReadyMixReferenceFilter === "site"}
+                  onClick={() => setDraftReadyMixReferenceFilter((current) =>
+                    current === "site" ? null : "site"
+                  )}
+                >
+                  Site (S)
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={draftReadyMixReferenceFilter === "plant" ? "default" : "outline"}
+                  aria-pressed={draftReadyMixReferenceFilter === "plant"}
+                  onClick={() => setDraftReadyMixReferenceFilter((current) =>
+                    current === "plant" ? null : "plant"
+                  )}
+                >
+                  Plant (H)
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Site includes Ready Mix references starting with S; Plant includes references starting with H. Overall includes all references.
+              </p>
             </div>
             <div className="grid gap-2">
               <div className="flex items-center justify-between gap-3">

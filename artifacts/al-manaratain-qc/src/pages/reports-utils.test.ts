@@ -302,6 +302,104 @@ test("daily Ready Mix results use calculated strength instead of air-dry strengt
   assert.equal(rows[0]?.maximumStrength, 57.22);
 });
 
+test("daily Ready Mix results filter Site S and Plant H references or include all by default", () => {
+  const records = [
+    qcRecord({
+      id: 51,
+      testType: "Ready Mix",
+      sampleDate: "2026-09-01",
+      location: "Plant A",
+      material: "OPC",
+      details: {
+        referenceNumber: "S-1",
+        designStrength: "25 N OPC 20mm",
+        testRows: [
+          { testAge: 7, calculatedStrength: 40 },
+          { testAge: 7, calculatedStrength: 44 },
+        ],
+      },
+    }),
+    qcRecord({
+      id: 52,
+      testType: "Ready Mix",
+      sampleDate: "2026-09-01",
+      location: "Plant A",
+      material: "OPC",
+      details: {
+        referenceNumber: "s-2",
+        designStrength: "25 N OPC 20mm",
+        testRows: [{ testAge: 7, calculatedStrength: 50 }],
+      },
+    }),
+    qcRecord({
+      id: 53,
+      testType: "Ready Mix",
+      sampleDate: "2026-09-01",
+      location: "Plant A",
+      material: "OPC",
+      details: {
+        referenceNumber: "H-1",
+        designStrength: "25 N OPC 20mm",
+        testRows: [{ testAge: 7, calculatedStrength: 60 }],
+      },
+    }),
+    qcRecord({
+      id: 54,
+      testType: "Ready Mix",
+      sampleDate: "2026-09-01",
+      location: "Plant A",
+      material: "OPC",
+      details: {
+        referenceNumber: "H-2",
+        designStrength: "25 N OPC 20mm",
+        testRows: [{ testAge: 7, calculatedStrength: 64 }],
+      },
+    }),
+    qcRecord({
+      id: 55,
+      testType: "Ready Mix",
+      sampleDate: "2026-09-01",
+      location: "Plant A",
+      material: "OPC",
+      details: {
+        referenceNumber: "X-1",
+        designStrength: "25 N OPC 20mm",
+        testRows: [{ testAge: 7, calculatedStrength: 100 }],
+      },
+    }),
+  ];
+  const summarize = (referenceFilter?: "site" | "plant") => {
+    const [row] = buildDailyReportRows(
+      records,
+      "2026-09-08",
+      "2026-09-08",
+      [],
+      referenceFilter ?? null,
+    );
+    return row && {
+      average: row.averageStrength,
+      minimum: row.minimumStrength,
+      maximum: row.maximumStrength,
+    };
+  };
+
+  assert.deepEqual(summarize("site"), {
+    average: 134 / 3,
+    minimum: 40,
+    maximum: 50,
+  });
+  assert.deepEqual(summarize("plant"), {
+    average: 62,
+    minimum: 60,
+    maximum: 64,
+  });
+  assert.deepEqual(summarize(), {
+    average: 358 / 6,
+    minimum: 40,
+    maximum: 100,
+  });
+});
+
 test("includes non-Ready Mix categories, date ranges, and selected product groups", () => {
   const records = [
     qcRecord({
