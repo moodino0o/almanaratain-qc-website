@@ -524,18 +524,6 @@
   table-layout: fixed;
 }
 
-.report-small-table-wrap {
-  width: 100%;
-  max-width: 150mm;
-  margin: 2mm auto 3mm;
-}
-
-.report-table.report-small-table th,
-.report-table.report-small-table td {
-  padding: 0.8mm 0.9mm;
-  font-size: 8.5px;
-}
-
 .report-table th,
 .report-table td {
   border: 1px solid #111;
@@ -1255,16 +1243,6 @@
 .report-paper .report-table td,
 .report-paper .report-specimen-table td {
   font-size: 12px;
-}
-
-.report-paper .report-table.report-small-table th {
-  padding: 0.8mm 0.9mm;
-  font-size: 9px;
-}
-
-.report-paper .report-table.report-small-table td {
-  padding: 0.8mm 0.9mm;
-  font-size: 10px;
 }
 
 .report-paper .report-results-table th {

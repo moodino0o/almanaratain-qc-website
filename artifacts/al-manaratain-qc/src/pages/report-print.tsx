@@ -20,7 +20,6 @@ import {
   blockSizeMatches,
   blockTypeMatches,
   calculateChlorideContent,
-  calculateMoistureContent,
   calculateRetainedPercentage,
   calculateSieveSampleWeight,
   calculateSiltContent,
@@ -1436,10 +1435,6 @@ function SieveReport({
       return { amountReturned: String(values.amountReturned ?? "") };
     }),
   );
-  const moistureContent = calculateMoistureContent(
-    detailRawValue(details, ["dryWeight", "drySample"], ""),
-    detailRawValue(details, ["wetWeight", "wetSample"], ""),
-  );
   const siltContent = calculateSiltContent(
     details.siltBefore,
     details.siltAfter,
@@ -1462,42 +1457,25 @@ function SieveReport({
     sulphateContent,
     AGGREGATE_SULPHATE_LIMIT_PERCENT,
   );
-  const testDetailRows = [
+  const chemicalResults = [
     {
-      label: "Sieve Weight",
-      result: sieveSampleWeight > 0 ? `${sieveSampleWeight.toFixed(2)} g` : "—",
-      standard: "—",
-      status: "—",
-    },
-    {
-      label: "Moisture",
-      result: moistureContent ? `${moistureContent}%` : "—",
-      standard: "—",
-      status: "—",
-    },
-    {
-      label: "Silt",
+      label: "Silt Content",
       result: siltContent === null ? "—" : `${siltContent.toFixed(2)}%`,
       standard: `< ${SIEVE_SILT_LIMIT_PERCENT}%`,
       status: siltStatus,
     },
     {
-      label: "Chloride",
+      label: "Chloride Content",
       result: chlorideContent === null ? "—" : `${chlorideContent.toFixed(3)}%`,
       standard: `≤ ${AGGREGATE_CHLORIDE_LIMIT_PERCENT.toFixed(2)}%`,
       status: chlorideStatus,
     },
     {
-      label: "Sulphate",
+      label: "Sulphate Content",
       result: sulphateContent === null ? "—" : `${sulphateContent.toFixed(2)}%`,
       standard: `≤ ${AGGREGATE_SULPHATE_LIMIT_PERCENT.toFixed(2)}%`,
       status: sulphateStatus,
     },
-  ] as const;
-  const detailTableRows = [
-    { label: "Result", key: "result" },
-    { label: "Standard", key: "standard" },
-    { label: "Status", key: "status" },
   ] as const;
   const measurementEntries = [
     ["Supplier", detailValue(details, ["supplier"])],
@@ -1537,48 +1515,45 @@ function SieveReport({
           <ReportFields entries={measurementEntries} />
         </section>
       </div>
-      <section className="report-summary mt-3">
-        <SectionHeading>Sieve, Moisture and Chemical Test Details</SectionHeading>
-        <div className="report-small-table-wrap">
-          <table className="report-table report-small-table">
-            <thead>
-              <tr>
-                <th scope="col">Measure</th>
-                {testDetailRows.map((detail) => (
-                  <th key={detail.label} scope="col">{detail.label}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {detailTableRows.map((row) => (
-                <tr key={row.label}>
-                  <th scope="row">{row.label}</th>
-                  {testDetailRows.map((detail) => (
-                    <td
-                      key={detail.label}
-                      className={row.key === "status"
-                        ? detail.status === "Pass"
-                          ? "font-semibold text-green-700"
-                          : detail.status === "Fail"
-                            ? "font-semibold text-red-700"
-                            : "text-muted-foreground"
-                        : undefined}
-                    >
-                      {detail[row.key]}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
       <SieveRowsTable
         rows={sieveRows}
         layout={layout}
         evaluation={evaluation}
         sampleWeight={sieveSampleWeight}
       />
+      <section className="report-summary mt-3">
+        <SectionHeading>Chemical Test Results</SectionHeading>
+        <table className="report-table">
+          <thead>
+            <tr>
+              <th>Test</th>
+              <th>Result</th>
+              <th>Standard</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {chemicalResults.map((result) => (
+              <tr key={result.label}>
+                <td>{result.label}</td>
+                <td>{result.result}</td>
+                <td>{result.standard}</td>
+                <td
+                  className={
+                    result.status === "Pass"
+                      ? "font-semibold text-green-700"
+                      : result.status === "Fail"
+                        ? "font-semibold text-red-700"
+                        : "text-muted-foreground"
+                  }
+                >
+                  {result.status}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
     </>
   );
 }

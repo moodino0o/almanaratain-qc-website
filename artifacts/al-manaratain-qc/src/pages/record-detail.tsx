@@ -605,14 +605,6 @@ export default function RecordDetail() {
       ["Machine", detailText(recordDetails, "machine")],
     );
   }
-  if (isSieveRecord) {
-    summaryEntries.push(
-      ["Sample Weight", detailText(recordDetails, "sampleWeight")],
-      ["Supplier", detailText(recordDetails, "supplier")],
-      ["Testing Date", detailText(recordDetails, "testingDate")],
-      ["Block Plant", detailText(recordDetails, "blockPlant")],
-    );
-  }
   if (record.testType === "Water") {
     summaryEntries.push(["Source", detailText(recordDetails, "source")]);
   }
@@ -734,6 +726,7 @@ export default function RecordDetail() {
             <CompactMeasurementTable
               title="Sieve, Moisture and Chemical Test Details"
               entries={[
+              ["Sample Weight", detailText(recordDetails, "sampleWeight")],
               [
                 record.testType === "Aggregate Sieve"
                   ? "Material Condition"
