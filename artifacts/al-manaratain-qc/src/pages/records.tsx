@@ -117,7 +117,9 @@ export default function Records() {
           <Table className="w-full table-fixed text-[11px] leading-tight">
             <TableHeader className="sticky top-0 bg-card z-10 shadow-sm">
               <TableRow>
-                <TableHead className="w-[8%] px-1.5 py-2 text-[10px] leading-tight">Record No.</TableHead>
+                <TableHead className="w-[8%] px-1.5 py-2 text-[10px] leading-tight">
+                  {section === "readymix" ? "Reference No." : "Record No."}
+                </TableHead>
                 <TableHead className="w-[11%] px-1.5 py-2 text-[10px] leading-tight">Test Type</TableHead>
                 <TableHead className="w-[9%] px-1.5 py-2 text-[10px] leading-tight">Location</TableHead>
                 <TableHead className="w-[11%] px-1.5 py-2 text-[10px] leading-tight">Customer Name</TableHead>
@@ -151,7 +153,11 @@ export default function Records() {
               ) : (
                 sectionRecords.map((record) => (
                   <TableRow key={record.id}>
-                    <TableCell className="break-words px-1.5 py-2 font-semibold text-primary">{record.recordNo}</TableCell>
+                    <TableCell className="break-words px-1.5 py-2 font-semibold text-primary">
+                      {section === "readymix"
+                        ? getRecordDetail(record.details, ["referenceNumber"])
+                        : record.recordNo}
+                    </TableCell>
                     <TableCell className="whitespace-normal break-words px-1.5 py-2">
                       <span className="inline-block max-w-full break-words rounded-sm bg-muted px-1 py-0.5 text-[10px] font-medium leading-tight">
                         {record.testType}
