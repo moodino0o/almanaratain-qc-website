@@ -292,6 +292,21 @@
   }
 }
 
+.qc-register-table-container {
+  container-type: inline-size;
+  overflow-x: auto;
+}
+
+.qc-register-table {
+  min-width: 960px;
+}
+
+@container (min-width: 960px) {
+  .qc-register-table {
+    min-width: 0;
+  }
+}
+
 .report-page {
   min-height: 100vh;
   overflow-x: auto;

@@ -218,8 +218,8 @@ export default function Records() {
           </div>
         </CardHeader>
         <CardContent className="flex-1 overflow-auto p-0">
-          <div className="w-full overflow-x-auto xl:overflow-x-visible">
-          <Table className="w-full min-w-0 table-fixed text-[9px] leading-tight sm:text-[10px]">
+          <div className="qc-register-table-container w-full min-w-0">
+          <Table className="qc-register-table w-full table-fixed text-[9px] leading-tight sm:text-[10px]">
             <TableHeader className="sticky top-0 bg-card z-10 shadow-sm">
               <TableRow>
                 <TableHead className={`${columnWidths.record} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>
