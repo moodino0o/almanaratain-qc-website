@@ -59,7 +59,6 @@ export default function Records() {
   const tableColumnCount =
     10 -
     (hideCustomerAndSiteLocation ? 2 : 0) +
-    (isReadyMixSection ? 1 : 0) +
     (isMasonrySection ? 3 : 0);
   const readyMixAgeAverages = useMemo(() => {
     const averages = new Map<number, ReadyMixAgeBandAverages>();
@@ -136,7 +135,7 @@ export default function Records() {
           ? "w-[9%]"
           : "w-[8%]",
     actions: isReadyMixSection
-      ? "w-[11%]"
+      ? "w-[14%]"
       : isMasonrySection
         ? "w-[15%]"
         : isAggregateSection
@@ -214,7 +213,8 @@ export default function Records() {
           </div>
         </CardHeader>
         <CardContent className="flex-1 overflow-auto p-0">
-          <Table className="w-full table-fixed text-[11px] leading-tight">
+          <div className="w-full overflow-x-auto xl:overflow-x-visible">
+          <Table className="w-full min-w-[1240px] table-fixed text-[11px] leading-tight xl:min-w-0">
             <TableHeader className="sticky top-0 bg-card z-10 shadow-sm">
               <TableRow>
                 <TableHead className={`${columnWidths.record} px-1.5 py-2 text-[10px] leading-tight`}>
@@ -230,7 +230,9 @@ export default function Records() {
                 )}
                 <TableHead className={`${columnWidths.material} px-1.5 py-2 text-[10px] leading-tight`}>Material</TableHead>
                 <TableHead className={`${columnWidths.sampleDate} px-1.5 py-2 text-[10px] leading-tight`}>Sample Date</TableHead>
-                <TableHead className={`${columnWidths.testedBy} px-1.5 py-2 text-[10px] leading-tight`}>Tested By</TableHead>
+                {!isReadyMixSection && (
+                  <TableHead className={`${columnWidths.testedBy} px-1.5 py-2 text-[10px] leading-tight`}>Tested By</TableHead>
+                )}
                 <TableHead className={`${columnWidths.status} px-1.5 py-2 text-[10px] leading-tight`}>Status</TableHead>
                 {isMasonrySection && (
                   <>
@@ -240,7 +242,7 @@ export default function Records() {
                   </>
                 )}
                 {isReadyMixSection && (
-                  <TableHead className="w-[15%] px-1 py-2 text-[10px] leading-tight">
+                  <TableHead className="w-[20%] px-1 py-2 text-[10px] leading-tight">
                     Avg. strength by age (N/mm²)
                   </TableHead>
                 )}
@@ -292,7 +294,9 @@ export default function Records() {
                     )}
                     <TableCell className="whitespace-normal break-words px-1.5 py-2">{record.material}</TableCell>
                     <TableCell className="whitespace-normal break-words px-1.5 py-2">{formatDate(record.sampleDate)}</TableCell>
-                    <TableCell className="whitespace-normal break-words px-1.5 py-2">{record.testedBy}</TableCell>
+                    {!isReadyMixSection && (
+                      <TableCell className="whitespace-normal break-words px-1.5 py-2">{record.testedBy}</TableCell>
+                    )}
                     <TableCell className="px-1.5 py-2">{getStatusBadge(record.status)}</TableCell>
                     {isReadyMixSection && (
                       <TableCell className="px-1 py-2">
@@ -353,6 +357,7 @@ export default function Records() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </div>
