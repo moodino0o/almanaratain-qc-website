@@ -18,6 +18,7 @@ import {
   RotateCcw,
   Save,
   TableProperties,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -144,6 +145,7 @@ function DraftRow({
   dirty,
   isNew,
   newRecordNumber,
+  onRemove,
   onChange,
   onDetailChange,
   onTestTypeChange,
@@ -154,6 +156,7 @@ function DraftRow({
   dirty: boolean;
   isNew: boolean;
   newRecordNumber?: number;
+  onRemove?: () => void;
   onChange: (key: DraftKey, value: string) => void;
   onDetailChange: (key: string, value: string) => void;
   onTestTypeChange: (value: BulkRecordDraft["testType"]) => void;
@@ -206,7 +209,21 @@ function DraftRow({
       ].join(" ")}
     >
       <td data-label="Record No." className="sticky left-0 z-10 min-w-0 border-r bg-inherit px-1 py-2 font-semibold text-primary">
-        {isNew ? `New ${newRecordNumber ?? ""}` : draft.recordNo}
+        {isNew ? (
+          <div className="flex min-w-0 items-center justify-between gap-0.5">
+            <span className="break-words">New {newRecordNumber ?? ""}</span>
+            {onRemove && (
+              <button
+                type="button"
+                className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                aria-label={`Remove new record ${newRecordNumber ?? ""}`}
+                onClick={onRemove}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        ) : draft.recordNo}
       </td>
       <td data-label="Test Type" className="min-w-0 px-1 py-1">
         {isNew ? (
@@ -307,7 +324,8 @@ export default function RecordsBulkEdit() {
   });
   const [drafts, setDrafts] = useState<BulkRecordDraft[]>([]);
   const [originals, setOriginals] = useState<BulkRecordDraft[]>([]);
-  const [newDraft, setNewDraft] = useState<BulkRecordDraft | null>(null);
+  const [newDrafts, setNewDrafts] = useState<BulkRecordDraft[]>([]);
+  const nextNewDraftId = useRef(-1);
   const [loadedFilter, setLoadedFilter] = useState<TestType | "All" | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const lookupOptions = useMemo<BulkLookupOptions>(() => ({
@@ -334,7 +352,7 @@ export default function RecordsBulkEdit() {
       const nextDrafts = records.map(recordToBulkDraft);
       setDrafts(nextDrafts);
       setOriginals(nextDrafts.map(cloneDraft));
-      setNewDraft(null);
+      setNewDrafts([]);
       setLoadedFilter(testTypeFilter);
     }
   }, [isFetching, loadedFilter, records, testTypeFilter]);
@@ -347,7 +365,7 @@ export default function RecordsBulkEdit() {
     const original = originalById.get(draft.id);
     return !original || !sameDraft(draft, original);
   });
-  const changeCount = dirtyDrafts.length + (newDraft ? 1 : 0);
+  const changeCount = dirtyDrafts.length + newDrafts.length;
 
   const changeTestTypeFilter = (value: TestType | "All") => {
     if (changeCount) {
@@ -366,6 +384,14 @@ export default function RecordsBulkEdit() {
     )));
   };
 
+  const addNewDraft = () => {
+    const id = nextNewDraftId.current--;
+    setNewDrafts((current) => [
+      ...current,
+      { ...createEmptyBulkDraft(today()), id },
+    ]);
+  };
+
   const updateTopLevel = (
     draft: BulkRecordDraft,
     key: DraftKey,
@@ -380,7 +406,7 @@ export default function RecordsBulkEdit() {
 
   const discardChanges = () => {
     setDrafts(originals.map(cloneDraft));
-    setNewDraft(null);
+    setNewDrafts([]);
   };
 
   const saveAll = async () => {
@@ -389,9 +415,10 @@ export default function RecordsBulkEdit() {
         label: draft.recordNo,
         missing: validateBulkDraft(draft),
       })),
-      ...(newDraft
-        ? [{ label: "New record", missing: validateBulkDraft(newDraft) }]
-        : []),
+      ...newDrafts.map((draft, index) => ({
+        label: `New record ${index + 1}`,
+        missing: validateBulkDraft(draft),
+      })),
     ].filter((entry) => entry.missing.length);
     if (validationFailures.length) {
       const first = validationFailures[0];
@@ -401,30 +428,72 @@ export default function RecordsBulkEdit() {
 
     setIsSaving(true);
     try {
-      const updatedRecords = await Promise.all(
-        dirtyDrafts.map((draft) => updateRecord(
-          draft.id,
-          bulkDraftToUpdate(draft, canEditApprovedBy),
-        )),
+      const [updateResults, createResults] = await Promise.all([
+        Promise.allSettled(
+          dirtyDrafts.map((draft) => updateRecord(
+            draft.id,
+            bulkDraftToUpdate(draft, canEditApprovedBy),
+          )),
+        ),
+        Promise.allSettled(
+          newDrafts.map((draft) => createRecord(
+            bulkDraftToCreate(draft, canEditApprovedBy),
+          )),
+        ),
+      ]);
+      const updatedRecords = updateResults.flatMap((result) =>
+        result.status === "fulfilled" ? [result.value] : [],
       );
-      const createdRecord = newDraft
-        ? await createRecord(bulkDraftToCreate(newDraft, canEditApprovedBy))
-        : null;
+      const createdRecords = createResults.flatMap((result) =>
+        result.status === "fulfilled" ? [result.value] : [],
+      );
+      const savedNewDrafts = createdRecords.map(recordToBulkDraft);
+      const failedUpdateCount = updateResults.filter(
+        (result) => result.status === "rejected",
+      ).length;
+      const failedCreateCount = createResults.filter(
+        (result) => result.status === "rejected",
+      ).length;
       const updatedById = new Map(updatedRecords.map((record) => [record.id, record]));
-      const savedDrafts = drafts.map((draft) => (
+      const savedDrafts = [...savedNewDrafts, ...drafts.map((draft) => (
         updatedById.has(draft.id)
           ? recordToBulkDraft(updatedById.get(draft.id) as QcRecord)
           : cloneDraft(draft)
-      ));
-      if (createdRecord) savedDrafts.unshift(recordToBulkDraft(createdRecord));
+      ))];
+      const savedOriginals = [
+        ...savedNewDrafts.map(cloneDraft),
+        ...originals.map((draft) => {
+          const updated = updatedById.get(draft.id);
+          return updated ? recordToBulkDraft(updated) : cloneDraft(draft);
+        }),
+      ];
       setDrafts(savedDrafts);
-      setOriginals(savedDrafts.map(cloneDraft));
-      setNewDraft(null);
-      await queryClient.invalidateQueries({ queryKey: getListRecordsQueryKey() });
-      toast.success(
-        `${updatedRecords.length} record${updatedRecords.length === 1 ? "" : "s"} updated` +
-        `${createdRecord ? " and 1 new record added" : ""}.`,
-      );
+      setOriginals(savedOriginals);
+      setNewDrafts((current) => current.filter((_, index) =>
+        createResults[index]?.status === "rejected",
+      ));
+      if (updatedRecords.length || createdRecords.length) {
+        await queryClient.invalidateQueries({ queryKey: getListRecordsQueryKey() });
+      }
+      const failureCount = failedUpdateCount + failedCreateCount;
+      if (failureCount) {
+        toast.error(
+          `${failureCount} record${failureCount === 1 ? "" : "s"} could not be saved. Successful saves were kept; review and retry the remaining changes.`,
+        );
+      } else {
+        const successParts = [];
+        if (updatedRecords.length) {
+          successParts.push(
+            `${updatedRecords.length} record${updatedRecords.length === 1 ? "" : "s"} updated`,
+          );
+        }
+        if (createdRecords.length) {
+          successParts.push(
+            `${createdRecords.length} new record${createdRecords.length === 1 ? "" : "s"} added`,
+          );
+        }
+        toast.success(`${successParts.join(" and ")}.`);
+      }
     } catch (saveError) {
       toast.error(saveError instanceof Error ? saveError.message : "Unable to save record changes.");
     } finally {
@@ -457,7 +526,7 @@ export default function RecordsBulkEdit() {
               Edit All Records
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Edit saved record sections with the same Settings-backed suggestions used in New Record. Test measurements and calculated results are preserved.
+              Add multiple records or edit saved records. Every column stays visible without horizontal scrolling.
             </p>
           </div>
         </div>
@@ -479,8 +548,8 @@ export default function RecordsBulkEdit() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => setNewDraft((current) => current ?? createEmptyBulkDraft(today()))}
-            disabled={Boolean(newDraft)}
+            onClick={addNewDraft}
+            disabled={isLoading || isSaving}
           >
             <Plus className="mr-2 h-4 w-4" />
             Add New Record
@@ -488,14 +557,10 @@ export default function RecordsBulkEdit() {
         </div>
       </div>
 
-      <div className="rounded-md border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-950 md:hidden dark:bg-amber-950/20 dark:text-amber-100">
-        This wide editor is easier to use on a desktop or tablet. Scroll horizontally to reach every field.
-      </div>
-
       <Card className="overflow-hidden border-t-4 border-t-primary">
         <CardContent className="p-0">
-          <div className="max-h-[calc(100vh-240px)] overflow-auto">
-            <table className="min-w-[3200px] border-collapse text-sm">
+          <div className="max-h-[calc(100vh-260px)] overflow-y-auto overflow-x-hidden">
+            <table className="bulk-record-table w-full table-fixed border-collapse text-[10px] leading-tight">
               <thead className="sticky top-0 z-20 bg-muted shadow-sm">
                 <tr className="border-b">
                   {[
@@ -528,7 +593,7 @@ export default function RecordsBulkEdit() {
                     <th
                       key={heading}
                       className={[
-                        "whitespace-nowrap border-r px-3 py-3 text-left text-xs font-semibold",
+                        "min-w-0 break-words border-r px-1 py-2 text-left text-[9px] font-semibold leading-tight",
                         index === 0 ? "sticky left-0 z-30 bg-muted" : "",
                       ].join(" ")}
                     >
@@ -553,24 +618,35 @@ export default function RecordsBulkEdit() {
                   </tr>
                 ) : (
                   <>
-                    {newDraft && (
+                    {newDrafts.map((newDraft, index) => (
                       <DraftRow
+                        key={newDraft.id}
                         draft={newDraft}
                         dirty
                         isNew
-                        onChange={(key, value) => setNewDraft((current) => (
-                          current ? updateTopLevel(current, key, value) : current
+                        newRecordNumber={index + 1}
+                        onRemove={() => setNewDrafts((current) => current.filter(
+                          (draft) => draft.id !== newDraft.id,
                         ))}
-                        onDetailChange={(key, value) => setNewDraft((current) => (
-                          current ? updateDetail(current, key, value) : current
+                        onChange={(key, value) => setNewDrafts((current) => (
+                          current.map((draft) => draft.id === newDraft.id
+                            ? updateTopLevel(draft, key, value)
+                            : draft)
                         ))}
-                        onTestTypeChange={(testType) => setNewDraft((current) => (
-                          current ? { ...current, testType } : current
+                        onDetailChange={(key, value) => setNewDrafts((current) => (
+                          current.map((draft) => draft.id === newDraft.id
+                            ? updateDetail(draft, key, value)
+                            : draft)
+                        ))}
+                        onTestTypeChange={(testType) => setNewDrafts((current) => (
+                          current.map((draft) => draft.id === newDraft.id
+                            ? { ...draft, testType }
+                            : draft)
                         ))}
                         lookupOptions={lookupOptions}
                         canEditApprovedBy={canEditApprovedBy}
                       />
-                    )}
+                    ))}
                     {drafts.map((draft) => (
                       <DraftRow
                         key={draft.id}
@@ -590,7 +666,7 @@ export default function RecordsBulkEdit() {
                         canEditApprovedBy={canEditApprovedBy}
                       />
                     ))}
-                    {!drafts.length && !newDraft && (
+                    {!drafts.length && !newDrafts.length && (
                       <tr>
                         <td colSpan={canEditApprovedBy ? 25 : 24} className="h-48 text-center text-muted-foreground">
                           No records yet. Use Add New Record to create the first one.
@@ -613,6 +689,10 @@ export default function RecordsBulkEdit() {
               : "All changes saved"}
           </p>
           <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={addNewDraft} disabled={isLoading || isSaving}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add New
+            </Button>
             <Button type="button" variant="outline" onClick={discardChanges} disabled={!changeCount || isSaving}>
               <RotateCcw className="mr-2 h-4 w-4" />
               Discard
