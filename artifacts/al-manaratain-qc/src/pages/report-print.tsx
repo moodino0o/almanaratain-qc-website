@@ -20,6 +20,7 @@ import {
   blockSizeMatches,
   blockTypeMatches,
   calculateChlorideContent,
+  calculateMoistureContent,
   calculateRetainedPercentage,
   calculateSieveSampleWeight,
   calculateSiltContent,
@@ -784,27 +785,17 @@ function SieveRowsTable({
   rows,
   layout,
   evaluation,
+  sampleWeight,
 }: {
   rows: unknown[];
   layout?: ReportLayout;
   evaluation: unknown;
+  sampleWeight: number;
 }) {
-  const sampleWeight = calculateSieveSampleWeight(
-    rows.map((row) => {
-      const values = typeof row === "object" && row !== null
-        ? row as Record<string, unknown>
-        : {};
-      return { amountReturned: String(values.amountReturned ?? "") };
-    }),
-  );
   const visibleRows = sortSieveRowsByPoreSize(rows.filter((row) => {
     const values = typeof row === "object" && row !== null
       ? row as Record<string, unknown> : {};
-    return hasSieveSize(values.sieveSize) && [
-      values.amountReturned,
-      values.passingAmount,
-      values.passingPercentage,
-    ].some(hasSieveEntry);
+    return hasSieveSize(values.sieveSize) && hasSieveEntry(values.amountReturned);
   }), (row) => objectValue(row)?.sieveSize);
   if (!visibleRows.length) return null;
   const tableColumns = layoutColumns(layout, "sieveResults", [
@@ -1437,6 +1428,18 @@ function SieveReport({
   const sieveRows = Array.isArray(details.sieveRows) ? details.sieveRows : [];
   const evaluation = objectValue(details.sieveEvaluation);
   const isAggregate = record.testType === "Aggregate Sieve";
+  const sieveSampleWeight = calculateSieveSampleWeight(
+    sieveRows.map((row) => {
+      const values = typeof row === "object" && row !== null
+        ? row as Record<string, unknown>
+        : {};
+      return { amountReturned: String(values.amountReturned ?? "") };
+    }),
+  );
+  const moistureContent = calculateMoistureContent(
+    detailRawValue(details, ["dryWeight", "drySample"], ""),
+    detailRawValue(details, ["wetWeight", "wetSample"], ""),
+  );
   const siltContent = calculateSiltContent(
     details.siltBefore,
     details.siltAfter,
@@ -1459,7 +1462,19 @@ function SieveReport({
     sulphateContent,
     AGGREGATE_SULPHATE_LIMIT_PERCENT,
   );
-  const chemicalResults = [
+  const testDetailRows = [
+    {
+      label: "Sieve Sample Weight",
+      result: sieveSampleWeight > 0 ? `${sieveSampleWeight.toFixed(2)} g` : "—",
+      standard: "—",
+      status: "—",
+    },
+    {
+      label: "Moisture Content",
+      result: moistureContent ? `${moistureContent}%` : "—",
+      standard: "—",
+      status: "—",
+    },
     {
       label: "Silt Content",
       result: siltContent === null ? "—" : `${siltContent.toFixed(2)}%`,
@@ -1468,7 +1483,7 @@ function SieveReport({
     },
     {
       label: "Chloride Content",
-      result: chlorideContent === null ? "—" : `${chlorideContent.toFixed(2)}%`,
+      result: chlorideContent === null ? "—" : `${chlorideContent.toFixed(3)}%`,
       standard: `≤ ${AGGREGATE_CHLORIDE_LIMIT_PERCENT.toFixed(2)}%`,
       status: chlorideStatus,
     },
@@ -1517,32 +1532,20 @@ function SieveReport({
           <ReportFields entries={measurementEntries} />
         </section>
       </div>
-      <section className="report-calculation-notes mt-3 space-y-1 border-t border-slate-300 pt-2 text-[8px] leading-tight text-slate-600">
-        <p>
-          Retained (%) = mass retained ÷ total retained mass × 100. Passing
-          amount = sample mass − cumulative retained mass; passing (%) =
-          passing amount ÷ sample mass × 100.
-        </p>
-      </section>
-
-      <SieveRowsTable
-        rows={sieveRows}
-        layout={layout}
-        evaluation={evaluation}
-      />
       <section className="report-summary mt-3">
-        <SectionHeading>Chemical Test Results</SectionHeading>
-        <table className="report-table">
+        <SectionHeading>Sieve, Moisture and Chemical Test Details</SectionHeading>
+        <div className="report-small-table-wrap">
+          <table className="report-table report-small-table">
           <thead>
             <tr>
-              <th>Test</th>
+              <th>Test / Detail</th>
               <th>Result</th>
               <th>Standard</th>
               <th>Status</th>
             </tr>
           </thead>
           <tbody>
-            {chemicalResults.map((result) => (
+            {testDetailRows.map((result) => (
               <tr key={result.label}>
                 <td>{result.label}</td>
                 <td>{result.result}</td>
@@ -1561,8 +1564,15 @@ function SieveReport({
               </tr>
             ))}
           </tbody>
-        </table>
+          </table>
+        </div>
       </section>
+      <SieveRowsTable
+        rows={sieveRows}
+        layout={layout}
+        evaluation={evaluation}
+        sampleWeight={sieveSampleWeight}
+      />
     </>
   );
 }
