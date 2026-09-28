@@ -9,6 +9,7 @@ import {
   firstWords,
   groupDailyResults,
   sortByReferenceNumber,
+  summarizeRecordStrengths,
 } from "./reports-utils";
 
 const record = ({
@@ -219,6 +220,46 @@ const qcRecord = ({
   status: "Passed",
   testedBy: "Tester",
   details,
+});
+
+test("summarizes Masonry records using their existing strength calculation basis", () => {
+  const blockRecord = qcRecord({
+    id: 90,
+    testType: "Blocks",
+    sampleDate: "2026-09-01",
+    location: "Eastern",
+    material: "Concrete Block",
+    details: {
+      testRows: [
+        { calculatedStrength: 40, airDryStrength: 48 },
+        { calculatedStrength: 50, airDryStrength: 60 },
+      ],
+    },
+  });
+  const pavingRecord = qcRecord({
+    id: 91,
+    testType: "Paving Blocks",
+    sampleDate: "2026-09-01",
+    location: "Eastern",
+    material: "Paving Block",
+    details: {
+      testRows: [
+        { tensileStrength: 4, correctedStrength: 4.5 },
+        { tensileStrength: 6, correctedStrength: 6.5 },
+      ],
+    },
+  });
+
+  assert.deepEqual(summarizeRecordStrengths(blockRecord), {
+    averageStrength: 54,
+    minimumStrength: 48,
+    maximumStrength: 60,
+  });
+  assert.deepEqual(summarizeRecordStrengths(pavingRecord), {
+    averageStrength: 5,
+    minimumStrength: 4,
+    maximumStrength: 6,
+  });
 });
 
 test("groups Ready Mix products by their first three words and summarizes each day", () => {

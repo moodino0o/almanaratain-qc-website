@@ -52,6 +52,12 @@ export type DailyReportProductOption = {
   product: string;
 };
 
+export type RecordStrengthSummary = {
+  averageStrength: number;
+  minimumStrength: number;
+  maximumStrength: number;
+};
+
 export type DailyReadyMixReferenceFilter = "site" | "plant" | null;
 
 type StrengthGroup = {
@@ -213,6 +219,16 @@ const recordStrengths = (record: QcRecord, details: Record<string, unknown>) => 
   }
   return [Number((directStrength * (record.location.trim().toLocaleLowerCase() === "dammam" ? 1 : 1.2)).toFixed(1))];
 };
+
+export function summarizeRecordStrengths(record: QcRecord): RecordStrengthSummary | null {
+  const strengths = recordStrengths(record, record.details as Record<string, unknown>);
+  if (!strengths.length) return null;
+  return {
+    averageStrength: strengths.reduce((sum, value) => sum + value, 0) / strengths.length,
+    minimumStrength: Math.min(...strengths),
+    maximumStrength: Math.max(...strengths),
+  };
+}
 
 export function dailyReportProductOptions(records: QcRecord[]): DailyReportProductOption[] {
   const options = new Map<string, DailyReportProductOption>();
