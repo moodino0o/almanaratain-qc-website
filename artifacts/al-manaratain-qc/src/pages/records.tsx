@@ -172,8 +172,11 @@ export default function Records() {
     );
     const value = keys
       .map((key) => normalized.get(key.toLowerCase().replace(/[^a-z0-9]/g, "")))
-      .find((candidate) => candidate !== undefined && candidate !== null);
-    return typeof value === "string" && value.trim() ? value : fallback;
+      .find(
+        (candidate) =>
+          typeof candidate === "string" && candidate.trim().length > 0,
+      );
+    return typeof value === "string" ? value : fallback;
   };
 
   return (
