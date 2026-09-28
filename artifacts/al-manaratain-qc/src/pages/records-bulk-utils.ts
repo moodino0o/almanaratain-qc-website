@@ -62,10 +62,16 @@ export const updateDraftDetail = (
 
 export const validateBulkDraft = (draft: BulkRecordDraft) => {
   const missing = [
-    !draft.sampleDate && "Sample date",
+    !draft.sampleDate &&
+      (draft.testType === TestType.Blocks || draft.testType === TestType.Paving_Blocks
+        ? "Casting date"
+        : "Sample date"),
     !draft.location.trim() && "Location / plant",
     !draft.material.trim() && "Material / product",
     !draft.testedBy.trim() && "Tested by",
+    draft.testType === TestType.Paving_Blocks &&
+      !detailText(draft.details, "pavingBlockSize").trim() &&
+      "Paving block size",
   ].filter((value): value is string => Boolean(value));
   return missing;
 };

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@workspace/replit-auth-web";
 import {
@@ -197,10 +197,12 @@ function DraftRow({
         ? uniqueValues(lookupOptions.blockTypes, lookupOptions.blockSizes)
         : lookupOptions.materials;
 
+  const recordLabel = isNew
+    ? `new record ${newRecordNumber ?? ""}`
+    : draft.recordNo;
   const detailInput = (
     key: string,
     label: string,
-    applies: boolean,
     type: "text" | "date" | "number" = "text",
     options: string[] = [],
     categoryKey?: string,
@@ -209,132 +211,273 @@ function DraftRow({
       ? <LookupCell
           value={detailText(draft.details, key)}
           onChange={(value) => onDetailChange(key, value)}
-          label={`${label} for ${draft.recordNo}`}
+          label={`${label} for ${recordLabel}`}
           options={options}
-          disabled={!applies}
           {...referenceOptionProps(categoryKey)}
         />
       : <CellInput
           value={detailText(draft.details, key)}
           onChange={(value) => onDetailChange(key, value)}
-          label={`${label} for ${draft.recordNo}`}
+          label={`${label} for ${recordLabel}`}
           type={type}
-          disabled={!applies}
         />
   );
+  const field = (label: string, control: ReactNode, className = "") => (
+    <div key={label} className={`min-w-0 ${className}`}>
+      <div className="mb-1 text-[10px] font-medium leading-tight text-muted-foreground">
+        {label}
+      </div>
+      {control}
+    </div>
+  );
+  const fields: ReactNode[] = [];
+  if (isNew) {
+    fields.push(field(
+      "Test Type",
+      <select
+        aria-label="Test type for new record"
+        value={draft.testType}
+        onChange={(event) => onTestTypeChange(
+          event.target.value as BulkRecordDraft["testType"],
+        )}
+        className="h-8 w-full min-w-0 rounded-sm border bg-background px-1 text-[10px] outline-none focus:border-primary"
+      >
+        {Object.values(TestType).map((type) => (
+          <option key={type} value={type}>{type}</option>
+        ))}
+      </select>,
+    ));
+  }
+
+  const sampleDateLabel =
+    blocks || pavingBlocks ? "Casting Date" : "Sample Date";
+  fields.push(
+    field(sampleDateLabel, (
+      <CellInput
+        value={draft.sampleDate}
+        onChange={(value) => onChange("sampleDate", value)}
+        label={`${sampleDateLabel} for ${recordLabel}`}
+        type="date"
+      />
+    )),
+    field("Location / Plant", (
+      <LookupCell
+        value={draft.location}
+        onChange={(value) => onChange("location", value)}
+        label={`Location or plant for ${recordLabel}`}
+        options={lookupOptions.locations}
+        {...referenceOptionProps("locations")}
+      />
+    )),
+    field("Material / Product", (
+      <LookupCell
+        value={draft.material}
+        onChange={(value) => onChange("material", value)}
+        label={`Material or product for ${recordLabel}`}
+        options={materialOptions}
+        {...referenceOptionProps(
+          mixDesign ? "mixStrengths" : blockProduct ? undefined : "materials",
+        )}
+      />
+    )),
+  );
+
+  if (readyMix) {
+    fields.push(
+      field("Reference No.", detailInput("referenceNumber", "Reference number")),
+      field("Customer Name", detailInput(
+        "customerName",
+        "Customer name",
+        "text",
+        lookupOptions.customers,
+        "customers",
+      )),
+      field("Customer Location", detailInput(
+        "customerLocation",
+        "Customer location",
+        "text",
+        lookupOptions.customerLocations,
+        "customerLocations",
+      )),
+      field("Slump (mm)", detailInput("slump", "Slump", "number")),
+      field("Temperature (°C)", detailInput(
+        "temperature",
+        "Temperature",
+        "number",
+      )),
+    );
+  }
+
+  if (blocks) {
+    fields.push(
+      field("Block Type", detailInput(
+        "blockType",
+        "Block type",
+        "text",
+        lookupOptions.blockTypes,
+        "blockTypes",
+      )),
+      field("Block Size", detailInput(
+        "blockSize",
+        "Block size",
+        "text",
+        lookupOptions.blockSizes,
+        "blockSizes",
+      )),
+      field("Machine", detailInput("machine", "Machine")),
+      field("Block Age", detailInput("blockAge", "Block age", "number")),
+      field("Testing Date", detailInput(
+        "testingDate",
+        "Testing date",
+        "date",
+      )),
+      field("Sample Type", detailInput(
+        "sampleType",
+        "Sample type",
+        "text",
+        lookupOptions.sampleTypes,
+        "sampleTypes",
+      )),
+      field("Conditioning Method", detailInput(
+        "conditioningMethod",
+        "Conditioning method",
+        "text",
+        lookupOptions.conditioningMethods,
+        "conditioningMethods",
+      )),
+      field("Preparation Method", detailInput(
+        "preparationMethod",
+        "Preparation method",
+        "text",
+        lookupOptions.preparationMethods,
+        "preparationMethods",
+      )),
+      field("Shape Factor", detailInput(
+        "shapeFactor",
+        "Shape factor",
+        "number",
+      )),
+    );
+  }
+
+  if (pavingBlocks) {
+    fields.push(
+      field("Machine Type", detailInput("machine", "Machine type")),
+      field("Sample Type", detailInput(
+        "sampleType",
+        "Sample type",
+        "text",
+        lookupOptions.sampleTypes,
+        "sampleTypes",
+      )),
+      field("Testing Date", detailInput(
+        "testingDate",
+        "Testing date",
+        "date",
+      )),
+      field("Paving Block Size", detailInput(
+        "pavingBlockSize",
+        "Paving block size",
+        "text",
+        lookupOptions.blockSizes,
+        "blockSizes",
+      )),
+      field("Correction Factor", detailInput(
+        "correctionFactor",
+        "Correction factor",
+      )),
+    );
+  }
+
+  if (sieve) {
+    fields.push(
+      field("Supplier", detailInput(
+        "supplier",
+        "Supplier",
+        "text",
+        lookupOptions.suppliers,
+        "suppliers",
+      )),
+      field("Condition", detailInput("condition", "Condition")),
+    );
+  }
+
+  if (water) {
+    fields.push(field(
+      "Water Source",
+      detailInput("source", "Water source"),
+    ));
+  }
+
+  fields.push(
+    field("Tested By", (
+      <LookupCell
+        value={draft.testedBy}
+        onChange={(value) => onChange("testedBy", value)}
+        label={`Tested by for ${recordLabel}`}
+        options={lookupOptions.employees}
+        {...referenceOptionProps("employees")}
+      />
+    )),
+  );
+
+  if (canEditApprovedBy) {
+    fields.push(field("Approved By", (
+      <LookupCell
+        value={draft.reviewedBy}
+        onChange={(value) => onChange("reviewedBy", value)}
+        label={`Approved by for ${recordLabel}`}
+        options={lookupOptions.employees}
+        {...referenceOptionProps("employees")}
+      />
+    )));
+  }
+
+  fields.push(field(
+    "Remarks",
+    <CellInput
+      value={draft.remarks}
+      onChange={(value) => onChange("remarks", value)}
+      label={`Remarks for ${recordLabel}`}
+    />,
+    "col-span-2 sm:col-span-2",
+  ));
 
   return (
-    <tr
+    <section
       className={[
-        "border-b transition-colors",
-        dirty ? "bg-amber-50/70 dark:bg-amber-950/15" : "bg-card",
+        "overflow-hidden rounded-md border transition-colors",
+        dirty
+          ? "border-amber-400 bg-amber-50/70 dark:border-amber-800 dark:bg-amber-950/15"
+          : "border-border bg-card",
         isNew ? "border-l-4 border-l-primary" : "",
       ].join(" ")}
+      aria-label={isNew ? `New record ${newRecordNumber ?? ""}` : `Record ${draft.recordNo}`}
     >
-      <td data-label="Record No." className="sticky left-0 z-10 min-w-0 border-r bg-inherit px-1 py-2 font-semibold text-primary">
-        {isNew ? (
-          <div className="flex min-w-0 items-center justify-between gap-0.5">
-            <span className="break-words">New {newRecordNumber ?? ""}</span>
-            {onRemove && (
-              <button
-                type="button"
-                className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                aria-label={`Remove new record ${newRecordNumber ?? ""}`}
-                onClick={onRemove}
-              >
-                <X className="h-3 w-3" />
-              </button>
-            )}
-          </div>
-        ) : draft.recordNo}
-      </td>
-      <td data-label="Test Type" className="min-w-0 px-1 py-1">
-        {isNew ? (
-          <select
-            aria-label="Test type for new record"
-            value={draft.testType}
-            onChange={(event) => onTestTypeChange(
-              event.target.value as BulkRecordDraft["testType"],
-            )}
-            className="h-8 w-full min-w-0 rounded-sm border border-transparent bg-transparent px-1 text-[10px] outline-none hover:border-border focus:border-primary focus:bg-background"
+      <div className="flex min-w-0 items-center justify-between gap-2 border-b bg-muted/40 px-3 py-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="shrink-0 text-xs font-semibold text-primary">
+            {isNew ? `New ${newRecordNumber ?? ""}` : draft.recordNo}
+          </span>
+          <span className="truncate text-xs font-medium text-muted-foreground">
+            {draft.testType}
+          </span>
+        </div>
+        {isNew && onRemove && (
+          <button
+            type="button"
+            className="shrink-0 rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+            aria-label={`Remove new record ${newRecordNumber ?? ""}`}
+            onClick={onRemove}
           >
-            {Object.values(TestType).map((type) => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
-        ) : (
-          <span className="block min-w-0 break-words px-1 text-[10px] font-semibold">{draft.testType}</span>
+            <X className="h-4 w-4" />
+          </button>
         )}
-      </td>
-      <td data-label="Sample Date" className="min-w-0 px-1 py-1">
-        <CellInput
-          value={draft.sampleDate}
-          onChange={(value) => onChange("sampleDate", value)}
-          label={`Sample date for ${draft.recordNo}`}
-          type="date"
-        />
-      </td>
-      <td data-label="Location / Plant" className="min-w-0 px-1 py-1">
-        <LookupCell
-          value={draft.location}
-          onChange={(value) => onChange("location", value)}
-          label={`Location or plant for ${draft.recordNo}`}
-          options={lookupOptions.locations}
-          {...referenceOptionProps("locations")}
-        />
-      </td>
-      <td data-label="Material / Product" className="min-w-0 px-1 py-1">
-        <LookupCell
-          value={draft.material}
-          onChange={(value) => onChange("material", value)}
-          label={`Material or product for ${draft.recordNo}`}
-          options={materialOptions}
-          {...referenceOptionProps(
-            mixDesign ? "mixStrengths" : blockProduct ? undefined : "materials",
-          )}
-        />
-      </td>
-      <td data-label="Reference No." className="min-w-0 px-1 py-1">{detailInput("referenceNumber", "Reference number", readyMix)}</td>
-      <td data-label="Customer Name" className="min-w-0 px-1 py-1">{detailInput("customerName", "Customer name", readyMix, "text", lookupOptions.customers, "customers")}</td>
-      <td data-label="Customer Location" className="min-w-0 px-1 py-1">{detailInput("customerLocation", "Customer location", readyMix, "text", lookupOptions.customerLocations, "customerLocations")}</td>
-      <td data-label="Slump (mm)" className="min-w-0 px-1 py-1">{detailInput("slump", "Slump", readyMix, "number")}</td>
-      <td data-label="Temperature (°C)" className="min-w-0 px-1 py-1">{detailInput("temperature", "Temperature", readyMix, "number")}</td>
-      <td data-label="Block Type" className="min-w-0 px-1 py-1">{detailInput("blockType", "Block type", blocks, "text", lookupOptions.blockTypes, "blockTypes")}</td>
-      <td data-label="Block Size" className="min-w-0 px-1 py-1">{detailInput("blockSize", "Block size", blocks, "text", lookupOptions.blockSizes, "blockSizes")}</td>
-      <td data-label="Machine" className="min-w-0 px-1 py-1">{detailInput("machine", "Machine", blocks)}</td>
-      <td data-label="Block Age" className="min-w-0 px-1 py-1">{detailInput("blockAge", "Block age", blocks, "number")}</td>
-      <td data-label="Testing Date" className="min-w-0 px-1 py-1">{detailInput("testingDate", "Testing date", blocks, "date")}</td>
-      <td data-label="Sample Type" className="min-w-0 px-1 py-1">{detailInput("sampleType", "Sample type", blocks, "text", lookupOptions.sampleTypes, "sampleTypes")}</td>
-      <td data-label="Conditioning Method" className="min-w-0 px-1 py-1">{detailInput("conditioningMethod", "Conditioning method", blocks, "text", lookupOptions.conditioningMethods, "conditioningMethods")}</td>
-      <td data-label="Preparation Method" className="min-w-0 px-1 py-1">{detailInput("preparationMethod", "Preparation method", blocks, "text", lookupOptions.preparationMethods, "preparationMethods")}</td>
-      <td data-label="Shape Factor" className="min-w-0 px-1 py-1">{detailInput("shapeFactor", "Shape factor", blocks, "number")}</td>
-      <td data-label="Supplier" className="min-w-0 px-1 py-1">{detailInput("supplier", "Supplier", sieve, "text", lookupOptions.suppliers, "suppliers")}</td>
-      <td data-label="Condition" className="min-w-0 px-1 py-1">{detailInput("condition", "Condition", sieve)}</td>
-      <td data-label="Water Source" className="min-w-0 px-1 py-1">{detailInput("source", "Source", water)}</td>
-      <td data-label="Tested By" className="min-w-0 px-1 py-1">
-        <LookupCell
-          value={draft.testedBy}
-          onChange={(value) => onChange("testedBy", value)}
-          label={`Tested by for ${draft.recordNo}`}
-          options={lookupOptions.employees}
-          {...referenceOptionProps("employees")}
-        />
-      </td>
-      {canEditApprovedBy && (
-        <td data-label="Approved By" className="min-w-0 px-1 py-1">
-          <LookupCell
-            value={draft.reviewedBy}
-            onChange={(value) => onChange("reviewedBy", value)}
-            label={`Approved by for ${draft.recordNo}`}
-            options={lookupOptions.employees}
-            {...referenceOptionProps("employees")}
-          />
-        </td>
-      )}
-      <td data-label="Remarks" className="min-w-0 px-1 py-1">
-        <CellInput value={draft.remarks} onChange={(value) => onChange("remarks", value)} label={`Remarks for ${draft.recordNo}`} />
-      </td>
-    </tr>
+      </div>
+      <div className="grid grid-cols-2 gap-x-2 gap-y-3 p-2 sm:grid-cols-4 lg:grid-cols-6 2xl:grid-cols-10">
+        {fields}
+      </div>
+    </section>
   );
 }
 
@@ -452,9 +595,14 @@ export default function RecordsBulkEdit() {
 
   const addNewDraft = () => {
     const id = nextNewDraftId.current--;
+    const emptyDraft = createEmptyBulkDraft(today());
     setNewDrafts((current) => [
       ...current,
-      { ...createEmptyBulkDraft(today()), id },
+      {
+        ...emptyDraft,
+        id,
+        testType: testTypeFilter === "All" ? emptyDraft.testType : testTypeFilter,
+      },
     ]);
   };
 
@@ -592,7 +740,7 @@ export default function RecordsBulkEdit() {
               Edit All Records
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Add multiple records or edit saved records. Every column stays visible without horizontal scrolling.
+              Add or edit records. Each record shows only the fields for its test type, without horizontal scrolling.
             </p>
           </div>
         </div>
@@ -625,126 +773,75 @@ export default function RecordsBulkEdit() {
 
       <Card className="overflow-hidden border-t-4 border-t-primary">
         <CardContent className="p-0">
-          <div className="max-h-[calc(100vh-260px)] overflow-y-auto overflow-x-hidden">
-            <table className="bulk-record-table w-full table-fixed border-collapse text-[10px] leading-tight">
-              <thead className="sticky top-0 z-20 bg-muted shadow-sm">
-                <tr className="border-b">
-                  {[
-                    "Record No.",
-                    "Test Type",
-                    "Sample Date",
-                    "Location / Plant",
-                    "Material / Product",
-                    "Reference No.",
-                    "Customer Name",
-                    "Customer Location",
-                    "Slump (mm)",
-                    "Temperature (°C)",
-                    "Block Type",
-                    "Block Size",
-                    "Machine",
-                    "Block Age",
-                    "Testing Date",
-                    "Sample Type",
-                    "Conditioning Method",
-                    "Preparation Method",
-                    "Shape Factor",
-                    "Supplier",
-                    "Condition",
-                    "Water Source",
-                    "Tested By",
-                     ...(canEditApprovedBy ? ["Approved By"] : []),
-                    "Remarks",
-                  ].map((heading, index) => (
-                    <th
-                      key={heading}
-                      className={[
-                        "min-w-0 break-words border-r px-1 py-2 text-left text-[9px] font-semibold leading-tight",
-                        index === 0 ? "sticky left-0 z-30 bg-muted" : "",
-                      ].join(" ")}
-                    >
-                      {heading}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={canEditApprovedBy ? 25 : 24} className="h-48 text-center text-muted-foreground">
-                      <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" />
-                      Loading all records...
-                    </td>
-                  </tr>
-                ) : error ? (
-                  <tr>
-                    <td colSpan={canEditApprovedBy ? 25 : 24} className="h-48 text-center text-destructive">
-                      Unable to load records.
-                    </td>
-                  </tr>
-                ) : (
-                  <>
-                    {newDrafts.map((newDraft, index) => (
-                      <DraftRow
-                        key={newDraft.id}
-                        draft={newDraft}
-                        dirty
-                        isNew
-                        newRecordNumber={index + 1}
-                        onRemove={() => setNewDrafts((current) => current.filter(
-                          (draft) => draft.id !== newDraft.id,
-                        ))}
-                        onChange={(key, value) => setNewDrafts((current) => (
-                          current.map((draft) => draft.id === newDraft.id
-                            ? updateTopLevel(draft, key, value)
-                            : draft)
-                        ))}
-                        onDetailChange={(key, value) => setNewDrafts((current) => (
-                          current.map((draft) => draft.id === newDraft.id
-                            ? updateDetail(draft, key, value)
-                            : draft)
-                        ))}
-                        onTestTypeChange={(testType) => setNewDrafts((current) => (
-                          current.map((draft) => draft.id === newDraft.id
-                            ? { ...draft, testType }
-                            : draft)
-                        ))}
-                        lookupOptions={lookupOptions}
-                        canEditApprovedBy={canEditApprovedBy}
-                        referenceOptionProps={referenceOptionProps}
-                      />
+          <div className="max-h-[calc(100vh-260px)] space-y-2 overflow-y-auto overflow-x-hidden p-2">
+            {isLoading ? (
+              <div className="flex min-h-48 flex-col items-center justify-center text-sm text-muted-foreground">
+                <Loader2 className="mb-2 h-6 w-6 animate-spin" />
+                Loading all records...
+              </div>
+            ) : error ? (
+              <div className="flex min-h-48 items-center justify-center text-sm text-destructive">
+                Unable to load records.
+              </div>
+            ) : (
+              <>
+                {newDrafts.map((newDraft, index) => (
+                  <DraftRow
+                    key={newDraft.id}
+                    draft={newDraft}
+                    dirty
+                    isNew
+                    newRecordNumber={index + 1}
+                    onRemove={() => setNewDrafts((current) => current.filter(
+                      (draft) => draft.id !== newDraft.id,
                     ))}
-                    {drafts.map((draft) => (
-                      <DraftRow
-                        key={draft.id}
-                        draft={draft}
-                        dirty={!sameDraft(draft, originalById.get(draft.id) ?? draft)}
-                        isNew={false}
-                        onChange={(key, value) => updateExisting(
-                          draft.id,
-                          (current) => updateTopLevel(current, key, value),
-                        )}
-                        onDetailChange={(key, value) => updateExisting(
-                          draft.id,
-                          (current) => updateDetail(current, key, value),
-                        )}
-                        onTestTypeChange={() => undefined}
-                        lookupOptions={lookupOptions}
-                        canEditApprovedBy={canEditApprovedBy}
-                        referenceOptionProps={referenceOptionProps}
-                      />
+                    onChange={(key, value) => setNewDrafts((current) => (
+                      current.map((draft) => draft.id === newDraft.id
+                        ? updateTopLevel(draft, key, value)
+                        : draft)
                     ))}
-                    {!drafts.length && !newDrafts.length && (
-                      <tr>
-                        <td colSpan={canEditApprovedBy ? 25 : 24} className="h-48 text-center text-muted-foreground">
-                          No records yet. Use Add New Record to create the first one.
-                        </td>
-                      </tr>
+                    onDetailChange={(key, value) => setNewDrafts((current) => (
+                      current.map((draft) => draft.id === newDraft.id
+                        ? updateDetail(draft, key, value)
+                        : draft)
+                    ))}
+                    onTestTypeChange={(testType) => setNewDrafts((current) => (
+                      current.map((draft) => draft.id === newDraft.id
+                        ? { ...draft, testType, material: "", details: {} }
+                        : draft)
+                    ))}
+                    lookupOptions={lookupOptions}
+                    canEditApprovedBy={canEditApprovedBy}
+                    referenceOptionProps={referenceOptionProps}
+                  />
+                ))}
+                {drafts.map((draft) => (
+                  <DraftRow
+                    key={draft.id}
+                    draft={draft}
+                    dirty={!sameDraft(draft, originalById.get(draft.id) ?? draft)}
+                    isNew={false}
+                    onChange={(key, value) => updateExisting(
+                      draft.id,
+                      (current) => updateTopLevel(current, key, value),
                     )}
-                  </>
+                    onDetailChange={(key, value) => updateExisting(
+                      draft.id,
+                      (current) => updateDetail(current, key, value),
+                    )}
+                    onTestTypeChange={() => undefined}
+                    lookupOptions={lookupOptions}
+                    canEditApprovedBy={canEditApprovedBy}
+                    referenceOptionProps={referenceOptionProps}
+                  />
+                ))}
+                {!drafts.length && !newDrafts.length && (
+                  <div className="flex min-h-48 items-center justify-center text-sm text-muted-foreground">
+                    No records yet. Use Add New Record to create the first one.
+                  </div>
                 )}
-              </tbody>
-            </table>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
