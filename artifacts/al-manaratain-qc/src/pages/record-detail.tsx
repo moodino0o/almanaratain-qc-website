@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { useAuth } from "@workspace/replit-auth-web";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListRecordsQueryKey, getGetDashboardQueryKey, getGetRecordQueryKey } from "@workspace/api-client-react";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useAppBack } from "@/hooks/use-app-back";
 import {
   AGGREGATE_CHLORIDE_LIMIT_PERCENT,
@@ -216,6 +216,55 @@ function MeasurementTable({
   );
 }
 
+function CompactMeasurementTable({
+  title,
+  entries,
+}: {
+  title: string;
+  entries: ReadonlyArray<readonly [string, unknown]>;
+}) {
+  const groupedEntries = Array.from(
+    { length: Math.ceil(entries.length / 2) },
+    (_, index) => entries.slice(index * 2, index * 2 + 2),
+  );
+
+  return (
+    <Card>
+      <CardHeader className="bg-muted/30 border-b">
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[760px] table-fixed text-xs">
+            <tbody>
+              {groupedEntries.map((group, index) => (
+                <tr key={group[0]?.[0] ?? index} className="border-b last:border-b-0">
+                  {group.map(([label, value]) => (
+                    <Fragment key={label}>
+                      <th
+                        scope="row"
+                        className="w-[18%] bg-muted/20 p-2 text-left text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
+                      >
+                        {label}
+                      </th>
+                      <td className="w-[32%] break-words p-2 text-left font-medium text-foreground">
+                        {displayValue(value)}
+                      </td>
+                    </Fragment>
+                  ))}
+                  {group.length === 1 && (
+                    <td colSpan={2} aria-hidden="true" className="p-2" />
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function TestRowsTable({
   rows,
   includeAbsorption,
@@ -292,10 +341,27 @@ function SieveRowsTable({
   rows: unknown[];
   evaluation: unknown;
 }) {
-  const orderedRows = sortSieveRowsByPoreSize(rows, (row) => {
+  const measuredRows = rows.filter((row) => {
+    const values = typeof row === "object" && row !== null
+      ? row as Record<string, unknown>
+      : {};
+    const hasSize = String(values.sieveSize ?? "").trim().length > 0;
+    const hasEnteredMass = values.amountReturned !== null &&
+      values.amountReturned !== undefined &&
+      String(values.amountReturned).trim().length > 0;
+    return hasSize && hasEnteredMass;
+  });
+  const orderedRows = sortSieveRowsByPoreSize(measuredRows, (row) => {
     if (typeof row !== "object" || row === null) return "";
     return (row as Record<string, unknown>).sieveSize;
   });
+  if (!orderedRows.length) {
+    return (
+      <p className="p-6 text-center text-muted-foreground">
+        No sieve measurements recorded.
+      </p>
+    );
+  }
   const sampleWeight = calculateSieveSampleWeight(
     orderedRows.map((row) => {
       const values = typeof row === "object" && row !== null
@@ -665,7 +731,7 @@ export default function RecordDetail() {
         );
         return (
           <>
-            <MeasurementTable
+            <CompactMeasurementTable
               title="Sieve, Moisture and Chemical Test Details"
               entries={[
               [
@@ -704,7 +770,7 @@ export default function RecordDetail() {
               ["Silt Result", evaluateSiltContent(siltContent)],
               [
                 "Chloride Content",
-                chlorideContent === null ? "—" : `${chlorideContent.toFixed(2)}%`,
+                chlorideContent === null ? "—" : `${chlorideContent.toFixed(3)}%`,
               ],
               [
                 "Chloride Standard",
