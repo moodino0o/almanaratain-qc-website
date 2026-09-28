@@ -54,11 +54,11 @@ export default function Records() {
   const isReadyMixSection = section === "readymix";
   const isMasonrySection = section === "masonry";
   const isAggregateSection = section === "aggregate";
-  const hideLocationAndCustomer =
+  const hideCustomerAndSiteLocation =
     isMasonrySection || isAggregateSection;
   const tableColumnCount =
     10 -
-    (hideLocationAndCustomer ? 2 : 0) +
+    (hideCustomerAndSiteLocation ? 2 : 0) +
     (isReadyMixSection ? 1 : 0) +
     (isMasonrySection ? 3 : 0);
   const readyMixAgeAverages = useMemo(() => {
@@ -94,7 +94,11 @@ export default function Records() {
         : isAggregateSection
           ? "w-[14%]"
           : "w-[11%]",
-    location: isReadyMixSection ? "w-[7%]" : "w-[9%]",
+    location: isReadyMixSection
+      ? "w-[7%]"
+      : isAggregateSection
+        ? "w-[12%]"
+        : "w-[9%]",
     customer: isReadyMixSection ? "w-[9%]" : "w-[11%]",
     siteLocation: isReadyMixSection
       ? "w-[8%]"
@@ -217,13 +221,13 @@ export default function Records() {
                   {section === "readymix" ? "Reference No." : "Record No."}
                 </TableHead>
                 <TableHead className={`${columnWidths.testType} px-1.5 py-2 text-[10px] leading-tight`}>Test Type</TableHead>
-                {!hideLocationAndCustomer && (
-                  <TableHead className={`${columnWidths.location} px-1.5 py-2 text-[10px] leading-tight`}>Location</TableHead>
-                )}
-                {!hideLocationAndCustomer && (
+                <TableHead className={`${columnWidths.location} px-1.5 py-2 text-[10px] leading-tight`}>Location</TableHead>
+                {!hideCustomerAndSiteLocation && (
                   <TableHead className={`${columnWidths.customer} px-1.5 py-2 text-[10px] leading-tight`}>Customer Name</TableHead>
                 )}
-                <TableHead className={`${columnWidths.siteLocation} px-1.5 py-2 text-[10px] leading-tight`}>Site Location</TableHead>
+                {!hideCustomerAndSiteLocation && (
+                  <TableHead className={`${columnWidths.siteLocation} px-1.5 py-2 text-[10px] leading-tight`}>Site Location</TableHead>
+                )}
                 <TableHead className={`${columnWidths.material} px-1.5 py-2 text-[10px] leading-tight`}>Material</TableHead>
                 <TableHead className={`${columnWidths.sampleDate} px-1.5 py-2 text-[10px] leading-tight`}>Sample Date</TableHead>
                 <TableHead className={`${columnWidths.testedBy} px-1.5 py-2 text-[10px] leading-tight`}>Tested By</TableHead>
@@ -275,17 +279,17 @@ export default function Records() {
                         {record.testType}
                       </span>
                     </TableCell>
-                    {!hideLocationAndCustomer && (
-                      <TableCell className="whitespace-normal break-words px-1.5 py-2">{record.location}</TableCell>
-                    )}
-                    {!hideLocationAndCustomer && (
+                    <TableCell className="whitespace-normal break-words px-1.5 py-2">{record.location}</TableCell>
+                    {!hideCustomerAndSiteLocation && (
                       <TableCell className="whitespace-normal break-words px-1.5 py-2">
                         {getRecordDetail(record.details, ["customerName", "customer"])}
                       </TableCell>
                     )}
-                    <TableCell className="whitespace-normal break-words px-1.5 py-2">
-                      {getRecordDetail(record.details, ["customerLocation", "siteLocation", "site"])}
-                    </TableCell>
+                    {!hideCustomerAndSiteLocation && (
+                      <TableCell className="whitespace-normal break-words px-1.5 py-2">
+                        {getRecordDetail(record.details, ["customerLocation", "siteLocation", "site"])}
+                      </TableCell>
+                    )}
                     <TableCell className="whitespace-normal break-words px-1.5 py-2">{record.material}</TableCell>
                     <TableCell className="whitespace-normal break-words px-1.5 py-2">{formatDate(record.sampleDate)}</TableCell>
                     <TableCell className="whitespace-normal break-words px-1.5 py-2">{record.testedBy}</TableCell>
