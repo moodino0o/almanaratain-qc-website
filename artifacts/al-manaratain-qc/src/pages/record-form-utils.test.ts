@@ -3,6 +3,7 @@ import test from "node:test";
 import { RecordStatus, TestType, type QcRecord } from "@workspace/api-client-react";
 import {
   applySizeDimensionDefaults,
+  blockAirDryRowStrength,
   blockDimensionsFromSize,
   blockMaterialMatches,
   blockSizeMatches,
@@ -191,6 +192,25 @@ test("uses the Dammam Block compliance basis in the form preview", () => {
       normalizedStrength: "3.6",
     },
   );
+});
+
+test("uses air-dry strength in Block specimen details, with the Dammam exception", () => {
+  assert.equal(
+    blockAirDryRowStrength(
+      { calculatedStrength: "6.46", airDryStrength: "7.8" },
+      "HIDD",
+    ),
+    7.8,
+  );
+  assert.equal(
+    blockAirDryRowStrength({ calculatedStrength: "6.46" }, "Eastern"),
+    7.8,
+  );
+  assert.equal(
+    blockAirDryRowStrength({ calculatedStrength: "6.46" }, "Dammam"),
+    6.46,
+  );
+  assert.equal(blockAirDryRowStrength({}, "HIDD"), null);
 });
 
 test("calculates sieve passing mass from cumulative retained amounts", () => {

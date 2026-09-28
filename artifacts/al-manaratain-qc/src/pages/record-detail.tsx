@@ -15,6 +15,7 @@ import {
   AGGREGATE_CHLORIDE_LIMIT_PERCENT,
   AGGREGATE_CHEMISTRY_FIELDS,
   AGGREGATE_SULPHATE_LIMIT_PERCENT,
+  blockAirDryRowStrength,
   calculateRetainedPercentage,
   calculateSieveSampleWeight,
   calculateChlorideContent,
@@ -84,31 +85,6 @@ function cubeRowStrength(row: unknown) {
     values.calculatedStrength ?? values.strength ?? values.compressiveStrength ?? "",
   ));
   return Number.isFinite(strength) ? strength : null;
-}
-
-function blockAirDryRowStrength(row: unknown, location: string) {
-  const values = typeof row === "object" && row !== null
-    ? row as Record<string, unknown>
-    : {};
-  const firstNumericValue = (keys: string[]) => {
-    for (const key of keys) {
-      const candidate = Number.parseFloat(String(values[key] ?? ""));
-      if (Number.isFinite(candidate)) return candidate;
-    }
-    return null;
-  };
-  const waterStrength = firstNumericValue([
-    "waterStrength",
-    "calculatedStrength",
-    "strength",
-    "compressiveStrength",
-  ]);
-  const isDammam = location.trim().toLocaleLowerCase() === "dammam";
-  if (isDammam && waterStrength !== null) return waterStrength;
-  const storedAirDryStrength = firstNumericValue(["airDryStrength", "dryAirStrength"]);
-  if (storedAirDryStrength !== null) return storedAirDryStrength;
-  if (waterStrength === null) return null;
-  return Number((waterStrength * 1.2).toFixed(1));
 }
 
 function averageStrengthForAge(rows: unknown[], age: number) {
@@ -271,12 +247,14 @@ function TestRowsTable({
   includeAge = true,
   sortByAge = false,
   strengthLabel = "Calculated Strength (N/mm²)",
+  strengthValueForRow,
 }: {
   rows: unknown[];
   includeAbsorption: boolean;
   includeAge?: boolean;
   sortByAge?: boolean;
   strengthLabel?: string;
+  strengthValueForRow?: (row: Record<string, unknown>) => unknown;
 }) {
   const displayRows = sortByAge ? sortCubeRowsByAge(rows) : rows;
   return (
@@ -318,11 +296,13 @@ function TestRowsTable({
                 <td className="p-2">{displayValue(values.loadedFaceArea)}</td>
                 <td className="p-2 font-semibold">
                   {displayValue(
-                    values.tensileStrength ??
-                      values.correctedStrength ??
-                      values.calculatedStrength ??
-                      values.strength ??
-                      values.compressiveStrength,
+                    strengthValueForRow
+                      ? strengthValueForRow(values)
+                      : values.tensileStrength ??
+                          values.correctedStrength ??
+                          values.calculatedStrength ??
+                          values.strength ??
+                          values.compressiveStrength,
                   )}
                 </td>
               </tr>
@@ -853,11 +833,20 @@ export default function RecordDetail() {
           <Card>
             <CardHeader className="bg-muted/30 border-b">
               <CardTitle>Specimen Measurements</CardTitle>
-              <CardDescription>Block sample dimensions, weights, load, and calculated strength.</CardDescription>
+              <CardDescription>Block sample dimensions, weights, load, and air-dry strength.</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
               {specimenRows.length > 0
-                 ? <TestRowsTable rows={specimenRows} includeAbsorption={false} includeAge={false} />
+                ? (
+                  <TestRowsTable
+                    rows={specimenRows}
+                    includeAbsorption={false}
+                    includeAge={false}
+                    strengthLabel="Air-dry Strength (N/mm²)"
+                    strengthValueForRow={(row) =>
+                      blockAirDryRowStrength(row, record.location)}
+                  />
+                )
                 : <p className="p-6 text-center text-muted-foreground">No specimen measurements recorded.</p>}
             </CardContent>
           </Card>

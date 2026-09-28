@@ -368,6 +368,38 @@ export const calculateBlockStrengths = (
   };
 };
 
+export const blockAirDryRowStrength = (
+  row: unknown,
+  locationValue?: unknown,
+): number | null => {
+  const values = typeof row === "object" && row !== null
+    ? row as Record<string, unknown>
+    : {};
+  const firstNumericValue = (keys: string[]) => {
+    for (const key of keys) {
+      const candidate = Number.parseFloat(String(values[key] ?? ""));
+      if (Number.isFinite(candidate)) return candidate;
+    }
+    return null;
+  };
+  const waterStrength = firstNumericValue([
+    "waterStrength",
+    "calculatedStrength",
+    "strength",
+    "compressiveStrength",
+  ]);
+  const isDammam = String(locationValue ?? "").trim().toLocaleLowerCase() === "dammam";
+  if (isDammam && waterStrength !== null) return waterStrength;
+
+  const storedAirDryStrength = firstNumericValue([
+    "airDryStrength",
+    "dryAirStrength",
+  ]);
+  if (storedAirDryStrength !== null) return storedAirDryStrength;
+  if (waterStrength === null) return null;
+  return Math.round((waterStrength * 1.2 + Number.EPSILON) * 10) / 10;
+};
+
 export const pavingCorrectionFactorFromSize = (value: unknown) => {
   const text = stringValue(value).trim();
   if (/(?:^|[^0-9])60\s*(?:mm)?$/i.test(text)) return "0.87";
