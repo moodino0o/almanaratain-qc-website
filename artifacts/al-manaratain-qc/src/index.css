@@ -936,7 +936,7 @@
 }
 
 .ready-mix-paper .report-title span {
-  display: none;
+  display: block;
 }
 
 .ready-mix-report {
@@ -1193,6 +1193,140 @@
   color: #666;
   text-align: center;
   font-size: 7.5px;
+}
+
+/* Keep printable QC report text readable at normal screen and print scale. */
+.report-paper {
+  font-size: 13px;
+}
+
+.report-paper .report-company {
+  font-size: 12px;
+}
+
+.report-paper .report-title strong {
+  font-size: 16px;
+}
+
+.report-paper .report-title span {
+  font-size: 11px;
+}
+
+.report-paper .report-standard,
+.report-paper .report-field span,
+.report-paper .report-compliance-grid span,
+.report-paper .report-compliance-reason,
+.report-paper .report-table th,
+.report-paper .report-specimen-table th,
+.report-paper .report-signatures span,
+.report-paper .report-signatures small {
+  font-size: 11px;
+}
+
+.report-paper .report-section-heading,
+.report-paper .report-subheading,
+.report-paper .report-centered-value {
+  font-size: 14px;
+}
+
+.report-paper .report-centered-title {
+  font-size: 12px;
+}
+
+.report-paper .report-field strong,
+.report-paper .report-results-table td,
+.report-paper .report-compliance-grid strong,
+.report-paper .report-signatures strong {
+  font-size: 13px;
+}
+
+.report-paper .report-table td,
+.report-paper .report-specimen-table td {
+  font-size: 12px;
+}
+
+.report-paper .report-results-table th {
+  font-size: 11px;
+}
+
+.report-paper .block-report-fields .report-field span,
+.report-paper .block-report-section-heading small,
+.report-paper .block-report-section-heading > strong,
+.report-paper .block-report-remarks strong,
+.report-paper .block-report-result span,
+.report-paper .block-report-statistics span {
+  font-size: 10px;
+}
+
+.report-paper .block-report-fields .report-field strong,
+.report-paper .block-report-table th,
+.report-paper .paving-report-table th,
+.report-paper .paving-report-standard-table th,
+.report-paper .paving-report-standard-table td {
+  font-size: 12px;
+}
+
+.report-paper .block-report-section-heading span,
+.report-paper .block-report-remarks span,
+.report-paper .block-report-table td,
+.report-paper .paving-report-table td,
+.report-paper .block-report-statistics strong,
+.report-paper .paving-average-row td {
+  font-size: 11px !important;
+}
+
+.report-paper .block-report-result strong,
+.report-paper .block-report-statistics b {
+  font-size: 14px;
+}
+
+.report-paper .paving-report-standard-block .report-centered-title {
+  font-size: 12px;
+}
+
+.report-paper .paving-tensile-statistics strong {
+  font-size: 11px;
+}
+
+.report-paper .paving-tensile-statistics span {
+  font-size: 10px;
+}
+
+.report-paper .paving-tensile-statistics b {
+  font-size: 13px;
+}
+
+.report-paper.ready-mix-paper .report-title span {
+  display: block;
+  font-size: 11px;
+}
+
+.report-paper .ready-mix-report {
+  font-size: 13px;
+}
+
+.report-paper .ready-mix-report .report-section-heading {
+  font-size: 13px;
+}
+
+.report-paper .ready-mix-report .report-field span,
+.report-paper .ready-mix-compliance-block .report-compliance-grid span {
+  font-size: 10px;
+}
+
+.report-paper .ready-mix-report .report-field strong,
+.report-paper .ready-mix-compliance-block .report-compliance-grid strong,
+.report-paper .ready-mix-average-table td,
+.report-paper .ready-mix-report .report-results-table td,
+.report-paper .ready-mix-standard-block .report-strength-table td {
+  font-size: 11px;
+}
+
+.report-paper .ready-mix-average-table th,
+.report-paper .ready-mix-report .report-results-table th,
+.report-paper .ready-mix-standard-block .report-centered-title,
+.report-paper .ready-mix-standard-block .report-strength-table th {
+  font-size: 10px;
 }
 
 @media print {

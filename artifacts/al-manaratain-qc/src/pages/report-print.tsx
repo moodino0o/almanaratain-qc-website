@@ -1603,6 +1603,14 @@ export default function ReportPrint() {
   }
 
   const { record, companyName, companySubtitle, layout } = report;
+  const reportReferenceNumber =
+    record.testType === "Ready Mix"
+      ? detailValue(
+          record.details,
+          ["sampleNumber", "sampleNo", "sampleReference", "referenceNumber"],
+          record.recordNo,
+        )
+      : record.recordNo;
   const strengthEvaluation = objectValue(record.details.strengthEvaluation);
   const configuredSieveStandards = sieveStandards
     .filter(
@@ -1635,7 +1643,7 @@ export default function ReportPrint() {
   const paperStyle = layout
     ? {
         fontFamily: layout.config.fontFamily,
-        fontSize: `${layout.config.fontSize}px`,
+        fontSize: `${Math.max(layout.config.fontSize, 13)}px`,
         color: layout.config.textColor,
         padding: `${layout.config.paperPadding}mm`,
         "--report-accent-color": layout.config.accentColor,
@@ -1703,7 +1711,7 @@ export default function ReportPrint() {
             <strong>
               {layout?.config.title || defaultTitle}
             </strong>
-            <span>Ref: {record.recordNo}</span>
+            <span>Ref: {reportReferenceNumber}</span>
           </div>
         </header>}
         {layoutSectionVisible(layout, "standard") && <p
