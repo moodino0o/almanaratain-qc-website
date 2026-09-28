@@ -142,6 +142,27 @@ export default function RecordForm() {
     if (!isEditing || !existingRecord || initializedRecordId.current === recordId) return;
 
     const { details: savedDetails, sourceRows: savedRows } = prepareDetailsForForm(existingRecord.details);
+    if (
+      existingRecord.testType === TestType.Aggregate_Sieve &&
+      !stringValue(savedDetails.materialCondition).trim() &&
+      stringValue(savedDetails.condition).trim()
+    ) {
+      savedDetails.materialCondition = savedDetails.condition;
+    }
+    if (
+      existingRecord.testType === TestType.Aggregate_Sieve &&
+      !stringValue(savedDetails.dryWeight).trim() &&
+      stringValue(savedDetails.drySample).trim()
+    ) {
+      savedDetails.dryWeight = savedDetails.drySample;
+    }
+    if (
+      existingRecord.testType === TestType.Aggregate_Sieve &&
+      !stringValue(savedDetails.wetWeight).trim() &&
+      stringValue(savedDetails.wetSample).trim()
+    ) {
+      savedDetails.wetWeight = savedDetails.wetSample;
+    }
 
     setTestType(existingRecord.testType);
     setSampleDate(existingRecord.sampleDate.slice(0, 10));
@@ -671,13 +692,18 @@ export default function RecordForm() {
     }
     if (
       testType === TestType.Aggregate_Sieve &&
-      !stringValue(details.materialCondition).trim()
+      !stringValue(details.materialCondition || details.condition).trim()
     ) {
       toast.error("Please select the Aggregate material condition.");
       return;
     }
 
     let payloadDetails: Record<string, unknown> = { ...details };
+    if (testType === TestType.Aggregate_Sieve) {
+      payloadDetails.materialCondition = stringValue(
+        details.materialCondition || details.condition,
+      ).trim();
+    }
 
     if (usesSieveRows) {
       const materialReferenceItemId = materialReferenceItems.find(
@@ -1168,7 +1194,9 @@ export default function RecordForm() {
                     Material Condition <span className="text-destructive">*</span>
                   </Label>
                   <Select
-                    value={String(details.materialCondition ?? "")}
+                    value={String(
+                      details.materialCondition || details.condition || "",
+                    )}
                     onValueChange={(value) =>
                       handleDetailChange("materialCondition", value)
                     }
@@ -1450,13 +1478,13 @@ export default function RecordForm() {
                       [
                         "dryWeight",
                         testType === TestType.Aggregate_Sieve
-                          ? `Dry Sample Weight (${sieveMassUnit})`
+                          ? `Dry Weight (${sieveMassUnit})`
                           : `Dry Weight (${usesSieveRows ? sieveMassUnit : "kg"})`,
                       ],
                       [
                         "wetWeight",
                         testType === TestType.Aggregate_Sieve
-                          ? `Wet Sample Weight (${sieveMassUnit})`
+                          ? `Wet Weight (${sieveMassUnit})`
                           : `Wet Weight (${usesSieveRows ? sieveMassUnit : "kg"})`,
                       ],
                     ].map(([key, label]) => (

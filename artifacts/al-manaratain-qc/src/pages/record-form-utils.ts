@@ -12,6 +12,9 @@ export const AGGREGATE_CHEMISTRY_FIELDS = [
   { key: "drySiltWeight", label: "Dry Silt Weight (g)" },
 ] as const;
 
+export const AGGREGATE_CHLORIDE_LIMIT_PERCENT = 0.06;
+export const AGGREGATE_SULPHATE_LIMIT_PERCENT = 0.4;
+
 export type TestRow = {
   id: number;
   length: string;

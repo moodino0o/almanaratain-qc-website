@@ -15,6 +15,8 @@ import { ArrowLeft, Printer } from "lucide-react";
 import { useAppBack } from "@/hooks/use-app-back";
 import {
   AGGREGATE_CHEMISTRY_FIELDS,
+  AGGREGATE_CHLORIDE_LIMIT_PERCENT,
+  AGGREGATE_SULPHATE_LIMIT_PERCENT,
   blockMaterialMatches,
   blockSizeMatches,
   blockTypeMatches,
@@ -24,9 +26,6 @@ import {
   evaluateContentAgainstLimit,
   sortSieveRowsByPoreSize,
 } from "./record-form-utils";
-
-const AGGREGATE_CHLORIDE_LIMIT = 0.06;
-const AGGREGATE_SULPHATE_LIMIT = 0.4;
 
 type DetailMap = QcRecord["details"];
 type ValueMap = Record<string, unknown>;
@@ -1414,16 +1413,17 @@ function SieveReport({
   );
   const chlorideStatus = evaluateContentAgainstLimit(
     chlorideContent,
-    AGGREGATE_CHLORIDE_LIMIT,
+    AGGREGATE_CHLORIDE_LIMIT_PERCENT,
   );
   const sulphateStatus = evaluateContentAgainstLimit(
     sulphateContent,
-    AGGREGATE_SULPHATE_LIMIT,
+    AGGREGATE_SULPHATE_LIMIT_PERCENT,
   );
   const measurementEntries = isAggregate
     ? [
         ["Supplier", detailValue(details, ["supplier"])],
         ["Material Condition", detailValue(details, ["materialCondition", "condition"])],
+        ["Dry Weight (g)", drySampleWeight || "-"],
         ["Wet Weight (g)", wetSampleWeight || "-"],
         ["Moisture Content (%)", moistureContent || "-"],
         ["Fineness Modulus", detailValue(details, ["finenessModulus"])],
@@ -1498,7 +1498,7 @@ function SieveReport({
               <tr>
                 <td>Chloride Content</td>
                 <td>{chlorideContent === null ? "—" : `${chlorideContent.toFixed(2)}%`}</td>
-                <td>0.06%</td>
+                <td>{AGGREGATE_CHLORIDE_LIMIT_PERCENT.toFixed(2)}%</td>
                 <td className={chlorideStatus === "Fail" ? "text-red-700 font-bold" : chlorideStatus === "Pass" ? "text-green-700 font-bold" : ""}>
                   {chlorideStatus}
                 </td>
@@ -1506,7 +1506,7 @@ function SieveReport({
               <tr>
                 <td>Sulphate Content</td>
                 <td>{sulphateContent === null ? "—" : `${sulphateContent.toFixed(2)}%`}</td>
-                <td>0.40%</td>
+                <td>{AGGREGATE_SULPHATE_LIMIT_PERCENT.toFixed(2)}%</td>
                 <td className={sulphateStatus === "Fail" ? "text-red-700 font-bold" : sulphateStatus === "Pass" ? "text-green-700 font-bold" : ""}>
                   {sulphateStatus}
                 </td>
@@ -1723,6 +1723,8 @@ export default function ReportPrint() {
     ? isDammamLocation(record.location)
       ? "ASTM C140/C140M:2020a"
       : "BS EN 771-3:2003 (BS EN 772-1:2011)"
+    : record.testType === "Aggregate Sieve"
+      ? "BS812:PART103:1985"
     : record.testType === "Paving Blocks"
       ? configuredStandard || "BS EN 1338:2003"
       : configuredStandard

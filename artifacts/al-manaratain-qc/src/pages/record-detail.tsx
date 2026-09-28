@@ -12,10 +12,13 @@ import { getListRecordsQueryKey, getGetDashboardQueryKey, getGetRecordQueryKey }
 import { useState } from "react";
 import { useAppBack } from "@/hooks/use-app-back";
 import {
+  AGGREGATE_CHLORIDE_LIMIT_PERCENT,
   AGGREGATE_CHEMISTRY_FIELDS,
+  AGGREGATE_SULPHATE_LIMIT_PERCENT,
   calculateChlorideContent,
   calculateMoistureContent,
   calculateSulphateContent,
+  evaluateContentAgainstLimit,
 } from "./record-form-utils";
 
 function calculatedWaterAbsorption(values: Record<string, unknown>) {
@@ -476,55 +479,10 @@ export default function RecordDetail() {
     summaryEntries.push(
       ["Sample Weight", detailText(recordDetails, "sampleWeight")],
       ["Supplier", detailText(recordDetails, "supplier")],
-      [
-        record.testType === "Aggregate Sieve" ? "Material Condition" : "Condition",
-        record.testType === "Aggregate Sieve"
-          ? detailText(recordDetails, "materialCondition", detailText(recordDetails, "condition"))
-          : detailText(recordDetails, "condition"),
-      ],
     );
-    if (record.testType === "Aggregate Sieve") {
+    if (record.testType === "Sand Sieve") {
       summaryEntries.push(
-        [
-          "Wet Weight (g)",
-          detailText(recordDetails, "wetWeight", detailText(recordDetails, "wetSample")),
-        ],
-        [
-          "Moisture Content (%)",
-          calculateMoistureContent(
-            recordDetails.dryWeight ?? recordDetails.drySample,
-            recordDetails.wetWeight ?? recordDetails.wetSample,
-          ) || "—",
-        ],
-        ["Fineness Modulus", detailText(recordDetails, "finenessModulus")],
-        [
-          "Chloride Content",
-          (() => {
-            const content = calculateChlorideContent(
-              recordDetails.silverNitrateContent,
-              recordDetails.firstChlorideTitrationPoint,
-              recordDetails.secondChlorideTitrationPoint,
-            );
-            return content === null ? "—" : `${content.toFixed(2)}%`;
-          })(),
-        ],
-        [
-          "Sulphate Content",
-          (() => {
-            const content = calculateSulphateContent(
-              recordDetails.crucibleWeight,
-              recordDetails.crucibleAshWeight,
-            );
-            return content === null ? "—" : `${content.toFixed(2)}%`;
-          })(),
-        ],
-        ...AGGREGATE_CHEMISTRY_FIELDS.map(
-          ({ key, label }) =>
-            [label, detailText(recordDetails, key)] as const,
-        ),
-      );
-    } else {
-      summaryEntries.push(
+        ["Condition", detailText(recordDetails, "condition")],
         ["Dry Sample", detailText(recordDetails, "drySample")],
         ["Wet Sample", detailText(recordDetails, "wetSample")],
         ["Silt Before", detailText(recordDetails, "siltBefore")],
@@ -630,6 +588,83 @@ export default function RecordDetail() {
           <DetailSummaryTable entries={summaryEntries} />
         </CardContent>
       </Card>
+
+      {record.testType === "Aggregate Sieve" && (() => {
+        const chlorideContent = calculateChlorideContent(
+          recordDetails.silverNitrateContent,
+          recordDetails.firstChlorideTitrationPoint,
+          recordDetails.secondChlorideTitrationPoint,
+        );
+        const sulphateContent = calculateSulphateContent(
+          recordDetails.crucibleWeight,
+          recordDetails.crucibleAshWeight,
+        );
+        return (
+          <MeasurementTable
+            title="Aggregate Sieve Details"
+            entries={[
+              [
+                "Material Condition",
+                detailText(
+                  recordDetails,
+                  "materialCondition",
+                  detailText(recordDetails, "condition"),
+                ),
+              ],
+              [
+                "Dry Weight (g)",
+                detailText(recordDetails, "dryWeight", detailText(recordDetails, "drySample")),
+              ],
+              [
+                "Wet Weight (g)",
+                detailText(recordDetails, "wetWeight", detailText(recordDetails, "wetSample")),
+              ],
+              [
+                "Moisture Content (%)",
+                calculateMoistureContent(
+                  recordDetails.dryWeight ?? recordDetails.drySample,
+                  recordDetails.wetWeight ?? recordDetails.wetSample,
+                ) || "—",
+              ],
+              ["Fineness Modulus", detailText(recordDetails, "finenessModulus")],
+              [
+                "Chloride Content",
+                chlorideContent === null ? "—" : `${chlorideContent.toFixed(2)}%`,
+              ],
+              [
+                "Chloride Standard",
+                `${AGGREGATE_CHLORIDE_LIMIT_PERCENT.toFixed(2)}%`,
+              ],
+              [
+                "Chloride Result",
+                evaluateContentAgainstLimit(
+                  chlorideContent,
+                  AGGREGATE_CHLORIDE_LIMIT_PERCENT,
+                ),
+              ],
+              [
+                "Sulphate Content",
+                sulphateContent === null ? "—" : `${sulphateContent.toFixed(2)}%`,
+              ],
+              [
+                "Sulphate Standard",
+                `${AGGREGATE_SULPHATE_LIMIT_PERCENT.toFixed(2)}%`,
+              ],
+              [
+                "Sulphate Result",
+                evaluateContentAgainstLimit(
+                  sulphateContent,
+                  AGGREGATE_SULPHATE_LIMIT_PERCENT,
+                ),
+              ],
+              ...AGGREGATE_CHEMISTRY_FIELDS.map(
+                ({ key, label }) =>
+                  [label, detailText(recordDetails, key)] as const,
+              ),
+            ]}
+          />
+        );
+      })()}
 
       {record.testType === "Ready Mix" && (
         <>
