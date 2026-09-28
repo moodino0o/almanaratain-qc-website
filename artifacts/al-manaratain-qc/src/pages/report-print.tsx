@@ -14,13 +14,20 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer } from "lucide-react";
 import { useAppBack } from "@/hooks/use-app-back";
 import {
+  AGGREGATE_CHLORIDE_LIMIT_PERCENT,
+  AGGREGATE_SULPHATE_LIMIT_PERCENT,
   blockMaterialMatches,
   blockSizeMatches,
   blockTypeMatches,
-  calculateMoistureContent,
+  calculateChlorideContent,
   calculateRetainedPercentage,
   calculateSieveSampleWeight,
+  calculateSiltContent,
+  calculateSulphateContent,
+  evaluateContentAgainstLimit,
+  evaluateSiltContent,
   findSieveEvaluationCriterion,
+  SIEVE_SILT_LIMIT_PERCENT,
   stringValue,
   sortSieveRowsByPoreSize,
 } from "./record-form-utils";
@@ -1430,21 +1437,58 @@ function SieveReport({
   const sieveRows = Array.isArray(details.sieveRows) ? details.sieveRows : [];
   const evaluation = objectValue(details.sieveEvaluation);
   const isAggregate = record.testType === "Aggregate Sieve";
-  const drySampleWeight = detailRawValue(details, ["dryWeight", "drySample"], "");
-  const wetSampleWeight = detailRawValue(details, ["wetWeight", "wetSample"], "");
-  const moistureContent = calculateMoistureContent(
-    drySampleWeight,
-    wetSampleWeight,
+  const siltContent = calculateSiltContent(
+    details.siltBefore,
+    details.siltAfter,
   );
+  const siltStatus = evaluateSiltContent(siltContent);
+  const chlorideContent = calculateChlorideContent(
+    details.silverNitrateContent,
+    details.firstChlorideTitrationPoint,
+    details.secondChlorideTitrationPoint,
+  );
+  const chlorideStatus = evaluateContentAgainstLimit(
+    chlorideContent,
+    AGGREGATE_CHLORIDE_LIMIT_PERCENT,
+  );
+  const sulphateContent = calculateSulphateContent(
+    details.crucibleWeight,
+    details.crucibleAshWeight,
+  );
+  const sulphateStatus = evaluateContentAgainstLimit(
+    sulphateContent,
+    AGGREGATE_SULPHATE_LIMIT_PERCENT,
+  );
+  const chemicalResults = [
+    {
+      label: "Silt Content",
+      result: siltContent === null ? "—" : `${siltContent.toFixed(2)}%`,
+      standard: `< ${SIEVE_SILT_LIMIT_PERCENT}%`,
+      status: siltStatus,
+    },
+    {
+      label: "Chloride Content",
+      result: chlorideContent === null ? "—" : `${chlorideContent.toFixed(2)}%`,
+      standard: `≤ ${AGGREGATE_CHLORIDE_LIMIT_PERCENT.toFixed(2)}%`,
+      status: chlorideStatus,
+    },
+    {
+      label: "Sulphate Content",
+      result: sulphateContent === null ? "—" : `${sulphateContent.toFixed(2)}%`,
+      standard: `≤ ${AGGREGATE_SULPHATE_LIMIT_PERCENT.toFixed(2)}%`,
+      status: sulphateStatus,
+    },
+  ] as const;
   const measurementEntries = [
     ["Supplier", detailValue(details, ["supplier"])],
     [
       isAggregate ? "Material Condition" : "Sand Condition",
       detailValue(details, ["materialCondition", "condition"]),
     ],
-    ["Dry Weight (g)", drySampleWeight || "-"],
-    ["Wet Weight (g)", wetSampleWeight || "-"],
-    ["Moisture Content (%)", moistureContent || "-"],
+    [
+      "Silt Content",
+      siltContent === null ? "-" : `${siltContent.toFixed(2)}%`,
+    ],
     ["Fineness Modulus", detailValue(details, ["finenessModulus"])],
   ] as const;
   const testingDate = stringValue(details.testingDate);
@@ -1464,8 +1508,6 @@ function SieveReport({
               ["Factory", record.location],
               ["Material Type", record.material],
               ["Block Plant", detailValue(details, ["blockPlant"])],
-              ["Sampled-Tested By", record.testedBy],
-              ["Approved By", record.reviewedBy || "ADEL ABBAS EBRAHIM"],
             ]}
           />
         </section>
@@ -1487,6 +1529,42 @@ function SieveReport({
         layout={layout}
         evaluation={evaluation}
       />
+      <section className="report-summary mt-3">
+        <SectionHeading>Chemical Test Results</SectionHeading>
+        <p className="mb-2 text-xs text-slate-600">
+          Test method: BS812:Part 117 and 118:1988
+        </p>
+        <table className="report-table">
+          <thead>
+            <tr>
+              <th>Test</th>
+              <th>Result</th>
+              <th>Standard</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {chemicalResults.map((result) => (
+              <tr key={result.label}>
+                <td>{result.label}</td>
+                <td>{result.result}</td>
+                <td>{result.standard}</td>
+                <td
+                  className={
+                    result.status === "Pass"
+                      ? "font-semibold text-green-700"
+                      : result.status === "Fail"
+                        ? "font-semibold text-red-700"
+                        : "text-muted-foreground"
+                  }
+                >
+                  {result.status}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
     </>
   );
 }
