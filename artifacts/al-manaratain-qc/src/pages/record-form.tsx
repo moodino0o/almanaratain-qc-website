@@ -15,6 +15,7 @@ import { Link } from "wouter";
 import { useAppBack } from "@/hooks/use-app-back";
 import { TypeaheadInput } from "@/components/ui/typeahead-input";
 import {
+  AGGREGATE_CHEMISTRY_FIELDS,
   calculateWaterAbsorption,
   calculateBlockDensity,
   calculateBlockStrengths,
@@ -1461,6 +1462,35 @@ export default function RecordForm() {
                     ))}
                   </div>
                 </div>
+              )}
+              {testType === TestType.Aggregate_Sieve && (
+                <section className="mb-6 rounded-md border border-amber-500/25 bg-amber-500/[0.035] p-4">
+                  <div className="mb-3">
+                    <h3 className="font-semibold text-foreground">
+                      Chloride and Sulphate Content
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      Enter the laboratory readings used to calculate chloride and sulphate content.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {AGGREGATE_CHEMISTRY_FIELDS.map(({ key, label }) => (
+                      <div key={key} className="space-y-2">
+                        <Label htmlFor={`aggregate-${key}`}>{label}</Label>
+                        <Input
+                          id={`aggregate-${key}`}
+                          type="text"
+                          inputMode="decimal"
+                          value={String(details[key] ?? "")}
+                          onChange={(event) =>
+                            handleDetailChange(key, event.target.value)
+                          }
+                          placeholder="Enter value"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </section>
               )}
               {usesTestRows || usesSieveRows ? (
                 <div className="space-y-3">

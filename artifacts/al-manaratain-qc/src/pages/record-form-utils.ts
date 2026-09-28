@@ -2,6 +2,16 @@ import type { QcRecord } from "@workspace/api-client-react";
 
 export const BLOCK_RECORD_MATERIAL = "Concrete Block";
 
+export const AGGREGATE_CHEMISTRY_FIELDS = [
+  { key: "silverNitrateContent", label: "Silver Nitrate Content" },
+  { key: "firstChlorideTitrationPoint", label: "1st Cl titration point" },
+  { key: "secondChlorideTitrationPoint", label: "2nd Cl titration point" },
+  { key: "crucibleWeight", label: "Crucible Weight (g)" },
+  { key: "crucibleAshWeight", label: "Cruc. + Ash weight (g)" },
+  { key: "wetSiltWeight", label: "Wet Silt Weight (g)" },
+  { key: "drySiltWeight", label: "Dry Silt Weight (g)" },
+] as const;
+
 export type TestRow = {
   id: number;
   length: string;

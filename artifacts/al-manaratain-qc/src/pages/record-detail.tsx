@@ -11,7 +11,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { getListRecordsQueryKey, getGetDashboardQueryKey, getGetRecordQueryKey } from "@workspace/api-client-react";
 import { useState } from "react";
 import { useAppBack } from "@/hooks/use-app-back";
-import { calculateMoistureContent } from "./record-form-utils";
+import {
+  AGGREGATE_CHEMISTRY_FIELDS,
+  calculateMoistureContent,
+} from "./record-form-utils";
 
 function calculatedWaterAbsorption(values: Record<string, unknown>) {
   const dryWeight = Number(values.dryWeight);
@@ -481,11 +484,7 @@ export default function RecordDetail() {
     if (record.testType === "Aggregate Sieve") {
       summaryEntries.push(
         [
-          "Dry Sample Weight (g)",
-          detailText(recordDetails, "dryWeight", detailText(recordDetails, "drySample")),
-        ],
-        [
-          "Wet Sample Weight (g)",
+          "Wet Weight (g)",
           detailText(recordDetails, "wetWeight", detailText(recordDetails, "wetSample")),
         ],
         [
@@ -496,6 +495,10 @@ export default function RecordDetail() {
           ) || "—",
         ],
         ["Fineness Modulus", detailText(recordDetails, "finenessModulus")],
+        ...AGGREGATE_CHEMISTRY_FIELDS.map(
+          ({ key, label }) =>
+            [label, detailText(recordDetails, key)] as const,
+        ),
       );
     } else {
       summaryEntries.push(

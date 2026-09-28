@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer } from "lucide-react";
 import { useAppBack } from "@/hooks/use-app-back";
 import {
+  AGGREGATE_CHEMISTRY_FIELDS,
   blockMaterialMatches,
   blockSizeMatches,
   blockTypeMatches,
@@ -1400,8 +1401,7 @@ function SieveReport({
     ? [
         ["Supplier", detailValue(details, ["supplier"])],
         ["Material Condition", detailValue(details, ["materialCondition", "condition"])],
-        ["Dry Sample Weight (g)", drySampleWeight || "-"],
-        ["Wet Sample Weight (g)", wetSampleWeight || "-"],
+        ["Wet Weight (g)", wetSampleWeight || "-"],
         ["Moisture Content (%)", moistureContent || "-"],
         ["Fineness Modulus", detailValue(details, ["finenessModulus"])],
       ] as const
@@ -1433,6 +1433,17 @@ function SieveReport({
           <ReportFields entries={measurementEntries} />
         </section>
       </div>
+      {isAggregate && (
+        <section className="report-summary">
+          <SectionHeading>Chloride and Sulphate Test Inputs</SectionHeading>
+          <ReportFields
+            entries={AGGREGATE_CHEMISTRY_FIELDS.map(({ key, label }) => [
+              label,
+              detailValue(details, [key]),
+            ] as const)}
+          />
+        </section>
+      )}
 
       <SieveRowsTable rows={sieveRows} layout={layout} />
       {evaluation && (
