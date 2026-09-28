@@ -18,7 +18,9 @@ import {
   blockMaterialMatches,
   blockSizeMatches,
   blockTypeMatches,
+  calculateChlorideContent,
   calculateMoistureContent,
+  calculateSulphateContent,
   sortSieveRowsByPoreSize,
 } from "./record-form-utils";
 
@@ -1397,6 +1399,15 @@ function SieveReport({
     drySampleWeight,
     wetSampleWeight,
   );
+  const chlorideContent = calculateChlorideContent(
+    details.silverNitrateContent,
+    details.firstChlorideTitrationPoint,
+    details.secondChlorideTitrationPoint,
+  );
+  const sulphateContent = calculateSulphateContent(
+    details.crucibleWeight,
+    details.crucibleAshWeight,
+  );
   const measurementEntries = isAggregate
     ? [
         ["Supplier", detailValue(details, ["supplier"])],
@@ -1435,12 +1446,16 @@ function SieveReport({
       </div>
       {isAggregate && (
         <section className="report-summary">
-          <SectionHeading>Chloride and Sulphate Test Inputs</SectionHeading>
+          <SectionHeading>Chloride and Sulphate Content</SectionHeading>
           <ReportFields
-            entries={AGGREGATE_CHEMISTRY_FIELDS.map(({ key, label }) => [
-              label,
-              detailValue(details, [key]),
-            ] as const)}
+            entries={[
+              ["Chloride Content", chlorideContent || "-"],
+              ["Sulphate Content", sulphateContent || "-"],
+              ...AGGREGATE_CHEMISTRY_FIELDS.map(({ key, label }) => [
+                label,
+                detailValue(details, [key]),
+              ] as const),
+            ]}
           />
         </section>
       )}

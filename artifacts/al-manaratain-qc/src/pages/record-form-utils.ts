@@ -180,6 +180,42 @@ export const calculateWaterAbsorption = (dryWeight: unknown, wetWeight: unknown)
 export const calculateMoistureContent = (dryWeight: unknown, wetWeight: unknown) =>
   calculateWaterAbsorption(dryWeight, wetWeight);
 
+const finiteNumericValue = (value: unknown) => {
+  const valueText = numericInputValue(value);
+  if (!valueText) return null;
+  const numericValue = Number(valueText);
+  return Number.isFinite(numericValue) ? numericValue : null;
+};
+
+export const calculateChlorideContent = (
+  silverNitrateContent: unknown,
+  firstTitrationPoint: unknown,
+  secondTitrationPoint: unknown,
+) => {
+  const silverNitrate = finiteNumericValue(silverNitrateContent);
+  const firstPoint = finiteNumericValue(firstTitrationPoint);
+  const secondPoint = finiteNumericValue(secondTitrationPoint);
+  if (silverNitrate === null || firstPoint === null || secondPoint === null) {
+    return "";
+  }
+
+  return (
+    0.07092 *
+    (silverNitrate - 10 * 0.1 * (secondPoint - firstPoint))
+  ).toFixed(2);
+};
+
+export const calculateSulphateContent = (
+  crucibleWeight: unknown,
+  crucibleAshWeight: unknown,
+) => {
+  const crucible = finiteNumericValue(crucibleWeight);
+  const crucibleWithAsh = finiteNumericValue(crucibleAshWeight);
+  if (crucible === null || crucibleWithAsh === null) return "";
+
+  return (((crucibleWithAsh - crucible) * 34.3) / 3).toFixed(2);
+};
+
 export const calculateBlockDensity = ({
   length,
   width,

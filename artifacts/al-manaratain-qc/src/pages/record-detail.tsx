@@ -13,7 +13,9 @@ import { useState } from "react";
 import { useAppBack } from "@/hooks/use-app-back";
 import {
   AGGREGATE_CHEMISTRY_FIELDS,
+  calculateChlorideContent,
   calculateMoistureContent,
+  calculateSulphateContent,
 } from "./record-form-utils";
 
 function calculatedWaterAbsorption(values: Record<string, unknown>) {
@@ -495,6 +497,21 @@ export default function RecordDetail() {
           ) || "—",
         ],
         ["Fineness Modulus", detailText(recordDetails, "finenessModulus")],
+        [
+          "Chloride Content",
+          calculateChlorideContent(
+            recordDetails.silverNitrateContent,
+            recordDetails.firstChlorideTitrationPoint,
+            recordDetails.secondChlorideTitrationPoint,
+          ) || "—",
+        ],
+        [
+          "Sulphate Content",
+          calculateSulphateContent(
+            recordDetails.crucibleWeight,
+            recordDetails.crucibleAshWeight,
+          ) || "—",
+        ],
         ...AGGREGATE_CHEMISTRY_FIELDS.map(
           ({ key, label }) =>
             [label, detailText(recordDetails, key)] as const,

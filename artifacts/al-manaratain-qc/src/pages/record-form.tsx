@@ -16,7 +16,9 @@ import { useAppBack } from "@/hooks/use-app-back";
 import { TypeaheadInput } from "@/components/ui/typeahead-input";
 import {
   AGGREGATE_CHEMISTRY_FIELDS,
+  calculateChlorideContent,
   calculateWaterAbsorption,
+  calculateSulphateContent,
   calculateBlockDensity,
   calculateBlockStrengths,
   calculatePavingStrengths,
@@ -205,6 +207,15 @@ export default function RecordForm() {
   const calculatedSieveSampleWeight = usesSieveRows
     ? calculateSieveSampleWeight(testRows)
     : null;
+  const calculatedChlorideContent = calculateChlorideContent(
+    details.silverNitrateContent,
+    details.firstChlorideTitrationPoint,
+    details.secondChlorideTitrationPoint,
+  );
+  const calculatedSulphateContent = calculateSulphateContent(
+    details.crucibleWeight,
+    details.crucibleAshWeight,
+  );
 
   useEffect(() => {
     if (testType !== TestType.Blocks) {
@@ -1487,6 +1498,25 @@ export default function RecordForm() {
                           }
                           placeholder="Enter value"
                         />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    {[
+                      {
+                        label: "Chloride Content",
+                        value: calculatedChlorideContent,
+                      },
+                      {
+                        label: "Sulphate Content",
+                        value: calculatedSulphateContent,
+                      },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="space-y-2">
+                        <Label>{label}</Label>
+                        <div className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground">
+                          {value || "—"}
+                        </div>
                       </div>
                     ))}
                   </div>

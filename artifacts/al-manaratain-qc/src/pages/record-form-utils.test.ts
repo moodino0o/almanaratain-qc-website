@@ -9,8 +9,10 @@ import {
   blockTypeMatches,
   calculateBlockDensity,
   calculateBlockStrengths,
+  calculateChlorideContent,
   calculateMoistureContent,
   calculatePavingStrengths,
+  calculateSulphateContent,
   pavingCorrectionFactorFromSize,
   calculateSieveSampleWeight,
   calculateSieveResults,
@@ -36,6 +38,13 @@ test("calculates aggregate moisture content from dry and wet sample weights", ()
   assert.equal(calculateMoistureContent("100", "112.5"), "12.50");
   assert.equal(calculateMoistureContent("0", "112.5"), "");
   assert.equal(calculateMoistureContent("", "112.5"), "");
+});
+
+test("calculates aggregate chloride and sulphate content from the supplied equations", () => {
+  assert.equal(calculateChlorideContent("25", "1.2", "2.4"), "1.69");
+  assert.equal(calculateChlorideContent("25", "", "2.4"), "");
+  assert.equal(calculateSulphateContent("10", "10.25"), "2.86");
+  assert.equal(calculateSulphateContent("10", ""), "");
 });
 
 const baseRecord = (
