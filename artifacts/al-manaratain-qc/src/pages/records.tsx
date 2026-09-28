@@ -219,43 +219,43 @@ export default function Records() {
         </CardHeader>
         <CardContent className="flex-1 overflow-auto p-0">
           <div className="w-full overflow-x-auto xl:overflow-x-visible">
-          <Table className="w-full min-w-[1240px] table-fixed text-[11px] leading-tight xl:min-w-0">
+          <Table className="w-full min-w-0 table-fixed text-[9px] leading-tight sm:text-[10px]">
             <TableHeader className="sticky top-0 bg-card z-10 shadow-sm">
               <TableRow>
-                <TableHead className={`${columnWidths.record} px-1.5 py-2 text-[10px] leading-tight`}>
+                <TableHead className={`${columnWidths.record} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>
                   {section === "readymix" ? "Reference No." : "Record No."}
                 </TableHead>
-                <TableHead className={`${columnWidths.testType} px-1.5 py-2 text-[10px] leading-tight`}>Test Type</TableHead>
-                <TableHead className={`${columnWidths.location} px-1.5 py-2 text-[10px] leading-tight`}>Location</TableHead>
+                <TableHead className={`${columnWidths.testType} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>Test Type</TableHead>
+                <TableHead className={`${columnWidths.location} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>Location</TableHead>
                 {!hideCustomerAndSiteLocation && (
-                  <TableHead className={`${columnWidths.customer} px-1.5 py-2 text-[10px] leading-tight`}>Customer Name</TableHead>
+                  <TableHead className={`${columnWidths.customer} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>Customer Name</TableHead>
                 )}
                 {!hideCustomerAndSiteLocation && (
-                  <TableHead className={`${columnWidths.siteLocation} px-1.5 py-2 text-[10px] leading-tight`}>Site Location</TableHead>
+                  <TableHead className={`${columnWidths.siteLocation} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>Site Location</TableHead>
                 )}
-                <TableHead className={`${columnWidths.material} px-1.5 py-2 text-[10px] leading-tight`}>Material</TableHead>
-                <TableHead className={`${columnWidths.sampleDate} px-1.5 py-2 text-[10px] leading-tight`}>Sample Date</TableHead>
+                <TableHead className={`${columnWidths.material} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>Material</TableHead>
+                <TableHead className={`${columnWidths.sampleDate} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>Sample Date</TableHead>
                 {(isMasonrySection || isAggregateSection) ? (
-                  <TableHead className={`${columnWidths.remarks} px-1.5 py-2 text-[10px] leading-tight`}>
+                  <TableHead className={`${columnWidths.remarks} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>
                     Remarks
                   </TableHead>
                 ) : !isReadyMixSection && (
-                  <TableHead className={`${columnWidths.testedBy} px-1.5 py-2 text-[10px] leading-tight`}>Tested By</TableHead>
+                  <TableHead className={`${columnWidths.testedBy} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>Tested By</TableHead>
                 )}
-                <TableHead className={`${columnWidths.status} px-1.5 py-2 text-[10px] leading-tight`}>Status</TableHead>
+                <TableHead className={`${columnWidths.status} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>Status</TableHead>
                 {isMasonrySection && (
                   <>
-                    <TableHead className="w-[8%] px-1 py-2 text-right text-[10px] leading-tight">Avg. (N/mm²)</TableHead>
-                    <TableHead className="w-[8%] px-1 py-2 text-right text-[10px] leading-tight">Min. (N/mm²)</TableHead>
-                    <TableHead className="w-[8%] px-1 py-2 text-right text-[10px] leading-tight">Max. (N/mm²)</TableHead>
+                    <TableHead className="w-[8%] whitespace-normal break-words px-1 py-1.5 text-right text-[9px] leading-tight sm:text-[10px]">Avg. (N/mm²)</TableHead>
+                    <TableHead className="w-[8%] whitespace-normal break-words px-1 py-1.5 text-right text-[9px] leading-tight sm:text-[10px]">Min. (N/mm²)</TableHead>
+                    <TableHead className="w-[8%] whitespace-normal break-words px-1 py-1.5 text-right text-[9px] leading-tight sm:text-[10px]">Max. (N/mm²)</TableHead>
                   </>
                 )}
                 {isReadyMixSection && (
-                  <TableHead className="w-[20%] px-1 py-2 text-[10px] leading-tight">
+                  <TableHead className="w-[20%] whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]">
                     Avg. strength by age (N/mm²)
                   </TableHead>
                 )}
-                <TableHead className={`${columnWidths.actions} px-1 py-2 text-right text-[10px] leading-tight`}>Actions</TableHead>
+                <TableHead className={`${columnWidths.actions} whitespace-normal break-words px-1 py-1.5 text-right text-[9px] leading-tight sm:text-[10px]`}>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -280,39 +280,39 @@ export default function Records() {
               ) : (
                 sectionRecords.map((record) => (
                   <TableRow key={record.id}>
-                    <TableCell className="break-words px-1.5 py-2 font-semibold text-primary">
+                    <TableCell className="whitespace-normal break-words px-1 py-1 font-semibold text-primary">
                       {isReadyMixSection
                         ? getRecordDetail(record.details, ["referenceNumber", "referenceNo", "reference"])
                         : record.recordNo}
                     </TableCell>
-                    <TableCell className="whitespace-normal break-words px-1.5 py-2">
+                    <TableCell className="whitespace-normal break-words px-1 py-1">
                       <span className="inline-block max-w-full break-words rounded-sm bg-muted px-1 py-0.5 text-[10px] font-medium leading-tight">
                         {record.testType}
                       </span>
                     </TableCell>
-                    <TableCell className="whitespace-normal break-words px-1.5 py-2">{record.location}</TableCell>
+                    <TableCell className="whitespace-normal break-words px-1 py-1">{record.location}</TableCell>
                     {!hideCustomerAndSiteLocation && (
-                      <TableCell className="whitespace-normal break-words px-1.5 py-2">
+                      <TableCell className="whitespace-normal break-words px-1 py-1">
                         {getRecordDetail(record.details, ["customerName", "customer"])}
                       </TableCell>
                     )}
                     {!hideCustomerAndSiteLocation && (
-                      <TableCell className="whitespace-normal break-words px-1.5 py-2">
+                      <TableCell className="whitespace-normal break-words px-1 py-1">
                         {getRecordDetail(record.details, ["customerLocation", "siteLocation", "site"])}
                       </TableCell>
                     )}
-                    <TableCell className="whitespace-normal break-words px-1.5 py-2">{record.material}</TableCell>
-                    <TableCell className="whitespace-normal break-words px-1.5 py-2">{formatDate(record.sampleDate)}</TableCell>
+                    <TableCell className="whitespace-normal break-words px-1 py-1">{record.material}</TableCell>
+                    <TableCell className="whitespace-normal break-words px-1 py-1">{formatDate(record.sampleDate)}</TableCell>
                     {(isMasonrySection || isAggregateSection) ? (
-                      <TableCell className="whitespace-normal break-words px-1.5 py-2">
+                      <TableCell className="whitespace-normal break-words px-1 py-1">
                         {record.remarks?.trim() || "—"}
                       </TableCell>
                     ) : !isReadyMixSection && (
-                      <TableCell className="whitespace-normal break-words px-1.5 py-2">{record.testedBy}</TableCell>
+                      <TableCell className="whitespace-normal break-words px-1 py-1">{record.testedBy}</TableCell>
                     )}
-                    <TableCell className="px-1.5 py-2">{getStatusBadge(record.status)}</TableCell>
+                    <TableCell className="px-1 py-1">{getStatusBadge(record.status)}</TableCell>
                     {isReadyMixSection && (
-                      <TableCell className="px-1 py-2">
+                      <TableCell className="px-1 py-1">
                         <div className="space-y-1 text-[9px] leading-tight tabular-nums">
                           <div className="flex justify-between gap-1">
                             <span className="text-muted-foreground">2–5 days</span>
@@ -337,28 +337,28 @@ export default function Records() {
                     )}
                     {isMasonrySection && (
                       <>
-                        <TableCell className="px-1 py-2 text-right tabular-nums">
+                        <TableCell className="px-1 py-1 text-right tabular-nums">
                           {masonryStrengthSummaries.get(record.id)?.averageStrength.toFixed(2) ?? "—"}
                         </TableCell>
-                        <TableCell className="px-1 py-2 text-right tabular-nums">
+                        <TableCell className="px-1 py-1 text-right tabular-nums">
                           {masonryStrengthSummaries.get(record.id)?.minimumStrength.toFixed(2) ?? "—"}
                         </TableCell>
-                        <TableCell className="px-1 py-2 text-right tabular-nums">
+                        <TableCell className="px-1 py-1 text-right tabular-nums">
                           {masonryStrengthSummaries.get(record.id)?.maximumStrength.toFixed(2) ?? "—"}
                         </TableCell>
                       </>
                     )}
-                    <TableCell className="px-1 py-2 text-right">
-                      <div className="flex flex-wrap justify-end gap-1">
+                    <TableCell className="px-1 py-1 text-right">
+                      <div className="flex flex-wrap justify-end gap-0.5">
                         <Link
                           href={`/records/${record.id}`}
-                          className="inline-flex h-7 items-center justify-center whitespace-nowrap rounded-md bg-secondary px-1.5 text-[10px] font-medium text-secondary-foreground shadow-sm transition-colors hover:bg-secondary/80"
+                          className="inline-flex h-6 items-center justify-center whitespace-nowrap rounded-md bg-secondary px-1 text-[9px] font-medium text-secondary-foreground shadow-sm transition-colors hover:bg-secondary/80 sm:text-[10px]"
                         >
                           View
                         </Link>
                         <Link
                           href={`/reports/${record.id}`}
-                          className="inline-flex h-7 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-1.5 text-[10px] font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+                          className="inline-flex h-6 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-1 text-[9px] font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground sm:text-[10px]"
                         >
                           <Printer className="mr-1 h-3 w-3 shrink-0" />
                           Print
