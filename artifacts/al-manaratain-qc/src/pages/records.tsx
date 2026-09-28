@@ -10,6 +10,10 @@ import { CheckCircle2, AlertTriangle, XCircle, Search, Plus, Printer, TablePrope
 import { formatDate } from "@/lib/utils";
 import { useAuth } from "@workspace/replit-auth-web";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  calculateReadyMixAgeBandAverages,
+  type ReadyMixAgeBandAverages,
+} from "./records-utils";
 
 type RegisterSection = "all" | "readymix" | "masonry" | "aggregate";
 
@@ -43,6 +47,16 @@ export default function Records() {
         return allRecords;
     }
   }, [records, section]);
+  const isReadyMixSection = section === "readymix";
+  const readyMixAgeAverages = useMemo(() => {
+    const averages = new Map<number, ReadyMixAgeBandAverages>();
+    if (isReadyMixSection) {
+      for (const record of sectionRecords) {
+        averages.set(record.id, calculateReadyMixAgeBandAverages(record.details));
+      }
+    }
+    return averages;
+  }, [isReadyMixSection, sectionRecords]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -117,24 +131,29 @@ export default function Records() {
           <Table className="w-full table-fixed text-[11px] leading-tight">
             <TableHeader className="sticky top-0 bg-card z-10 shadow-sm">
               <TableRow>
-                <TableHead className="w-[8%] px-1.5 py-2 text-[10px] leading-tight">
+                <TableHead className={`${isReadyMixSection ? "w-[9%]" : "w-[8%]"} px-1.5 py-2 text-[10px] leading-tight`}>
                   {section === "readymix" ? "Reference No." : "Record No."}
                 </TableHead>
-                <TableHead className="w-[11%] px-1.5 py-2 text-[10px] leading-tight">Test Type</TableHead>
-                <TableHead className="w-[9%] px-1.5 py-2 text-[10px] leading-tight">Location</TableHead>
-                <TableHead className="w-[11%] px-1.5 py-2 text-[10px] leading-tight">Customer Name</TableHead>
-                <TableHead className="w-[10%] px-1.5 py-2 text-[10px] leading-tight">Site Location</TableHead>
-                <TableHead className="w-[12%] px-1.5 py-2 text-[10px] leading-tight">Material</TableHead>
-                <TableHead className="w-[8%] px-1.5 py-2 text-[10px] leading-tight">Sample Date</TableHead>
-                <TableHead className="w-[9%] px-1.5 py-2 text-[10px] leading-tight">Tested By</TableHead>
-                <TableHead className="w-[8%] px-1.5 py-2 text-[10px] leading-tight">Status</TableHead>
-                <TableHead className="w-[14%] px-1 py-2 text-right text-[10px] leading-tight">Actions</TableHead>
+                <TableHead className={`${isReadyMixSection ? "w-[9%]" : "w-[11%]"} px-1.5 py-2 text-[10px] leading-tight`}>Test Type</TableHead>
+                <TableHead className={`${isReadyMixSection ? "w-[7%]" : "w-[9%]"} px-1.5 py-2 text-[10px] leading-tight`}>Location</TableHead>
+                <TableHead className={`${isReadyMixSection ? "w-[9%]" : "w-[11%]"} px-1.5 py-2 text-[10px] leading-tight`}>Customer Name</TableHead>
+                <TableHead className={`${isReadyMixSection ? "w-[8%]" : "w-[10%]"} px-1.5 py-2 text-[10px] leading-tight`}>Site Location</TableHead>
+                <TableHead className={`${isReadyMixSection ? "w-[10%]" : "w-[12%]"} px-1.5 py-2 text-[10px] leading-tight`}>Material</TableHead>
+                <TableHead className={`${isReadyMixSection ? "w-[7%]" : "w-[8%]"} px-1.5 py-2 text-[10px] leading-tight`}>Sample Date</TableHead>
+                <TableHead className={`${isReadyMixSection ? "w-[8%]" : "w-[9%]"} px-1.5 py-2 text-[10px] leading-tight`}>Tested By</TableHead>
+                <TableHead className={`${isReadyMixSection ? "w-[7%]" : "w-[8%]"} px-1.5 py-2 text-[10px] leading-tight`}>Status</TableHead>
+                {isReadyMixSection && (
+                  <TableHead className="w-[15%] px-1 py-2 text-[10px] leading-tight">
+                    Avg. strength by age (N/mm²)
+                  </TableHead>
+                )}
+                <TableHead className={`${isReadyMixSection ? "w-[11%]" : "w-[14%]"} px-1 py-2 text-right text-[10px] leading-tight`}>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center h-48 text-muted-foreground">
+                  <TableCell colSpan={isReadyMixSection ? 11 : 10} className="text-center h-48 text-muted-foreground">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
                       Loading register...
@@ -143,7 +162,7 @@ export default function Records() {
                 </TableRow>
               ) : sectionRecords.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center h-48 text-muted-foreground">
+                  <TableCell colSpan={isReadyMixSection ? 11 : 10} className="text-center h-48 text-muted-foreground">
                     <div className="flex flex-col items-center justify-center">
                       <Search className="w-10 h-10 text-muted-foreground/30 mb-2" />
                       <p>No records found matching your filters.</p>
@@ -154,8 +173,8 @@ export default function Records() {
                 sectionRecords.map((record) => (
                   <TableRow key={record.id}>
                     <TableCell className="break-words px-1.5 py-2 font-semibold text-primary">
-                      {section === "readymix"
-                        ? getRecordDetail(record.details, ["referenceNumber"])
+                      {isReadyMixSection
+                        ? getRecordDetail(record.details, ["referenceNumber", "referenceNo", "reference"])
                         : record.recordNo}
                     </TableCell>
                     <TableCell className="whitespace-normal break-words px-1.5 py-2">
@@ -174,6 +193,30 @@ export default function Records() {
                     <TableCell className="whitespace-normal break-words px-1.5 py-2">{formatDate(record.sampleDate)}</TableCell>
                     <TableCell className="whitespace-normal break-words px-1.5 py-2">{record.testedBy}</TableCell>
                     <TableCell className="px-1.5 py-2">{getStatusBadge(record.status)}</TableCell>
+                    {isReadyMixSection && (
+                      <TableCell className="px-1 py-2">
+                        <div className="space-y-1 text-[9px] leading-tight tabular-nums">
+                          <div className="flex justify-between gap-1">
+                            <span className="text-muted-foreground">2–5 days</span>
+                            <span className="font-medium">
+                              {readyMixAgeAverages.get(record.id)?.twoToFiveDays?.toFixed(2) ?? "—"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between gap-1">
+                            <span className="text-muted-foreground">6–8 days</span>
+                            <span className="font-medium">
+                              {readyMixAgeAverages.get(record.id)?.sixToEightDays?.toFixed(2) ?? "—"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between gap-1">
+                            <span className="text-muted-foreground">28–29 days</span>
+                            <span className="font-medium">
+                              {readyMixAgeAverages.get(record.id)?.twentyEightToTwentyNineDays?.toFixed(2) ?? "—"}
+                            </span>
+                          </div>
+                        </div>
+                      </TableCell>
+                    )}
                     <TableCell className="px-1 py-2 text-right">
                       <div className="flex flex-wrap justify-end gap-1">
                         <Link
