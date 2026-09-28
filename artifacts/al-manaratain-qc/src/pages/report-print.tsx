@@ -1464,35 +1464,40 @@ function SieveReport({
   );
   const testDetailRows = [
     {
-      label: "Sieve Sample Weight",
+      label: "Sieve Weight",
       result: sieveSampleWeight > 0 ? `${sieveSampleWeight.toFixed(2)} g` : "—",
       standard: "—",
       status: "—",
     },
     {
-      label: "Moisture Content",
+      label: "Moisture",
       result: moistureContent ? `${moistureContent}%` : "—",
       standard: "—",
       status: "—",
     },
     {
-      label: "Silt Content",
+      label: "Silt",
       result: siltContent === null ? "—" : `${siltContent.toFixed(2)}%`,
       standard: `< ${SIEVE_SILT_LIMIT_PERCENT}%`,
       status: siltStatus,
     },
     {
-      label: "Chloride Content",
+      label: "Chloride",
       result: chlorideContent === null ? "—" : `${chlorideContent.toFixed(3)}%`,
       standard: `≤ ${AGGREGATE_CHLORIDE_LIMIT_PERCENT.toFixed(2)}%`,
       status: chlorideStatus,
     },
     {
-      label: "Sulphate Content",
+      label: "Sulphate",
       result: sulphateContent === null ? "—" : `${sulphateContent.toFixed(2)}%`,
       standard: `≤ ${AGGREGATE_SULPHATE_LIMIT_PERCENT.toFixed(2)}%`,
       status: sulphateStatus,
     },
+  ] as const;
+  const detailTableRows = [
+    { label: "Result", key: "result" },
+    { label: "Standard", key: "standard" },
+    { label: "Status", key: "status" },
   ] as const;
   const measurementEntries = [
     ["Supplier", detailValue(details, ["supplier"])],
@@ -1536,34 +1541,35 @@ function SieveReport({
         <SectionHeading>Sieve, Moisture and Chemical Test Details</SectionHeading>
         <div className="report-small-table-wrap">
           <table className="report-table report-small-table">
-          <thead>
-            <tr>
-              <th>Test / Detail</th>
-              <th>Result</th>
-              <th>Standard</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {testDetailRows.map((result) => (
-              <tr key={result.label}>
-                <td>{result.label}</td>
-                <td>{result.result}</td>
-                <td>{result.standard}</td>
-                <td
-                  className={
-                    result.status === "Pass"
-                      ? "font-semibold text-green-700"
-                      : result.status === "Fail"
-                        ? "font-semibold text-red-700"
-                        : "text-muted-foreground"
-                  }
-                >
-                  {result.status}
-                </td>
+            <thead>
+              <tr>
+                <th scope="col">Measure</th>
+                {testDetailRows.map((detail) => (
+                  <th key={detail.label} scope="col">{detail.label}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
+            </thead>
+            <tbody>
+              {detailTableRows.map((row) => (
+                <tr key={row.label}>
+                  <th scope="row">{row.label}</th>
+                  {testDetailRows.map((detail) => (
+                    <td
+                      key={detail.label}
+                      className={row.key === "status"
+                        ? detail.status === "Pass"
+                          ? "font-semibold text-green-700"
+                          : detail.status === "Fail"
+                            ? "font-semibold text-red-700"
+                            : "text-muted-foreground"
+                        : undefined}
+                    >
+                      {detail[row.key]}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
           </table>
         </div>
       </section>
