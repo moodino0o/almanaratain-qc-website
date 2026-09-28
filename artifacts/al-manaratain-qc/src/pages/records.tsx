@@ -127,6 +127,11 @@ export default function Records() {
         : isAggregateSection
           ? "w-[10%]"
           : "w-[9%]",
+    remarks: isMasonrySection
+      ? "w-[8%]"
+      : isAggregateSection
+        ? "w-[10%]"
+        : "w-[9%]",
     status: isReadyMixSection
       ? "w-[7%]"
       : isMasonrySection
@@ -230,7 +235,11 @@ export default function Records() {
                 )}
                 <TableHead className={`${columnWidths.material} px-1.5 py-2 text-[10px] leading-tight`}>Material</TableHead>
                 <TableHead className={`${columnWidths.sampleDate} px-1.5 py-2 text-[10px] leading-tight`}>Sample Date</TableHead>
-                {!isReadyMixSection && (
+                {(isMasonrySection || isAggregateSection) ? (
+                  <TableHead className={`${columnWidths.remarks} px-1.5 py-2 text-[10px] leading-tight`}>
+                    Remarks
+                  </TableHead>
+                ) : !isReadyMixSection && (
                   <TableHead className={`${columnWidths.testedBy} px-1.5 py-2 text-[10px] leading-tight`}>Tested By</TableHead>
                 )}
                 <TableHead className={`${columnWidths.status} px-1.5 py-2 text-[10px] leading-tight`}>Status</TableHead>
@@ -294,7 +303,11 @@ export default function Records() {
                     )}
                     <TableCell className="whitespace-normal break-words px-1.5 py-2">{record.material}</TableCell>
                     <TableCell className="whitespace-normal break-words px-1.5 py-2">{formatDate(record.sampleDate)}</TableCell>
-                    {!isReadyMixSection && (
+                    {(isMasonrySection || isAggregateSection) ? (
+                      <TableCell className="whitespace-normal break-words px-1.5 py-2">
+                        {record.remarks?.trim() || "—"}
+                      </TableCell>
+                    ) : !isReadyMixSection && (
                       <TableCell className="whitespace-normal break-words px-1.5 py-2">{record.testedBy}</TableCell>
                     )}
                     <TableCell className="px-1.5 py-2">{getStatusBadge(record.status)}</TableCell>
