@@ -668,9 +668,13 @@ const REPORT_LAYOUT_COLUMN_OPTIONS: Record<
   sieveResults: [
     { key: "no", label: "No." },
     { key: "size", label: "Sieve / Pore Size" },
-    { key: "returned", label: "Amount Returned" },
-    { key: "passing", label: "Amount Passing" },
-    { key: "percentage", label: "% Passing" },
+    { key: "returned", label: "Mass Retained (g)" },
+    { key: "retained", label: "Retained (%)" },
+    { key: "passing", label: "Amount Passing (g)" },
+    { key: "percentage", label: "Passing (%)" },
+    { key: "lower", label: "Lower Limit" },
+    { key: "upper", label: "Upper Limit" },
+    { key: "remarks", label: "Remarks" },
   ],
   pavingResults: [
     { key: "no", label: "Block No." },

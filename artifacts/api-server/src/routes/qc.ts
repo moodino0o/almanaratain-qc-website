@@ -378,11 +378,15 @@ const REPORT_LAYOUT_DEFAULTS: Record<string, Record<string, unknown>> = {
     ],
     columns: {
       sieveResults: [
-        { key: "no", label: "No.", visible: true, order: 0, width: 7 },
-        { key: "size", label: "Sieve / Pore Size", visible: true, order: 1, width: 26 },
-        { key: "returned", label: "Amount Returned", visible: true, order: 2, width: 22 },
-        { key: "passing", label: "Amount Passing", visible: true, order: 3, width: 22 },
-        { key: "percentage", label: "% Passing", visible: true, order: 4, width: 23 },
+        { key: "no", label: "No.", visible: true, order: 0, width: 6 },
+        { key: "size", label: "Sieve / Pore Size", visible: true, order: 1, width: 17 },
+        { key: "returned", label: "Mass Retained (g)", visible: true, order: 2, width: 13 },
+        { key: "retained", label: "Retained (%)", visible: true, order: 3, width: 9 },
+        { key: "passing", label: "Amount Passing (g)", visible: true, order: 4, width: 11 },
+        { key: "percentage", label: "Passing (%)", visible: true, order: 5, width: 8 },
+        { key: "lower", label: "Lower Limit", visible: true, order: 6, width: 12 },
+        { key: "upper", label: "Upper Limit", visible: true, order: 7, width: 12 },
+        { key: "remarks", label: "Remarks", visible: true, order: 8, width: 18 },
       ],
     },
   },
@@ -402,11 +406,15 @@ const REPORT_LAYOUT_DEFAULTS: Record<string, Record<string, unknown>> = {
     ],
     columns: {
       sieveResults: [
-        { key: "no", label: "No.", visible: true, order: 0, width: 7 },
-        { key: "size", label: "Sieve / Pore Size", visible: true, order: 1, width: 26 },
-        { key: "returned", label: "Amount Returned", visible: true, order: 2, width: 22 },
-        { key: "passing", label: "Amount Passing", visible: true, order: 3, width: 22 },
-        { key: "percentage", label: "% Passing", visible: true, order: 4, width: 23 },
+        { key: "no", label: "No.", visible: true, order: 0, width: 6 },
+        { key: "size", label: "Sieve / Pore Size", visible: true, order: 1, width: 17 },
+        { key: "returned", label: "Mass Retained (g)", visible: true, order: 2, width: 13 },
+        { key: "retained", label: "Retained (%)", visible: true, order: 3, width: 9 },
+        { key: "passing", label: "Amount Passing (g)", visible: true, order: 4, width: 11 },
+        { key: "percentage", label: "Passing (%)", visible: true, order: 5, width: 8 },
+        { key: "lower", label: "Lower Limit", visible: true, order: 6, width: 12 },
+        { key: "upper", label: "Upper Limit", visible: true, order: 7, width: 12 },
+        { key: "remarks", label: "Remarks", visible: true, order: 8, width: 18 },
       ],
     },
   },
@@ -608,16 +616,62 @@ async function ensureReportLayouts() {
     const existingColumns = typeof existing?.config.columns === "object" && existing.config.columns !== null
       ? existing.config.columns as Record<string, unknown>
       : {};
-    const missingColumns = Object.fromEntries(
-      Object.entries(defaultColumns).filter(([key]) => existingColumns[key] === undefined),
-    );
-    if (existing && Object.keys(missingColumns).length > 0) {
+    const mergedColumns = { ...existingColumns };
+    let columnsChanged = false;
+    for (const [key, defaultValue] of Object.entries(defaultColumns)) {
+      const currentValue = existingColumns[key];
+      if (currentValue === undefined) {
+        mergedColumns[key] = defaultValue;
+        columnsChanged = true;
+        continue;
+      }
+      if (
+        key !== "sieveResults" ||
+        !Array.isArray(currentValue) ||
+        !Array.isArray(defaultValue)
+      ) {
+        continue;
+      }
+
+      const currentColumns = currentValue.filter(
+        (column): column is Record<string, unknown> =>
+          typeof column === "object" && column !== null,
+      );
+      const defaultSieveColumns = defaultValue.filter(
+        (column): column is Record<string, unknown> =>
+          typeof column === "object" && column !== null,
+      );
+      const currentKeys = new Set(currentColumns.map((column) => column.key));
+      const lastOrder = Math.max(
+        -1,
+        ...currentColumns.map((column) =>
+          typeof column.order === "number" ? column.order : -1,
+        ),
+      );
+      const additions = defaultSieveColumns
+        .filter(
+          (column) =>
+            ["retained", "passing", "lower", "upper", "remarks"].includes(
+              String(column.key),
+            ) &&
+            !currentKeys.has(column.key),
+        )
+        .map((column, index) => ({
+          ...column,
+          order: lastOrder + index + 1,
+        }));
+      if (additions.length) {
+        mergedColumns[key] = [...currentColumns, ...additions];
+        columnsChanged = true;
+      }
+    }
+    if (existing && columnsChanged) {
       await db
         .update(qcReportLayoutsTable)
         .set({
           config: {
             ...existing.config,
-            columns: { ...existingColumns, ...missingColumns },
+            columns: mergedColumns,
           },
         })
         .where(eq(qcReportLayoutsTable.id, existing.id));

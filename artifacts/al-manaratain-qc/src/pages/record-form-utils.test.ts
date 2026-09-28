@@ -11,6 +11,8 @@ import {
   calculateBlockStrengths,
   calculateChlorideContent,
   calculateMoistureContent,
+  calculateRetainedPercentage,
+  calculateSiltContent,
   calculatePavingStrengths,
   calculateSulphateContent,
   pavingCorrectionFactorFromSize,
@@ -18,6 +20,7 @@ import {
   calculateSieveResults,
   sortSieveRowsByPoreSize,
   evaluateContentAgainstLimit,
+  evaluateSiltContent,
   prepareRecordForForm,
 } from "./record-form-utils";
 
@@ -41,11 +44,27 @@ test("calculates aggregate moisture content from dry and wet sample weights", ()
   assert.equal(calculateMoistureContent("", "112.5"), "");
 });
 
+test("calculates silt content and applies the strict less-than-three-percent limit", () => {
+  const siltContent = calculateSiltContent("100", "97");
+  assert.equal(siltContent, 3);
+  assert.equal(calculateSiltContent("100", "98")?.toFixed(2), "2.00");
+  assert.equal(calculateSiltContent("0", "0"), null);
+  assert.equal(evaluateSiltContent(2.999), "Pass");
+  assert.equal(evaluateSiltContent(siltContent), "Fail");
+  assert.equal(evaluateSiltContent(null), "Pending");
+});
+
 test("calculates aggregate chloride and sulphate content from the supplied equations", () => {
   assert.equal(calculateChlorideContent("25", "1.2", "2.4")?.toFixed(2), "1.69");
   assert.equal(calculateChlorideContent("25", "", "2.4"), null);
   assert.equal(calculateSulphateContent("10", "10.25")?.toFixed(2), "2.86");
   assert.equal(calculateSulphateContent("10", ""), null);
+});
+
+test("calculates retained percentage against the total sieve sample weight", () => {
+  assert.equal(calculateRetainedPercentage("25", "100"), "25.00");
+  assert.equal(calculateRetainedPercentage("100.01", "100"), "");
+  assert.equal(calculateRetainedPercentage("25", "0"), "");
 });
 
 test("fails aggregate chemistry only when content exceeds its standard", () => {

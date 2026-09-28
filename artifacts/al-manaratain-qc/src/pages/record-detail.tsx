@@ -15,10 +15,17 @@ import {
   AGGREGATE_CHLORIDE_LIMIT_PERCENT,
   AGGREGATE_CHEMISTRY_FIELDS,
   AGGREGATE_SULPHATE_LIMIT_PERCENT,
+  calculateRetainedPercentage,
+  calculateSieveSampleWeight,
   calculateChlorideContent,
   calculateMoistureContent,
+  calculateSiltContent,
   calculateSulphateContent,
   evaluateContentAgainstLimit,
+  evaluateSiltContent,
+  findSieveEvaluationCriterion,
+  SIEVE_SILT_LIMIT_PERCENT,
+  sortSieveRowsByPoreSize,
 } from "./record-form-utils";
 
 function calculatedWaterAbsorption(values: Record<string, unknown>) {
@@ -278,31 +285,87 @@ function TestRowsTable({
   );
 }
 
-function SieveRowsTable({ rows }: { rows: unknown[] }) {
+function SieveRowsTable({
+  rows,
+  evaluation,
+}: {
+  rows: unknown[];
+  evaluation: unknown;
+}) {
+  const orderedRows = sortSieveRowsByPoreSize(rows, (row) => {
+    if (typeof row !== "object" || row === null) return "";
+    return (row as Record<string, unknown>).sieveSize;
+  });
+  const sampleWeight = calculateSieveSampleWeight(
+    orderedRows.map((row) => {
+      const values = typeof row === "object" && row !== null
+        ? row as Record<string, unknown>
+        : {};
+      return { amountReturned: String(values.amountReturned ?? "") };
+    }),
+  );
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[620px] text-xs">
+      <table className="w-full min-w-[1040px] text-xs">
         <thead className="bg-muted/30">
           <tr className="border-b">
             <th className="p-2 text-left">No.</th>
             <th className="p-2 text-left">Sieve / Pore Size</th>
-            <th className="p-2 text-left">Amount Returned</th>
-            <th className="p-2 text-left">Amount Passing</th>
-            <th className="p-2 text-left">% Passing</th>
+            <th className="p-2 text-left">Mass Retained (g)</th>
+            <th className="p-2 text-left">Retained (%)</th>
+            <th className="p-2 text-left">Passing (%)</th>
+            <th className="p-2 text-left">Lower Limit</th>
+            <th className="p-2 text-left">Upper Limit</th>
+            <th className="p-2 text-left">Remarks</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, index) => {
+          {orderedRows.map((row, index) => {
             const values = typeof row === "object" && row !== null
               ? row as Record<string, unknown>
               : {};
+            const criterion = findSieveEvaluationCriterion(
+              evaluation,
+              values.sieveSize,
+            );
+            const result = criterion?.withinLimits === true
+              ? "Pass"
+              : criterion?.withinLimits === false
+                ? "Fail"
+                : criterion
+                  ? "Pending"
+                  : "—";
+            const limitUnit = displayValue(criterion?.unit, "");
             return (
               <tr key={index} className="border-b last:border-b-0">
-                <td className="p-2 font-semibold">{displayValue(values.rowNo, String(index + 1))}</td>
+                <td className="p-2 font-semibold">{index + 1}</td>
                 <td className="p-2">{displayValue(values.sieveSize)}</td>
                 <td className="p-2">{displayValue(values.amountReturned)}</td>
-                <td className="p-2">{displayValue(values.passingAmount)}</td>
+                <td className="p-2">
+                  {calculateRetainedPercentage(values.amountReturned, sampleWeight) || "—"}
+                </td>
                 <td className="p-2">{displayValue(values.passingPercentage)}</td>
+                <td className="p-2">
+                  {criterion?.minimum == null
+                    ? "—"
+                    : `${displayValue(criterion.minimum)}${limitUnit ? ` ${limitUnit}` : ""}`}
+                </td>
+                <td className="p-2">
+                  {criterion?.maximum == null
+                    ? "—"
+                    : `${displayValue(criterion.maximum)}${limitUnit ? ` ${limitUnit}` : ""}`}
+                </td>
+                <td
+                  className={
+                    result === "Pass"
+                      ? "p-2 font-semibold text-green-700"
+                      : result === "Fail"
+                        ? "p-2 font-semibold text-red-700"
+                        : "p-2 text-muted-foreground"
+                  }
+                >
+                  {result}
+                </td>
               </tr>
             );
           })}
@@ -450,13 +513,14 @@ export default function RecordDetail() {
   const isStrengthEvaluated = record.testType === "Ready Mix" || record.testType === "Blocks";
   const isSieveEvaluated = record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve";
   const recordDetails = record.details as DetailMap;
+  const isSieveRecord = isSieveEvaluated;
   const summaryEntries: Array<readonly [string, unknown]> = [
     ["Record No.", record.recordNo],
     ["Test Type", record.testType],
-    ["Sample Date", formatDate(record.sampleDate)],
-    ["Location", record.location],
-    ["Material / Product", record.material],
-    ["Tested By", record.testedBy],
+    [isSieveRecord ? "Sampling Date" : "Sample Date", formatDate(record.sampleDate)],
+    [isSieveRecord ? "Factory" : "Location", record.location],
+    [isSieveRecord ? "Material Type" : "Material / Product", record.material],
+    [isSieveRecord ? "Sampled-Tested By" : "Tested By", record.testedBy],
     ["Approved By", record.reviewedBy || "ADEL ABBAS EBRAHIM"],
   ];
 
@@ -475,20 +539,13 @@ export default function RecordDetail() {
       ["Machine", detailText(recordDetails, "machine")],
     );
   }
-  if (record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve") {
+  if (isSieveRecord) {
     summaryEntries.push(
       ["Sample Weight", detailText(recordDetails, "sampleWeight")],
       ["Supplier", detailText(recordDetails, "supplier")],
+      ["Testing Date", detailText(recordDetails, "testingDate")],
+      ["Block Plant", detailText(recordDetails, "blockPlant")],
     );
-    if (record.testType === "Sand Sieve") {
-      summaryEntries.push(
-        ["Condition", detailText(recordDetails, "condition")],
-        ["Dry Sample", detailText(recordDetails, "drySample")],
-        ["Wet Sample", detailText(recordDetails, "wetSample")],
-        ["Silt Before", detailText(recordDetails, "siltBefore")],
-        ["Silt After", detailText(recordDetails, "siltAfter")],
-      );
-    }
   }
   if (record.testType === "Water") {
     summaryEntries.push(["Source", detailText(recordDetails, "source")]);
@@ -589,7 +646,14 @@ export default function RecordDetail() {
         </CardContent>
       </Card>
 
-      {record.testType === "Aggregate Sieve" && (() => {
+      {isSieveEvaluated && (() => {
+        const dryWeight = recordDetails.dryWeight ?? recordDetails.drySample;
+        const wetWeight = recordDetails.wetWeight ?? recordDetails.wetSample;
+        const moistureContent = calculateMoistureContent(dryWeight, wetWeight);
+        const siltContent = calculateSiltContent(
+          recordDetails.siltBefore,
+          recordDetails.siltAfter,
+        );
         const chlorideContent = calculateChlorideContent(
           recordDetails.silverNitrateContent,
           recordDetails.firstChlorideTitrationPoint,
@@ -600,17 +664,23 @@ export default function RecordDetail() {
           recordDetails.crucibleAshWeight,
         );
         return (
-          <MeasurementTable
-            title="Aggregate Sieve Details"
-            entries={[
+          <>
+            <MeasurementTable
+              title="Sieve, Moisture and Chemical Test Details"
+              entries={[
               [
-                "Material Condition",
+                record.testType === "Aggregate Sieve"
+                  ? "Material Condition"
+                  : "Sand Condition",
                 detailText(
                   recordDetails,
                   "materialCondition",
                   detailText(recordDetails, "condition"),
                 ),
               ],
+              ["Supplier", detailText(recordDetails, "supplier")],
+              ["Block Plant", detailText(recordDetails, "blockPlant")],
+              ["Testing Date", detailText(recordDetails, "testingDate")],
               [
                 "Dry Weight (g)",
                 detailText(recordDetails, "dryWeight", detailText(recordDetails, "drySample")),
@@ -621,12 +691,17 @@ export default function RecordDetail() {
               ],
               [
                 "Moisture Content (%)",
-                calculateMoistureContent(
-                  recordDetails.dryWeight ?? recordDetails.drySample,
-                  recordDetails.wetWeight ?? recordDetails.wetSample,
-                ) || "—",
+                moistureContent || "—",
               ],
               ["Fineness Modulus", detailText(recordDetails, "finenessModulus")],
+              ["Silt Before", detailText(recordDetails, "siltBefore")],
+              ["Silt After", detailText(recordDetails, "siltAfter")],
+              [
+                "Silt Content (%)",
+                siltContent === null ? "—" : `${siltContent.toFixed(2)}%`,
+              ],
+              ["Silt Limit", `< ${SIEVE_SILT_LIMIT_PERCENT}%`],
+              ["Silt Result", evaluateSiltContent(siltContent)],
               [
                 "Chloride Content",
                 chlorideContent === null ? "—" : `${chlorideContent.toFixed(2)}%`,
@@ -657,12 +732,32 @@ export default function RecordDetail() {
                   AGGREGATE_SULPHATE_LIMIT_PERCENT,
                 ),
               ],
+              [
+                "Chemical Tested By",
+                detailText(recordDetails, "chemicalTestedBy"),
+              ],
+              ["Chemical Testing Standard", "BS812:Part 117 and 118:1988"],
               ...AGGREGATE_CHEMISTRY_FIELDS.map(
                 ({ key, label }) =>
                   [label, detailText(recordDetails, key)] as const,
               ),
-            ]}
-          />
+              ]}
+            />
+            <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+              <p>
+                Retained (%) = retained mass ÷ total retained mass × 100;
+                passing mass = sample mass − cumulative retained mass; passing
+                (%) = passing mass ÷ sample mass × 100.
+              </p>
+              <p>
+                Moisture (%) = (wet − dry) ÷ dry × 100. Silt (%) = (silt before
+                − silt after) ÷ silt before × 100. Chloride (%) = 0.07092 ×
+                (silver nitrate content − (10 × 0.1 × (second titration point −
+                first titration point))). Sulfate (%) = ((crucible + ash −
+                crucible) × 34.3) ÷ 3.
+              </p>
+            </div>
+          </>
         );
       })()}
 
@@ -730,7 +825,12 @@ export default function RecordDetail() {
             </CardHeader>
             <CardContent className="p-0">
               {sieveRows.length > 0
-                ? <SieveRowsTable rows={sieveRows} />
+                ? (
+                  <SieveRowsTable
+                    rows={sieveRows}
+                    evaluation={recordDetails.sieveEvaluation}
+                  />
+                )
                 : <p className="p-6 text-center text-muted-foreground">No sieve measurements recorded.</p>}
             </CardContent>
           </Card>

@@ -22,8 +22,15 @@ import {
   blockTypeMatches,
   calculateChlorideContent,
   calculateMoistureContent,
+  calculateRetainedPercentage,
+  calculateSieveSampleWeight,
+  calculateSiltContent,
   calculateSulphateContent,
   evaluateContentAgainstLimit,
+  evaluateSiltContent,
+  findSieveEvaluationCriterion,
+  SIEVE_SILT_LIMIT_PERCENT,
+  stringValue,
   sortSieveRowsByPoreSize,
 } from "./record-form-utils";
 
@@ -49,7 +56,25 @@ function layoutColumns(
   const configured = layout?.config.columns[tableKey];
   const selectedColumns = configured?.length ? configured : fallback;
   const compatibleColumns =
-    tableKey === "pavingResults" && configured?.length
+    tableKey === "sieveResults" && configured?.length
+      ? (() => {
+          const existingKeys = new Set(configured.map((column) => column.key));
+          const lastOrder = Math.max(-1, ...configured.map((column) => column.order));
+          const addedColumns = fallback
+            .filter(
+              (column) =>
+                !existingKeys.has(column.key) &&
+                ["retained", "passing", "lower", "upper", "remarks"].includes(
+                  column.key,
+                ),
+            )
+            .map((column, index) => ({
+              ...column,
+              order: lastOrder + index + 1,
+            }));
+          return [...configured, ...addedColumns];
+        })()
+      : tableKey === "pavingResults" && configured?.length
       ? (() => {
           const legacyDefaultKeys = [
             "no",
@@ -760,10 +785,20 @@ function PavingStrengthStatistics({ rows }: { rows: unknown[] }) {
 function SieveRowsTable({
   rows,
   layout,
+  evaluation,
 }: {
   rows: unknown[];
   layout?: ReportLayout;
+  evaluation: unknown;
 }) {
+  const sampleWeight = calculateSieveSampleWeight(
+    rows.map((row) => {
+      const values = typeof row === "object" && row !== null
+        ? row as Record<string, unknown>
+        : {};
+      return { amountReturned: String(values.amountReturned ?? "") };
+    }),
+  );
   const visibleRows = sortSieveRowsByPoreSize(rows.filter((row) => {
     const values = typeof row === "object" && row !== null
       ? row as Record<string, unknown> : {};
@@ -775,11 +810,15 @@ function SieveRowsTable({
   }), (row) => objectValue(row)?.sieveSize);
   if (!visibleRows.length) return null;
   const tableColumns = layoutColumns(layout, "sieveResults", [
-    { key: "no", label: "No.", visible: true, order: 0, width: 7 },
-    { key: "size", label: "Sieve / Pore Size", visible: true, order: 1, width: 26 },
-    { key: "returned", label: "Amount Returned", visible: true, order: 2, width: 22 },
-    { key: "passing", label: "Amount Passing", visible: true, order: 3, width: 22 },
-    { key: "percentage", label: "% Passing", visible: true, order: 4, width: 23 },
+    { key: "no", label: "No.", visible: true, order: 0, width: 5 },
+    { key: "size", label: "Sieve / Pore Size", visible: true, order: 1, width: 15 },
+    { key: "returned", label: "Mass Retained (g)", visible: true, order: 2, width: 11 },
+    { key: "retained", label: "Retained (%)", visible: true, order: 3, width: 8 },
+    { key: "passing", label: "Amount Passing (g)", visible: true, order: 4, width: 11 },
+    { key: "percentage", label: "Passing (%)", visible: true, order: 5, width: 8 },
+    { key: "lower", label: "Lower Limit", visible: true, order: 6, width: 12 },
+    { key: "upper", label: "Upper Limit", visible: true, order: 7, width: 12 },
+    { key: "remarks", label: "Remarks", visible: true, order: 8, width: 18 },
   ]);
   return (
     <div className="report-specimen-block">
@@ -792,19 +831,57 @@ function SieveRowsTable({
           {visibleRows.map((row, index) => {
             const values = typeof row === "object" && row !== null
               ? row as Record<string, unknown> : {};
+            const criterion = findSieveEvaluationCriterion(
+              evaluation,
+              values.sieveSize,
+            );
+            const unit = textValue(criterion?.unit, "");
+            const remark = criterion?.withinLimits === true
+              ? "PASS"
+              : criterion?.withinLimits === false
+                ? "FAIL"
+                : criterion
+                  ? "PENDING"
+                  : "—";
             return (
-              <tr key={index}>{tableColumns.map((column) => {
-                const value = column.key === "no"
-                  ? index + 1
-                  : column.key === "size"
-                    ? rawTextValue(values.sieveSize)
-                    : column.key === "returned"
-                      ? textValue(values.amountReturned)
-                      : column.key === "passing"
-                        ? textValue(values.passingAmount)
-                        : textValue(values.passingPercentage);
-                return <td key={column.key}>{value}</td>;
-              })}</tr>
+              <tr key={index}>
+                {tableColumns.map((column) => {
+                  const value = column.key === "no"
+                    ? index + 1
+                    : column.key === "size"
+                      ? rawTextValue(values.sieveSize)
+                      : column.key === "returned"
+                        ? textValue(values.amountReturned)
+                        : column.key === "retained"
+                          ? calculateRetainedPercentage(
+                              values.amountReturned,
+                              sampleWeight,
+                            ) || "—"
+                          : column.key === "passing"
+                            ? textValue(values.passingAmount)
+                            : column.key === "percentage"
+                              ? textValue(values.passingPercentage)
+                              : column.key === "lower"
+                                ? criterion?.minimum == null
+                                  ? "—"
+                                  : `${textValue(criterion.minimum)}${unit ? ` ${unit}` : ""}`
+                                : column.key === "upper"
+                                  ? criterion?.maximum == null
+                                    ? "—"
+                                    : `${textValue(criterion.maximum)}${unit ? ` ${unit}` : ""}`
+                                  : column.key === "remarks"
+                                    ? remark
+                                    : "—";
+                  const resultClass = column.key === "remarks"
+                    ? remark === "PASS"
+                      ? "font-semibold text-green-700"
+                      : remark === "FAIL"
+                        ? "font-semibold text-red-700"
+                        : ""
+                    : "";
+                  return <td key={column.key} className={resultClass}>{value}</td>;
+                })}
+              </tr>
             );
           })}
         </tbody>
@@ -1402,6 +1479,11 @@ function SieveReport({
     drySampleWeight,
     wetSampleWeight,
   );
+  const siltContent = calculateSiltContent(
+    details.siltBefore,
+    details.siltAfter,
+  );
+  const siltStatus = evaluateSiltContent(siltContent);
   const chlorideContent = calculateChlorideContent(
     details.silverNitrateContent,
     details.firstChlorideTitrationPoint,
@@ -1419,23 +1501,20 @@ function SieveReport({
     sulphateContent,
     AGGREGATE_SULPHATE_LIMIT_PERCENT,
   );
-  const measurementEntries = isAggregate
-    ? [
-        ["Supplier", detailValue(details, ["supplier"])],
-        ["Material Condition", detailValue(details, ["materialCondition", "condition"])],
-        ["Dry Weight (g)", drySampleWeight || "-"],
-        ["Wet Weight (g)", wetSampleWeight || "-"],
-        ["Moisture Content (%)", moistureContent || "-"],
-        ["Fineness Modulus", detailValue(details, ["finenessModulus"])],
-      ] as const
-    : [
-        ["Supplier", detailValue(details, ["supplier"])],
-        ["Condition", detailValue(details, ["condition"])],
-        ["Dry Sample", detailValue(details, ["drySample"])],
-        ["Wet Sample", detailValue(details, ["wetSample"])],
-        ["Silt Before", detailValue(details, ["siltBefore"])],
-        ["Silt After", detailValue(details, ["siltAfter"])],
-      ] as const;
+  const measurementEntries = [
+    ["Supplier", detailValue(details, ["supplier"])],
+    [
+      isAggregate ? "Material Condition" : "Sand Condition",
+      detailValue(details, ["materialCondition", "condition"]),
+    ],
+    ["Dry Weight (g)", drySampleWeight || "-"],
+    ["Wet Weight (g)", wetSampleWeight || "-"],
+    ["Moisture Content (%)", moistureContent || "-"],
+    ["Silt Before", detailValue(details, ["siltBefore"])],
+    ["Silt After", detailValue(details, ["siltAfter"])],
+    ["Fineness Modulus", detailValue(details, ["finenessModulus"])],
+  ] as const;
+  const testingDate = stringValue(details.testingDate);
 
   return (
     <>
@@ -1444,10 +1523,16 @@ function SieveReport({
           <SectionHeading>Sample Details</SectionHeading>
           <ReportFields
             entries={[
-              ["Sample Date", formatReportDate(record.sampleDate)],
-              ["Location", record.location],
-              ["Material", record.material],
-              ["Tested By", record.testedBy],
+              ["Sampling Date", formatReportDate(record.sampleDate)],
+              [
+                "Testing Date",
+                testingDate ? formatReportDate(testingDate) : "-",
+              ],
+              ["Factory", record.location],
+              ["Material Type", record.material],
+              ["Block Plant", detailValue(details, ["blockPlant"])],
+              ["Sampled-Tested By", record.testedBy],
+              ["Approved By", record.reviewedBy || "ADEL ABBAS EBRAHIM"],
             ]}
           />
         </section>
@@ -1456,65 +1541,109 @@ function SieveReport({
           <ReportFields entries={measurementEntries} />
         </section>
       </div>
-      {isAggregate && (
-        <section className="report-summary">
-          <SectionHeading>Chloride and Sulphate Content</SectionHeading>
-          <ReportFields
-            entries={[
-              [
-                "Chloride Content",
-                chlorideContent === null ? "-" : `${chlorideContent.toFixed(2)}%`,
-              ],
-              [
-                "Sulphate Content",
-                sulphateContent === null ? "-" : `${sulphateContent.toFixed(2)}%`,
-              ],
-              ...AGGREGATE_CHEMISTRY_FIELDS.map(({ key, label }) => [
-                label,
-                detailValue(details, [key]),
-              ] as const),
-            ]}
-          />
-        </section>
-      )}
+      <section className="report-summary">
+        <SectionHeading>Chemical Testing</SectionHeading>
+        <ReportFields
+          entries={[
+            [
+              "Moisture Content",
+              moistureContent ? `${moistureContent}%` : "-",
+            ],
+            [
+              "Silt Content",
+              siltContent === null ? "-" : `${siltContent.toFixed(2)}%`,
+            ],
+            ["Silt Limit", `< ${SIEVE_SILT_LIMIT_PERCENT}%`],
+            ["Silt Result", siltStatus],
+            [
+              "Chloride Content",
+              chlorideContent === null ? "-" : `${chlorideContent.toFixed(2)}%`,
+            ],
+            [
+              "Chloride Standard",
+              `${AGGREGATE_CHLORIDE_LIMIT_PERCENT.toFixed(2)}%`,
+            ],
+            ["Chloride Result", chlorideStatus],
+            [
+              "Sulfate Content",
+              sulphateContent === null ? "-" : `${sulphateContent.toFixed(2)}%`,
+            ],
+            [
+              "Sulfate Standard",
+              `${AGGREGATE_SULPHATE_LIMIT_PERCENT.toFixed(2)}%`,
+            ],
+            ["Sulfate Result", sulphateStatus],
+            ["Chemical Tested By", detailValue(details, ["chemicalTestedBy"])],
+            ["Chemical Standard", "BS812:Part 117 and 118:1988"],
+            ...AGGREGATE_CHEMISTRY_FIELDS.map(({ key, label }) => [
+              label,
+              detailValue(details, [key]),
+            ] as const),
+          ]}
+        />
+      </section>
+      <section className="report-calculation-notes mt-3 space-y-1 border-t border-slate-300 pt-2 text-[8px] leading-tight text-slate-600">
+        <p>
+          Retained (%) = mass retained ÷ total retained mass × 100. Passing
+          amount = sample mass − cumulative retained mass; passing (%) =
+          passing amount ÷ sample mass × 100.
+        </p>
+        <p>
+          Moisture (%) = (wet weight − dry weight) ÷ dry weight × 100. Silt
+          (%) = (silt before − silt after) ÷ silt before × 100. Chloride (%) =
+          0.07092 × (silver nitrate content − (10 × 0.1 × (second titration
+          point − first titration point))). Sulfate (%) = ((crucible + ash −
+          crucible) × 34.3) ÷ 3.
+        </p>
+      </section>
 
-      <SieveRowsTable rows={sieveRows} layout={layout} />
+      <SieveRowsTable
+        rows={sieveRows}
+        layout={layout}
+        evaluation={evaluation}
+      />
       {evaluation && (
         <SieveEvaluationTable value={evaluation} />
       )}
-      {isAggregate && (
-        <section className="report-summary">
-          <SectionHeading>Chemical Content Acceptance</SectionHeading>
-          <table className="report-table">
-            <thead>
-              <tr>
-                <th>Test</th>
-                <th>Measured Content</th>
-                <th>Maximum Standard</th>
-                <th>Result</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Chloride Content</td>
-                <td>{chlorideContent === null ? "—" : `${chlorideContent.toFixed(2)}%`}</td>
-                <td>{AGGREGATE_CHLORIDE_LIMIT_PERCENT.toFixed(2)}%</td>
-                <td className={chlorideStatus === "Fail" ? "text-red-700 font-bold" : chlorideStatus === "Pass" ? "text-green-700 font-bold" : ""}>
-                  {chlorideStatus}
-                </td>
-              </tr>
-              <tr>
-                <td>Sulphate Content</td>
-                <td>{sulphateContent === null ? "—" : `${sulphateContent.toFixed(2)}%`}</td>
-                <td>{AGGREGATE_SULPHATE_LIMIT_PERCENT.toFixed(2)}%</td>
-                <td className={sulphateStatus === "Fail" ? "text-red-700 font-bold" : sulphateStatus === "Pass" ? "text-green-700 font-bold" : ""}>
-                  {sulphateStatus}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
-      )}
+      <section className="report-summary">
+        <SectionHeading>Chemical Content Acceptance</SectionHeading>
+        <table className="report-table">
+          <thead>
+            <tr>
+              <th>Test</th>
+              <th>Measured Content</th>
+              <th>Limit</th>
+              <th>Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Silt Content</td>
+              <td>{siltContent === null ? "—" : `${siltContent.toFixed(2)}%`}</td>
+              <td>&lt; {SIEVE_SILT_LIMIT_PERCENT}%</td>
+              <td className={siltStatus === "Fail" ? "text-red-700 font-bold" : siltStatus === "Pass" ? "text-green-700 font-bold" : ""}>
+                {siltStatus}
+              </td>
+            </tr>
+            <tr>
+              <td>Chloride Content</td>
+              <td>{chlorideContent === null ? "—" : `${chlorideContent.toFixed(2)}%`}</td>
+              <td>{AGGREGATE_CHLORIDE_LIMIT_PERCENT.toFixed(2)}%</td>
+              <td className={chlorideStatus === "Fail" ? "text-red-700 font-bold" : chlorideStatus === "Pass" ? "text-green-700 font-bold" : ""}>
+                {chlorideStatus}
+              </td>
+            </tr>
+            <tr>
+              <td>Sulfate Content</td>
+              <td>{sulphateContent === null ? "—" : `${sulphateContent.toFixed(2)}%`}</td>
+              <td>{AGGREGATE_SULPHATE_LIMIT_PERCENT.toFixed(2)}%</td>
+              <td className={sulphateStatus === "Fail" ? "text-red-700 font-bold" : sulphateStatus === "Pass" ? "text-green-700 font-bold" : ""}>
+                {sulphateStatus}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
     </>
   );
 }
@@ -1719,11 +1848,14 @@ export default function ReportPrint() {
     strengthEvaluation?.bsStandard ??
     configuredSieveStandards[0]?.standardReference ??
     null;
+  const isSieveReport =
+    record.testType === "Sand Sieve" ||
+    record.testType === "Aggregate Sieve";
   const accordingTo = record.testType === "Blocks"
     ? isDammamLocation(record.location)
       ? "ASTM C140/C140M:2020a"
       : "BS EN 771-3:2003 (BS EN 772-1:2011)"
-    : record.testType === "Aggregate Sieve"
+    : isSieveReport
       ? "BS812:PART103:1985"
     : record.testType === "Paving Blocks"
       ? configuredStandard || "BS EN 1338:2003"
@@ -1810,7 +1942,14 @@ export default function ReportPrint() {
           className="report-standard report-layout-section"
           style={{ order: layoutSectionOrder(layout, "standard") }}
         >
-          {accordingTo
+          {isSieveReport ? (
+            <>
+              <span>ACCORDING TO BS812:PART103:1985</span>
+              <span className="block">
+                IN ACCORDANCE WITH BS812:PART 117 AND 118:1988
+              </span>
+            </>
+          ) : accordingTo
             ? `ACCORDING TO ${accordingTo}`
             : "QUALITY CONTROL TEST REPORT"}
         </p>}

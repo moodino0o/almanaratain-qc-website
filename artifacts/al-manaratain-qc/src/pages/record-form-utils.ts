@@ -14,6 +14,7 @@ export const AGGREGATE_CHEMISTRY_FIELDS = [
 
 export const AGGREGATE_CHLORIDE_LIMIT_PERCENT = 0.06;
 export const AGGREGATE_SULPHATE_LIMIT_PERCENT = 0.4;
+export const SIEVE_SILT_LIMIT_PERCENT = 3;
 
 export type TestRow = {
   id: number;
@@ -129,6 +130,24 @@ export const calculateSieveSampleWeight = (
   return sampleWeight;
 };
 
+export const calculateRetainedPercentage = (
+  amountReturned: unknown,
+  sampleWeight: unknown,
+) => {
+  const retained = finiteNumericValue(amountReturned);
+  const total = finiteNumericValue(sampleWeight);
+  if (
+    retained === null ||
+    total === null ||
+    retained < 0 ||
+    total <= 0 ||
+    retained > total
+  ) {
+    return "";
+  }
+  return ((retained / total) * 100).toFixed(2);
+};
+
 export const calculateSieveResults = (
   rows: Array<Pick<TestRow, "amountReturned">>,
 ) => {
@@ -165,6 +184,28 @@ export const calculateSieveResults = (
   });
 };
 
+export const findSieveEvaluationCriterion = (
+  evaluation: unknown,
+  sieveSize: unknown,
+): Record<string, unknown> | null => {
+  if (typeof evaluation !== "object" || evaluation === null) return null;
+  const criteria = (evaluation as Record<string, unknown>).criteria;
+  if (!Array.isArray(criteria)) return null;
+  const normalizedSize = stringValue(sieveSize)
+    .trim()
+    .toLocaleLowerCase()
+    .replace(/\s+/g, "");
+  return (
+    criteria.find((criterion) => {
+      if (typeof criterion !== "object" || criterion === null) return false;
+      return stringValue((criterion as Record<string, unknown>).sieveSize)
+        .trim()
+        .toLocaleLowerCase()
+        .replace(/\s+/g, "") === normalizedSize;
+    }) as Record<string, unknown> | undefined
+  ) ?? null;
+};
+
 export const calculateWaterAbsorption = (dryWeight: unknown, wetWeight: unknown) => {
   const dry = Number(numericInputValue(dryWeight));
   const wet = Number(numericInputValue(wetWeight));
@@ -189,6 +230,24 @@ const finiteNumericValue = (value: unknown) => {
   const numericValue = Number(valueText);
   return Number.isFinite(numericValue) ? numericValue : null;
 };
+
+export const calculateSiltContent = (
+  siltBefore: unknown,
+  siltAfter: unknown,
+): number | null => {
+  const before = finiteNumericValue(siltBefore);
+  const after = finiteNumericValue(siltAfter);
+  if (before === null || after === null || before <= 0) return null;
+
+  const content = ((before - after) / before) * 100;
+  return Number.isFinite(content) ? content : null;
+};
+
+export const evaluateSiltContent = (
+  content: number | null,
+  maximumExclusive = SIEVE_SILT_LIMIT_PERCENT,
+): "Pass" | "Fail" | "Pending" =>
+  content === null ? "Pending" : content < maximumExclusive ? "Pass" : "Fail";
 
 export const calculateChlorideContent = (
   silverNitrateContent: unknown,
@@ -225,6 +284,21 @@ export const evaluateContentAgainstLimit = (
   maximum: number,
 ): "Pass" | "Fail" | "Pending" =>
   content === null ? "Pending" : content > maximum ? "Fail" : "Pass";
+
+export const evaluateSieveValue = (
+  value: unknown,
+  minimum: unknown,
+  maximum: unknown,
+): "Pass" | "Fail" | "Pending" => {
+  const measured = finiteNumericValue(value);
+  const lower = finiteNumericValue(minimum);
+  const upper = finiteNumericValue(maximum);
+  if (measured === null || (lower === null && upper === null)) return "Pending";
+  return (lower === null || measured >= lower) &&
+    (upper === null || measured <= upper)
+    ? "Pass"
+    : "Fail";
+};
 
 export const calculateBlockDensity = ({
   length,

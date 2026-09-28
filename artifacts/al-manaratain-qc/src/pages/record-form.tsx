@@ -16,7 +16,12 @@ import { useAppBack } from "@/hooks/use-app-back";
 import { TypeaheadInput } from "@/components/ui/typeahead-input";
 import {
   AGGREGATE_CHEMISTRY_FIELDS,
+  AGGREGATE_CHLORIDE_LIMIT_PERCENT,
+  AGGREGATE_SULPHATE_LIMIT_PERCENT,
   calculateChlorideContent,
+  calculateMoistureContent,
+  calculateRetainedPercentage,
+  calculateSiltContent,
   calculateWaterAbsorption,
   calculateSulphateContent,
   calculateBlockDensity,
@@ -26,6 +31,9 @@ import {
   blockSizeMatches,
   blockTypeMatches,
   createEmptyRow,
+  evaluateContentAgainstLimit,
+  evaluateSieveValue,
+  evaluateSiltContent,
   calculateSieveSampleWeight,
   calculateSieveResults,
   applySizeDimensionDefaults,
@@ -36,6 +44,7 @@ import {
   toFormRow,
   numericInputValue,
   pavingCorrectionFactorFromSize,
+  SIEVE_SILT_LIMIT_PERCENT,
   type TestRow,
 } from "./record-form-utils";
 import { EMPLOYEE_ADDABLE_REFERENCE_CATEGORIES } from "./reference-data-permissions";
@@ -142,26 +151,34 @@ export default function RecordForm() {
     if (!isEditing || !existingRecord || initializedRecordId.current === recordId) return;
 
     const { details: savedDetails, sourceRows: savedRows } = prepareDetailsForForm(existingRecord.details);
-    if (
-      existingRecord.testType === TestType.Aggregate_Sieve &&
-      !stringValue(savedDetails.materialCondition).trim() &&
-      stringValue(savedDetails.condition).trim()
-    ) {
-      savedDetails.materialCondition = savedDetails.condition;
-    }
-    if (
-      existingRecord.testType === TestType.Aggregate_Sieve &&
-      !stringValue(savedDetails.dryWeight).trim() &&
-      stringValue(savedDetails.drySample).trim()
-    ) {
-      savedDetails.dryWeight = savedDetails.drySample;
-    }
-    if (
-      existingRecord.testType === TestType.Aggregate_Sieve &&
-      !stringValue(savedDetails.wetWeight).trim() &&
-      stringValue(savedDetails.wetSample).trim()
-    ) {
-      savedDetails.wetWeight = savedDetails.wetSample;
+    const isSieveRecord =
+      existingRecord.testType === TestType.Sand_Sieve ||
+      existingRecord.testType === TestType.Aggregate_Sieve;
+    if (isSieveRecord) {
+      if (
+        !stringValue(savedDetails.materialCondition).trim() &&
+        stringValue(savedDetails.condition).trim()
+      ) {
+        savedDetails.materialCondition = savedDetails.condition;
+      }
+      if (
+        !stringValue(savedDetails.condition).trim() &&
+        stringValue(savedDetails.materialCondition).trim()
+      ) {
+        savedDetails.condition = savedDetails.materialCondition;
+      }
+      if (
+        !stringValue(savedDetails.dryWeight).trim() &&
+        stringValue(savedDetails.drySample).trim()
+      ) {
+        savedDetails.dryWeight = savedDetails.drySample;
+      }
+      if (
+        !stringValue(savedDetails.wetWeight).trim() &&
+        stringValue(savedDetails.wetSample).trim()
+      ) {
+        savedDetails.wetWeight = savedDetails.wetSample;
+      }
     }
 
     setTestType(existingRecord.testType);
@@ -228,6 +245,15 @@ export default function RecordForm() {
   const calculatedSieveSampleWeight = usesSieveRows
     ? calculateSieveSampleWeight(testRows)
     : null;
+  const calculatedMoistureContent = calculateMoistureContent(
+    details.dryWeight || details.drySample,
+    details.wetWeight || details.wetSample,
+  );
+  const calculatedSiltContent = calculateSiltContent(
+    details.siltBefore,
+    details.siltAfter,
+  );
+  const siltContentStatus = evaluateSiltContent(calculatedSiltContent);
   const calculatedChlorideContent = calculateChlorideContent(
     details.silverNitrateContent,
     details.firstChlorideTitrationPoint,
@@ -699,10 +725,15 @@ export default function RecordForm() {
     }
 
     let payloadDetails: Record<string, unknown> = { ...details };
-    if (testType === TestType.Aggregate_Sieve) {
-      payloadDetails.materialCondition = stringValue(
+    if (usesSieveRows) {
+      const selectedCondition = stringValue(
         details.materialCondition || details.condition,
       ).trim();
+      if (testType === TestType.Aggregate_Sieve) {
+        payloadDetails.materialCondition = selectedCondition;
+      } else {
+        payloadDetails.condition = selectedCondition;
+      }
     }
 
     if (usesSieveRows) {
@@ -992,7 +1023,9 @@ export default function RecordForm() {
 
               <div className="space-y-2">
                 <Label>
-                  {testType === TestType.Blocks || testType === TestType.Paving_Blocks
+                  {usesSieveRows
+                    ? "Sampling Date"
+                    : testType === TestType.Blocks || testType === TestType.Paving_Blocks
                     ? "Casting Date"
                     : "Sample Date"}{" "}
                   <span className="text-destructive">*</span>
@@ -1006,7 +1039,10 @@ export default function RecordForm() {
               </div>
 
               <div className="space-y-2">
-                <Label>Plant / Production Location <span className="text-destructive">*</span></Label>
+                <Label>
+                  {usesSieveRows ? "Factory" : "Plant / Production Location"}{" "}
+                  <span className="text-destructive">*</span>
+                </Label>
                 <TypeaheadInput
                   value={locationValue}
                   onChange={setLocationValue}
@@ -1018,7 +1054,10 @@ export default function RecordForm() {
 
               {testType !== TestType.Blocks && (
                 <div className="space-y-2">
-                  <Label>Material / Product <span className="text-destructive">*</span></Label>
+                  <Label>
+                    {usesSieveRows ? "Material Type" : "Material / Product"}{" "}
+                    <span className="text-destructive">*</span>
+                  </Label>
                   <TypeaheadInput
                     value={material}
                     onChange={setMaterial}
@@ -1027,6 +1066,41 @@ export default function RecordForm() {
                     onCreateOption={createReferenceOption(getMaterialReferenceCategory())}
                   />
                 </div>
+              )}
+
+              {usesSieveRows && (
+                <>
+                  <div className="space-y-2">
+                    <Label>Testing Date</Label>
+                    <Input
+                      type="date"
+                      value={stringValue(details.testingDate).slice(0, 10)}
+                      onChange={(event) =>
+                        handleDetailChange("testingDate", event.target.value)
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Supplier</Label>
+                    <Input
+                      value={stringValue(details.supplier)}
+                      onChange={(event) =>
+                        handleDetailChange("supplier", event.target.value)
+                      }
+                      placeholder="Enter supplier"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Block Plant</Label>
+                    <Input
+                      value={stringValue(details.blockPlant)}
+                      onChange={(event) =>
+                        handleDetailChange("blockPlant", event.target.value)
+                      }
+                      placeholder="Enter block plant"
+                    />
+                  </div>
+                </>
               )}
 
       {testType === TestType.Blocks ? (
@@ -1164,7 +1238,10 @@ export default function RecordForm() {
       )}
 
               <div className="space-y-2">
-                <Label>Tested By (Technician) <span className="text-destructive">*</span></Label>
+                <Label>
+                  {usesSieveRows ? "Sampled-Tested By" : "Tested By (Technician)"}{" "}
+                  <span className="text-destructive">*</span>
+                </Label>
                 <TypeaheadInput
                   value={testedBy}
                   onChange={setTestedBy}
@@ -1188,30 +1265,45 @@ export default function RecordForm() {
                 </div>
               )}
 
-              {testType === TestType.Aggregate_Sieve && (
+              {usesSieveRows && (
                 <div className="space-y-2">
                   <Label>
-                    Material Condition <span className="text-destructive">*</span>
-                  </Label>
-                  <Select
-                    value={String(
-                      details.materialCondition || details.condition || "",
+                    {testType === TestType.Aggregate_Sieve
+                      ? "Material Condition"
+                      : "Sand Condition"}
+                    {testType === TestType.Aggregate_Sieve && (
+                      <span className="text-destructive"> *</span>
                     )}
-                    onValueChange={(value) =>
-                      handleDetailChange("materialCondition", value)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select material condition..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {["Single Washed", "Unwashed", "Double Washed"].map((condition) => (
-                        <SelectItem key={condition} value={condition}>
-                          {condition}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  </Label>
+                  {testType === TestType.Aggregate_Sieve ? (
+                    <Select
+                      value={String(
+                        details.materialCondition || details.condition || "",
+                      )}
+                      onValueChange={(value) =>
+                        handleDetailChange("materialCondition", value)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select material condition..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {["Single Washed", "Unwashed", "Double Washed"].map((condition) => (
+                          <SelectItem key={condition} value={condition}>
+                            {condition}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      value={String(details.condition ?? "")}
+                      onChange={(event) =>
+                        handleDetailChange("condition", event.target.value)
+                      }
+                      placeholder="Enter sand condition"
+                    />
+                  )}
                 </div>
               )}
 
@@ -1502,22 +1594,35 @@ export default function RecordForm() {
                   </div>
                 </div>
               )}
-              {testType === TestType.Aggregate_Sieve && (
+              {usesSieveRows && (
                 <section className="mb-6 rounded-md border border-amber-500/25 bg-amber-500/[0.035] p-4">
                   <div className="mb-3">
                     <h3 className="font-semibold text-foreground">
-                      Chloride and Sulphate Content
+                      Sieve and Chemical Test Results
                     </h3>
                     <p className="text-xs text-muted-foreground">
-                      Enter the laboratory readings used to calculate chloride and sulphate content.
+                      Sieve analysis: BS812:PART103:1985. Chemical testing: BS812:Part 117 and 118:1988.
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Retained (%) = retained mass ÷ total retained mass × 100;
+                      passing mass = sample mass − cumulative retained mass;
+                      passing (%) = passing mass ÷ sample mass × 100. Moisture
+                      (%) = (wet − dry) ÷ dry × 100. Silt (%) = (silt before −
+                      silt after) ÷ silt before × 100. Chloride (%) = 0.07092 ×
+                      (silver nitrate content − (10 × 0.1 × (second titration
+                      point − first titration point))). Sulfate (%) = ((crucible
+                      + ash − crucible) × 34.3) ÷ 3.
                     </p>
                   </div>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {AGGREGATE_CHEMISTRY_FIELDS.map(({ key, label }) => (
+                    {[
+                      { key: "siltBefore", label: "Silt Before" },
+                      { key: "siltAfter", label: "Silt After" },
+                    ].map(({ key, label }) => (
                       <div key={key} className="space-y-2">
-                        <Label htmlFor={`aggregate-${key}`}>{label}</Label>
+                        <Label htmlFor={`sieve-${key}`}>{label}</Label>
                         <Input
-                          id={`aggregate-${key}`}
+                          id={`sieve-${key}`}
                           type="text"
                           inputMode="decimal"
                           value={String(details[key] ?? "")}
@@ -1528,22 +1633,70 @@ export default function RecordForm() {
                         />
                       </div>
                     ))}
+                    {AGGREGATE_CHEMISTRY_FIELDS.map(({ key, label }) => (
+                      <div key={key} className="space-y-2">
+                        <Label htmlFor={`sieve-chemistry-${key}`}>{label}</Label>
+                        <Input
+                          id={`sieve-chemistry-${key}`}
+                          type="text"
+                          inputMode="decimal"
+                          value={String(details[key] ?? "")}
+                          onChange={(event) =>
+                            handleDetailChange(key, event.target.value)
+                          }
+                          placeholder="Enter value"
+                        />
+                      </div>
+                    ))}
+                    <div className="space-y-2">
+                      <Label htmlFor="sieve-chemical-tested-by">Chemical Tested By</Label>
+                      <Input
+                        id="sieve-chemical-tested-by"
+                        value={String(details.chemicalTestedBy ?? "")}
+                        onChange={(event) =>
+                          handleDetailChange("chemicalTestedBy", event.target.value)
+                        }
+                        placeholder="Enter chemical tester"
+                      />
+                    </div>
                   </div>
                   <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                     {[
                       {
-                        label: "Chloride Content",
-                        value: calculatedChlorideContent,
+                        label: "Moisture Content",
+                        value: calculatedMoistureContent
+                          ? `${calculatedMoistureContent}%`
+                          : "—",
                       },
                       {
-                        label: "Sulphate Content",
-                        value: calculatedSulphateContent,
+                        label: `Silt Content (Limit < ${SIEVE_SILT_LIMIT_PERCENT}%)`,
+                        value: calculatedSiltContent === null
+                          ? "—"
+                          : `${calculatedSiltContent.toFixed(2)}% · ${siltContentStatus}`,
+                      },
+                      {
+                        label: `Chloride Content (Limit ${AGGREGATE_CHLORIDE_LIMIT_PERCENT}%)`,
+                        value: calculatedChlorideContent === null
+                          ? "—"
+                          : `${calculatedChlorideContent.toFixed(2)}% · ${evaluateContentAgainstLimit(
+                              calculatedChlorideContent,
+                              AGGREGATE_CHLORIDE_LIMIT_PERCENT,
+                            )}`,
+                      },
+                      {
+                        label: `Sulfate Content (Limit ${AGGREGATE_SULPHATE_LIMIT_PERCENT}%)`,
+                        value: calculatedSulphateContent === null
+                          ? "—"
+                          : `${calculatedSulphateContent.toFixed(2)}% · ${evaluateContentAgainstLimit(
+                              calculatedSulphateContent,
+                              AGGREGATE_SULPHATE_LIMIT_PERCENT,
+                            )}`,
                       },
                     ].map(({ label, value }) => (
                       <div key={label} className="space-y-2">
                         <Label>{label}</Label>
                         <div className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground">
-                          {value === null ? "—" : `${value.toFixed(2)}%`}
+                          {value}
                         </div>
                       </div>
                     ))}
@@ -1609,7 +1762,7 @@ export default function RecordForm() {
                     </div>
                   )}
                    {usesSieveRows && !sieveEntryItems.length ? null : <div className={`${isCompactBlockTable ? "overflow-hidden" : "overflow-x-auto"} rounded-md border`}>
-                      <table className={`w-full ${usesSieveRows ? "min-w-[760px] text-sm" : isCompactBlockTable ? "table-fixed text-[11px]" : testType === TestType.Paving_Blocks ? "min-w-[1440px] text-sm" : "min-w-[1080px] text-sm"}`}>
+                      <table className={`w-full ${usesSieveRows ? "min-w-[1240px] text-sm" : isCompactBlockTable ? "table-fixed text-[11px]" : testType === TestType.Paving_Blocks ? "min-w-[1440px] text-sm" : "min-w-[1080px] text-sm"}`}>
                       <thead className="bg-muted/50">
                         <tr className="border-b">
                            <th className={`${isCompactBlockTable ? "w-[4%] px-1 py-2 text-[10px]" : "w-12 px-3 py-3"} text-left font-semibold`}>No.</th>
@@ -1621,9 +1774,13 @@ export default function RecordForm() {
                           {usesSieveRows ? (
                             <>
                               <th className="px-3 py-3 text-left font-semibold">Standard</th>
-                               <th className="px-3 py-3 text-left font-semibold">Amount Returned (g) <span className="font-normal text-muted-foreground">(optional)</span></th>
-                               <th className="px-3 py-3 text-left font-semibold">Amount Passing (g)</th>
-                              <th className="px-3 py-3 text-left font-semibold">% Passing</th>
+                              <th className="px-3 py-3 text-left font-semibold">Mass Retained (g)</th>
+                              <th className="px-3 py-3 text-left font-semibold">Retained (%)</th>
+                              <th className="px-3 py-3 text-left font-semibold">Amount Passing (g)</th>
+                              <th className="px-3 py-3 text-left font-semibold">Passing (%)</th>
+                              <th className="px-3 py-3 text-left font-semibold">Lower Limit</th>
+                              <th className="px-3 py-3 text-left font-semibold">Upper Limit</th>
+                              <th className="px-3 py-3 text-left font-semibold">Remarks</th>
                             </>
                           ) : (
                             <>
@@ -1735,6 +1892,19 @@ export default function RecordForm() {
                                 </td>
                                 <td className="px-2 py-2">
                                   <div className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground">
+                                    {calculateRetainedPercentage(
+                                      row.amountReturned,
+                                      calculatedSieveSampleWeight,
+                                    )
+                                      ? `${calculateRetainedPercentage(
+                                          row.amountReturned,
+                                          calculatedSieveSampleWeight,
+                                        )}%`
+                                      : "—"}
+                                  </div>
+                                </td>
+                                <td className="px-2 py-2">
+                                  <div className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground">
                                      {row.passingAmount ? `${row.passingAmount} g` : "—"}
                                   </div>
                                 </td>
@@ -1742,6 +1912,62 @@ export default function RecordForm() {
                                   <div className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground">
                                     {row.passingPercentage ? `${row.passingPercentage}%` : "—"}
                                   </div>
+                                </td>
+                                <td className="px-2 py-2">
+                                  {(() => {
+                                    const standard = applicableSieveStandards.find(
+                                      (candidate) =>
+                                        candidate.sieveSizeReferenceItemId ===
+                                        row.sieveSizeReferenceItemId,
+                                    );
+                                    return standard?.minimum == null
+                                      ? "—"
+                                      : `${standard.minimum}${standard.unit ? ` ${standard.unit}` : ""}`;
+                                  })()}
+                                </td>
+                                <td className="px-2 py-2">
+                                  {(() => {
+                                    const standard = applicableSieveStandards.find(
+                                      (candidate) =>
+                                        candidate.sieveSizeReferenceItemId ===
+                                        row.sieveSizeReferenceItemId,
+                                    );
+                                    return standard?.maximum == null
+                                      ? "—"
+                                      : `${standard.maximum}${standard.unit ? ` ${standard.unit}` : ""}`;
+                                  })()}
+                                </td>
+                                <td className="px-2 py-2">
+                                  {(() => {
+                                    const standard = applicableSieveStandards.find(
+                                      (candidate) =>
+                                        candidate.sieveSizeReferenceItemId ===
+                                        row.sieveSizeReferenceItemId,
+                                    );
+                                    if (!standard) return "Pending";
+                                    const measuredValue =
+                                      standard.measurementType === "amount"
+                                        ? row.passingAmount
+                                        : row.passingPercentage;
+                                    const result = evaluateSieveValue(
+                                      measuredValue,
+                                      standard.minimum,
+                                      standard.maximum,
+                                    );
+                                    return (
+                                      <span
+                                        className={
+                                          result === "Pass"
+                                            ? "font-semibold text-green-700"
+                                            : result === "Fail"
+                                              ? "font-semibold text-red-700"
+                                              : "text-muted-foreground"
+                                        }
+                                      >
+                                        {result}
+                                      </span>
+                                    );
+                                  })()}
                                 </td>
                               </>
                             ) : (
