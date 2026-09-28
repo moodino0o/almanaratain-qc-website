@@ -14,22 +14,13 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer } from "lucide-react";
 import { useAppBack } from "@/hooks/use-app-back";
 import {
-  AGGREGATE_CHEMISTRY_FIELDS,
-  AGGREGATE_CHLORIDE_LIMIT_PERCENT,
-  AGGREGATE_SULPHATE_LIMIT_PERCENT,
   blockMaterialMatches,
   blockSizeMatches,
   blockTypeMatches,
-  calculateChlorideContent,
   calculateMoistureContent,
   calculateRetainedPercentage,
   calculateSieveSampleWeight,
-  calculateSiltContent,
-  calculateSulphateContent,
-  evaluateContentAgainstLimit,
-  evaluateSiltContent,
   findSieveEvaluationCriterion,
-  SIEVE_SILT_LIMIT_PERCENT,
   stringValue,
   sortSieveRowsByPoreSize,
 } from "./record-form-utils";
@@ -890,40 +881,6 @@ function SieveRowsTable({
   );
 }
 
-function SieveEvaluationTable({ value }: { value: unknown }) {
-  if (typeof value !== "object" || value === null) return null;
-  const evaluation = value as Record<string, unknown>;
-  const criteria = sortSieveRowsByPoreSize(
-    (Array.isArray(evaluation.criteria) ? evaluation.criteria : []).filter(
-      (criterion) => hasSieveSize(objectValue(criterion)?.sieveSize),
-    ),
-    (criterion) => objectValue(criterion)?.sieveSize,
-  );
-  if (!criteria.length) return null;
-  return (
-    <div className="report-evaluation-block">
-      <p className="report-centered-title">
-        Sieve Evaluation: {textValue(evaluation.status)}{evaluation.reason ? ` — ${textValue(evaluation.reason)}` : ""}
-      </p>
-      <table className="report-table">
-        <thead><tr><th>Sieve / Pore Size</th><th>Measured</th><th>Allowed Range</th><th>Result</th></tr></thead>
-        <tbody>
-          {criteria.map((criterion, index) => {
-            const item = typeof criterion === "object" && criterion !== null
-              ? criterion as Record<string, unknown> : {};
-            return <tr key={index}>
-              <td>{rawTextValue(item.sieveSize)}</td>
-              <td>{item.measuredValue == null ? "Missing" : `${textValue(item.measuredValue)} ${textValue(item.unit)}`}</td>
-              <td>{item.minimum == null ? "—" : textValue(item.minimum)} to {item.maximum == null ? "—" : textValue(item.maximum)} {textValue(item.unit)}</td>
-              <td>{item.withinLimits === true ? "Pass" : item.withinLimits === false ? "Fail" : "Review"}</td>
-            </tr>;
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 const readyMixReportStandards = [
   { mixType: "45 N/mm2", sevenDay: 31, twentyEightDay: 45 },
   { mixType: "35 N/mm2", sevenDay: 21, twentyEightDay: 35 },
@@ -1479,28 +1436,6 @@ function SieveReport({
     drySampleWeight,
     wetSampleWeight,
   );
-  const siltContent = calculateSiltContent(
-    details.siltBefore,
-    details.siltAfter,
-  );
-  const siltStatus = evaluateSiltContent(siltContent);
-  const chlorideContent = calculateChlorideContent(
-    details.silverNitrateContent,
-    details.firstChlorideTitrationPoint,
-    details.secondChlorideTitrationPoint,
-  );
-  const sulphateContent = calculateSulphateContent(
-    details.crucibleWeight,
-    details.crucibleAshWeight,
-  );
-  const chlorideStatus = evaluateContentAgainstLimit(
-    chlorideContent,
-    AGGREGATE_CHLORIDE_LIMIT_PERCENT,
-  );
-  const sulphateStatus = evaluateContentAgainstLimit(
-    sulphateContent,
-    AGGREGATE_SULPHATE_LIMIT_PERCENT,
-  );
   const measurementEntries = [
     ["Supplier", detailValue(details, ["supplier"])],
     [
@@ -1510,8 +1445,6 @@ function SieveReport({
     ["Dry Weight (g)", drySampleWeight || "-"],
     ["Wet Weight (g)", wetSampleWeight || "-"],
     ["Moisture Content (%)", moistureContent || "-"],
-    ["Silt Before", detailValue(details, ["siltBefore"])],
-    ["Silt After", detailValue(details, ["siltAfter"])],
     ["Fineness Modulus", detailValue(details, ["finenessModulus"])],
   ] as const;
   const testingDate = stringValue(details.testingDate);
@@ -1541,59 +1474,11 @@ function SieveReport({
           <ReportFields entries={measurementEntries} />
         </section>
       </div>
-      <section className="report-summary">
-        <SectionHeading>Chemical Testing</SectionHeading>
-        <ReportFields
-          entries={[
-            [
-              "Moisture Content",
-              moistureContent ? `${moistureContent}%` : "-",
-            ],
-            [
-              "Silt Content",
-              siltContent === null ? "-" : `${siltContent.toFixed(2)}%`,
-            ],
-            ["Silt Limit", `< ${SIEVE_SILT_LIMIT_PERCENT}%`],
-            ["Silt Result", siltStatus],
-            [
-              "Chloride Content",
-              chlorideContent === null ? "-" : `${chlorideContent.toFixed(2)}%`,
-            ],
-            [
-              "Chloride Standard",
-              `${AGGREGATE_CHLORIDE_LIMIT_PERCENT.toFixed(2)}%`,
-            ],
-            ["Chloride Result", chlorideStatus],
-            [
-              "Sulfate Content",
-              sulphateContent === null ? "-" : `${sulphateContent.toFixed(2)}%`,
-            ],
-            [
-              "Sulfate Standard",
-              `${AGGREGATE_SULPHATE_LIMIT_PERCENT.toFixed(2)}%`,
-            ],
-            ["Sulfate Result", sulphateStatus],
-            ["Chemical Tested By", detailValue(details, ["chemicalTestedBy"])],
-            ["Chemical Standard", "BS812:Part 117 and 118:1988"],
-            ...AGGREGATE_CHEMISTRY_FIELDS.map(({ key, label }) => [
-              label,
-              detailValue(details, [key]),
-            ] as const),
-          ]}
-        />
-      </section>
       <section className="report-calculation-notes mt-3 space-y-1 border-t border-slate-300 pt-2 text-[8px] leading-tight text-slate-600">
         <p>
           Retained (%) = mass retained ÷ total retained mass × 100. Passing
           amount = sample mass − cumulative retained mass; passing (%) =
           passing amount ÷ sample mass × 100.
-        </p>
-        <p>
-          Moisture (%) = (wet weight − dry weight) ÷ dry weight × 100. Silt
-          (%) = (silt before − silt after) ÷ silt before × 100. Chloride (%) =
-          0.07092 × (silver nitrate content − (10 × 0.1 × (second titration
-          point − first titration point))). Sulfate (%) = ((crucible + ash −
-          crucible) × 34.3) ÷ 3.
         </p>
       </section>
 
@@ -1602,48 +1487,6 @@ function SieveReport({
         layout={layout}
         evaluation={evaluation}
       />
-      {evaluation && (
-        <SieveEvaluationTable value={evaluation} />
-      )}
-      <section className="report-summary">
-        <SectionHeading>Chemical Content Acceptance</SectionHeading>
-        <table className="report-table">
-          <thead>
-            <tr>
-              <th>Test</th>
-              <th>Measured Content</th>
-              <th>Limit</th>
-              <th>Result</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Silt Content</td>
-              <td>{siltContent === null ? "—" : `${siltContent.toFixed(2)}%`}</td>
-              <td>&lt; {SIEVE_SILT_LIMIT_PERCENT}%</td>
-              <td className={siltStatus === "Fail" ? "text-red-700 font-bold" : siltStatus === "Pass" ? "text-green-700 font-bold" : ""}>
-                {siltStatus}
-              </td>
-            </tr>
-            <tr>
-              <td>Chloride Content</td>
-              <td>{chlorideContent === null ? "—" : `${chlorideContent.toFixed(2)}%`}</td>
-              <td>{AGGREGATE_CHLORIDE_LIMIT_PERCENT.toFixed(2)}%</td>
-              <td className={chlorideStatus === "Fail" ? "text-red-700 font-bold" : chlorideStatus === "Pass" ? "text-green-700 font-bold" : ""}>
-                {chlorideStatus}
-              </td>
-            </tr>
-            <tr>
-              <td>Sulfate Content</td>
-              <td>{sulphateContent === null ? "—" : `${sulphateContent.toFixed(2)}%`}</td>
-              <td>{AGGREGATE_SULPHATE_LIMIT_PERCENT.toFixed(2)}%</td>
-              <td className={sulphateStatus === "Fail" ? "text-red-700 font-bold" : sulphateStatus === "Pass" ? "text-green-700 font-bold" : ""}>
-                {sulphateStatus}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
     </>
   );
 }
@@ -1942,14 +1785,7 @@ export default function ReportPrint() {
           className="report-standard report-layout-section"
           style={{ order: layoutSectionOrder(layout, "standard") }}
         >
-          {isSieveReport ? (
-            <>
-              <span>ACCORDING TO BS812:PART103:1985</span>
-              <span className="block">
-                IN ACCORDANCE WITH BS812:PART 117 AND 118:1988
-              </span>
-            </>
-          ) : accordingTo
+          {accordingTo
             ? `ACCORDING TO ${accordingTo}`
             : "QUALITY CONTROL TEST REPORT"}
         </p>}
