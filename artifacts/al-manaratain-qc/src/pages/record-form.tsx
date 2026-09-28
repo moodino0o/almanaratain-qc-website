@@ -657,6 +657,13 @@ export default function RecordForm() {
       toast.error("Please enter the paving block size.");
       return;
     }
+    if (
+      testType === TestType.Aggregate_Sieve &&
+      !stringValue(details.materialCondition).trim()
+    ) {
+      toast.error("Please select the Aggregate material condition.");
+      return;
+    }
 
     let payloadDetails: Record<string, unknown> = { ...details };
 
@@ -1143,6 +1150,31 @@ export default function RecordForm() {
                 </div>
               )}
 
+              {testType === TestType.Aggregate_Sieve && (
+                <div className="space-y-2">
+                  <Label>
+                    Material Condition <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={String(details.materialCondition ?? "")}
+                    onValueChange={(value) =>
+                      handleDetailChange("materialCondition", value)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select material condition..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {["Single Washed", "Unwashed", "Double Washed"].map((condition) => (
+                        <SelectItem key={condition} value={condition}>
+                          {condition}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               {testType === TestType.Ready_Mix && (
                 <>
                   <div className="space-y-2">
@@ -1374,8 +1406,10 @@ export default function RecordForm() {
                   <div className="mb-3">
                     <h3 className="font-semibold text-foreground">Sample Weights</h3>
                     <p className="text-xs text-muted-foreground">
-                      {usesSieveRows
-                        ? "Sample weight is calculated from the retained amounts entered below."
+                      {testType === TestType.Aggregate_Sieve
+                        ? "Sample weight is calculated from the retained amounts. Dry and wet sample weights are used to calculate moisture content."
+                        : usesSieveRows
+                          ? "Sample weight is calculated from the retained amounts entered below."
                         : "Record the total sample weight and the measured dry and wet weights."}
                     </p>
                   </div>
@@ -1401,8 +1435,18 @@ export default function RecordForm() {
                       </div>
                     )}
                     {[
-                      ["dryWeight", `Dry Weight (${usesSieveRows ? sieveMassUnit : "kg"})`],
-                      ["wetWeight", `Wet Weight (${usesSieveRows ? sieveMassUnit : "kg"})`],
+                      [
+                        "dryWeight",
+                        testType === TestType.Aggregate_Sieve
+                          ? `Dry Sample Weight (${sieveMassUnit})`
+                          : `Dry Weight (${usesSieveRows ? sieveMassUnit : "kg"})`,
+                      ],
+                      [
+                        "wetWeight",
+                        testType === TestType.Aggregate_Sieve
+                          ? `Wet Sample Weight (${sieveMassUnit})`
+                          : `Wet Weight (${usesSieveRows ? sieveMassUnit : "kg"})`,
+                      ],
                     ].map(([key, label]) => (
                       <div key={key} className="space-y-2">
                         <Label>{label}</Label>

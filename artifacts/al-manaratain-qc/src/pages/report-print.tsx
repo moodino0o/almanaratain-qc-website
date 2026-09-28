@@ -13,7 +13,13 @@ import type {
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer } from "lucide-react";
 import { useAppBack } from "@/hooks/use-app-back";
-import { blockMaterialMatches, blockSizeMatches, blockTypeMatches } from "./record-form-utils";
+import {
+  blockMaterialMatches,
+  blockSizeMatches,
+  blockTypeMatches,
+  calculateMoistureContent,
+  sortSieveRowsByPoreSize,
+} from "./record-form-utils";
 
 type DetailMap = QcRecord["details"];
 type ValueMap = Record<string, unknown>;
@@ -752,7 +758,7 @@ function SieveRowsTable({
   rows: unknown[];
   layout?: ReportLayout;
 }) {
-  const visibleRows = rows.filter((row) => {
+  const visibleRows = sortSieveRowsByPoreSize(rows.filter((row) => {
     const values = typeof row === "object" && row !== null
       ? row as Record<string, unknown> : {};
     return hasSieveSize(values.sieveSize) && [
@@ -760,7 +766,7 @@ function SieveRowsTable({
       values.passingAmount,
       values.passingPercentage,
     ].some(hasSieveEntry);
-  });
+  }), (row) => objectValue(row)?.sieveSize);
   if (!visibleRows.length) return null;
   const tableColumns = layoutColumns(layout, "sieveResults", [
     { key: "no", label: "No.", visible: true, order: 0, width: 7 },
@@ -804,11 +810,12 @@ function SieveRowsTable({
 function SieveEvaluationTable({ value }: { value: unknown }) {
   if (typeof value !== "object" || value === null) return null;
   const evaluation = value as Record<string, unknown>;
-  const criteria = (Array.isArray(evaluation.criteria) ? evaluation.criteria : []).filter((criterion) => {
-    const item = typeof criterion === "object" && criterion !== null
-      ? criterion as Record<string, unknown> : {};
-    return hasSieveSize(item.sieveSize);
-  });
+  const criteria = sortSieveRowsByPoreSize(
+    (Array.isArray(evaluation.criteria) ? evaluation.criteria : []).filter(
+      (criterion) => hasSieveSize(objectValue(criterion)?.sieveSize),
+    ),
+    (criterion) => objectValue(criterion)?.sieveSize,
+  );
   if (!criteria.length) return null;
   return (
     <div className="report-evaluation-block">
@@ -1383,12 +1390,19 @@ function SieveReport({
   const sieveRows = Array.isArray(details.sieveRows) ? details.sieveRows : [];
   const evaluation = objectValue(details.sieveEvaluation);
   const isAggregate = record.testType === "Aggregate Sieve";
+  const drySampleWeight = detailRawValue(details, ["dryWeight", "drySample"], "");
+  const wetSampleWeight = detailRawValue(details, ["wetWeight", "wetSample"], "");
+  const moistureContent = calculateMoistureContent(
+    drySampleWeight,
+    wetSampleWeight,
+  );
   const measurementEntries = isAggregate
     ? [
         ["Supplier", detailValue(details, ["supplier"])],
         ["Material Condition", detailValue(details, ["materialCondition", "condition"])],
-        ["Dry Sample", detailValue(details, ["drySample"])],
-        ["Wet Sample", detailValue(details, ["wetSample"])],
+        ["Dry Sample Weight (g)", drySampleWeight || "-"],
+        ["Wet Sample Weight (g)", wetSampleWeight || "-"],
+        ["Moisture Content (%)", moistureContent || "-"],
         ["Fineness Modulus", detailValue(details, ["finenessModulus"])],
       ] as const
     : [
@@ -1411,7 +1425,6 @@ function SieveReport({
               ["Location", record.location],
               ["Material", record.material],
               ["Tested By", record.testedBy],
-              ["Sample Weight", detailValue(details, ["sampleWeight"])],
             ]}
           />
         </section>

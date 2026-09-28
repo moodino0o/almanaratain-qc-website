@@ -9,12 +9,34 @@ import {
   blockTypeMatches,
   calculateBlockDensity,
   calculateBlockStrengths,
+  calculateMoistureContent,
   calculatePavingStrengths,
   pavingCorrectionFactorFromSize,
   calculateSieveSampleWeight,
   calculateSieveResults,
+  sortSieveRowsByPoreSize,
   prepareRecordForForm,
 } from "./record-form-utils";
+
+test("sorts sieve pore sizes from largest to smallest without reordering ties", () => {
+  const rows = [
+    { sieveSize: "0.075 mm", row: "fine" },
+    { sieveSize: "4.75 mm", row: "coarse" },
+    { sieveSize: "2.36 mm", row: "middle first" },
+    { sieveSize: "2.36 mm", row: "middle second" },
+  ];
+
+  assert.deepEqual(
+    sortSieveRowsByPoreSize(rows, (row) => row.sieveSize).map((row) => row.row),
+    ["coarse", "middle first", "middle second", "fine"],
+  );
+});
+
+test("calculates aggregate moisture content from dry and wet sample weights", () => {
+  assert.equal(calculateMoistureContent("100", "112.5"), "12.50");
+  assert.equal(calculateMoistureContent("0", "112.5"), "");
+  assert.equal(calculateMoistureContent("", "112.5"), "");
+});
 
 const baseRecord = (
   testType: QcRecord["testType"],

@@ -11,6 +11,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { getListRecordsQueryKey, getGetDashboardQueryKey, getGetRecordQueryKey } from "@workspace/api-client-react";
 import { useState } from "react";
 import { useAppBack } from "@/hooks/use-app-back";
+import { calculateMoistureContent } from "./record-form-utils";
 
 function calculatedWaterAbsorption(values: Record<string, unknown>) {
   const dryWeight = Number(values.dryWeight);
@@ -472,15 +473,34 @@ export default function RecordDetail() {
       ["Supplier", detailText(recordDetails, "supplier")],
       [
         record.testType === "Aggregate Sieve" ? "Material Condition" : "Condition",
-        detailText(recordDetails, record.testType === "Aggregate Sieve" ? "materialCondition" : "condition"),
+        record.testType === "Aggregate Sieve"
+          ? detailText(recordDetails, "materialCondition", detailText(recordDetails, "condition"))
+          : detailText(recordDetails, "condition"),
       ],
-      ["Dry Sample", detailText(recordDetails, "drySample")],
-      ["Wet Sample", detailText(recordDetails, "wetSample")],
     );
     if (record.testType === "Aggregate Sieve") {
-      summaryEntries.push(["Fineness Modulus", detailText(recordDetails, "finenessModulus")]);
+      summaryEntries.push(
+        [
+          "Dry Sample Weight (g)",
+          detailText(recordDetails, "dryWeight", detailText(recordDetails, "drySample")),
+        ],
+        [
+          "Wet Sample Weight (g)",
+          detailText(recordDetails, "wetWeight", detailText(recordDetails, "wetSample")),
+        ],
+        [
+          "Moisture Content (%)",
+          calculateMoistureContent(
+            recordDetails.dryWeight ?? recordDetails.drySample,
+            recordDetails.wetWeight ?? recordDetails.wetSample,
+          ) || "—",
+        ],
+        ["Fineness Modulus", detailText(recordDetails, "finenessModulus")],
+      );
     } else {
       summaryEntries.push(
+        ["Dry Sample", detailText(recordDetails, "drySample")],
+        ["Wet Sample", detailText(recordDetails, "wetSample")],
         ["Silt Before", detailText(recordDetails, "siltBefore")],
         ["Silt After", detailText(recordDetails, "siltAfter")],
       );

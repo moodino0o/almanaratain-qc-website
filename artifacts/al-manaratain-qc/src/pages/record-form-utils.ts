@@ -167,6 +167,9 @@ export const calculateWaterAbsorption = (dryWeight: unknown, wetWeight: unknown)
   return (((wet - dry) / dry) * 100).toFixed(2);
 };
 
+export const calculateMoistureContent = (dryWeight: unknown, wetWeight: unknown) =>
+  calculateWaterAbsorption(dryWeight, wetWeight);
+
 export const calculateBlockDensity = ({
   length,
   width,
@@ -295,6 +298,23 @@ export const sieveSizeNumber = (value: string) => {
   const parsed = Number(numericInputValue(value));
   return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
 };
+
+export const sortSieveRowsByPoreSize = <T>(
+  rows: T[],
+  getSieveSize: (row: T) => unknown,
+) =>
+  rows
+    .map((row, index) => ({
+      row,
+      index,
+      size: sieveSizeNumber(String(getSieveSize(row) ?? "")),
+    }))
+    .sort((left, right) =>
+      left.size === right.size
+        ? left.index - right.index
+        : right.size - left.size,
+    )
+    .map(({ row }) => row);
 
 export const blockDimensionsFromSize = (value: unknown): BlockDimensions | null => {
   const text = stringValue(value).trim();
