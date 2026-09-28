@@ -1,26 +1,48 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useListRecords, TestType, RecordStatus } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { CheckCircle2, AlertTriangle, XCircle, Search, Plus, Filter, Printer, TableProperties } from "lucide-react";
+import { CheckCircle2, AlertTriangle, XCircle, Search, Plus, Printer, TableProperties } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { useAuth } from "@workspace/replit-auth-web";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+type RegisterSection = "all" | "readymix" | "masonry" | "aggregate";
 
 export default function Records() {
   const { role } = useAuth();
   const canEditQc = role === "technician" || role === "managerial" || role === "administrator";
   const [search, setSearch] = useState("");
-  const [testType, setTestType] = useState<TestType | "All">("All");
+  const [section, setSection] = useState<RegisterSection>("all");
 
-  const { data: records, isLoading } = useListRecords({ 
-    search: search || undefined, 
-    testType: testType === "All" ? undefined : testType 
+  const { data: records, isLoading } = useListRecords({
+    search: search || undefined,
+    limit: 1000,
   });
+  const sectionRecords = useMemo(() => {
+    const allRecords = records ?? [];
+    switch (section) {
+      case "readymix":
+        return allRecords.filter((record) => record.testType === TestType.Ready_Mix);
+      case "masonry":
+        return allRecords.filter((record) =>
+          record.testType === TestType.Blocks ||
+          record.testType === TestType.Paving_Blocks,
+        );
+      case "aggregate":
+        return allRecords.filter((record) =>
+          record.testType === TestType.Sand_Sieve ||
+          record.testType === TestType.Aggregate_Sieve ||
+          record.testType === TestType["Flakiness_&_Elongation"],
+        );
+      default:
+        return allRecords;
+    }
+  }, [records, section]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -49,7 +71,7 @@ export default function Records() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">QC Register</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Comprehensive searchable list of all quality control tests.</p>
+          <p className="text-muted-foreground mt-1 text-sm">Browse QC records by test section. Section membership follows each record’s test type.</p>
         </div>
          {canEditQc && (
            <div className="flex flex-wrap gap-2">
@@ -67,33 +89,28 @@ export default function Records() {
 
       <Card className="flex-1 flex flex-col min-h-0 border-t-4 border-t-primary">
         <CardHeader className="pb-4 shrink-0">
-          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+          <div className="flex flex-col gap-4">
             <div className="relative w-full max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search record no, location, material..." 
+              <Input
+                placeholder="Search record no, location, material..."
                 className="pl-9"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Filter className="w-4 h-4 text-muted-foreground hidden sm:block" />
-              <div className="w-full sm:w-[200px]">
-                <Select value={testType} onValueChange={(val: any) => setTestType(val)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filter by Test Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="All">All Test Types</SelectItem>
-                    {Object.values(TestType).map(type => (
-                      <SelectItem key={type} value={type}>{type}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            <Tabs
+              value={section}
+              onValueChange={(value) => setSection(value as RegisterSection)}
+              className="w-full"
+            >
+              <TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-4">
+                <TabsTrigger value="all">All Results</TabsTrigger>
+                <TabsTrigger value="readymix">ReadyMix</TabsTrigger>
+                <TabsTrigger value="masonry">Masonry</TabsTrigger>
+                <TabsTrigger value="aggregate">Aggregate</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
         </CardHeader>
         <CardContent className="flex-1 overflow-auto p-0">
@@ -122,7 +139,7 @@ export default function Records() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : records?.length === 0 ? (
+              ) : sectionRecords.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={10} className="text-center h-48 text-muted-foreground">
                     <div className="flex flex-col items-center justify-center">
@@ -132,7 +149,7 @@ export default function Records() {
                   </TableCell>
                 </TableRow>
               ) : (
-                records?.map((record) => (
+                sectionRecords.map((record) => (
                   <TableRow key={record.id}>
                     <TableCell className="break-words px-1.5 py-2 font-semibold text-primary">{record.recordNo}</TableCell>
                     <TableCell className="whitespace-normal break-words px-1.5 py-2">
