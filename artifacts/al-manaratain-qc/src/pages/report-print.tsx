@@ -1485,11 +1485,12 @@ function SieveReport({
       isAggregate ? "Material Condition" : "Sand Condition",
       detailValue(details, ["materialCondition", "condition"]),
     ],
-    [
-      "Silt Content",
-      siltContent === null ? "-" : `${siltContent.toFixed(2)}%`,
-    ],
-    ["Fineness Modulus", detailValue(details, ["finenessModulus"])],
+    ...(isAggregate
+      ? [[
+          "Silt Content",
+          siltContent === null ? "-" : `${siltContent.toFixed(2)}%`,
+        ] as const]
+      : []),
   ] as const;
   const testingDate = stringValue(details.testingDate);
 
@@ -1531,9 +1532,6 @@ function SieveReport({
       />
       <section className="report-summary mt-3">
         <SectionHeading>Chemical Test Results</SectionHeading>
-        <p className="mb-2 text-xs text-slate-600">
-          Test method: BS812:Part 117 and 118:1988
-        </p>
         <table className="report-table">
           <thead>
             <tr>
