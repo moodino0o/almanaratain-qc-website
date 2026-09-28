@@ -59,7 +59,7 @@ export default function Records() {
   const tableColumnCount =
     10 -
     (hideCustomerAndSiteLocation ? 2 : 0) +
-    (isMasonrySection ? 3 : 0);
+    (isMasonrySection ? 4 : 0);
   const readyMixAgeAverages = useMemo(() => {
     const averages = new Map<number, ReadyMixAgeBandAverages>();
     if (isReadyMixSection) {
@@ -89,15 +89,17 @@ export default function Records() {
     testType: isReadyMixSection
       ? "w-[9%]"
       : isMasonrySection
-        ? "w-[10%]"
+        ? "w-[8%]"
         : isAggregateSection
           ? "w-[14%]"
           : "w-[11%]",
     location: isReadyMixSection
       ? "w-[7%]"
-      : isAggregateSection
-        ? "w-[12%]"
-        : "w-[9%]",
+      : isMasonrySection
+        ? "w-[8%]"
+        : isAggregateSection
+          ? "w-[12%]"
+          : "w-[9%]",
     customer: isReadyMixSection ? "w-[9%]" : "w-[11%]",
     siteLocation: isReadyMixSection
       ? "w-[8%]"
@@ -108,15 +110,13 @@ export default function Records() {
           : "w-[10%]",
     material: isReadyMixSection
       ? "w-[10%]"
-      : isMasonrySection
-        ? "w-[11%]"
-        : isAggregateSection
-          ? "w-[14%]"
-          : "w-[12%]",
+      : isAggregateSection
+        ? "w-[14%]"
+        : "w-[12%]",
     sampleDate: isReadyMixSection
       ? "w-[7%]"
       : isMasonrySection
-        ? "w-[8%]"
+        ? "w-[7%]"
         : isAggregateSection
           ? "w-[10%]"
           : "w-[8%]",
@@ -128,14 +128,16 @@ export default function Records() {
           ? "w-[10%]"
           : "w-[9%]",
     remarks: isMasonrySection
-      ? "w-[8%]"
+      ? "w-[9%]"
       : isAggregateSection
         ? "w-[10%]"
         : "w-[9%]",
+    blockType: "w-[13%]",
+    machine: "w-[8%]",
     status: isReadyMixSection
       ? "w-[7%]"
       : isMasonrySection
-        ? "w-[7%]"
+        ? "w-[6%]"
         : isAggregateSection
           ? "w-[9%]"
           : "w-[8%]",
@@ -157,7 +159,11 @@ export default function Records() {
     }
   };
 
-  const getRecordDetail = (details: Record<string, unknown>, keys: string[]) => {
+  const getRecordDetail = (
+    details: Record<string, unknown>,
+    keys: string[],
+    fallback = "—",
+  ) => {
     const normalized = new Map(
       Object.entries(details).map(([key, value]) => [
         key.toLowerCase().replace(/[^a-z0-9]/g, ""),
@@ -167,7 +173,7 @@ export default function Records() {
     const value = keys
       .map((key) => normalized.get(key.toLowerCase().replace(/[^a-z0-9]/g, "")))
       .find((candidate) => candidate !== undefined && candidate !== null);
-    return typeof value === "string" && value.trim() ? value : "—";
+    return typeof value === "string" && value.trim() ? value : fallback;
   };
 
   return (
@@ -233,7 +239,20 @@ export default function Records() {
                 {!hideCustomerAndSiteLocation && (
                   <TableHead className={`${columnWidths.siteLocation} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>Site Location</TableHead>
                 )}
-                <TableHead className={`${columnWidths.material} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>Material</TableHead>
+                {isMasonrySection ? (
+                  <>
+                    <TableHead className={`${columnWidths.blockType} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>
+                      Block Type
+                    </TableHead>
+                    <TableHead className={`${columnWidths.machine} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>
+                      Machine
+                    </TableHead>
+                  </>
+                ) : (
+                  <TableHead className={`${columnWidths.material} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>
+                    Material
+                  </TableHead>
+                )}
                 <TableHead className={`${columnWidths.sampleDate} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>Sample Date</TableHead>
                 {(isMasonrySection || isAggregateSection) ? (
                   <TableHead className={`${columnWidths.remarks} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>
@@ -245,9 +264,9 @@ export default function Records() {
                 <TableHead className={`${columnWidths.status} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>Status</TableHead>
                 {isMasonrySection && (
                   <>
-                    <TableHead className="w-[8%] whitespace-normal break-words px-1 py-1.5 text-right text-[9px] leading-tight sm:text-[10px]">Avg. (N/mm²)</TableHead>
-                    <TableHead className="w-[8%] whitespace-normal break-words px-1 py-1.5 text-right text-[9px] leading-tight sm:text-[10px]">Min. (N/mm²)</TableHead>
-                    <TableHead className="w-[8%] whitespace-normal break-words px-1 py-1.5 text-right text-[9px] leading-tight sm:text-[10px]">Max. (N/mm²)</TableHead>
+                    <TableHead className="w-[6%] whitespace-normal break-words px-1 py-1.5 text-right text-[9px] leading-tight sm:text-[10px]">Avg. (N/mm²)</TableHead>
+                    <TableHead className="w-[6%] whitespace-normal break-words px-1 py-1.5 text-right text-[9px] leading-tight sm:text-[10px]">Min. (N/mm²)</TableHead>
+                    <TableHead className="w-[6%] whitespace-normal break-words px-1 py-1.5 text-right text-[9px] leading-tight sm:text-[10px]">Max. (N/mm²)</TableHead>
                   </>
                 )}
                 {isReadyMixSection && (
@@ -301,7 +320,24 @@ export default function Records() {
                         {getRecordDetail(record.details, ["customerLocation", "siteLocation", "site"])}
                       </TableCell>
                     )}
-                    <TableCell className="whitespace-normal break-words px-1 py-1">{record.material}</TableCell>
+                    {isMasonrySection ? (
+                      <>
+                        <TableCell className="whitespace-normal break-words px-1 py-1">
+                          {getRecordDetail(
+                            record.details,
+                            ["blockType"],
+                            record.material || "—",
+                          )}
+                        </TableCell>
+                        <TableCell className="whitespace-normal break-words px-1 py-1">
+                          {getRecordDetail(record.details, ["machineType", "machine"])}
+                        </TableCell>
+                      </>
+                    ) : (
+                      <TableCell className="whitespace-normal break-words px-1 py-1">
+                        {record.material}
+                      </TableCell>
+                    )}
                     <TableCell className="whitespace-normal break-words px-1 py-1">{formatDate(record.sampleDate)}</TableCell>
                     {(isMasonrySection || isAggregateSection) ? (
                       <TableCell className="whitespace-normal break-words px-1 py-1">
