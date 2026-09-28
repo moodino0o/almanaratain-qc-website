@@ -26,6 +26,7 @@ export interface TypeaheadInputProps {
   emptyMessage?: string;
   className?: string;
   compact?: boolean;
+  createOptionDestination?: string;
   onCreateOption?: (value: string) => Promise<string | void> | string | void;
 }
 
@@ -37,6 +38,7 @@ export function TypeaheadInput({
   emptyMessage = "No matches found.",
   className,
   compact = false,
+  createOptionDestination,
   onCreateOption,
 }: TypeaheadInputProps) {
   const [open, setOpen] = React.useState(false);
@@ -67,7 +69,12 @@ export function TypeaheadInput({
   const hasExactMatch = options.some(
     (option) => option.trim().toLocaleLowerCase() === trimmedInput.toLocaleLowerCase(),
   );
-  const canCreateOption = Boolean(onCreateOption && trimmedInput && !hasExactMatch);
+  const canCreateOption = Boolean(
+    onCreateOption &&
+    trimmedInput &&
+    !hasExactMatch &&
+    filteredOptions.length === 0,
+  );
 
   const handleCreateOption = async () => {
     if (!onCreateOption || !trimmedInput || hasExactMatch || isCreatingOption) return;
@@ -152,8 +159,8 @@ export function TypeaheadInput({
                 </div>
               ) : (
                 <>
-                  {canCreateOption && (
-                    <CommandGroup heading="Reference Data">
+                    {canCreateOption && (
+                    <CommandGroup heading={createOptionDestination ? "No matching value" : "Reference Data"}>
                       <CommandItem
                         value={`add-${trimmedInput}`}
                         onSelect={handleCreateOption}
@@ -164,7 +171,7 @@ export function TypeaheadInput({
                         ) : (
                           <Plus className="mr-2 h-4 w-4" />
                         )}
-                        Add “{trimmedInput}” to Reference Data
+                        Add new “{trimmedInput}” to {createOptionDestination ?? "Reference Data"}
                       </CommandItem>
                     </CommandGroup>
                   )}

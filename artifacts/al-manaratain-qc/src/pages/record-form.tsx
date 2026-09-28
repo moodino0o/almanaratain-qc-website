@@ -35,15 +35,10 @@ import {
   pavingCorrectionFactorFromSize,
   type TestRow,
 } from "./record-form-utils";
+import { EMPLOYEE_ADDABLE_REFERENCE_CATEGORIES } from "./reference-data-permissions";
 
 const REFERENCE_NUMBER_MAX_LENGTH = 32;
 const DEFAULT_APPROVED_BY = "ADEL ABBAS EBRAHIM";
-const EMPLOYEE_ADDABLE_REFERENCE_CATEGORIES = new Set([
-  "locations",
-  "customers",
-  "customerLocations",
-  "mixStrengths",
-]);
 
 export default function RecordForm() {
   const { id } = useParams();

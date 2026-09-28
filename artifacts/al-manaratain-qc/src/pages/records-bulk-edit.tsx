@@ -4,9 +4,12 @@ import { useAuth } from "@workspace/replit-auth-web";
 import {
   TestType,
   createRecord,
+  getGetLookupsQueryKey,
+  getGetReferenceDataQueryKey,
   getListRecordsQueryKey,
   updateRecord,
   useListRecords,
+  useCreateReferenceItem,
   useGetLookups,
   useGetReferenceData,
   type QcRecord,
@@ -42,6 +45,7 @@ import {
   validateBulkDraft,
   type BulkRecordDraft,
 } from "./records-bulk-utils";
+import { EMPLOYEE_ADDABLE_REFERENCE_CATEGORIES } from "./reference-data-permissions";
 
 const today = () => {
   const value = new Date();
@@ -56,6 +60,11 @@ const sameDraft = (left: BulkRecordDraft, right: BulkRecordDraft) =>
   JSON.stringify(left) === JSON.stringify(right);
 
 type DraftKey = "sampleDate" | "location" | "material" | "testedBy" | "reviewedBy" | "remarks";
+
+type ReferenceOptionProps = {
+  onCreateOption?: (value: string) => Promise<string | void>;
+  createOptionDestination?: string;
+};
 
 function CellInput({
   value,
@@ -94,6 +103,8 @@ function LookupCell({
   options,
   placeholder = "Choose...",
   disabled = false,
+  onCreateOption,
+  createOptionDestination,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -101,6 +112,8 @@ function LookupCell({
   options: string[];
   placeholder?: string;
   disabled?: boolean;
+  onCreateOption?: (value: string) => Promise<string | void>;
+  createOptionDestination?: string;
 }) {
   if (disabled) {
     return <span className="block px-2 text-center text-muted-foreground/50">—</span>;
@@ -112,6 +125,8 @@ function LookupCell({
       options={options}
       placeholder={placeholder}
       className="min-w-0"
+      onCreateOption={onCreateOption}
+      createOptionDestination={createOptionDestination}
       compact
     />
   );
@@ -151,6 +166,7 @@ function DraftRow({
   onTestTypeChange,
   lookupOptions,
   canEditApprovedBy,
+  referenceOptionProps,
 }: {
   draft: BulkRecordDraft;
   dirty: boolean;
@@ -162,17 +178,22 @@ function DraftRow({
   onTestTypeChange: (value: BulkRecordDraft["testType"]) => void;
   lookupOptions: BulkLookupOptions;
   canEditApprovedBy: boolean;
+  referenceOptionProps: (categoryKey?: string) => ReferenceOptionProps;
 }) {
   const readyMix = draft.testType === TestType.Ready_Mix;
+  const mixDesign =
+    readyMix || draft.testType === TestType.RMX_Trial;
   const blocks = draft.testType === TestType.Blocks;
+  const pavingBlocks = draft.testType === TestType.Paving_Blocks;
+  const blockProduct = blocks || pavingBlocks;
   const sieve =
     draft.testType === TestType.Sand_Sieve ||
     draft.testType === TestType.Aggregate_Sieve;
   const water = draft.testType === TestType.Water;
   const materialOptions =
-    readyMix
+    mixDesign
       ? lookupOptions.mixStrengths
-      : blocks
+      : blockProduct
         ? uniqueValues(lookupOptions.blockTypes, lookupOptions.blockSizes)
         : lookupOptions.materials;
 
@@ -182,14 +203,16 @@ function DraftRow({
     applies: boolean,
     type: "text" | "date" | "number" = "text",
     options: string[] = [],
+    categoryKey?: string,
   ) => (
-    options.length > 0 && type === "text"
+    (options.length > 0 || categoryKey !== undefined) && type === "text"
       ? <LookupCell
           value={detailText(draft.details, key)}
           onChange={(value) => onDetailChange(key, value)}
           label={`${label} for ${draft.recordNo}`}
           options={options}
           disabled={!applies}
+          {...referenceOptionProps(categoryKey)}
         />
       : <CellInput
           value={detailText(draft.details, key)}
@@ -257,6 +280,7 @@ function DraftRow({
           onChange={(value) => onChange("location", value)}
           label={`Location or plant for ${draft.recordNo}`}
           options={lookupOptions.locations}
+          {...referenceOptionProps("locations")}
         />
       </td>
       <td data-label="Material / Product" className="min-w-0 px-1 py-1">
@@ -265,23 +289,26 @@ function DraftRow({
           onChange={(value) => onChange("material", value)}
           label={`Material or product for ${draft.recordNo}`}
           options={materialOptions}
+          {...referenceOptionProps(
+            mixDesign ? "mixStrengths" : blockProduct ? undefined : "materials",
+          )}
         />
       </td>
       <td data-label="Reference No." className="min-w-0 px-1 py-1">{detailInput("referenceNumber", "Reference number", readyMix)}</td>
-      <td data-label="Customer Name" className="min-w-0 px-1 py-1">{detailInput("customerName", "Customer name", readyMix, "text", lookupOptions.customers)}</td>
-      <td data-label="Customer Location" className="min-w-0 px-1 py-1">{detailInput("customerLocation", "Customer location", readyMix, "text", lookupOptions.customerLocations)}</td>
+      <td data-label="Customer Name" className="min-w-0 px-1 py-1">{detailInput("customerName", "Customer name", readyMix, "text", lookupOptions.customers, "customers")}</td>
+      <td data-label="Customer Location" className="min-w-0 px-1 py-1">{detailInput("customerLocation", "Customer location", readyMix, "text", lookupOptions.customerLocations, "customerLocations")}</td>
       <td data-label="Slump (mm)" className="min-w-0 px-1 py-1">{detailInput("slump", "Slump", readyMix, "number")}</td>
       <td data-label="Temperature (°C)" className="min-w-0 px-1 py-1">{detailInput("temperature", "Temperature", readyMix, "number")}</td>
-      <td data-label="Block Type" className="min-w-0 px-1 py-1">{detailInput("blockType", "Block type", blocks, "text", lookupOptions.blockTypes)}</td>
-      <td data-label="Block Size" className="min-w-0 px-1 py-1">{detailInput("blockSize", "Block size", blocks, "text", lookupOptions.blockSizes)}</td>
+      <td data-label="Block Type" className="min-w-0 px-1 py-1">{detailInput("blockType", "Block type", blocks, "text", lookupOptions.blockTypes, "blockTypes")}</td>
+      <td data-label="Block Size" className="min-w-0 px-1 py-1">{detailInput("blockSize", "Block size", blocks, "text", lookupOptions.blockSizes, "blockSizes")}</td>
       <td data-label="Machine" className="min-w-0 px-1 py-1">{detailInput("machine", "Machine", blocks)}</td>
       <td data-label="Block Age" className="min-w-0 px-1 py-1">{detailInput("blockAge", "Block age", blocks, "number")}</td>
       <td data-label="Testing Date" className="min-w-0 px-1 py-1">{detailInput("testingDate", "Testing date", blocks, "date")}</td>
-      <td data-label="Sample Type" className="min-w-0 px-1 py-1">{detailInput("sampleType", "Sample type", blocks, "text", lookupOptions.sampleTypes)}</td>
-      <td data-label="Conditioning Method" className="min-w-0 px-1 py-1">{detailInput("conditioningMethod", "Conditioning method", blocks, "text", lookupOptions.conditioningMethods)}</td>
-      <td data-label="Preparation Method" className="min-w-0 px-1 py-1">{detailInput("preparationMethod", "Preparation method", blocks, "text", lookupOptions.preparationMethods)}</td>
+      <td data-label="Sample Type" className="min-w-0 px-1 py-1">{detailInput("sampleType", "Sample type", blocks, "text", lookupOptions.sampleTypes, "sampleTypes")}</td>
+      <td data-label="Conditioning Method" className="min-w-0 px-1 py-1">{detailInput("conditioningMethod", "Conditioning method", blocks, "text", lookupOptions.conditioningMethods, "conditioningMethods")}</td>
+      <td data-label="Preparation Method" className="min-w-0 px-1 py-1">{detailInput("preparationMethod", "Preparation method", blocks, "text", lookupOptions.preparationMethods, "preparationMethods")}</td>
       <td data-label="Shape Factor" className="min-w-0 px-1 py-1">{detailInput("shapeFactor", "Shape factor", blocks, "number")}</td>
-      <td data-label="Supplier" className="min-w-0 px-1 py-1">{detailInput("supplier", "Supplier", sieve, "text", lookupOptions.suppliers)}</td>
+      <td data-label="Supplier" className="min-w-0 px-1 py-1">{detailInput("supplier", "Supplier", sieve, "text", lookupOptions.suppliers, "suppliers")}</td>
       <td data-label="Condition" className="min-w-0 px-1 py-1">{detailInput("condition", "Condition", sieve)}</td>
       <td data-label="Water Source" className="min-w-0 px-1 py-1">{detailInput("source", "Source", water)}</td>
       <td data-label="Tested By" className="min-w-0 px-1 py-1">
@@ -290,6 +317,7 @@ function DraftRow({
           onChange={(value) => onChange("testedBy", value)}
           label={`Tested by for ${draft.recordNo}`}
           options={lookupOptions.employees}
+          {...referenceOptionProps("employees")}
         />
       </td>
       {canEditApprovedBy && (
@@ -299,6 +327,7 @@ function DraftRow({
             onChange={(value) => onChange("reviewedBy", value)}
             label={`Approved by for ${draft.recordNo}`}
             options={lookupOptions.employees}
+            {...referenceOptionProps("employees")}
           />
         </td>
       )}
@@ -317,6 +346,7 @@ export default function RecordsBulkEdit() {
   const queryClient = useQueryClient();
   const { data: lookups } = useGetLookups();
   const { data: referenceData } = useGetReferenceData();
+  const createReferenceItem = useCreateReferenceItem();
   const [testTypeFilter, setTestTypeFilter] = useState<TestType | "All">("All");
   const { data: records = [], isLoading, isFetching, error } = useListRecords({
     limit: 1000,
@@ -328,6 +358,42 @@ export default function RecordsBulkEdit() {
   const nextNewDraftId = useRef(-1);
   const [loadedFilter, setLoadedFilter] = useState<TestType | "All" | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const referenceOptionProps = (categoryKey?: string): ReferenceOptionProps => {
+    if (!categoryKey) return {};
+    const category = referenceData?.categories.find(
+      (item) => item.key === categoryKey,
+    );
+    const canAddCategory =
+      role === "administrator" ||
+      (Boolean(role) &&
+        EMPLOYEE_ADDABLE_REFERENCE_CATEGORIES.has(categoryKey));
+    if (!category || !canAddCategory) return {};
+
+    return {
+      createOptionDestination: `Settings → ${category.label}`,
+      onCreateOption: async (value) => {
+        try {
+          const createdItem = await createReferenceItem.mutateAsync({
+            categoryId: category.id,
+            data: { value },
+          });
+          await Promise.all([
+            queryClient.invalidateQueries({
+              queryKey: getGetReferenceDataQueryKey(),
+            }),
+            queryClient.invalidateQueries({
+              queryKey: getGetLookupsQueryKey(),
+            }),
+          ]);
+          toast.success(`Added “${createdItem.value}” to ${category.label}.`);
+          return createdItem.value;
+        } catch {
+          toast.error(`That value could not be added to ${category.label}.`);
+          throw new Error(`Could not add this value to ${category.label}.`);
+        }
+      },
+    };
+  };
   const lookupOptions = useMemo<BulkLookupOptions>(() => ({
     locations: uniqueValues(
       lookups?.locations ?? [],
@@ -645,6 +711,7 @@ export default function RecordsBulkEdit() {
                         ))}
                         lookupOptions={lookupOptions}
                         canEditApprovedBy={canEditApprovedBy}
+                        referenceOptionProps={referenceOptionProps}
                       />
                     ))}
                     {drafts.map((draft) => (
@@ -664,6 +731,7 @@ export default function RecordsBulkEdit() {
                         onTestTypeChange={() => undefined}
                         lookupOptions={lookupOptions}
                         canEditApprovedBy={canEditApprovedBy}
+                        referenceOptionProps={referenceOptionProps}
                       />
                     ))}
                     {!drafts.length && !newDrafts.length && (
