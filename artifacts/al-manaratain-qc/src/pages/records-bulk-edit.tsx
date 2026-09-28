@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@workspace/replit-auth-web";
 import {
@@ -81,7 +81,7 @@ function CellInput({
       value={value}
       onChange={(event) => onChange(event.target.value)}
       placeholder={placeholder}
-      className="h-9 w-full min-w-[110px] rounded-sm border border-transparent bg-transparent px-2 text-sm outline-none transition-colors hover:border-border focus:border-primary focus:bg-background focus:ring-1 focus:ring-primary/30"
+      className="h-8 w-full min-w-0 rounded-sm border border-transparent bg-transparent px-1 text-[10px] leading-tight outline-none transition-colors hover:border-border focus:border-primary focus:bg-background focus:ring-1 focus:ring-primary/30"
     />
   );
 }
@@ -91,7 +91,7 @@ function LookupCell({
   onChange,
   label,
   options,
-  placeholder = "Select or type...",
+  placeholder = "Choose...",
   disabled = false,
 }: {
   value: string;
@@ -110,7 +110,8 @@ function LookupCell({
       onChange={onChange}
       options={options}
       placeholder={placeholder}
-      className="min-w-[150px]"
+      className="min-w-0"
+      compact
     />
   );
 }
@@ -142,6 +143,7 @@ function DraftRow({
   draft,
   dirty,
   isNew,
+  newRecordNumber,
   onChange,
   onDetailChange,
   onTestTypeChange,
@@ -151,6 +153,7 @@ function DraftRow({
   draft: BulkRecordDraft;
   dirty: boolean;
   isNew: boolean;
+  newRecordNumber?: number;
   onChange: (key: DraftKey, value: string) => void;
   onDetailChange: (key: string, value: string) => void;
   onTestTypeChange: (value: BulkRecordDraft["testType"]) => void;
@@ -202,10 +205,10 @@ function DraftRow({
         isNew ? "border-l-4 border-l-primary" : "",
       ].join(" ")}
     >
-      <td className="sticky left-0 z-10 border-r bg-inherit px-3 py-2 font-semibold text-primary">
-        {isNew ? "New record" : draft.recordNo}
+      <td data-label="Record No." className="sticky left-0 z-10 min-w-0 border-r bg-inherit px-1 py-2 font-semibold text-primary">
+        {isNew ? `New ${newRecordNumber ?? ""}` : draft.recordNo}
       </td>
-      <td className="px-1 py-1">
+      <td data-label="Test Type" className="min-w-0 px-1 py-1">
         {isNew ? (
           <select
             aria-label="Test type for new record"
@@ -213,17 +216,17 @@ function DraftRow({
             onChange={(event) => onTestTypeChange(
               event.target.value as BulkRecordDraft["testType"],
             )}
-            className="h-9 min-w-[150px] rounded-sm border border-transparent bg-transparent px-2 text-sm outline-none hover:border-border focus:border-primary focus:bg-background"
+            className="h-8 w-full min-w-0 rounded-sm border border-transparent bg-transparent px-1 text-[10px] outline-none hover:border-border focus:border-primary focus:bg-background"
           >
             {Object.values(TestType).map((type) => (
               <option key={type} value={type}>{type}</option>
             ))}
           </select>
         ) : (
-          <span className="block min-w-[135px] px-2 text-xs font-semibold">{draft.testType}</span>
+          <span className="block min-w-0 break-words px-1 text-[10px] font-semibold">{draft.testType}</span>
         )}
       </td>
-      <td className="px-1 py-1">
+      <td data-label="Sample Date" className="min-w-0 px-1 py-1">
         <CellInput
           value={draft.sampleDate}
           onChange={(value) => onChange("sampleDate", value)}
@@ -231,7 +234,7 @@ function DraftRow({
           type="date"
         />
       </td>
-      <td className="px-1 py-1">
+      <td data-label="Location / Plant" className="min-w-0 px-1 py-1">
         <LookupCell
           value={draft.location}
           onChange={(value) => onChange("location", value)}
@@ -239,7 +242,7 @@ function DraftRow({
           options={lookupOptions.locations}
         />
       </td>
-      <td className="px-1 py-1">
+      <td data-label="Material / Product" className="min-w-0 px-1 py-1">
         <LookupCell
           value={draft.material}
           onChange={(value) => onChange("material", value)}
@@ -247,24 +250,24 @@ function DraftRow({
           options={materialOptions}
         />
       </td>
-      <td className="px-1 py-1">{detailInput("referenceNumber", "Reference number", readyMix)}</td>
-      <td className="px-1 py-1">{detailInput("customerName", "Customer name", readyMix, "text", lookupOptions.customers)}</td>
-      <td className="px-1 py-1">{detailInput("customerLocation", "Customer location", readyMix, "text", lookupOptions.customerLocations)}</td>
-      <td className="px-1 py-1">{detailInput("slump", "Slump", readyMix, "number")}</td>
-      <td className="px-1 py-1">{detailInput("temperature", "Temperature", readyMix, "number")}</td>
-      <td className="px-1 py-1">{detailInput("blockType", "Block type", blocks, "text", lookupOptions.blockTypes)}</td>
-      <td className="px-1 py-1">{detailInput("blockSize", "Block size", blocks, "text", lookupOptions.blockSizes)}</td>
-      <td className="px-1 py-1">{detailInput("machine", "Machine", blocks)}</td>
-      <td className="px-1 py-1">{detailInput("blockAge", "Block age", blocks, "number")}</td>
-      <td className="px-1 py-1">{detailInput("testingDate", "Testing date", blocks, "date")}</td>
-      <td className="px-1 py-1">{detailInput("sampleType", "Sample type", blocks, "text", lookupOptions.sampleTypes)}</td>
-      <td className="px-1 py-1">{detailInput("conditioningMethod", "Conditioning method", blocks, "text", lookupOptions.conditioningMethods)}</td>
-      <td className="px-1 py-1">{detailInput("preparationMethod", "Preparation method", blocks, "text", lookupOptions.preparationMethods)}</td>
-      <td className="px-1 py-1">{detailInput("shapeFactor", "Shape factor", blocks, "number")}</td>
-      <td className="px-1 py-1">{detailInput("supplier", "Supplier", sieve, "text", lookupOptions.suppliers)}</td>
-      <td className="px-1 py-1">{detailInput("condition", "Condition", sieve)}</td>
-      <td className="px-1 py-1">{detailInput("source", "Source", water)}</td>
-      <td className="px-1 py-1">
+      <td data-label="Reference No." className="min-w-0 px-1 py-1">{detailInput("referenceNumber", "Reference number", readyMix)}</td>
+      <td data-label="Customer Name" className="min-w-0 px-1 py-1">{detailInput("customerName", "Customer name", readyMix, "text", lookupOptions.customers)}</td>
+      <td data-label="Customer Location" className="min-w-0 px-1 py-1">{detailInput("customerLocation", "Customer location", readyMix, "text", lookupOptions.customerLocations)}</td>
+      <td data-label="Slump (mm)" className="min-w-0 px-1 py-1">{detailInput("slump", "Slump", readyMix, "number")}</td>
+      <td data-label="Temperature (°C)" className="min-w-0 px-1 py-1">{detailInput("temperature", "Temperature", readyMix, "number")}</td>
+      <td data-label="Block Type" className="min-w-0 px-1 py-1">{detailInput("blockType", "Block type", blocks, "text", lookupOptions.blockTypes)}</td>
+      <td data-label="Block Size" className="min-w-0 px-1 py-1">{detailInput("blockSize", "Block size", blocks, "text", lookupOptions.blockSizes)}</td>
+      <td data-label="Machine" className="min-w-0 px-1 py-1">{detailInput("machine", "Machine", blocks)}</td>
+      <td data-label="Block Age" className="min-w-0 px-1 py-1">{detailInput("blockAge", "Block age", blocks, "number")}</td>
+      <td data-label="Testing Date" className="min-w-0 px-1 py-1">{detailInput("testingDate", "Testing date", blocks, "date")}</td>
+      <td data-label="Sample Type" className="min-w-0 px-1 py-1">{detailInput("sampleType", "Sample type", blocks, "text", lookupOptions.sampleTypes)}</td>
+      <td data-label="Conditioning Method" className="min-w-0 px-1 py-1">{detailInput("conditioningMethod", "Conditioning method", blocks, "text", lookupOptions.conditioningMethods)}</td>
+      <td data-label="Preparation Method" className="min-w-0 px-1 py-1">{detailInput("preparationMethod", "Preparation method", blocks, "text", lookupOptions.preparationMethods)}</td>
+      <td data-label="Shape Factor" className="min-w-0 px-1 py-1">{detailInput("shapeFactor", "Shape factor", blocks, "number")}</td>
+      <td data-label="Supplier" className="min-w-0 px-1 py-1">{detailInput("supplier", "Supplier", sieve, "text", lookupOptions.suppliers)}</td>
+      <td data-label="Condition" className="min-w-0 px-1 py-1">{detailInput("condition", "Condition", sieve)}</td>
+      <td data-label="Water Source" className="min-w-0 px-1 py-1">{detailInput("source", "Source", water)}</td>
+      <td data-label="Tested By" className="min-w-0 px-1 py-1">
         <LookupCell
           value={draft.testedBy}
           onChange={(value) => onChange("testedBy", value)}
@@ -273,7 +276,7 @@ function DraftRow({
         />
       </td>
       {canEditApprovedBy && (
-        <td className="px-1 py-1">
+        <td data-label="Approved By" className="min-w-0 px-1 py-1">
           <LookupCell
             value={draft.reviewedBy}
             onChange={(value) => onChange("reviewedBy", value)}
@@ -282,7 +285,7 @@ function DraftRow({
           />
         </td>
       )}
-      <td className="px-1 py-1">
+      <td data-label="Remarks" className="min-w-0 px-1 py-1">
         <CellInput value={draft.remarks} onChange={(value) => onChange("remarks", value)} label={`Remarks for ${draft.recordNo}`} />
       </td>
     </tr>
