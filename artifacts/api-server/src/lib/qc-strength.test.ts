@@ -389,6 +389,21 @@ test("applies a configured Block-size shape factor only when no saved value exis
   assert.equal(legacyRows[0].normalizedStrength, 19.5);
 });
 
+test("preserves the configured shape-factor precision in Block calculations", () => {
+  const result = evaluateStrengthRecord(
+    blockRecord([
+      { length: 400, width: 200, height: 200, load: 1000 },
+    ]),
+    [blockStandard()],
+    [blockShapeFactor({ shapeFactor: "1.234" })],
+  );
+
+  const resultDetails = result.details as Record<string, unknown>;
+  const resultRows = resultDetails.testRows as Array<Record<string, unknown>>;
+  assert.equal(resultDetails.shapeFactor, "1.234");
+  assert.equal(resultRows[0].normalizedStrength, 18.5);
+});
+
 test("does not apply a shape factor configured for a different Block size", () => {
   const result = evaluateStrengthRecord(
     blockRecord([

@@ -349,7 +349,7 @@ export function buildDailyReportRows(
       castingDate;
     addStrengths(
       record,
-      castingDate,
+      testingDate,
       testingDate,
       product,
       age,

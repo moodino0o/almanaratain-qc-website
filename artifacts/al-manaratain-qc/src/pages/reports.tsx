@@ -449,7 +449,7 @@ export default function Reports() {
                   <CalendarDays className="mb-4 h-10 w-10 text-primary/60" />
                   <h2 className="text-lg font-semibold">Start with a daily result search</h2>
                   <p className="mt-2 max-w-md text-sm text-muted-foreground">
-                    Select an inclusive date range and optionally choose multiple products. Results are summarized by date, category, plant, and product group.
+                    Select an inclusive testing-date range and optionally choose multiple products. Results are summarized by testing date, category, plant, and product group.
                   </p>
                   <Button className="mt-5" onClick={openFilters}>Choose dates and products</Button>
                 </div>
@@ -467,7 +467,7 @@ export default function Reports() {
                   <Search className="mb-3 h-10 w-10 text-muted-foreground/40" />
                   <p className="font-semibold">No matching QC results</p>
                   <p className="mt-1 max-w-lg text-sm text-muted-foreground">
-                    No strength results matched the selected dates and product groups.
+                    No strength results matched the selected testing dates and product groups.
                   </p>
                 </div>
               ) : (
@@ -551,13 +551,13 @@ export default function Reports() {
           <DialogHeader>
             <DialogTitle>Choose daily results</DialogTitle>
               <DialogDescription>
-                Choose an inclusive date range and optionally select product groups. Ready Mix results are grouped by the first three words of the mix design; you can calculate them from Site (S) or Plant (H) references, or include all references.
+                Choose an inclusive testing-date range and optionally select product groups. Ready Mix results are grouped by the first three words of the mix design; you can calculate them from Site (S) or Plant (H) references, or include all references.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-5 py-2">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
-                <Label htmlFor="daily-result-start-date">Start date</Label>
+                <Label htmlFor="daily-result-start-date">Testing date from</Label>
                 <Input
                   id="daily-result-start-date"
                   type="date"
@@ -566,7 +566,7 @@ export default function Reports() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="daily-result-end-date">End date</Label>
+                <Label htmlFor="daily-result-end-date">Testing date to</Label>
                 <Input
                   id="daily-result-end-date"
                   type="date"

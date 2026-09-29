@@ -466,9 +466,9 @@ test("includes non-Ready Mix categories, date ranges, and selected product group
   ];
 
   assert.deepEqual(
-    buildDailyReportRows(records, "2026-09-10", "2026-09-11", ["Blocks\u0000Hollow Concrete"]),
+    buildDailyReportRows(records, "2026-10-08", "2026-10-08", ["Blocks\u0000Hollow Concrete"]),
     [{
-      date: "2026-09-10",
+      date: "2026-10-08",
       castingDate: "2026-09-10",
       testingDate: "2026-10-08",
       category: "Blocks",
@@ -518,8 +518,8 @@ test("Block daily report min and max use air-dry strength, including the Dammam 
         },
       }),
     ],
-    "2026-09-10",
-    "2026-09-10",
+    "2026-10-08",
+    "2026-10-08",
   );
 
   const plantA = rows.find((row) => row.plant === "Plant A");
@@ -547,10 +547,11 @@ test("uses the Block age-derived testing date instead of the entered legacy date
         },
       }),
     ],
-    "2026-09-01",
-    "2026-09-01",
+    "2026-09-29",
+    "2026-09-29",
   );
 
+  assert.equal(rows[0]?.date, "2026-09-29");
   assert.equal(rows[0]?.castingDate, "2026-09-01");
   assert.equal(rows[0]?.testingDate, "2026-09-29");
 });
@@ -595,7 +596,7 @@ test("derives Sand, Aggregate, and Paving testing dates from their saved ages", 
     }),
   ];
 
-  const rows = buildDailyReportRows(records, "2026-09-01", "2026-09-01");
+  const rows = buildDailyReportRows(records, "2026-09-06", "2026-09-11");
   assert.deepEqual(
     rows.map((row) => [row.category, row.cubeAge, row.testingDate]),
     [
