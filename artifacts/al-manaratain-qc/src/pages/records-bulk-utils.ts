@@ -30,10 +30,17 @@ const ageFromDates = (sampleDate: string, testingDate: unknown) => {
   }
   const sampleTime = Date.parse(`${sampleDay}T00:00:00.000Z`);
   const testTime = Date.parse(`${testDay}T00:00:00.000Z`);
-  if (!Number.isFinite(sampleTime) || !Number.isFinite(testTime) || testTime < sampleTime) {
+  if (
+    !Number.isFinite(sampleTime) ||
+    !Number.isFinite(testTime) ||
+    new Date(sampleTime).toISOString().slice(0, 10) !== sampleDay ||
+    new Date(testTime).toISOString().slice(0, 10) !== testDay ||
+    testTime < sampleTime
+  ) {
     return "";
   }
-  return String(Math.floor((testTime - sampleTime) / 86_400_000));
+  const age = (testTime - sampleTime) / 86_400_000;
+  return Number.isSafeInteger(age) ? String(age) : "";
 };
 
 export const recordToBulkDraft = (record: QcRecord): BulkRecordDraft => {
@@ -45,16 +52,7 @@ export const recordToBulkDraft = (record: QcRecord): BulkRecordDraft => {
         ? "sampleAge"
         : null;
   if (ageKey && !detailText(details, ageKey).trim()) {
-    const rows = Array.isArray(details.testRows) ? details.testRows : [];
-    const rowAge = rows
-      .map((row) => (
-        typeof row === "object" && row !== null
-          ? (row as Record<string, unknown>).sampleAge
-          : undefined
-      ))
-      .find((value) => String(value ?? "").trim());
-    details[ageKey] =
-      String(rowAge ?? "").trim() || ageFromDates(record.sampleDate, details.testingDate);
+    details[ageKey] = ageFromDates(record.sampleDate, details.testingDate);
   }
   return {
     id: record.id,
@@ -102,7 +100,8 @@ export const validateBulkDraft = (draft: BulkRecordDraft) => {
       : draft.testType === TestType.Sand_Sieve || draft.testType === TestType.Aggregate_Sieve
         ? "sampleAge"
         : null;
-  const age = ageKey ? Number(detailText(draft.details, ageKey)) : Number.NaN;
+  const ageText = ageKey ? detailText(draft.details, ageKey).trim() : "";
+  const age = ageText ? Number(ageText) : Number.NaN;
   const missing = [
     !draft.sampleDate &&
       (draft.testType === TestType.Blocks || draft.testType === TestType.Paving_Blocks
@@ -111,7 +110,7 @@ export const validateBulkDraft = (draft: BulkRecordDraft) => {
     !draft.location.trim() && "Location / plant",
     !draft.material.trim() && "Material / product",
     !draft.testedBy.trim() && "Tested by",
-    ageKey && (!Number.isFinite(age) || age <= 0) && "Age (days)",
+    ageKey && (!ageText || !Number.isSafeInteger(age) || age < 0) && "Age (days)",
     draft.testType === TestType.Paving_Blocks &&
       !detailText(draft.details, "pavingBlockSize").trim() &&
       "Paving block size",

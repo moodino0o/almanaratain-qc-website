@@ -88,6 +88,45 @@ export interface QcRecordUpdate {
   details?: QcRecordUpdateDetails;
 }
 
+export interface RecordAgeBackfillPreviewInput { [key: string]: unknown }
+
+export interface RecordAgeBackfillCandidate {
+  id: number;
+  recordNo: string;
+  testType: TestType;
+  sampleDate: string;
+  testingDate: string;
+  /** @minimum 0 */
+  age: number;
+}
+
+export interface RecordAgeBackfillIssue {
+  id: number;
+  recordNo: string;
+  testType: TestType;
+  /** @nullable */
+  sampleDate: string | null;
+  /** @nullable */
+  testingDate: string | null;
+  reason: string;
+}
+
+export interface RecordAgeBackfillPreview {
+  eligible: RecordAgeBackfillCandidate[];
+  manualReview: RecordAgeBackfillIssue[];
+}
+
+export interface RecordAgeBackfillApplyInput {
+  /** @minItems 1 */
+  candidates: RecordAgeBackfillCandidate[];
+}
+
+export interface RecordAgeBackfillApplyResult {
+  /** @minimum 0 */
+  applied: number;
+  skipped: RecordAgeBackfillIssue[];
+}
+
 export interface ComplaintPicture {
   /** @minLength 1 */
   objectPath: string;

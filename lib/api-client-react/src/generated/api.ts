@@ -49,6 +49,10 @@ import type {
   QcRecord,
   QcRecordInput,
   QcRecordUpdate,
+  RecordAgeBackfillApplyInput,
+  RecordAgeBackfillApplyResult,
+  RecordAgeBackfillPreview,
+  RecordAgeBackfillPreviewInput,
   ReferenceCategory,
   ReferenceCategoryInput,
   ReferenceCategoryUpdate,
@@ -3371,6 +3375,148 @@ export const useCreateRecord = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCreateRecordMutationOptions(options));
+    }
+
+export const getPreviewRecordAgeBackfillUrl = () => {
+
+
+
+
+  return `/api/records/age-backfill/preview`
+}
+
+/**
+ * @summary Preview age values for historical QC records
+ */
+export const previewRecordAgeBackfill = async (recordAgeBackfillPreviewInput: RecordAgeBackfillPreviewInput, options?: Parameters<typeof customFetch>[1]): Promise<RecordAgeBackfillPreview> => {
+
+  return customFetch<RecordAgeBackfillPreview>(getPreviewRecordAgeBackfillUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(recordAgeBackfillPreviewInput)
+  }
+);}
+
+
+
+
+
+export const getPreviewRecordAgeBackfillMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewRecordAgeBackfill>>, TError,{data: BodyType<RecordAgeBackfillPreviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewRecordAgeBackfill>>, TError,{data: BodyType<RecordAgeBackfillPreviewInput>}, TContext> => {
+
+const mutationKey = ['previewRecordAgeBackfill'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewRecordAgeBackfill>>, {data: BodyType<RecordAgeBackfillPreviewInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  previewRecordAgeBackfill(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewRecordAgeBackfillMutationResult = NonNullable<Awaited<ReturnType<typeof previewRecordAgeBackfill>>>
+    export type PreviewRecordAgeBackfillMutationBody = BodyType<RecordAgeBackfillPreviewInput>
+    export type PreviewRecordAgeBackfillMutationError = ErrorType<void>
+
+    /**
+ * @summary Preview age values for historical QC records
+ */
+export const usePreviewRecordAgeBackfill = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewRecordAgeBackfill>>, TError,{data: BodyType<RecordAgeBackfillPreviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewRecordAgeBackfill>>,
+        TError,
+        {data: BodyType<RecordAgeBackfillPreviewInput>},
+        TContext
+      > => {
+      return useMutation(getPreviewRecordAgeBackfillMutationOptions(options));
+    }
+
+export const getApplyRecordAgeBackfillUrl = () => {
+
+
+
+
+  return `/api/records/age-backfill/apply`
+}
+
+/**
+ * @summary Apply previewed age values to historical QC records
+ */
+export const applyRecordAgeBackfill = async (recordAgeBackfillApplyInput: RecordAgeBackfillApplyInput, options?: Parameters<typeof customFetch>[1]): Promise<RecordAgeBackfillApplyResult> => {
+
+  return customFetch<RecordAgeBackfillApplyResult>(getApplyRecordAgeBackfillUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(recordAgeBackfillApplyInput)
+  }
+);}
+
+
+
+
+
+export const getApplyRecordAgeBackfillMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyRecordAgeBackfill>>, TError,{data: BodyType<RecordAgeBackfillApplyInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof applyRecordAgeBackfill>>, TError,{data: BodyType<RecordAgeBackfillApplyInput>}, TContext> => {
+
+const mutationKey = ['applyRecordAgeBackfill'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof applyRecordAgeBackfill>>, {data: BodyType<RecordAgeBackfillApplyInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  applyRecordAgeBackfill(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApplyRecordAgeBackfillMutationResult = NonNullable<Awaited<ReturnType<typeof applyRecordAgeBackfill>>>
+    export type ApplyRecordAgeBackfillMutationBody = BodyType<RecordAgeBackfillApplyInput>
+    export type ApplyRecordAgeBackfillMutationError = ErrorType<void>
+
+    /**
+ * @summary Apply previewed age values to historical QC records
+ */
+export const useApplyRecordAgeBackfill = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyRecordAgeBackfill>>, TError,{data: BodyType<RecordAgeBackfillApplyInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof applyRecordAgeBackfill>>,
+        TError,
+        {data: BodyType<RecordAgeBackfillApplyInput>},
+        TContext
+      > => {
+      return useMutation(getApplyRecordAgeBackfillMutationOptions(options));
     }
 
 export const getGetDailyReadyMixResultsUrl = (params: GetDailyReadyMixResultsParams,) => {

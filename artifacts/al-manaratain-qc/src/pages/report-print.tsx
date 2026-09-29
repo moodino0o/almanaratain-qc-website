@@ -539,10 +539,12 @@ function BlockCompressionRowsTable({
 
 function blockAgeFromRecord(details: DetailMap, rows: unknown[]) {
   const configuredAge = numericValue(details.blockAge);
-  if (configuredAge !== null && configuredAge > 0) return configuredAge;
+  if (configuredAge !== null && Number.isSafeInteger(configuredAge) && configuredAge >= 0) {
+    return configuredAge;
+  }
   for (const row of rows) {
     const age = cubeRowAge(row);
-    if (age !== null && age > 0) return age;
+    if (age !== null && Number.isSafeInteger(age) && age >= 0) return age;
   }
   return null;
 }

@@ -43,13 +43,14 @@ test("bulk drafts require the shared main record fields", () => {
   );
 });
 
-test("bulk drafts require positive ages for age-based record types", () => {
+test("bulk drafts require whole nonnegative ages for age-based record types", () => {
   const baseDraft = recordToBulkDraft(record);
   const cases = [
     { testType: TestType.Blocks, details: { blockAge: "" } },
     { testType: TestType.Paving_Blocks, details: { blockAge: "", pavingBlockSize: "200*200*60" } },
     { testType: TestType.Sand_Sieve, details: { sampleAge: "" } },
-    { testType: TestType.Aggregate_Sieve, details: { sampleAge: "0" } },
+    { testType: TestType.Aggregate_Sieve, details: { sampleAge: "-1" } },
+    { testType: TestType.Sand_Sieve, details: { sampleAge: "1.5" } },
   ] as const;
 
   for (const testCase of cases) {
@@ -60,6 +61,13 @@ test("bulk drafts require positive ages for age-based record types", () => {
     };
     assert.ok(validateBulkDraft(draft).includes("Age (days)"));
   }
+
+  const zeroAgeDraft = {
+    ...baseDraft,
+    testType: TestType.Sand_Sieve,
+    details: { sampleAge: "0" },
+  };
+  assert.deepEqual(validateBulkDraft(zeroAgeDraft), []);
 });
 
 test("bulk editing derives an age from a legacy testing date", () => {
@@ -73,4 +81,17 @@ test("bulk editing derives an age from a legacy testing date", () => {
   const draft = recordToBulkDraft(legacyRecord);
   assert.equal(draft.details.sampleAge, "7");
   assert.deepEqual(validateBulkDraft(draft), []);
+});
+
+test("bulk editing does not infer an age from an invalid calendar date", () => {
+  const legacyRecord: QcRecord = {
+    ...record,
+    testType: TestType.Aggregate_Sieve,
+    sampleDate: "2026-02-01",
+    details: { testingDate: "2026-02-30" },
+  };
+
+  const draft = recordToBulkDraft(legacyRecord);
+  assert.equal(draft.details.sampleAge, "");
+  assert.ok(validateBulkDraft(draft).includes("Age (days)"));
 });

@@ -757,6 +757,52 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/QcRecord"
+  /records/age-backfill/preview:
+    post:
+      operationId: previewRecordAgeBackfill
+      tags: [qc]
+      summary: Preview age values for historical QC records
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordAgeBackfillPreviewInput"
+      responses:
+        "200":
+          description: Eligible historical records and records requiring manual review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecordAgeBackfillPreview"
+        "401":
+          description: Authentication required
+        "403":
+          description: Administrator access required
+  /records/age-backfill/apply:
+    post:
+      operationId: applyRecordAgeBackfill
+      tags: [qc]
+      summary: Apply previewed age values to historical QC records
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordAgeBackfillApplyInput"
+      responses:
+        "200":
+          description: Applied age values and records that changed after preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecordAgeBackfillApplyResult"
+        "400":
+          description: Invalid preview data
+        "401":
+          description: Authentication required
+        "403":
+          description: Administrator access required
   /daily-ready-mix-results:
     get:
       operationId: getDailyReadyMixResults
@@ -1139,6 +1185,74 @@ components:
         details:
           type: object
           additionalProperties: true
+    RecordAgeBackfillPreviewInput:
+      type: object
+      additionalProperties: false
+    RecordAgeBackfillCandidate:
+      type: object
+      required: [id, recordNo, testType, sampleDate, testingDate, age]
+      properties:
+        id:
+          type: number
+        recordNo:
+          type: string
+        testType:
+          $ref: "#/components/schemas/TestType"
+        sampleDate:
+          type: string
+        testingDate:
+          type: string
+        age:
+          type: number
+          minimum: 0
+    RecordAgeBackfillIssue:
+      type: object
+      required: [id, recordNo, testType, sampleDate, testingDate, reason]
+      properties:
+        id:
+          type: number
+        recordNo:
+          type: string
+        testType:
+          $ref: "#/components/schemas/TestType"
+        sampleDate:
+          type: ["string", "null"]
+        testingDate:
+          type: ["string", "null"]
+        reason:
+          type: string
+    RecordAgeBackfillPreview:
+      type: object
+      required: [eligible, manualReview]
+      properties:
+        eligible:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecordAgeBackfillCandidate"
+        manualReview:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecordAgeBackfillIssue"
+    RecordAgeBackfillApplyInput:
+      type: object
+      required: [candidates]
+      properties:
+        candidates:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/RecordAgeBackfillCandidate"
+    RecordAgeBackfillApplyResult:
+      type: object
+      required: [applied, skipped]
+      properties:
+        applied:
+          type: number
+          minimum: 0
+        skipped:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecordAgeBackfillIssue"
     ComplaintPicture:
       type: object
       required: [objectPath, originalName, mimeType, size]

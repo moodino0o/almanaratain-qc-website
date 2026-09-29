@@ -952,6 +952,73 @@ export const CreateRecordResponse = zod.object({
 
 
 /**
+ * @summary Preview age values for historical QC records
+ */
+export const PreviewRecordAgeBackfillBody = zod.object({
+
+})
+
+export const previewRecordAgeBackfillResponseEligibleItemAgeMin = 0;
+
+
+
+export const PreviewRecordAgeBackfillResponse = zod.object({
+  "eligible": zod.array(zod.object({
+  "id": zod.number(),
+  "recordNo": zod.string(),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "sampleDate": zod.string(),
+  "testingDate": zod.string(),
+  "age": zod.number().min(previewRecordAgeBackfillResponseEligibleItemAgeMin)
+})),
+  "manualReview": zod.array(zod.object({
+  "id": zod.number(),
+  "recordNo": zod.string(),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "sampleDate": zod.string().nullable(),
+  "testingDate": zod.string().nullable(),
+  "reason": zod.string()
+}))
+})
+
+
+/**
+ * @summary Apply previewed age values to historical QC records
+ */
+export const applyRecordAgeBackfillBodyCandidatesItemAgeMin = 0;
+
+
+
+
+export const ApplyRecordAgeBackfillBody = zod.object({
+  "candidates": zod.array(zod.object({
+  "id": zod.number(),
+  "recordNo": zod.string(),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "sampleDate": zod.string(),
+  "testingDate": zod.string(),
+  "age": zod.number().min(applyRecordAgeBackfillBodyCandidatesItemAgeMin)
+})).min(1)
+})
+
+export const applyRecordAgeBackfillResponseAppliedMin = 0;
+
+
+
+export const ApplyRecordAgeBackfillResponse = zod.object({
+  "applied": zod.number().min(applyRecordAgeBackfillResponseAppliedMin),
+  "skipped": zod.array(zod.object({
+  "id": zod.number(),
+  "recordNo": zod.string(),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "sampleDate": zod.string().nullable(),
+  "testingDate": zod.string().nullable(),
+  "reason": zod.string()
+}))
+})
+
+
+/**
  * @summary Get daily Ready Mix strength results
  */
 export const GetDailyReadyMixResultsQueryParams = zod.object({

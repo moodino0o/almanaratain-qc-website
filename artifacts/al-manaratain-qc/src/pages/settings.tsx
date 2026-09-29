@@ -26,6 +26,10 @@ import {
   useListReportLayouts,
   useUpdateReportLayout,
   getListReportLayoutsQueryKey,
+  usePreviewRecordAgeBackfill,
+  useApplyRecordAgeBackfill,
+  type RecordAgeBackfillPreview,
+  type RecordAgeBackfillApplyResult,
 } from "@workspace/api-client-react";
 import { useAuth } from "@workspace/replit-auth-web";
 import { useQueryClient } from "@tanstack/react-query";
@@ -54,6 +58,25 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 function getCategoryIcon(key: string) {
   const k = key.toLowerCase();
@@ -72,6 +95,220 @@ function formatAccessDate(value: string) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+}
+
+function HistoricalAgeBackfillSection() {
+  const queryClient = useQueryClient();
+  const previewMutation = usePreviewRecordAgeBackfill();
+  const applyMutation = useApplyRecordAgeBackfill();
+  const [preview, setPreview] = useState<RecordAgeBackfillPreview | null>(null);
+  const [applyResult, setApplyResult] = useState<RecordAgeBackfillApplyResult | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const createPreview = async () => {
+    setPreview(null);
+    setApplyResult(null);
+    try {
+      setPreview(await previewMutation.mutateAsync({ data: {} }));
+    } catch {
+      toast.error("Unable to preview historical records. Try again.");
+    }
+  };
+
+  const applyPreview = async () => {
+    if (!preview?.eligible.length) return;
+    try {
+      const result = await applyMutation.mutateAsync({
+        data: { candidates: preview.eligible },
+      });
+      setApplyResult(result);
+      setConfirmOpen(false);
+      await queryClient.invalidateQueries({
+        predicate: (query) =>
+          String(query.queryKey[0] ?? "").startsWith("/api/records"),
+      });
+      setPreview(await previewMutation.mutateAsync({ data: {} }));
+      toast.success(`Added ages to ${result.applied} historical record${result.applied === 1 ? "" : "s"}.`);
+    } catch {
+      toast.error("Unable to apply the previewed ages. Generate a new preview and try again.");
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Historical age backfill</CardTitle>
+        <CardDescription>
+          Find older Blocks, Paving Blocks, Sand Sieve, and Aggregate Sieve records
+          that have a saved Testing Date but no matching age field.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="max-w-3xl text-sm text-muted-foreground">
+            Preview the proposed ages first. Applying adds only the age value, keeps
+            the saved Testing Date, and leaves ambiguous records unchanged for manual review.
+          </p>
+          <Button
+            variant="outline"
+            onClick={() => void createPreview()}
+            disabled={previewMutation.isPending || applyMutation.isPending}
+          >
+            {previewMutation.isPending ? "Previewing…" : preview ? "Refresh preview" : "Preview records"}
+          </Button>
+        </div>
+
+        {applyResult && (
+          <div className="rounded-md border bg-muted/30 p-3 text-sm">
+            <strong>{applyResult.applied} age value{applyResult.applied === 1 ? "" : "s"} applied.</strong>
+            {applyResult.skipped.length > 0 && (
+              <span className="ml-1 text-muted-foreground">
+                {applyResult.skipped.length} record{applyResult.skipped.length === 1 ? "" : "s"} changed after preview and were left unchanged.
+              </span>
+            )}
+          </div>
+        )}
+
+        {preview && (
+          <div className="space-y-6">
+            <section className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold">Ready to update ({preview.eligible.length})</h3>
+                  <p className="text-sm text-muted-foreground">
+                    The age shown is the whole-day difference between Sample Date and saved Testing Date.
+                  </p>
+                </div>
+                <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+                  <AlertDialogTrigger asChild>
+                    <Button disabled={!preview.eligible.length || applyMutation.isPending}>
+                      Apply age values
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Apply the previewed ages?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will add an age field to {preview.eligible.length} records.
+                        Each record is checked again before saving; records that changed
+                        since this preview will be skipped.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={applyMutation.isPending}>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        disabled={applyMutation.isPending}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          void applyPreview();
+                        }}
+                      >
+                        {applyMutation.isPending ? "Applying…" : "Confirm apply"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+
+              {preview.eligible.length === 0 ? (
+                <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                  No historical records are ready for an age update.
+                </p>
+              ) : (
+                <div className="max-h-80 overflow-auto rounded-md border">
+                  <Table className="min-w-[780px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Record</TableHead>
+                        <TableHead>Test type</TableHead>
+                        <TableHead>Sample date</TableHead>
+                        <TableHead>Testing date</TableHead>
+                        <TableHead className="text-right">Age (days)</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {preview.eligible.map((record) => (
+                        <TableRow key={record.id}>
+                          <TableCell>{record.recordNo}</TableCell>
+                          <TableCell>{record.testType}</TableCell>
+                          <TableCell>{record.sampleDate}</TableCell>
+                          <TableCell>{record.testingDate}</TableCell>
+                          <TableCell className="text-right font-medium">{record.age}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </section>
+
+            <section className="space-y-3">
+              <div>
+                <h3 className="font-semibold">Manual review ({preview.manualReview.length})</h3>
+                <p className="text-sm text-muted-foreground">
+                  These records are not changed because their dates or existing age values are missing, invalid, or conflicting.
+                </p>
+              </div>
+              {preview.manualReview.length === 0 ? (
+                <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                  No records need manual review.
+                </p>
+              ) : (
+                <div className="max-h-72 overflow-auto rounded-md border">
+                  <Table className="min-w-[780px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Record</TableHead>
+                        <TableHead>Test type</TableHead>
+                        <TableHead>Sample date</TableHead>
+                        <TableHead>Saved testing date</TableHead>
+                        <TableHead>Why it needs review</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {preview.manualReview.map((record) => (
+                        <TableRow key={record.id}>
+                          <TableCell>{record.recordNo}</TableCell>
+                          <TableCell>{record.testType}</TableCell>
+                          <TableCell>{record.sampleDate ?? "—"}</TableCell>
+                          <TableCell>{record.testingDate ?? "—"}</TableCell>
+                          <TableCell className="min-w-64 whitespace-normal">{record.reason}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </section>
+
+            {applyResult && applyResult.skipped.length > 0 && (
+              <section className="space-y-3">
+                <h3 className="font-semibold">Skipped after preview ({applyResult.skipped.length})</h3>
+                <div className="max-h-60 overflow-auto rounded-md border">
+                  <Table className="min-w-[780px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Record</TableHead>
+                        <TableHead>Why it was skipped</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {applyResult.skipped.map((record) => (
+                        <TableRow key={record.id}>
+                          <TableCell>{record.recordNo}</TableCell>
+                          <TableCell className="whitespace-normal">{record.reason}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </section>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 const employeeRoleOptions: Array<{ value: UserRole; label: string }> = [
@@ -1545,7 +1782,7 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="report-layouts" className="flex min-h-0 flex-1 flex-col">
-        <TabsList className="grid h-auto w-full max-w-3xl shrink-0 grid-cols-2 sm:grid-cols-4">
+        <TabsList className="grid h-auto w-full max-w-5xl shrink-0 grid-cols-2 sm:grid-cols-5">
           <TabsTrigger value="reference-data" className="gap-2 py-2.5">
             <Database className="h-4 w-4" /> Settings
           </TabsTrigger>
@@ -1558,10 +1795,17 @@ export default function Settings() {
           <TabsTrigger value="employee-activity" className="gap-2 py-2.5">
             <Activity className="h-4 w-4" /> Activity
           </TabsTrigger>
+          <TabsTrigger value="historical-ages" className="gap-2 py-2.5">
+            <CalendarDays className="h-4 w-4" /> Date Backfill
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="employee-access" className="mt-4 min-h-0 flex-1 overflow-y-auto">
           <EmployeeAccessSection isAdmin={isAdmin} />
+        </TabsContent>
+
+        <TabsContent value="historical-ages" className="mt-4 min-h-0 flex-1 overflow-y-auto">
+          <HistoricalAgeBackfillSection />
         </TabsContent>
 
         <TabsContent value="reference-data" className="mt-4 flex min-h-0 flex-1 flex-col">

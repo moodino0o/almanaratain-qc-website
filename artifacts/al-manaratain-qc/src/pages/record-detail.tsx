@@ -45,10 +45,15 @@ function displayValue(value: unknown, fallback = "—") {
 }
 
 function ageDerivedTestingDate(sampleDate: string, ageValue: unknown) {
-  const age = Number(String(ageValue ?? "").trim());
-  if (!Number.isFinite(age) || age <= 0) return null;
-  const date = new Date(`${sampleDate.slice(0, 10)}T00:00:00.000Z`);
-  if (Number.isNaN(date.getTime())) return null;
+  const ageText = String(ageValue ?? "").trim();
+  const age = ageText ? Number(ageText) : Number.NaN;
+  if (!Number.isSafeInteger(age) || age < 0) return null;
+  const sampleDay = sampleDate.slice(0, 10);
+  const date = new Date(`${sampleDay}T00:00:00.000Z`);
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.toISOString().slice(0, 10) !== sampleDay
+  ) return null;
   date.setUTCDate(date.getUTCDate() + age);
   return date.toISOString();
 }

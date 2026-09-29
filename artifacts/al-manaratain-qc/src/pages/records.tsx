@@ -38,18 +38,26 @@ function masonryTestingDate(record: QcRecord) {
   const ageKey = record.testType === TestType.Blocks || record.testType === TestType.Paving_Blocks
     ? "blockAge"
     : "sampleAge";
-  const directAge = Number(String(details[ageKey] ?? "").trim());
+  const directAgeText = String(details[ageKey] ?? "").trim();
+  const directAge = directAgeText ? Number(directAgeText) : Number.NaN;
   const rows = Array.isArray(details.testRows) ? details.testRows : [];
   const legacyRowAge = rows
     .map((row) => (
       typeof row === "object" && row !== null
-        ? Number(String((row as Record<string, unknown>).sampleAge ?? "").trim())
+        ? String((row as Record<string, unknown>).sampleAge ?? "").trim()
         : Number.NaN
     ))
-    .find((value) => Number.isFinite(value) && value > 0);
-  const age = Number.isFinite(directAge) && directAge > 0 ? directAge : legacyRowAge;
-  if (age !== undefined && Number.isFinite(age) && age > 0) {
-    const date = new Date(`${record.sampleDate.slice(0, 10)}T00:00:00.000Z`);
+    .map((value) => typeof value === "string" && value ? Number(value) : Number.NaN)
+    .find((value) => Number.isSafeInteger(value) && value >= 0);
+  const age = Number.isSafeInteger(directAge) && directAge >= 0 ? directAge : legacyRowAge;
+  if (age !== undefined && Number.isSafeInteger(age) && age >= 0) {
+    const sampleDay = record.sampleDate.slice(0, 10);
+    const date = new Date(`${sampleDay}T00:00:00.000Z`);
+    if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== sampleDay) {
+      return typeof details.testingDate === "string" && details.testingDate
+        ? details.testingDate
+        : record.sampleDate;
+    }
     if (!Number.isNaN(date.getTime())) {
       date.setUTCDate(date.getUTCDate() + age);
       return date.toISOString();
@@ -62,26 +70,33 @@ function masonryTestingDate(record: QcRecord) {
 
 function masonryBlockAge(record: QcRecord) {
   const details = record.details as Record<string, unknown>;
-  const directAge = Number(String(details.blockAge ?? "").trim());
-  if (Number.isFinite(directAge) && directAge > 0) return String(directAge);
+  const directAgeText = String(details.blockAge ?? "").trim();
+  const directAge = directAgeText ? Number(directAgeText) : Number.NaN;
+  if (Number.isSafeInteger(directAge) && directAge >= 0) return String(directAge);
 
   const rows = Array.isArray(details.testRows) ? details.testRows : [];
   const legacyRowAge = rows
     .map((row) => (
       typeof row === "object" && row !== null
-        ? Number(String((row as Record<string, unknown>).sampleAge ?? "").trim())
+        ? String((row as Record<string, unknown>).sampleAge ?? "").trim()
         : Number.NaN
     ))
-    .find((value) => Number.isFinite(value) && value > 0);
+    .map((value) => typeof value === "string" && value ? Number(value) : Number.NaN)
+    .find((value) => Number.isSafeInteger(value) && value >= 0);
   if (legacyRowAge !== undefined) return String(legacyRowAge);
 
   const sampleDay = record.sampleDate.slice(0, 10);
   const testingDay = masonryTestingDate(record).slice(0, 10);
   const sampleTime = Date.parse(`${sampleDay}T00:00:00.000Z`);
   const testingTime = Date.parse(`${testingDay}T00:00:00.000Z`);
-  if (!Number.isFinite(sampleTime) || !Number.isFinite(testingTime)) return "—";
-  const age = Math.floor((testingTime - sampleTime) / 86_400_000);
-  return age > 0 ? String(age) : "—";
+  if (
+    !Number.isFinite(sampleTime) ||
+    !Number.isFinite(testingTime) ||
+    new Date(sampleTime).toISOString().slice(0, 10) !== sampleDay ||
+    new Date(testingTime).toISOString().slice(0, 10) !== testingDay
+  ) return "—";
+  const age = (testingTime - sampleTime) / 86_400_000;
+  return Number.isSafeInteger(age) && age >= 0 ? String(age) : "—";
 }
 
 export default function Records() {

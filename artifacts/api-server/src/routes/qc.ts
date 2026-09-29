@@ -23,6 +23,8 @@ import {
   qcStrengthStandardsTable,
 } from "@workspace/db";
 import {
+  ApplyRecordAgeBackfillBody,
+  ApplyRecordAgeBackfillResponse,
   CreateReferenceCategoryBody,
   CreateReferenceCategoryResponse,
   CreateReferenceItemBody,
@@ -69,6 +71,8 @@ import {
   DeleteSieveStandardParams,
   ListSieveStandardsResponse,
   ListShapeFactorsResponse,
+  PreviewRecordAgeBackfillBody,
+  PreviewRecordAgeBackfillResponse,
   UpdateSieveStandardBody,
   UpdateSieveStandardParams,
   UpdateSieveStandardResponse,
@@ -97,8 +101,13 @@ import {
   evaluateStrengthRecord,
   type SieveStandardForEvaluation,
 } from "../lib/qc-strength";
-import { calculateRecordTestingDate } from "../lib/qc-record-dates";
 import { normalizeMasonryMachineDetails } from "../lib/qc-machine-names";
+import {
+  ageDetailKeyForTestType,
+  calculateRecordTestingDate,
+  inspectHistoricalAgeBackfill,
+  previewHistoricalAgeBackfill,
+} from "../lib/qc-record-dates";
 import {
   readyMixStrengthsForAge,
   summarizeStrengths,
@@ -1952,7 +1961,6 @@ router.post("/records", requireQcEditor, async (req, res): Promise<void> => {
     parsed.data.testType,
     dateCalculation.details,
   );
-
   const [strengthStandards, sieveStandards, shapeFactors] = await Promise.all([
     db.select().from(qcStrengthStandardsTable),
     loadSieveStandards(),
@@ -2024,6 +2032,132 @@ router.post("/records", requireQcEditor, async (req, res): Promise<void> => {
   }
   res.status(201).json(CreateRecordResponse.parse(toRecord(record, createdBy)));
 });
+
+router.post(
+  "/records/age-backfill/preview",
+  requireAdministrator,
+  async (req, res): Promise<void> => {
+    const parsed = PreviewRecordAgeBackfillBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+
+    const records = await db
+      .select()
+      .from(qcRecordsTable)
+      .where(inArray(qcRecordsTable.testType, Object.keys(ageDetailKeyForTestType)))
+      .orderBy(asc(qcRecordsTable.sampleDate), asc(qcRecordsTable.id));
+    const preview = previewHistoricalAgeBackfill(records);
+    res.json(PreviewRecordAgeBackfillResponse.parse(preview));
+  },
+);
+
+router.post(
+  "/records/age-backfill/apply",
+  requireAdministrator,
+  async (req, res): Promise<void> => {
+    const parsed = ApplyRecordAgeBackfillBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+
+    const candidateIds = parsed.data.candidates.map((candidate) => candidate.id);
+    if (
+      candidateIds.some((id) => !Number.isSafeInteger(id) || id <= 0) ||
+      new Set(candidateIds).size !== candidateIds.length ||
+      parsed.data.candidates.some((candidate) => !Number.isSafeInteger(candidate.age))
+    ) {
+      res.status(400).json({ error: "Candidates must contain unique record IDs and whole-day ages." });
+      return;
+    }
+
+    const result = await db.transaction(async (tx) => {
+      const records = await tx
+        .select()
+        .from(qcRecordsTable)
+        .where(inArray(qcRecordsTable.id, candidateIds));
+      const recordsById = new Map(records.map((record) => [record.id, record]));
+      const skipped = [];
+      let applied = 0;
+
+      for (const expected of parsed.data.candidates) {
+        const record = recordsById.get(expected.id);
+        const issue = (reason: string) => ({
+          id: expected.id,
+          recordNo: expected.recordNo,
+          testType: expected.testType,
+          sampleDate: expected.sampleDate,
+          testingDate: expected.testingDate,
+          reason,
+        });
+
+        if (!record) {
+          skipped.push(issue("Record no longer exists. Run a new preview before applying."));
+          continue;
+        }
+
+        const inspection = inspectHistoricalAgeBackfill(record);
+        if (inspection.kind !== "eligible") {
+          skipped.push(
+            issue(
+              inspection.kind === "manualReview"
+                ? inspection.issue.reason
+                : "An age is already saved. Run a new preview to confirm the current record.",
+            ),
+          );
+          continue;
+        }
+
+        const candidate = inspection.candidate;
+        if (
+          candidate.id !== expected.id ||
+          candidate.recordNo !== expected.recordNo ||
+          candidate.testType !== expected.testType ||
+          candidate.sampleDate !== expected.sampleDate ||
+          candidate.testingDate !== expected.testingDate ||
+          candidate.age !== expected.age
+        ) {
+          skipped.push(issue("Record changed after preview. Run a new preview before applying."));
+          continue;
+        }
+
+        const ageKey = ageDetailKeyForTestType[record.testType];
+        if (!ageKey) {
+          skipped.push(issue("This record type does not use an age-based Testing Date."));
+          continue;
+        }
+        const details = {
+          ...record.details,
+          [ageKey]: String(candidate.age),
+          testingDate: candidate.testingDate,
+        };
+        const updated = await tx
+          .update(qcRecordsTable)
+          .set({ details })
+          .where(
+            and(
+              eq(qcRecordsTable.id, record.id),
+              eq(qcRecordsTable.testType, record.testType),
+              eq(qcRecordsTable.sampleDate, record.sampleDate),
+              eq(qcRecordsTable.details, record.details),
+            ),
+          )
+          .returning({ id: qcRecordsTable.id });
+        if (updated.length === 0) {
+          skipped.push(issue("Record changed during apply. Run a new preview before applying."));
+          continue;
+        }
+        applied += 1;
+      }
+
+      return { applied, skipped };
+    });
+
+    res.json(ApplyRecordAgeBackfillResponse.parse(result));
+  },
+);
 
 router.get("/records/:id", async (req, res): Promise<void> => {
   const parsed = GetRecordParams.safeParse(req.params);

@@ -63,14 +63,22 @@ function ageFromDates(sampleDate: string, testingDate: unknown) {
   }
   const sampleTime = Date.parse(`${sampleDay}T00:00:00.000Z`);
   const testingTime = Date.parse(`${testingDay}T00:00:00.000Z`);
-  if (!Number.isFinite(sampleTime) || !Number.isFinite(testingTime) || testingTime < sampleTime) {
+  if (
+    !Number.isFinite(sampleTime) ||
+    !Number.isFinite(testingTime) ||
+    new Date(sampleTime).toISOString().slice(0, 10) !== sampleDay ||
+    new Date(testingTime).toISOString().slice(0, 10) !== testingDay ||
+    testingTime < sampleTime
+  ) {
     return "";
   }
-  return String(Math.floor((testingTime - sampleTime) / 86_400_000));
+  const age = (testingTime - sampleTime) / 86_400_000;
+  return Number.isSafeInteger(age) ? String(age) : "";
 }
 
 function isValidAge(value: string) {
-  return value.trim() !== "" && Number.isFinite(Number(value)) && Number(value) > 0;
+  const age = Number(value.trim());
+  return value.trim() !== "" && Number.isSafeInteger(age) && age >= 0;
 }
 
 export default function RecordForm() {
