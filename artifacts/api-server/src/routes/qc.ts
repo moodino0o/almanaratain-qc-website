@@ -90,6 +90,7 @@ import {
 } from "../middlewares/requireAuthenticated";
 import { isConfiguredAdministrator } from "../lib/auth";
 import {
+  getEmployeeActivityRequestSessionId,
   getActivityEmployeeName,
   recordEmployeeActivityChange,
 } from "../lib/employee-activity";
@@ -2073,6 +2074,18 @@ router.post(
       return;
     }
 
+    const actorEmployeeId = req.user?.id?.startsWith("employee:")
+      ? req.user.id.slice("employee:".length).trim()
+      : "";
+    if (!actorEmployeeId) {
+      res.status(403).json({
+        error: "An employee identity is required to audit historical date corrections.",
+      });
+      return;
+    }
+    const actorEmployeeName = getActivityEmployeeName(req.user, actorEmployeeId);
+    const sessionId = getEmployeeActivityRequestSessionId(req);
+
     const result = await db.transaction(async (tx) => {
       const records = await tx
         .select()
@@ -2149,6 +2162,31 @@ router.post(
           skipped.push(issue("Record changed during apply. Run a new preview before applying."));
           continue;
         }
+        await recordEmployeeActivityChange(
+          {
+            employeeId: actorEmployeeId,
+            employeeName: actorEmployeeName,
+            sessionId,
+            action: "updated",
+            entityType: "QC record",
+            entityId: String(record.id),
+            summary: `Backfilled historical age for QC record #${record.id} (${record.recordNo})`,
+            path: req.path,
+            submitted: {
+              operation: "historical age backfill",
+              recordId: record.id,
+              recordNo: record.recordNo,
+              testType: record.testType,
+              sampleDate: record.sampleDate,
+              oldTestingDate: record.details.testingDate,
+              oldAgeValue: record.details[ageKey] ?? null,
+              newTestingDate: details.testingDate,
+              ageField: ageKey,
+              newAgeValue: details[ageKey],
+            },
+          },
+          tx,
+        );
         applied += 1;
       }
 

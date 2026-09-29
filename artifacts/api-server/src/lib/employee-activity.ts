@@ -7,7 +7,9 @@ import {
   employeeActivitySessionsTable,
 } from "@workspace/db";
 
-function getRequestSessionId(req: Request): string | undefined {
+export function getEmployeeActivityRequestSessionId(
+  req: Request,
+): string | undefined {
   const authorization = req.headers.authorization;
   if (authorization?.startsWith("Bearer ")) return authorization.slice(7);
   return req.cookies?.sid;
@@ -181,9 +183,10 @@ export async function recordEmployeeActivityChange(input: {
   action: ActivityChangeAction;
   entityType: string;
   entityId: string | null;
+  summary?: string;
   path: string;
   submitted: unknown;
-}): Promise<void> {
+}, executor: Pick<typeof db, "insert"> = db): Promise<void> {
   const sanitized = sanitizeAuditValue(input.submitted);
   const serialized = JSON.stringify(sanitized);
   const details =
@@ -194,7 +197,7 @@ export async function recordEmployeeActivityChange(input: {
         }
       : { submitted: sanitized };
 
-  await db.insert(employeeActivityEventsTable).values({
+  await executor.insert(employeeActivityEventsTable).values({
     employeeId: input.employeeId,
     employeeName: input.employeeName,
     sessionFingerprint: input.sessionId
@@ -203,7 +206,9 @@ export async function recordEmployeeActivityChange(input: {
     action: input.action,
     entityType: input.entityType,
     entityId: input.entityId,
-    summary: `${input.action[0].toUpperCase()}${input.action.slice(1)} ${input.entityType.toLowerCase()}${input.entityId ? ` #${input.entityId}` : ""}`,
+    summary:
+      input.summary ??
+      `${input.action[0].toUpperCase()}${input.action.slice(1)} ${input.entityType.toLowerCase()}${input.entityId ? ` #${input.entityId}` : ""}`,
     details: {
       ...details,
       path: input.path,
@@ -223,11 +228,14 @@ export function employeeActivityAuditMiddleware(
   const path = req.path;
   const isQcRecordCreate =
     req.method === "POST" && /\/records\/?$/.test(path);
+  const isHistoricalAgeBackfillApply =
+    req.method === "POST" && /\/records\/age-backfill\/apply\/?$/.test(path);
 
   if (
     !action ||
     !employeeId ||
     isQcRecordCreate ||
+    isHistoricalAgeBackfillApply ||
     /\/logout(?:\/|$)/i.test(path) ||
     /\/employee-activity(?:\/|$)/i.test(path)
   ) {
@@ -256,7 +264,7 @@ export function employeeActivityAuditMiddleware(
     void recordEmployeeActivityChange({
       employeeId,
       employeeName: getActivityEmployeeName(req.user, employeeId),
-      sessionId: getRequestSessionId(req),
+      sessionId: getEmployeeActivityRequestSessionId(req),
       action,
       entityType: getEntityType(path),
       entityId: id,
