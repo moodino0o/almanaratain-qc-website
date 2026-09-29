@@ -463,7 +463,7 @@ export const sieveSizeNumber = (value: string) => {
 
 const SAND_SIEVE_PORE_SIZES = [5, 2.36, 1.18, 0.6, 0.3, 0.15, 0.075, 0] as const;
 const DUST_SIEVE_PORE_SIZES = [10, ...SAND_SIEVE_PORE_SIZES] as const;
-const TEN_MM_AGGREGATE_PORE_SIZES = [20, 14, 10, 6.3, 5, 2.36, 0] as const;
+const COARSE_AGGREGATE_PORE_SIZES = [20, 14, 10, 6.3, 5, 2.36, 0] as const;
 
 const sievePoreSizeWhitelist = (testType: unknown, material: unknown): readonly number[] | null => {
   const normalizedTestType = stringValue(testType).trim();
@@ -474,11 +474,13 @@ const sievePoreSizeWhitelist = (testType: unknown, material: unknown): readonly 
       : SAND_SIEVE_PORE_SIZES;
   }
 
-  if (
-    normalizedTestType === "Aggregate Sieve" &&
-    /\b10\s*mm\b/.test(normalizedMaterial)
-  ) {
-    return TEN_MM_AGGREGATE_PORE_SIZES;
+  if (normalizedTestType === "Aggregate Sieve") {
+    if (/\b(?:10|20)\s*mm\b/.test(normalizedMaterial)) {
+      return COARSE_AGGREGATE_PORE_SIZES;
+    }
+    if (/\b2\s*[-–]\s*5\s*mm\b/.test(normalizedMaterial)) {
+      return SAND_SIEVE_PORE_SIZES;
+    }
   }
 
   return null;

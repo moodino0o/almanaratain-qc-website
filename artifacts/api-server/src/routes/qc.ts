@@ -122,7 +122,17 @@ const REFERENCE_SEED = [
   {
     key: "materials",
     label: "Materials",
-    values: ["Ready Mix Concrete", "Concrete Block", "Paving Block", "Sand", "Dust", "10 mm Aggregate", "20 mm Aggregate", "Water"],
+    values: [
+      "Ready Mix Concrete",
+      "Concrete Block",
+      "Paving Block",
+      "Sand",
+      "Dust",
+      "2-5 mm Aggregate",
+      "10 mm Aggregate",
+      "20 mm Aggregate",
+      "Water",
+    ],
   },
   {
     key: "locations",

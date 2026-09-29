@@ -41,7 +41,7 @@ test("sorts sieve pore sizes from largest to smallest without reordering ties", 
   );
 });
 
-test("filters sieve form pore sizes for sand and 10 mm aggregate", () => {
+test("filters sieve form pore sizes by sand, dust, and aggregate material", () => {
   const items = [
     "20 mm",
     "14 mm",
@@ -83,7 +83,7 @@ test("filters sieve form pore sizes for sand and 10 mm aggregate", () => {
     "0.075 mm",
     "0 mm",
   ]);
-  assert.deepEqual(valuesFor("Aggregate Sieve", "10 mm Aggregate"), [
+  const coarseAggregateSizes = [
     "20 mm",
     "14 mm",
     "10 mm",
@@ -91,11 +91,19 @@ test("filters sieve form pore sizes for sand and 10 mm aggregate", () => {
     "5 mm",
     "2.36 mm",
     "0 mm",
+  ];
+  assert.deepEqual(valuesFor("Aggregate Sieve", "10 mm Aggregate"), coarseAggregateSizes);
+  assert.deepEqual(valuesFor("Aggregate Sieve", "20 mm Aggregate"), coarseAggregateSizes);
+  assert.deepEqual(valuesFor("Aggregate Sieve", "2-5 mm Aggregate"), [
+    "5 mm",
+    "2.36 mm",
+    "1.18 mm",
+    "0.6 mm",
+    "0.3 mm",
+    "0.15 mm",
+    "0.075 mm",
+    "0 mm",
   ]);
-  assert.equal(
-    valuesFor("Aggregate Sieve", "20 mm Aggregate").length,
-    items.length,
-  );
 });
 
 test("calculates aggregate moisture content from dry and wet sample weights", () => {
