@@ -97,6 +97,7 @@ import {
   evaluateStrengthRecord,
   type SieveStandardForEvaluation,
 } from "../lib/qc-strength";
+import { calculateRecordTestingDate } from "../lib/qc-record-dates";
 import {
   readyMixStrengthsForAge,
   summarizeStrengths,
@@ -1906,6 +1907,17 @@ router.post("/records", requireQcEditor, async (req, res): Promise<void> => {
     return;
   }
 
+  const sampleDate = parsed.data.sampleDate.toISOString().slice(0, 10);
+  const dateCalculation = calculateRecordTestingDate(
+    parsed.data.testType,
+    sampleDate,
+    parsed.data.details,
+  );
+  if (dateCalculation.error) {
+    res.status(400).json({ error: dateCalculation.error });
+    return;
+  }
+
   const [strengthStandards, sieveStandards, shapeFactors] = await Promise.all([
     db.select().from(qcStrengthStandardsTable),
     loadSieveStandards(),
@@ -1917,7 +1929,7 @@ router.post("/records", requireQcEditor, async (req, res): Promise<void> => {
           {
             testType: parsed.data.testType,
             material: parsed.data.material,
-            details: parsed.data.details,
+            details: dateCalculation.details,
           },
           sieveStandards,
         )
@@ -1926,7 +1938,7 @@ router.post("/records", requireQcEditor, async (req, res): Promise<void> => {
       testType: parsed.data.testType,
       material: parsed.data.material,
       location: parsed.data.location,
-      details: parsed.data.details,
+      details: dateCalculation.details,
     },
           strengthStandards,
           shapeFactors,
@@ -1942,7 +1954,7 @@ router.post("/records", requireQcEditor, async (req, res): Promise<void> => {
       ...parsed.data,
       status: evaluated.status ?? parsed.data.status,
       details: evaluated.details,
-      sampleDate: parsed.data.sampleDate.toISOString().slice(0, 10),
+      sampleDate,
       recordNo,
     })
     .returning();
@@ -2029,11 +2041,30 @@ router.patch("/records/:id", requireQcEditor, async (req, res): Promise<void> =>
     return;
   }
 
-  const candidate = {
+  const sampleDate =
+    body.data.sampleDate?.toISOString().slice(0, 10) ?? existing.sampleDate;
+  const candidateDetails = body.data.details ?? existing.details;
+  const candidateBase = {
     testType: body.data.testType ?? existing.testType,
     material: body.data.material ?? existing.material,
     location: body.data.location ?? existing.location,
-    details: body.data.details ?? existing.details,
+  };
+  const dateCalculation = calculateRecordTestingDate(
+    candidateBase.testType,
+    sampleDate,
+    candidateDetails,
+  );
+  const updatesAgeDerivedRecord =
+    body.data.details !== undefined ||
+    body.data.sampleDate !== undefined ||
+    body.data.testType !== undefined;
+  if (dateCalculation.error && updatesAgeDerivedRecord) {
+    res.status(400).json({ error: dateCalculation.error });
+    return;
+  }
+  const candidate = {
+    ...candidateBase,
+    details: dateCalculation.details,
   };
   const [strengthStandards, sieveStandards, shapeFactors] = await Promise.all([
     db.select().from(qcStrengthStandardsTable),
@@ -2044,13 +2075,19 @@ router.patch("/records/:id", requireQcEditor, async (req, res): Promise<void> =>
     candidate.testType === "Sand Sieve" || candidate.testType === "Aggregate Sieve"
       ? evaluateSieveRecord(candidate, sieveStandards)
       : evaluateStrengthRecord(candidate, strengthStandards, shapeFactors);
-  const { sampleDate, ...rest } = body.data;
+  const { sampleDate: submittedSampleDate, ...rest } = body.data;
   const updates = {
     ...rest,
     status: evaluated.status ?? body.data.status ?? existing.status,
-    ...(evaluated.status !== undefined ? { details: evaluated.details } : {}),
-    ...(sampleDate
-      ? { sampleDate: sampleDate.toISOString().slice(0, 10) }
+    ...(evaluated.status !== undefined ||
+        body.data.details !== undefined ||
+        body.data.sampleDate !== undefined ||
+        body.data.testType !== undefined ||
+        dateCalculation.testingDate !== null
+      ? { details: evaluated.details }
+      : {}),
+    ...(submittedSampleDate
+      ? { sampleDate: submittedSampleDate.toISOString().slice(0, 10) }
       : {}),
   };
   const [record] = await db

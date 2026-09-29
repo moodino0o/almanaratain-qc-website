@@ -530,7 +530,7 @@ test("Block daily report min and max use air-dry strength, including the Dammam 
   assert.equal(dammam?.maximumStrength, 10);
 });
 
-test("uses an entered Block testing date before the age-derived date", () => {
+test("uses the Block age-derived testing date instead of the entered legacy date", () => {
   const rows = buildDailyReportRows(
     [
       qcRecord({
@@ -552,7 +552,58 @@ test("uses an entered Block testing date before the age-derived date", () => {
   );
 
   assert.equal(rows[0]?.castingDate, "2026-09-01");
-  assert.equal(rows[0]?.testingDate, "2026-10-02");
+  assert.equal(rows[0]?.testingDate, "2026-09-29");
+});
+
+test("derives Sand, Aggregate, and Paving testing dates from their saved ages", () => {
+  const records = [
+    qcRecord({
+      id: 61,
+      testType: "Sand Sieve",
+      sampleDate: "2026-09-01",
+      location: "Plant A",
+      material: "Sand",
+      details: {
+        sampleAge: "5",
+        testingDate: "2026-09-20",
+        testRows: [{ strength: 12 }],
+      },
+    }),
+    qcRecord({
+      id: 62,
+      testType: "Aggregate Sieve",
+      sampleDate: "2026-09-01",
+      location: "Plant A",
+      material: "Aggregate",
+      details: {
+        sampleAge: 7,
+        testingDate: "2026-09-20",
+        testRows: [{ strength: 14 }],
+      },
+    }),
+    qcRecord({
+      id: 63,
+      testType: "Paving Blocks",
+      sampleDate: "2026-09-01",
+      location: "Plant A",
+      material: "Paving Block",
+      details: {
+        blockAge: 10,
+        testingDate: "2026-09-20",
+        testRows: [{ tensileStrength: 8 }],
+      },
+    }),
+  ];
+
+  const rows = buildDailyReportRows(records, "2026-09-01", "2026-09-01");
+  assert.deepEqual(
+    rows.map((row) => [row.category, row.cubeAge, row.testingDate]),
+    [
+      ["Aggregate Sieve", 7, "2026-09-08"],
+      ["Paving Blocks", 10, "2026-09-11"],
+      ["Sand Sieve", 5, "2026-09-06"],
+    ],
+  );
 });
 
 test("uses Block Age for block results and orders Ready Mix ages 7 days before 28 days per plant", () => {

@@ -22,18 +22,53 @@ export type BulkRecordDraft = {
 export const detailText = (details: Record<string, unknown>, key: string) =>
   details[key] == null ? "" : String(details[key]);
 
-export const recordToBulkDraft = (record: QcRecord): BulkRecordDraft => ({
-  id: record.id,
-  recordNo: record.recordNo,
-  testType: record.testType,
-  sampleDate: record.sampleDate.slice(0, 10),
-  location: record.location,
-  material: record.material,
-  testedBy: record.testedBy,
-  reviewedBy: record.reviewedBy ?? "",
-  remarks: record.remarks ?? "",
-  details: structuredClone(record.details),
-});
+const ageFromDates = (sampleDate: string, testingDate: unknown) => {
+  const sampleDay = sampleDate.slice(0, 10);
+  const testDay = String(testingDate ?? "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(sampleDay) || !/^\d{4}-\d{2}-\d{2}$/.test(testDay)) {
+    return "";
+  }
+  const sampleTime = Date.parse(`${sampleDay}T00:00:00.000Z`);
+  const testTime = Date.parse(`${testDay}T00:00:00.000Z`);
+  if (!Number.isFinite(sampleTime) || !Number.isFinite(testTime) || testTime < sampleTime) {
+    return "";
+  }
+  return String(Math.floor((testTime - sampleTime) / 86_400_000));
+};
+
+export const recordToBulkDraft = (record: QcRecord): BulkRecordDraft => {
+  const details = structuredClone(record.details);
+  const ageKey =
+    record.testType === TestType.Blocks || record.testType === TestType.Paving_Blocks
+      ? "blockAge"
+      : record.testType === TestType.Sand_Sieve || record.testType === TestType.Aggregate_Sieve
+        ? "sampleAge"
+        : null;
+  if (ageKey && !detailText(details, ageKey).trim()) {
+    const rows = Array.isArray(details.testRows) ? details.testRows : [];
+    const rowAge = rows
+      .map((row) => (
+        typeof row === "object" && row !== null
+          ? (row as Record<string, unknown>).sampleAge
+          : undefined
+      ))
+      .find((value) => String(value ?? "").trim());
+    details[ageKey] =
+      String(rowAge ?? "").trim() || ageFromDates(record.sampleDate, details.testingDate);
+  }
+  return {
+    id: record.id,
+    recordNo: record.recordNo,
+    testType: record.testType,
+    sampleDate: record.sampleDate.slice(0, 10),
+    location: record.location,
+    material: record.material,
+    testedBy: record.testedBy,
+    reviewedBy: record.reviewedBy ?? "",
+    remarks: record.remarks ?? "",
+    details,
+  };
+};
 
 export const createEmptyBulkDraft = (sampleDate: string): BulkRecordDraft => ({
   id: -1,
@@ -61,6 +96,13 @@ export const updateDraftDetail = (
 });
 
 export const validateBulkDraft = (draft: BulkRecordDraft) => {
+  const ageKey =
+    draft.testType === TestType.Blocks || draft.testType === TestType.Paving_Blocks
+      ? "blockAge"
+      : draft.testType === TestType.Sand_Sieve || draft.testType === TestType.Aggregate_Sieve
+        ? "sampleAge"
+        : null;
+  const age = ageKey ? Number(detailText(draft.details, ageKey)) : Number.NaN;
   const missing = [
     !draft.sampleDate &&
       (draft.testType === TestType.Blocks || draft.testType === TestType.Paving_Blocks
@@ -69,6 +111,7 @@ export const validateBulkDraft = (draft: BulkRecordDraft) => {
     !draft.location.trim() && "Location / plant",
     !draft.material.trim() && "Material / product",
     !draft.testedBy.trim() && "Tested by",
+    ageKey && (!Number.isFinite(age) || age <= 0) && "Age (days)",
     draft.testType === TestType.Paving_Blocks &&
       !detailText(draft.details, "pavingBlockSize").trim() &&
       "Paving block size",

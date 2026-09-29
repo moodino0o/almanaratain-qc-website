@@ -1355,8 +1355,9 @@ function BlocksReport({
   const blockAge = blockAgeFromRecord(details, testRows);
   const enteredTestingDate =
     typeof details.testingDate === "string" ? details.testingDate : null;
-  const testingDate = enteredTestingDate ||
-    (blockAge === null ? null : addDaysToDate(record.sampleDate, blockAge));
+  const testingDate =
+    (blockAge === null ? null : addDaysToDate(record.sampleDate, blockAge)) ||
+    enteredTestingDate;
   const configuredStandard = standards
     .filter((standard) => strengthStandardMatchesRecord(standard, record))
     .sort((left, right) => left.id - right.id)[0];
@@ -1481,7 +1482,7 @@ function SieveReport({
   const measurementEntries = [
     ["Supplier", detailValue(details, ["supplier"])],
     [
-      isAggregate ? "Material Condition" : "Sand Condition",
+      "Material Condition",
       detailValue(details, ["materialCondition", "condition"]),
     ],
     ...(isAggregate
@@ -1491,7 +1492,11 @@ function SieveReport({
         ] as const]
       : []),
   ] as const;
-  const testingDate = stringValue(details.testingDate);
+  const sampleAge = numericValue(details.sampleAge);
+  const testingDate =
+    sampleAge !== null && sampleAge > 0
+      ? addDaysToDate(record.sampleDate, sampleAge)
+      : stringValue(details.testingDate);
 
   return (
     <>
@@ -1501,6 +1506,7 @@ function SieveReport({
           <ReportFields
             entries={[
               ["Sampling Date", formatReportDate(record.sampleDate)],
+              ["Age (days)", sampleAge === null ? "-" : formatNumber(sampleAge)],
               [
                 "Testing Date",
                 testingDate ? formatReportDate(testingDate) : "-",
@@ -1578,10 +1584,17 @@ function PavingBlocksReport({ record, standards, layout }: {
   );
   const status = textValue(evaluation?.status, record.status);
   const castingDate = record.sampleDate;
-  const testingDate = textValue(details.testingDate);
-  const configuredAge = numericValue(details.blockAge);
+  const legacyRowAge = rows
+    .map((row) => (
+      typeof row === "object" && row !== null
+        ? (row as Record<string, unknown>).sampleAge
+        : undefined
+    ))
+    .find((value) => numericValue(value) !== null && numericValue(value)! > 0);
+  const configuredAge = numericValue(details.blockAge) ?? numericValue(legacyRowAge);
+  const enteredTestingDate = textValue(details.testingDate);
   const castingTimestamp = Date.parse(castingDate);
-  const testingTimestamp = Date.parse(testingDate);
+  const testingTimestamp = Date.parse(enteredTestingDate);
   const dateAge =
     Number.isFinite(castingTimestamp) && Number.isFinite(testingTimestamp)
       ? Math.max(
@@ -1589,7 +1602,12 @@ function PavingBlocksReport({ record, standards, layout }: {
           Math.floor((testingTimestamp - castingTimestamp) / 86_400_000),
         )
       : null;
-  const blockAge = configuredAge ?? dateAge;
+  const blockAge = configuredAge !== null && configuredAge > 0
+    ? configuredAge
+    : dateAge;
+  const testingDate =
+    (blockAge === null ? null : addDaysToDate(castingDate, blockAge)) ||
+    enteredTestingDate;
   return (
     <div className="paving-block-report">
       <div className="block-report-section-heading">

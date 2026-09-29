@@ -42,3 +42,35 @@ test("bulk drafts require the shared main record fields", () => {
     ["Location / plant", "Material / product", "Tested by"],
   );
 });
+
+test("bulk drafts require positive ages for age-based record types", () => {
+  const baseDraft = recordToBulkDraft(record);
+  const cases = [
+    { testType: TestType.Blocks, details: { blockAge: "" } },
+    { testType: TestType.Paving_Blocks, details: { blockAge: "", pavingBlockSize: "200*200*60" } },
+    { testType: TestType.Sand_Sieve, details: { sampleAge: "" } },
+    { testType: TestType.Aggregate_Sieve, details: { sampleAge: "0" } },
+  ] as const;
+
+  for (const testCase of cases) {
+    const draft = {
+      ...baseDraft,
+      testType: testCase.testType,
+      details: { ...testCase.details },
+    };
+    assert.ok(validateBulkDraft(draft).includes("Age (days)"));
+  }
+});
+
+test("bulk editing derives an age from a legacy testing date", () => {
+  const legacyRecord: QcRecord = {
+    ...record,
+    testType: TestType.Aggregate_Sieve,
+    sampleDate: "2026-09-01",
+    details: { testingDate: "2026-09-08" },
+  };
+
+  const draft = recordToBulkDraft(legacyRecord);
+  assert.equal(draft.details.sampleAge, "7");
+  assert.deepEqual(validateBulkDraft(draft), []);
+});

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useListRecords, TestType, RecordStatus } from "@workspace/api-client-react";
+import { useListRecords, TestType, RecordStatus, type QcRecord } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { CheckCircle2, AlertTriangle, XCircle, Search, Plus, Printer, TableProperties } from "lucide-react";
-import { formatDate, formatDateTime } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 import { useAuth } from "@workspace/replit-auth-web";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -20,6 +20,69 @@ import {
 } from "./reports-utils";
 
 type RegisterSection = "all" | "readymix" | "masonry" | "aggregate";
+
+function formatRegisterDate(value: string | null | undefined) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    timeZone: "UTC",
+  }).format(date);
+}
+
+function masonryTestingDate(record: QcRecord) {
+  const details = record.details as Record<string, unknown>;
+  const ageKey = record.testType === TestType.Blocks || record.testType === TestType.Paving_Blocks
+    ? "blockAge"
+    : "sampleAge";
+  const directAge = Number(String(details[ageKey] ?? "").trim());
+  const rows = Array.isArray(details.testRows) ? details.testRows : [];
+  const legacyRowAge = rows
+    .map((row) => (
+      typeof row === "object" && row !== null
+        ? Number(String((row as Record<string, unknown>).sampleAge ?? "").trim())
+        : Number.NaN
+    ))
+    .find((value) => Number.isFinite(value) && value > 0);
+  const age = Number.isFinite(directAge) && directAge > 0 ? directAge : legacyRowAge;
+  if (age !== undefined && Number.isFinite(age) && age > 0) {
+    const date = new Date(`${record.sampleDate.slice(0, 10)}T00:00:00.000Z`);
+    if (!Number.isNaN(date.getTime())) {
+      date.setUTCDate(date.getUTCDate() + age);
+      return date.toISOString();
+    }
+  }
+  return typeof details.testingDate === "string" && details.testingDate
+    ? details.testingDate
+    : record.sampleDate;
+}
+
+function masonryBlockAge(record: QcRecord) {
+  const details = record.details as Record<string, unknown>;
+  const directAge = Number(String(details.blockAge ?? "").trim());
+  if (Number.isFinite(directAge) && directAge > 0) return String(directAge);
+
+  const rows = Array.isArray(details.testRows) ? details.testRows : [];
+  const legacyRowAge = rows
+    .map((row) => (
+      typeof row === "object" && row !== null
+        ? Number(String((row as Record<string, unknown>).sampleAge ?? "").trim())
+        : Number.NaN
+    ))
+    .find((value) => Number.isFinite(value) && value > 0);
+  if (legacyRowAge !== undefined) return String(legacyRowAge);
+
+  const sampleDay = record.sampleDate.slice(0, 10);
+  const testingDay = masonryTestingDate(record).slice(0, 10);
+  const sampleTime = Date.parse(`${sampleDay}T00:00:00.000Z`);
+  const testingTime = Date.parse(`${testingDay}T00:00:00.000Z`);
+  if (!Number.isFinite(sampleTime) || !Number.isFinite(testingTime)) return "—";
+  const age = Math.floor((testingTime - sampleTime) / 86_400_000);
+  return age > 0 ? String(age) : "—";
+}
 
 export default function Records() {
   const { role } = useAuth();
@@ -59,7 +122,7 @@ export default function Records() {
   const tableColumnCount =
     10 -
     (hideCustomerAndSiteLocation ? 2 : 0) +
-    (isMasonrySection ? 4 : 0);
+    (isMasonrySection ? 6 : 0);
   const readyMixAgeAverages = useMemo(() => {
     const averages = new Map<number, ReadyMixAgeBandAverages>();
     if (isReadyMixSection) {
@@ -120,6 +183,8 @@ export default function Records() {
         : isAggregateSection
           ? "w-[10%]"
           : "w-[8%]",
+    testingDate: "w-[7%]",
+    blockAge: "w-[5%]",
     testedBy: isReadyMixSection
       ? "w-[8%]"
       : isMasonrySection
@@ -128,12 +193,12 @@ export default function Records() {
           ? "w-[10%]"
           : "w-[9%]",
     remarks: isMasonrySection
-      ? "w-[9%]"
+      ? "w-[8%]"
       : isAggregateSection
         ? "w-[10%]"
         : "w-[9%]",
-    blockType: "w-[13%]",
-    machine: "w-[8%]",
+    blockType: isMasonrySection ? "w-[11%]" : "w-[13%]",
+    machine: isMasonrySection ? "w-[7%]" : "w-[8%]",
     status: isReadyMixSection
       ? "w-[7%]"
       : isMasonrySection
@@ -144,7 +209,7 @@ export default function Records() {
     actions: isReadyMixSection
       ? "w-[14%]"
       : isMasonrySection
-        ? "w-[15%]"
+        ? "w-[10%]"
         : isAggregateSection
           ? "w-[21%]"
           : "w-[14%]",
@@ -256,7 +321,23 @@ export default function Records() {
                     Material
                   </TableHead>
                 )}
-                <TableHead className={`${columnWidths.sampleDate} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>Sample Date</TableHead>
+                {isMasonrySection ? (
+                  <>
+                    <TableHead className={`${columnWidths.sampleDate} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>
+                      Sample Date
+                    </TableHead>
+                    <TableHead className={`${columnWidths.testingDate} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>
+                      Testing Date
+                    </TableHead>
+                    <TableHead className={`${columnWidths.blockAge} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>
+                      Block Age (days)
+                    </TableHead>
+                  </>
+                ) : (
+                  <TableHead className={`${columnWidths.sampleDate} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>
+                    Sample Date
+                  </TableHead>
+                )}
                 {(isMasonrySection || isAggregateSection) ? (
                   <TableHead className={`${columnWidths.remarks} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>
                     Remarks
@@ -267,9 +348,9 @@ export default function Records() {
                 <TableHead className={`${columnWidths.status} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>Status</TableHead>
                 {isMasonrySection && (
                   <>
-                    <TableHead className="w-[6%] whitespace-normal break-words px-1 py-1.5 text-right text-[9px] leading-tight sm:text-[10px]">Avg. (N/mm²)</TableHead>
-                    <TableHead className="w-[6%] whitespace-normal break-words px-1 py-1.5 text-right text-[9px] leading-tight sm:text-[10px]">Min. (N/mm²)</TableHead>
-                    <TableHead className="w-[6%] whitespace-normal break-words px-1 py-1.5 text-right text-[9px] leading-tight sm:text-[10px]">Max. (N/mm²)</TableHead>
+                    <TableHead className="w-[5%] whitespace-normal break-words px-1 py-1.5 text-right text-[9px] leading-tight sm:text-[10px]">Avg. (N/mm²)</TableHead>
+                    <TableHead className="w-[5%] whitespace-normal break-words px-1 py-1.5 text-right text-[9px] leading-tight sm:text-[10px]">Min. (N/mm²)</TableHead>
+                    <TableHead className="w-[5%] whitespace-normal break-words px-1 py-1.5 text-right text-[9px] leading-tight sm:text-[10px]">Max. (N/mm²)</TableHead>
                   </>
                 )}
                 {isReadyMixSection && (
@@ -347,7 +428,23 @@ export default function Records() {
                         {record.material}
                       </TableCell>
                     )}
-                    <TableCell className="whitespace-normal break-words px-1 py-1">{formatDate(record.sampleDate)}</TableCell>
+                    {isMasonrySection ? (
+                      <>
+                        <TableCell className="whitespace-normal break-words px-1 py-1 tabular-nums">
+                          {formatRegisterDate(record.sampleDate)}
+                        </TableCell>
+                        <TableCell className="whitespace-normal break-words px-1 py-1 tabular-nums">
+                          {formatRegisterDate(masonryTestingDate(record))}
+                        </TableCell>
+                        <TableCell className="whitespace-normal break-words px-1 py-1 text-center tabular-nums">
+                          {masonryBlockAge(record)}
+                        </TableCell>
+                      </>
+                    ) : (
+                      <TableCell className="whitespace-normal break-words px-1 py-1 tabular-nums">
+                        {formatRegisterDate(record.sampleDate)}
+                      </TableCell>
+                    )}
                     {(isMasonrySection || isAggregateSection) ? (
                       <TableCell className="whitespace-normal break-words px-1 py-1">
                         {record.remarks?.trim() || "—"}

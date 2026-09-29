@@ -44,6 +44,15 @@ function displayValue(value: unknown, fallback = "—") {
   return value === undefined || value === null || value === "" ? fallback : String(value);
 }
 
+function ageDerivedTestingDate(sampleDate: string, ageValue: unknown) {
+  const age = Number(String(ageValue ?? "").trim());
+  if (!Number.isFinite(age) || age <= 0) return null;
+  const date = new Date(`${sampleDate.slice(0, 10)}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) return null;
+  date.setUTCDate(date.getUTCDate() + age);
+  return date.toISOString();
+}
+
 function sortCubeRowsByAge(rows: unknown[]) {
   return rows
     .map((row, index) => {
@@ -560,6 +569,23 @@ export default function RecordDetail() {
   const isSieveEvaluated = record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve";
   const recordDetails = record.details as DetailMap;
   const isSieveRecord = isSieveEvaluated;
+  const ageKey = record.testType === "Blocks" || record.testType === "Paving Blocks"
+    ? "blockAge"
+    : "sampleAge";
+  const configuredAge = Number(String(recordDetails[ageKey] ?? "").trim());
+  const legacyRows = Array.isArray(recordDetails.testRows) ? recordDetails.testRows : [];
+  const legacyRowAge = legacyRows
+    .map((row) => (
+      typeof row === "object" && row !== null
+        ? (row as Record<string, unknown>).sampleAge
+        : undefined
+    ))
+    .find((value) => Number.isFinite(Number(value)) && Number(value) > 0);
+  const ageForDate =
+    Number.isFinite(configuredAge) && configuredAge > 0
+      ? recordDetails[ageKey]
+      : legacyRowAge;
+  const calculatedTestingDate = ageDerivedTestingDate(record.sampleDate, ageForDate);
   const summaryEntries: Array<readonly [string, unknown]> = [
     ["Record No.", record.recordNo],
     ["Test Type", record.testType],
@@ -582,6 +608,7 @@ export default function RecordDetail() {
       ["Block Type", detailText(recordDetails, "blockType", record.material)],
       ["Block Size", detailText(recordDetails, "blockSize")],
       ["Block Age (days)", detailText(recordDetails, "blockAge")],
+      ["Testing Date", calculatedTestingDate ? formatDate(calculatedTestingDate) : detailText(recordDetails, "testingDate")],
       ["Machine", detailText(recordDetails, "machine")],
     );
   }
@@ -712,9 +739,7 @@ export default function RecordDetail() {
               entries={[
               ["Sample Weight", detailText(recordDetails, "sampleWeight")],
               [
-                record.testType === "Aggregate Sieve"
-                  ? "Material Condition"
-                  : "Sand Condition",
+                "Material Condition",
                 detailText(
                   recordDetails,
                   "materialCondition",
@@ -722,7 +747,8 @@ export default function RecordDetail() {
                 ),
               ],
               ["Supplier", detailText(recordDetails, "supplier")],
-              ["Testing Date", detailText(recordDetails, "testingDate")],
+              ["Age (days)", detailText(recordDetails, "sampleAge")],
+              ["Testing Date", calculatedTestingDate ? formatDate(calculatedTestingDate) : detailText(recordDetails, "testingDate")],
               [
                 "Dry Weight (g)",
                 detailText(recordDetails, "dryWeight", detailText(recordDetails, "drySample")),

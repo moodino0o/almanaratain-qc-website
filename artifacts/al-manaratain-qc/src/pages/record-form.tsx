@@ -53,6 +53,25 @@ import { EMPLOYEE_ADDABLE_REFERENCE_CATEGORIES } from "./reference-data-permissi
 
 const REFERENCE_NUMBER_MAX_LENGTH = 32;
 const DEFAULT_APPROVED_BY = "ADEL ABBAS EBRAHIM";
+const MATERIAL_CONDITIONS = ["Single Washed", "Unwashed", "Double Washed"] as const;
+
+function ageFromDates(sampleDate: string, testingDate: unknown) {
+  const sampleDay = String(sampleDate).slice(0, 10);
+  const testingDay = String(testingDate ?? "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(sampleDay) || !/^\d{4}-\d{2}-\d{2}$/.test(testingDay)) {
+    return "";
+  }
+  const sampleTime = Date.parse(`${sampleDay}T00:00:00.000Z`);
+  const testingTime = Date.parse(`${testingDay}T00:00:00.000Z`);
+  if (!Number.isFinite(sampleTime) || !Number.isFinite(testingTime) || testingTime < sampleTime) {
+    return "";
+  }
+  return String(Math.floor((testingTime - sampleTime) / 86_400_000));
+}
+
+function isValidAge(value: string) {
+  return value.trim() !== "" && Number.isFinite(Number(value)) && Number(value) > 0;
+}
 
 export default function RecordForm() {
   const { id } = useParams();
@@ -97,6 +116,7 @@ export default function RecordForm() {
   const [reviewedBy, setReviewedBy] = useState(DEFAULT_APPROVED_BY);
   const [machine, setMachine] = useState("");
   const [blockAge, setBlockAge] = useState("");
+  const [sampleAge, setSampleAge] = useState("");
   const [referenceNumber, setReferenceNumber] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerLocation, setCustomerLocation] = useState("");
@@ -200,7 +220,20 @@ export default function RecordForm() {
     const legacyBlockAge = legacyBlockAgeRow && typeof legacyBlockAgeRow === "object"
       ? (legacyBlockAgeRow as Record<string, unknown>).sampleAge
       : "";
-    setBlockAge(numericInputValue(savedDetails.blockAge ?? legacyBlockAge));
+    const savedBlockAge = [savedDetails.blockAge, legacyBlockAge]
+      .find((value) => stringValue(value).trim()) ??
+      ageFromDates(existingRecord.sampleDate, savedDetails.testingDate);
+    setBlockAge(numericInputValue(savedBlockAge));
+    const legacySampleAgeRow = savedRows.find(
+      (row) => typeof row === "object" && row !== null && "sampleAge" in row,
+    );
+    const legacySampleAge = legacySampleAgeRow && typeof legacySampleAgeRow === "object"
+      ? (legacySampleAgeRow as Record<string, unknown>).sampleAge
+      : "";
+    const savedSampleAge = [savedDetails.sampleAge, legacySampleAge]
+      .find((value) => stringValue(value).trim()) ??
+      ageFromDates(existingRecord.sampleDate, savedDetails.testingDate);
+    setSampleAge(numericInputValue(savedSampleAge));
     const savedStandardId = stringValue(savedDetails.strengthStandardId);
     const savedAssignmentMode = stringValue(savedDetails.strengthStandardAssignmentMode);
     setSelectedStrengthStandardId(savedStandardId);
@@ -735,9 +768,20 @@ export default function RecordForm() {
     }
     if (
       testType === TestType.Blocks &&
-      (!blockAge.trim() || !Number.isFinite(Number(blockAge)) || Number(blockAge) <= 0)
+      !isValidAge(blockAge)
     ) {
       toast.error("Please enter a valid Block age in days.");
+      return;
+    }
+    if (
+      testType === TestType.Paving_Blocks &&
+      !isValidAge(blockAge)
+    ) {
+      toast.error("Please enter a valid Age in days.");
+      return;
+    }
+    if (usesSieveRows && !isValidAge(sampleAge)) {
+      toast.error("Please enter a valid Age in days.");
       return;
     }
     if (testType === TestType.Paving_Blocks && !String(details.pavingBlockSize ?? "").trim()) {
@@ -757,11 +801,9 @@ export default function RecordForm() {
       const selectedCondition = stringValue(
         details.materialCondition || details.condition,
       ).trim();
-      if (testType === TestType.Aggregate_Sieve) {
-        payloadDetails.materialCondition = selectedCondition;
-      } else {
-        payloadDetails.condition = selectedCondition;
-      }
+      payloadDetails.materialCondition = selectedCondition;
+      delete payloadDetails.condition;
+      payloadDetails.sampleAge = sampleAge.trim();
     }
 
     if (usesSieveRows) {
@@ -820,9 +862,11 @@ export default function RecordForm() {
         payloadDetails.strengthStandardAssignmentMode = "automatic";
       }
     }
+    if (testType === TestType.Blocks || testType === TestType.Paving_Blocks) {
+      payloadDetails.blockAge = blockAge.trim();
+    }
     if (testType === TestType.Blocks) {
       payloadDetails.machine = machine;
-      payloadDetails.blockAge = blockAge.trim();
     }
 
     if (usesTestRows) {
@@ -1108,13 +1152,13 @@ export default function RecordForm() {
               {usesSieveRows && (
                 <>
                   <div className="space-y-2">
-                    <Label>Testing Date</Label>
+                    <Label>Age (days) <span className="text-destructive">*</span></Label>
                     <Input
-                      type="date"
-                      value={stringValue(details.testingDate).slice(0, 10)}
-                      onChange={(event) =>
-                        handleDetailChange("testingDate", event.target.value)
-                      }
+                      type="text"
+                      inputMode="numeric"
+                      value={sampleAge}
+                      onChange={(event) => setSampleAge(event.target.value)}
+                      placeholder="e.g. 28"
                     />
                   </div>
                   <div className="space-y-2">
@@ -1295,42 +1339,30 @@ export default function RecordForm() {
               {usesSieveRows && (
                 <div className="space-y-2">
                   <Label>
-                    {testType === TestType.Aggregate_Sieve
-                      ? "Material Condition"
-                      : "Sand Condition"}
+                    Material Condition
                     {testType === TestType.Aggregate_Sieve && (
                       <span className="text-destructive"> *</span>
                     )}
                   </Label>
-                  {testType === TestType.Aggregate_Sieve ? (
-                    <Select
-                      value={String(
-                        details.materialCondition || details.condition || "",
-                      )}
-                      onValueChange={(value) =>
-                        handleDetailChange("materialCondition", value)
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select material condition..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {["Single Washed", "Unwashed", "Double Washed"].map((condition) => (
-                          <SelectItem key={condition} value={condition}>
-                            {condition}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Input
-                      value={String(details.condition ?? "")}
-                      onChange={(event) =>
-                        handleDetailChange("condition", event.target.value)
-                      }
-                      placeholder="Enter sand condition"
-                    />
-                  )}
+                  <Select
+                    value={String(
+                      details.materialCondition || details.condition || "",
+                    )}
+                    onValueChange={(value) =>
+                      handleDetailChange("materialCondition", value)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select material condition..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MATERIAL_CONDITIONS.map((condition) => (
+                        <SelectItem key={condition} value={condition}>
+                          {condition}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
 
@@ -1412,14 +1444,6 @@ export default function RecordForm() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Testing Date</Label>
-                    <Input
-                      type="date"
-                      value={String(details.testingDate ?? "")}
-                      onChange={(event) => handleDetailChange("testingDate", event.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
                     <Label>Sample Type</Label>
                     <TypeaheadInput
                       value={String(details.sampleType ?? "")}
@@ -1489,13 +1513,13 @@ export default function RecordForm() {
             />
           </div>
           <div className="space-y-2">
-            <Label>Testing Date</Label>
+            <Label>Age (days) <span className="text-destructive">*</span></Label>
             <Input
-              type="date"
-              value={String(details.testingDate ?? "")}
-              onChange={(event) =>
-                handleDetailChange("testingDate", event.target.value)
-              }
+              type="text"
+              inputMode="numeric"
+              value={blockAge}
+              onChange={(event) => setBlockAge(event.target.value)}
+              placeholder="e.g. 28"
             />
           </div>
           <div className="space-y-2">

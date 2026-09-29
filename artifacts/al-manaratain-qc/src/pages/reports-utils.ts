@@ -132,10 +132,23 @@ const recordProduct = (record: QcRecord, details: Record<string, unknown>) => {
   );
 };
 
-const recordAge = (record: QcRecord, details: Record<string, unknown>) =>
-  record.testType === "Blocks" || record.testType === "Paving Blocks"
-    ? numericValue(detailsValue(details, ["blockAge"]))
-    : null;
+const recordAge = (record: QcRecord, details: Record<string, unknown>) => {
+  const ageKey =
+    record.testType === "Blocks" || record.testType === "Paving Blocks"
+      ? "blockAge"
+      : record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve"
+        ? "sampleAge"
+        : null;
+  if (!ageKey) return null;
+  const configuredAge = numericValue(detailsValue(details, [ageKey]));
+  if (configuredAge !== null && configuredAge > 0) return configuredAge;
+  const rows = Array.isArray(details.testRows) ? details.testRows : [];
+  return rows.reduce<number | null>((age, row) => {
+    if (age !== null || typeof row !== "object" || row === null) return age;
+    const rowAge = numericValue((row as Record<string, unknown>).sampleAge);
+    return rowAge !== null && rowAge > 0 ? rowAge : null;
+  }, null);
+};
 
 const rowStrength = (row: unknown, testType: QcRecord["testType"]) => {
   if (typeof row !== "object" || row === null) return null;
@@ -331,8 +344,8 @@ export function buildDailyReportRows(
     const castingDate = record.sampleDate.slice(0, 10);
     const age = recordAge(record, details);
     const testingDate =
-      dateOnly(detailsValue(details, ["testingDate"])) ||
       (age === null ? null : addDays(castingDate, age)) ||
+      dateOnly(detailsValue(details, ["testingDate"])) ||
       castingDate;
     addStrengths(
       record,

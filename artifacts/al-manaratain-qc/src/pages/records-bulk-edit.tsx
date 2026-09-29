@@ -325,12 +325,7 @@ function DraftRow({
         "blockSizes",
       )),
       field("Machine", detailInput("machine", "Machine")),
-      field("Block Age", detailInput("blockAge", "Block age", "number")),
-      field("Testing Date", detailInput(
-        "testingDate",
-        "Testing date",
-        "date",
-      )),
+      field("Block Age (days)", detailInput("blockAge", "Block age", "number")),
       field("Sample Type", detailInput(
         "sampleType",
         "Sample type",
@@ -363,17 +358,13 @@ function DraftRow({
   if (pavingBlocks) {
     fields.push(
       field("Machine Type", detailInput("machine", "Machine type")),
+      field("Age (days)", detailInput("blockAge", "Age", "number")),
       field("Sample Type", detailInput(
         "sampleType",
         "Sample type",
         "text",
         lookupOptions.sampleTypes,
         "sampleTypes",
-      )),
-      field("Testing Date", detailInput(
-        "testingDate",
-        "Testing date",
-        "date",
       )),
       field("Paving Block Size", detailInput(
         "pavingBlockSize",
@@ -391,6 +382,7 @@ function DraftRow({
 
   if (sieve) {
     fields.push(
+      field("Age (days)", detailInput("sampleAge", "Age", "number")),
       field("Supplier", detailInput(
         "supplier",
         "Supplier",
@@ -398,7 +390,24 @@ function DraftRow({
         lookupOptions.suppliers,
         "suppliers",
       )),
-      field("Condition", detailInput("condition", "Condition")),
+      field("Material Condition", (
+        <Select
+          value={
+            detailText(draft.details, "materialCondition") ||
+            detailText(draft.details, "condition")
+          }
+          onValueChange={(value) => onDetailChange("materialCondition", value)}
+        >
+          <SelectTrigger className="h-8 min-w-0 text-[10px]">
+            <SelectValue placeholder="Choose condition..." />
+          </SelectTrigger>
+          <SelectContent>
+            {["Single Washed", "Unwashed", "Double Washed"].map((condition) => (
+              <SelectItem key={condition} value={condition}>{condition}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )),
     );
   }
 
