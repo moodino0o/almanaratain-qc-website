@@ -3,6 +3,7 @@ const EMPLOYEE_ADDABLE_REFERENCE_CATEGORY_KEYS = new Set([
   "customers",
   "customerLocations",
   "mixStrengths",
+  "machines",
 ]);
 
 export function canEmployeeAddReferenceCategory(categoryKey: string): boolean {

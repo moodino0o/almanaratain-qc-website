@@ -136,6 +136,7 @@ type BulkLookupOptions = {
   locations: string[];
   materials: string[];
   mixStrengths: string[];
+  machines: string[];
   blockTypes: string[];
   blockSizes: string[];
   customers: string[];
@@ -324,7 +325,13 @@ function DraftRow({
         lookupOptions.blockSizes,
         "blockSizes",
       )),
-      field("Machine", detailInput("machine", "Machine")),
+      field("Machine", detailInput(
+        "machine",
+        "Machine",
+        "text",
+        lookupOptions.machines,
+        "machines",
+      )),
       field("Block Age (days)", detailInput("blockAge", "Block age", "number")),
       field("Sample Type", detailInput(
         "sampleType",
@@ -357,7 +364,13 @@ function DraftRow({
 
   if (pavingBlocks) {
     fields.push(
-      field("Machine Type", detailInput("machine", "Machine type")),
+      field("Machine Type", detailInput(
+        "machine",
+        "Machine type",
+        "text",
+        lookupOptions.machines,
+        "machines",
+      )),
       field("Age (days)", detailInput("blockAge", "Age", "number")),
       field("Sample Type", detailInput(
         "sampleType",
@@ -554,6 +567,7 @@ export default function RecordsBulkEdit() {
     ),
     materials: lookups?.materials ?? [],
     mixStrengths: lookups?.mixStrengths ?? [],
+    machines: categoryValues(referenceData?.categories, "machines"),
     blockTypes: lookups?.blockTypes ?? [],
     blockSizes: lookups?.blockSizes ?? [],
     customers: lookups?.customers ?? [],

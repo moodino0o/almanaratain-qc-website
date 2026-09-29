@@ -3,4 +3,5 @@ export const EMPLOYEE_ADDABLE_REFERENCE_CATEGORIES = new Set([
   "customers",
   "customerLocations",
   "mixStrengths",
+  "machines",
 ]);

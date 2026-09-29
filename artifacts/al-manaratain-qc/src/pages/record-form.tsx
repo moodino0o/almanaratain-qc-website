@@ -406,6 +406,10 @@ export default function RecordForm() {
     () => referenceData?.categories.find((category) => category.key === "sampleTypes")?.items.map((item) => item.value) ?? [],
     [referenceData],
   );
+  const machineOptions = useMemo(
+    () => referenceData?.categories.find((category) => category.key === "machines")?.items.map((item) => item.value) ?? [],
+    [referenceData],
+  );
   const conditioningMethodOptions = useMemo(
     () => referenceData?.categories.find((category) => category.key === "conditioningMethods")?.items.map((item) => item.value) ?? [],
     [referenceData],
@@ -1427,10 +1431,12 @@ export default function RecordForm() {
                   </div>
                   <div className="space-y-2">
                     <Label>Machine</Label>
-                    <Input
+                    <TypeaheadInput
                       value={machine}
-                      onChange={(event) => setMachine(event.target.value)}
-                      placeholder="Enter block machine"
+                      onChange={setMachine}
+                      options={machineOptions}
+                      placeholder="Select or type machine..."
+                      onCreateOption={createReferenceOption("machines")}
                     />
                   </div>
                   <div className="space-y-2">
@@ -1494,12 +1500,12 @@ export default function RecordForm() {
         <>
           <div className="space-y-2">
             <Label>Machine Type</Label>
-            <Input
+            <TypeaheadInput
               value={String(details.machine ?? "")}
-              onChange={(event) =>
-                handleDetailChange("machine", event.target.value)
-              }
-              placeholder="Enter machine type"
+              onChange={(value) => handleDetailChange("machine", value)}
+              options={machineOptions}
+              placeholder="Select or type machine..."
+              onCreateOption={createReferenceOption("machines")}
             />
           </div>
           <div className="space-y-2">

@@ -98,6 +98,7 @@ import {
   type SieveStandardForEvaluation,
 } from "../lib/qc-strength";
 import { calculateRecordTestingDate } from "../lib/qc-record-dates";
+import { normalizeMasonryMachineDetails } from "../lib/qc-machine-names";
 import {
   readyMixStrengthsForAge,
   summarizeStrengths,
@@ -115,6 +116,7 @@ const addDaysToDate = (date: string, days: number) => {
 const REFERENCE_SEED = [
   { key: "factories", label: "Factories", values: ["HAFFERA", "HIDD", "AKER", "KHAMIS"] },
   { key: "plants", label: "Plants", values: ["COLUMBIA", "MASA", "HENKI I", "HENKI II", "LIEBHERR"] },
+  { key: "machines", label: "Masonry Machines", values: ["HENKI I", "HENKI II", "MASA"] },
   {
     key: "employees",
     label: "Technicians",
@@ -262,6 +264,7 @@ const REFERENCE_SEED = [
 
 let referenceSeedPromise: Promise<void> | null = null;
 let strengthSeedPromise: Promise<void> | null = null;
+let masonryMachineNormalizationPromise: Promise<void> | null = null;
 
 const READY_MIX_DEFAULT_DESIGNS = [
   "20 N OPC",
@@ -749,6 +752,34 @@ export async function ensureReferenceData() {
     });
   }
   await referenceSeedPromise;
+  if (!masonryMachineNormalizationPromise) {
+    masonryMachineNormalizationPromise = (async () => {
+      const records = await db
+        .select({
+          id: qcRecordsTable.id,
+          testType: qcRecordsTable.testType,
+          details: qcRecordsTable.details,
+        })
+        .from(qcRecordsTable)
+        .where(inArray(qcRecordsTable.testType, ["Blocks", "Paving Blocks"]));
+
+      for (const record of records) {
+        const details = normalizeMasonryMachineDetails(
+          record.testType,
+          record.details,
+        );
+        if (details === record.details) continue;
+        await db
+          .update(qcRecordsTable)
+          .set({ details })
+          .where(eq(qcRecordsTable.id, record.id));
+      }
+    })().catch((error) => {
+      masonryMachineNormalizationPromise = null;
+      throw error;
+    });
+  }
+  await masonryMachineNormalizationPromise;
   await ensureDefaultShapeFactors();
   await ensureReportLayouts();
 }
@@ -1917,6 +1948,10 @@ router.post("/records", requireQcEditor, async (req, res): Promise<void> => {
     res.status(400).json({ error: dateCalculation.error });
     return;
   }
+  const normalizedDetails = normalizeMasonryMachineDetails(
+    parsed.data.testType,
+    dateCalculation.details,
+  );
 
   const [strengthStandards, sieveStandards, shapeFactors] = await Promise.all([
     db.select().from(qcStrengthStandardsTable),
@@ -1929,7 +1964,7 @@ router.post("/records", requireQcEditor, async (req, res): Promise<void> => {
           {
             testType: parsed.data.testType,
             material: parsed.data.material,
-            details: dateCalculation.details,
+            details: normalizedDetails,
           },
           sieveStandards,
         )
@@ -1938,7 +1973,7 @@ router.post("/records", requireQcEditor, async (req, res): Promise<void> => {
       testType: parsed.data.testType,
       material: parsed.data.material,
       location: parsed.data.location,
-      details: dateCalculation.details,
+      details: normalizedDetails,
     },
           strengthStandards,
           shapeFactors,
@@ -2043,12 +2078,15 @@ router.patch("/records/:id", requireQcEditor, async (req, res): Promise<void> =>
 
   const sampleDate =
     body.data.sampleDate?.toISOString().slice(0, 10) ?? existing.sampleDate;
-  const candidateDetails = body.data.details ?? existing.details;
   const candidateBase = {
     testType: body.data.testType ?? existing.testType,
     material: body.data.material ?? existing.material,
     location: body.data.location ?? existing.location,
   };
+  const candidateDetails = normalizeMasonryMachineDetails(
+    candidateBase.testType,
+    body.data.details ?? existing.details,
+  );
   const dateCalculation = calculateRecordTestingDate(
     candidateBase.testType,
     sampleDate,
