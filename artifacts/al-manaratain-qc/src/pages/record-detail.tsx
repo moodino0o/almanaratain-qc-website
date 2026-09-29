@@ -718,7 +718,6 @@ export default function RecordDetail() {
                 ),
               ],
               ["Supplier", detailText(recordDetails, "supplier")],
-              ["Block Plant", detailText(recordDetails, "blockPlant")],
               ["Testing Date", detailText(recordDetails, "testingDate")],
               [
                 "Dry Weight (g)",

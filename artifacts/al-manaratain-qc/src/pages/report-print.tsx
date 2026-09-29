@@ -1506,7 +1506,6 @@ function SieveReport({
               ],
               ["Factory", record.location],
               ["Material Type", record.material],
-              ["Block Plant", detailValue(details, ["blockPlant"])],
             ]}
           />
         </section>

@@ -1090,16 +1090,6 @@ export default function RecordForm() {
                       placeholder="Enter supplier"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Block Plant</Label>
-                    <Input
-                      value={stringValue(details.blockPlant)}
-                      onChange={(event) =>
-                        handleDetailChange("blockPlant", event.target.value)
-                      }
-                      placeholder="Enter block plant"
-                    />
-                  </div>
                 </>
               )}
 
