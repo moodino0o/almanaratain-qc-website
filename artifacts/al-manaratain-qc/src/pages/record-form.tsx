@@ -34,9 +34,11 @@ import {
   evaluateContentAgainstLimit,
   evaluateSieveValue,
   evaluateSiltContent,
+  filterSieveSizeItems,
   calculateSieveSampleWeight,
   calculateSieveResults,
   applySizeDimensionDefaults,
+  isSievePoreSizeAllowed,
   BLOCK_RECORD_MATERIAL,
   prepareDetailsForForm,
   sieveSizeNumber,
@@ -242,9 +244,6 @@ export default function RecordForm() {
 
   const sieveMassUnit = "g";
   const blockDimensions = blockDimensionsFromSize(details.blockSize);
-  const calculatedSieveSampleWeight = usesSieveRows
-    ? calculateSieveSampleWeight(testRows)
-    : null;
   const calculatedMoistureContent = calculateMoistureContent(
     details.dryWeight || details.drySample,
     details.wetWeight || details.wetSample,
@@ -543,10 +542,17 @@ export default function RecordForm() {
     ));
   }, [details.materialReferenceItemId, material, sieveStandards, testType, usesSieveRows]);
 
+  const matchingSieveEntryStandards = useMemo(
+    () => applicableSieveStandards.filter((standard) =>
+      isSievePoreSizeAllowed(testType, material, standard.sieveSize),
+    ),
+    [applicableSieveStandards, material, testType],
+  );
+
   const sieveEntryItems = useMemo(() => {
     const itemsById = new Map<number, { id: number; value: string }>();
     sieveSizeReferenceItems.forEach((item) => itemsById.set(item.id, item));
-    applicableSieveStandards.forEach((standard) => {
+    matchingSieveEntryStandards.forEach((standard) => {
       if (!itemsById.has(standard.sieveSizeReferenceItemId)) {
         itemsById.set(standard.sieveSizeReferenceItemId, {
           id: standard.sieveSizeReferenceItemId,
@@ -554,10 +560,32 @@ export default function RecordForm() {
         });
       }
     });
-    return Array.from(itemsById.values()).sort(
-      (a, b) => sieveSizeNumber(b.value) - sieveSizeNumber(a.value),
+    return filterSieveSizeItems(
+      Array.from(itemsById.values()).sort(
+        (a, b) => sieveSizeNumber(b.value) - sieveSizeNumber(a.value),
+      ),
+      testType,
+      material,
     );
-  }, [applicableSieveStandards, sieveSizeReferenceItems]);
+  }, [material, matchingSieveEntryStandards, sieveSizeReferenceItems, testType]);
+
+  const visibleSieveRowEntries = useMemo(
+    () => usesSieveRows
+      ? testRows
+          .map((row, rowIndex) => ({ row, rowIndex }))
+          .filter(({ row }) =>
+            isSievePoreSizeAllowed(testType, material, row.sieveSize),
+          )
+      : [],
+    [material, testRows, testType, usesSieveRows],
+  );
+  const visibleSieveRows = visibleSieveRowEntries.map(({ row }) => row);
+  const calculatedSieveSampleWeight = usesSieveRows
+    ? calculateSieveSampleWeight(visibleSieveRows)
+    : null;
+  const displayedTestRows = usesSieveRows
+    ? visibleSieveRowEntries
+    : testRows.map((row, rowIndex) => ({ row, rowIndex }));
 
   const sieveContextKey = `${testType}|${String(details.materialReferenceItemId ?? material.trim())}`;
 
@@ -580,7 +608,7 @@ export default function RecordForm() {
             ]),
       );
       const standardsBySize = new Map(
-        applicableSieveStandards.map((standard) => [standard.sieveSizeReferenceItemId, standard]),
+        matchingSieveEntryStandards.map((standard) => [standard.sieveSizeReferenceItemId, standard]),
       );
       const nextRows: TestRow[] = sieveEntryItems.map((item) => {
         const savedRow = rowsBySize.get(item.id);
@@ -612,7 +640,7 @@ export default function RecordForm() {
       return nextRows.length ? nextRows : [createEmptyRow(nextRowId.current++)];
     });
   }, [
-    applicableSieveStandards,
+    matchingSieveEntryStandards,
     isEditing,
     material,
     recordId,
@@ -743,19 +771,28 @@ export default function RecordForm() {
       if (materialReferenceItemId) {
         payloadDetails.materialReferenceItemId = materialReferenceItemId;
       }
-      const calculatedRows = calculateSieveResults(testRows);
+      const visibleCalculatedRows = calculateSieveResults(visibleSieveRows);
+      const calculatedRowsById = new Map(
+        visibleSieveRows.map((row, index) => [row.id, visibleCalculatedRows[index]] as const),
+      );
       payloadDetails.sampleWeight = calculatedSieveSampleWeight;
-      payloadDetails.sieveRows = testRows.map(({ id: _id, ...row }, index) => {
-        const calculated = calculatedRows[index];
+      payloadDetails.sieveRows = testRows.map(({ id, ...row }, index) => {
+        const calculated = calculatedRowsById.get(id);
+        const passingAmount = calculated
+          ? calculated.passingAmount
+          : row.passingAmount;
+        const passingPercentage = calculated
+          ? calculated.passingPercentage
+          : row.passingPercentage;
         return {
           rowNo: index + 1,
           sieveSize: row.sieveSize,
           sieveSizeReferenceItemId: row.sieveSizeReferenceItemId ??
             sieveSizeReferenceItems.find((item) => item.value === row.sieveSize)?.id ??
             null,
-           ...(row.amountReturned.trim() ? { amountReturned: row.amountReturned } : {}),
-          ...(calculated.passingAmount ? { passingAmount: calculated.passingAmount } : {}),
-          ...(calculated.passingPercentage ? { passingPercentage: calculated.passingPercentage } : {}),
+          ...(row.amountReturned.trim() ? { amountReturned: row.amountReturned } : {}),
+          ...(passingAmount.trim() ? { passingAmount } : {}),
+          ...(passingPercentage.trim() ? { passingPercentage } : {}),
         };
       });
     }
@@ -1735,14 +1772,14 @@ export default function RecordForm() {
                   )}
                   {usesSieveRows && (
                     <div className="rounded-md border border-amber-500/30 bg-amber-500/[0.04] px-4 py-3 text-sm">
-                       {applicableSieveStandards.length ? (
+                      {matchingSieveEntryStandards.length ? (
                         <span>
-                          Standard <strong>{Array.from(new Set(applicableSieveStandards.map((standard) => standard.standardReference))).join(", ")}</strong>{" "}
-                           provides <strong>{applicableSieveStandards.length} sieve criteria</strong> for {material}. All {sieveEntryItems.length} sieve sizes from Reference Data are available below.
+                          Standard <strong>{Array.from(new Set(matchingSieveEntryStandards.map((standard) => standard.standardReference))).join(", ")}</strong>{" "}
+                          provides <strong>{matchingSieveEntryStandards.length} sieve criteria</strong> for {material}. The applicable sieve sizes are listed below.
                         </span>
                       ) : (
                         <span className="text-muted-foreground">
-                           No sieve standard is configured for {material || "this material"}. You can still enter retained amounts for all {sieveEntryItems.length} sieve sizes from Reference Data; the record will remain in Review until a standard is configured.{" "}
+                          No matching sieve standard is configured for {material || "this material"}. You can still enter retained amounts for the {sieveEntryItems.length} available sieve sizes below; the record will remain in Review until matching standards are configured.{" "}
                           <Link href="/standards" className="font-semibold text-foreground underline underline-offset-2">
                             Configure Standards
                           </Link>{" "}
@@ -1831,9 +1868,9 @@ export default function RecordForm() {
                         </tr>
                       </thead>
                       <tbody>
-                        {testRows.map((row, rowIndex) => (
+                        {displayedTestRows.map(({ row, rowIndex }, displayIndex) => (
                           <tr key={row.id} className="border-b last:border-b-0">
-                            <td className={isCompactBlockTable ? "px-1 py-1.5 text-center text-[10px] font-semibold text-muted-foreground" : "px-3 py-2 font-semibold text-muted-foreground"}>{rowIndex + 1}</td>
+                            <td className={isCompactBlockTable ? "px-1 py-1.5 text-center text-[10px] font-semibold text-muted-foreground" : "px-3 py-2 font-semibold text-muted-foreground"}>{usesSieveRows ? displayIndex + 1 : rowIndex + 1}</td>
                             {usesSieveRows ? (
                               <>
                                 <td className="px-3 py-2 font-medium">
@@ -1841,7 +1878,7 @@ export default function RecordForm() {
                                 </td>
                                 <td className="px-2 py-2">
                                   {(() => {
-                                    const standard = applicableSieveStandards.find(
+                                    const standard = matchingSieveEntryStandards.find(
                                       (candidate) => candidate.sieveSizeReferenceItemId === row.sieveSizeReferenceItemId,
                                     );
                                     return standard ? (
@@ -1866,18 +1903,33 @@ export default function RecordForm() {
                                         const nextRows = previous.map((candidate, index) => (
                                           index === rowIndex ? nextRow : candidate
                                         ));
-                                        const calculatedRows = calculateSieveResults(
-                                          nextRows,
+                                        const visibleRows = nextRows.filter((candidate) =>
+                                          isSievePoreSizeAllowed(
+                                            testType,
+                                            material,
+                                            candidate.sieveSize,
+                                          ),
                                         );
-                                        return nextRows.map((candidate, index) => ({
-                                          ...candidate,
-                                          ...calculatedRows[index],
-                                        }));
+                                        const calculatedRows = calculateSieveResults(visibleRows);
+                                        let visibleIndex = 0;
+                                        return nextRows.map((candidate) => {
+                                          if (!isSievePoreSizeAllowed(
+                                            testType,
+                                            material,
+                                            candidate.sieveSize,
+                                          )) {
+                                            return candidate;
+                                          }
+                                          return {
+                                            ...candidate,
+                                            ...calculatedRows[visibleIndex++],
+                                          };
+                                        });
                                       });
                                     }}
                                      placeholder="Optional"
                                      aria-required="false"
-                                    aria-label={`Amount returned for row ${rowIndex + 1}`}
+                                    aria-label={`Amount returned for row ${displayIndex + 1}`}
                                   />
                                 </td>
                                 <td className="px-2 py-2">
@@ -1905,7 +1957,7 @@ export default function RecordForm() {
                                 </td>
                                 <td className="px-2 py-2">
                                   {(() => {
-                                    const standard = applicableSieveStandards.find(
+                                    const standard = matchingSieveEntryStandards.find(
                                       (candidate) =>
                                         candidate.sieveSizeReferenceItemId ===
                                         row.sieveSizeReferenceItemId,
@@ -1917,7 +1969,7 @@ export default function RecordForm() {
                                 </td>
                                 <td className="px-2 py-2">
                                   {(() => {
-                                    const standard = applicableSieveStandards.find(
+                                    const standard = matchingSieveEntryStandards.find(
                                       (candidate) =>
                                         candidate.sieveSizeReferenceItemId ===
                                         row.sieveSizeReferenceItemId,
@@ -1929,7 +1981,7 @@ export default function RecordForm() {
                                 </td>
                                 <td className="px-2 py-2">
                                   {(() => {
-                                    const standard = applicableSieveStandards.find(
+                                    const standard = matchingSieveEntryStandards.find(
                                       (candidate) =>
                                         candidate.sieveSizeReferenceItemId ===
                                         row.sieveSizeReferenceItemId,

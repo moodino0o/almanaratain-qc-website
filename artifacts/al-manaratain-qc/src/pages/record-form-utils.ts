@@ -461,6 +461,44 @@ export const sieveSizeNumber = (value: string) => {
   return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
 };
 
+const SAND_SIEVE_PORE_SIZES = [5, 2.36, 1.18, 0.6, 0.3, 0.15, 0.075, 0] as const;
+const TEN_MM_AGGREGATE_PORE_SIZES = [20, 14, 10, 6.3, 5, 2.36, 0] as const;
+
+const sievePoreSizeWhitelist = (testType: unknown, material: unknown): readonly number[] | null => {
+  const normalizedTestType = stringValue(testType).trim();
+  if (normalizedTestType === "Sand Sieve") return SAND_SIEVE_PORE_SIZES;
+
+  const normalizedMaterial = stringValue(material).trim().toLocaleLowerCase();
+  if (
+    normalizedTestType === "Aggregate Sieve" &&
+    /\b10\s*mm\b/.test(normalizedMaterial)
+  ) {
+    return TEN_MM_AGGREGATE_PORE_SIZES;
+  }
+
+  return null;
+};
+
+export const isSievePoreSizeAllowed = (
+  testType: unknown,
+  material: unknown,
+  sieveSize: unknown,
+) => {
+  const allowedSizes = sievePoreSizeWhitelist(testType, material);
+  if (!allowedSizes) return true;
+
+  const sizeText = numericInputValue(sieveSize);
+  if (!sizeText) return false;
+  const size = Number(sizeText);
+  return Number.isFinite(size) && allowedSizes.some((allowedSize) => allowedSize === size);
+};
+
+export const filterSieveSizeItems = <T extends { value: string }>(
+  items: T[],
+  testType: unknown,
+  material: unknown,
+) => items.filter((item) => isSievePoreSizeAllowed(testType, material, item.value));
+
 export const sortSieveRowsByPoreSize = <T>(
   rows: T[],
   getSieveSize: (row: T) => unknown,

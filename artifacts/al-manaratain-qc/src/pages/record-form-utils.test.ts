@@ -23,6 +23,8 @@ import {
   evaluateContentAgainstLimit,
   evaluateSiltContent,
   prepareRecordForForm,
+  filterSieveSizeItems,
+  sieveSizeNumber,
 } from "./record-form-utils";
 
 test("sorts sieve pore sizes from largest to smallest without reordering ties", () => {
@@ -36,6 +38,52 @@ test("sorts sieve pore sizes from largest to smallest without reordering ties", 
   assert.deepEqual(
     sortSieveRowsByPoreSize(rows, (row) => row.sieveSize).map((row) => row.row),
     ["coarse", "middle first", "middle second", "fine"],
+  );
+});
+
+test("filters sieve form pore sizes for sand and 10 mm aggregate", () => {
+  const items = [
+    "20 mm",
+    "14 mm",
+    "10 mm",
+    "6.3 mm",
+    "5 mm",
+    "2.36 mm",
+    "1.18 mm",
+    "0.6 mm",
+    "0.3 mm",
+    "0.15 mm",
+    "0.075 mm",
+    "0 mm",
+    "0.063 mm",
+  ].map((value, index) => ({ id: index + 1, value }));
+  const valuesFor = (testType: string, material: string) =>
+    filterSieveSizeItems(items, testType, material)
+      .sort((left, right) => sieveSizeNumber(right.value) - sieveSizeNumber(left.value))
+      .map((item) => item.value);
+
+  assert.deepEqual(valuesFor("Sand Sieve", "Sand"), [
+    "5 mm",
+    "2.36 mm",
+    "1.18 mm",
+    "0.6 mm",
+    "0.3 mm",
+    "0.15 mm",
+    "0.075 mm",
+    "0 mm",
+  ]);
+  assert.deepEqual(valuesFor("Aggregate Sieve", "10 mm Aggregate"), [
+    "20 mm",
+    "14 mm",
+    "10 mm",
+    "6.3 mm",
+    "5 mm",
+    "2.36 mm",
+    "0 mm",
+  ]);
+  assert.equal(
+    valuesFor("Aggregate Sieve", "20 mm Aggregate").length,
+    items.length,
   );
 });
 
