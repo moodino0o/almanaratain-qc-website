@@ -72,6 +72,17 @@ test("filters sieve form pore sizes for sand and 10 mm aggregate", () => {
     "0.075 mm",
     "0 mm",
   ]);
+  assert.deepEqual(valuesFor("Sand Sieve", "Dust"), [
+    "10 mm",
+    "5 mm",
+    "2.36 mm",
+    "1.18 mm",
+    "0.6 mm",
+    "0.3 mm",
+    "0.15 mm",
+    "0.075 mm",
+    "0 mm",
+  ]);
   assert.deepEqual(valuesFor("Aggregate Sieve", "10 mm Aggregate"), [
     "20 mm",
     "14 mm",
