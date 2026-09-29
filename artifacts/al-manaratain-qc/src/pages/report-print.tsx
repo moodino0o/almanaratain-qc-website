@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer } from "lucide-react";
 import { useAppBack } from "@/hooks/use-app-back";
 import { formatDateTime } from "@/lib/utils";
+import { formatShapeFactor } from "./report-print-utils";
 import {
   AGGREGATE_CHLORIDE_LIMIT_PERCENT,
   AGGREGATE_SULPHATE_LIMIT_PERCENT,
@@ -1400,7 +1401,7 @@ function BlocksReport({
             ["SAMPLE TYPE:", detailValue(details, ["sampleType"])],
             ["METHOD OF CONDITIONING:", detailValue(details, ["conditioningMethod"])],
             ["METHOD OF PREPARATION:", detailValue(details, ["preparationMethod"])],
-            ["SHAPE FACTOR:", detailValue(details, ["shapeFactor"])],
+            ["SHAPE FACTOR:", formatShapeFactor(details.shapeFactor)],
             ["BLOCK TYPE:", detailValue(details, ["blockType"], record.material)],
           ]}
         />

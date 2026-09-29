@@ -678,13 +678,12 @@
 }
 
 .block-report-remarks {
-  display: grid;
-  grid-template-columns: 24mm minmax(0, 1fr);
+  display: block;
   min-height: 8mm;
   margin-top: 1mm;
   border-bottom: 1px solid #e0e4e8;
   padding: 2mm 0;
-  align-items: start;
+  text-align: center;
 }
 
 .block-report-remarks strong {
@@ -841,11 +840,11 @@
 }
 
 .paving-block-report .block-report-remarks {
-  grid-template-columns: 16mm minmax(0, 1fr);
   min-height: 7mm;
   margin-top: 1mm;
   padding: 1.5mm 2mm;
   background: #dce9ff;
+  text-align: center;
 }
 
 .paving-average-row td {
@@ -1178,6 +1177,7 @@
   margin-top: 7mm;
   border-top: 1px solid #111;
   padding-top: 2mm;
+  text-align: center;
 }
 
 .report-remarks span {
