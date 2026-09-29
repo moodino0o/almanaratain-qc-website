@@ -221,10 +221,13 @@ export function employeeActivityAuditMiddleware(
     ? req.user.id.slice("employee:".length).trim()
     : "";
   const path = req.path;
+  const isQcRecordCreate =
+    req.method === "POST" && /\/records\/?$/.test(path);
 
   if (
     !action ||
     !employeeId ||
+    isQcRecordCreate ||
     /\/logout(?:\/|$)/i.test(path) ||
     /\/employee-activity(?:\/|$)/i.test(path)
   ) {

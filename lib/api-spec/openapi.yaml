@@ -1070,6 +1070,8 @@ components:
           $ref: "#/components/schemas/RecordStatus"
         testedBy:
           type: string
+        createdBy:
+          type: ["string", "null"]
         reviewedBy:
           type: ["string", "null"]
         remarks:

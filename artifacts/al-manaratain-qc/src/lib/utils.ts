@@ -19,3 +19,14 @@ export function formatDate(dateString: string | undefined | null) {
   }
 }
 
+export function formatDateTime(dateString: string | undefined | null) {
+  if (!dateString) return "—";
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return dateString;
+  return new Intl.DateTimeFormat("en-GB", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Asia/Riyadh",
+  }).format(date);
+}
+

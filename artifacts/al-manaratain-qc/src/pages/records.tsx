@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { CheckCircle2, AlertTriangle, XCircle, Search, Plus, Printer, TableProperties } from "lucide-react";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatDateTime } from "@/lib/utils";
 import { useAuth } from "@workspace/replit-auth-web";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -303,9 +303,15 @@ export default function Records() {
                 sectionRecords.map((record) => (
                   <TableRow key={record.id}>
                     <TableCell className="whitespace-normal break-words px-1 py-1 font-semibold text-primary">
-                      {isReadyMixSection
-                        ? getRecordDetail(record.details, ["referenceNumber", "referenceNo", "reference"])
-                        : record.recordNo}
+                      <div>
+                        {isReadyMixSection
+                          ? getRecordDetail(record.details, ["referenceNumber", "referenceNo", "reference"])
+                          : record.recordNo}
+                      </div>
+                      <div className="mt-0.5 break-words text-[8px] font-normal leading-tight text-muted-foreground">
+                        Added by {record.createdBy?.trim() || "Not recorded"} ·{" "}
+                        {formatDateTime(record.createdAt)}
+                      </div>
                     </TableCell>
                     <TableCell className="whitespace-normal break-words px-1 py-1">
                       <span className="inline-block max-w-full break-words rounded-sm bg-muted px-1 py-0.5 text-[10px] font-medium leading-tight">

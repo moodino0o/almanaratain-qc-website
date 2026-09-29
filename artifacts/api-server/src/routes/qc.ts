@@ -13,6 +13,7 @@ import {
 import {
   db,
   complaintsTable,
+  employeeActivityEventsTable,
   qcRecordsTable,
   qcReferenceCategoriesTable,
   qcReferenceItemsTable,
@@ -84,6 +85,10 @@ import {
   requireQcEditor,
 } from "../middlewares/requireAuthenticated";
 import { isConfiguredAdministrator } from "../lib/auth";
+import {
+  getActivityEmployeeName,
+  recordEmployeeActivityChange,
+} from "../lib/employee-activity";
 import { canEmployeeAddReferenceCategory } from "../lib/employee-reference-permissions";
 import {
   blockShapeFactorFromSize,
@@ -780,10 +785,63 @@ function lookupValues(
   return categories.find((category) => category.key === key)?.items.map((item) => item.value) ?? [];
 }
 
-const toRecord = (row: typeof qcRecordsTable.$inferSelect) => ({
+const toRecord = (
+  row: typeof qcRecordsTable.$inferSelect,
+  createdBy: string | null = null,
+) => ({
   ...row,
   createdAt: row.createdAt.toISOString(),
+  createdBy,
 });
+
+async function getRecordCreatorNames(
+  rows: Array<typeof qcRecordsTable.$inferSelect>,
+) {
+  const recordIds = rows.map((row) => String(row.id));
+  const creatorNames = new Map<string, string>();
+  if (!recordIds.length) return creatorNames;
+
+  const creationEvents = await db
+    .select({
+      entityId: employeeActivityEventsTable.entityId,
+      employeeName: employeeActivityEventsTable.employeeName,
+    })
+    .from(employeeActivityEventsTable)
+    .where(
+      and(
+        eq(employeeActivityEventsTable.entityType, "QC record"),
+        eq(employeeActivityEventsTable.action, "created"),
+        inArray(employeeActivityEventsTable.entityId, recordIds),
+      ),
+    )
+    .orderBy(
+      asc(employeeActivityEventsTable.occurredAt),
+      asc(employeeActivityEventsTable.id),
+    );
+
+  for (const event of creationEvents) {
+    if (event.entityId && !creatorNames.has(event.entityId)) {
+      creatorNames.set(event.entityId, event.employeeName);
+    }
+  }
+  return creatorNames;
+}
+
+async function toRecords(
+  rows: Array<typeof qcRecordsTable.$inferSelect>,
+) {
+  const creatorNames = await getRecordCreatorNames(rows);
+  return rows.map((row) =>
+    toRecord(row, creatorNames.get(String(row.id)) ?? null),
+  );
+}
+
+async function toRecordWithCreator(
+  row: typeof qcRecordsTable.$inferSelect,
+) {
+  const [record] = await toRecords([row]);
+  return record ?? toRecord(row);
+}
 
 async function refreshRecordEvaluations(testTypes: string[]) {
   const uniqueTestTypes = [...new Set(testTypes)];
@@ -997,7 +1055,7 @@ router.get("/dashboard", async (_req, res): Promise<void> => {
         testType: row.testType,
         count: Number(row.count),
       })),
-      recentRecords: recentRows.map(toRecord),
+      recentRecords: await toRecords(recentRows),
     }),
   );
 });
@@ -1680,7 +1738,7 @@ router.get("/records", async (req, res): Promise<void> => {
     .orderBy(desc(qcRecordsTable.sampleDate), desc(qcRecordsTable.id))
     .limit(parsed.data.limit ?? 50);
 
-  res.json(ListRecordsResponse.parse(rows.map(toRecord)));
+  res.json(ListRecordsResponse.parse(await toRecords(rows)));
 });
 
 router.get("/daily-ready-mix-results", async (req, res): Promise<void> => {
@@ -1893,7 +1951,31 @@ router.post("/records", requireQcEditor, async (req, res): Promise<void> => {
     res.status(500).json({ error: "Unable to create record" });
     return;
   }
-  res.status(201).json(CreateRecordResponse.parse(toRecord(record)));
+  const actorEmployeeId = req.user?.id?.startsWith("employee:")
+    ? req.user.id.slice("employee:".length).trim()
+    : "";
+  const createdBy = actorEmployeeId
+    ? getActivityEmployeeName(req.user, actorEmployeeId)
+    : null;
+  if (actorEmployeeId && createdBy) {
+    try {
+      await recordEmployeeActivityChange({
+        employeeId: actorEmployeeId,
+        employeeName: createdBy,
+        action: "created",
+        entityType: "QC record",
+        entityId: String(record.id),
+        path: req.path,
+        submitted: parsed.data,
+      });
+    } catch (error) {
+      req.log.error(
+        { error, recordId: record.id },
+        "Unable to record QC report creator activity",
+      );
+    }
+  }
+  res.status(201).json(CreateRecordResponse.parse(toRecord(record, createdBy)));
 });
 
 router.get("/records/:id", async (req, res): Promise<void> => {
@@ -1915,7 +1997,9 @@ router.get("/records/:id", async (req, res): Promise<void> => {
     .select()
     .from(qcRecordsTable)
     .where(eq(qcRecordsTable.id, parsed.data.id));
-  res.json(GetRecordResponse.parse(toRecord(currentRecord ?? record)));
+  res.json(
+    GetRecordResponse.parse(await toRecordWithCreator(currentRecord ?? record)),
+  );
 });
 
 router.patch("/records/:id", requireQcEditor, async (req, res): Promise<void> => {
@@ -1978,7 +2062,7 @@ router.patch("/records/:id", requireQcEditor, async (req, res): Promise<void> =>
     res.status(404).json({ error: "Record not found" });
     return;
   }
-  res.json(UpdateRecordResponse.parse(toRecord(record)));
+  res.json(UpdateRecordResponse.parse(await toRecordWithCreator(record)));
 });
 
 router.delete("/records/:id", requireQcEditor, async (req, res): Promise<void> => {
@@ -2024,7 +2108,7 @@ router.get("/reports/:id", async (req, res): Promise<void> => {
     .where(eq(qcReportLayoutsTable.testType, record.testType));
   res.json(
     GetReportResponse.parse({
-      record: toRecord(currentRecord ?? record),
+      record: await toRecordWithCreator(currentRecord ?? record),
       companyName: "AL MANARATAIN",
       companySubtitle: "Al Manaratain Company & Ali Shaab Group W.L.L",
       layout: toReportLayout(layout ?? {

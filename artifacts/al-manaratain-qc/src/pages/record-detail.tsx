@@ -3,7 +3,7 @@ import { useGetRecord, useUpdateRecord, useDeleteRecord, RecordStatus } from "@w
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatDateTime } from "@/lib/utils";
 import { CheckCircle2, AlertTriangle, XCircle, ArrowLeft, Printer, Trash2, Edit2, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@workspace/replit-auth-web";
@@ -646,6 +646,10 @@ export default function RecordDetail() {
               {getStatusBadge(record.status)}
             </div>
             <p className="text-muted-foreground text-sm mt-1">{record.testType} Quality Control Record</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Added by {record.createdBy?.trim() || "Not recorded"} ·{" "}
+              {formatDateTime(record.createdAt)}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
