@@ -16,6 +16,7 @@ import {
 } from "@workspace/api-client-react";
 import {
   ArrowLeft,
+  Copy,
   Loader2,
   Plus,
   RotateCcw,
@@ -40,6 +41,7 @@ import {
   bulkDraftToUpdate,
   createEmptyBulkDraft,
   detailText,
+  duplicateBulkDraft,
   recordToBulkDraft,
   updateDraftDetail,
   validateBulkDraft,
@@ -162,6 +164,8 @@ function DraftRow({
   isNew,
   newRecordNumber,
   onRemove,
+  onDuplicate,
+  isSaving = false,
   onChange,
   onDetailChange,
   onTestTypeChange,
@@ -174,6 +178,8 @@ function DraftRow({
   isNew: boolean;
   newRecordNumber?: number;
   onRemove?: () => void;
+  onDuplicate?: () => void;
+  isSaving?: boolean;
   onChange: (key: DraftKey, value: string) => void;
   onDetailChange: (key: string, value: string) => void;
   onTestTypeChange: (value: BulkRecordDraft["testType"]) => void;
@@ -485,15 +491,31 @@ function DraftRow({
             {draft.testType}
           </span>
         </div>
-        {isNew && onRemove && (
-          <button
-            type="button"
-            className="shrink-0 rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-            aria-label={`Remove new record ${newRecordNumber ?? ""}`}
-            onClick={onRemove}
-          >
-            <X className="h-4 w-4" />
-          </button>
+        {isNew && (
+          <div className="flex shrink-0 items-center gap-1">
+            {onDuplicate && (
+              <button
+                type="button"
+                className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+                aria-label={`Duplicate new record ${newRecordNumber ?? ""}`}
+                title="Duplicate record"
+                onClick={onDuplicate}
+                disabled={isSaving}
+              >
+                <Copy className="h-4 w-4" />
+              </button>
+            )}
+            {onRemove && (
+              <button
+                type="button"
+                className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                aria-label={`Remove new record ${newRecordNumber ?? ""}`}
+                onClick={onRemove}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         )}
       </div>
       <div className="grid grid-cols-2 gap-x-2 gap-y-3 p-2 sm:grid-cols-4 lg:grid-cols-6 2xl:grid-cols-10">
@@ -627,6 +649,19 @@ export default function RecordsBulkEdit() {
         testType: testTypeFilter === "All" ? emptyDraft.testType : testTypeFilter,
       },
     ]);
+  };
+
+  const duplicateNewDraft = (draft: BulkRecordDraft) => {
+    const duplicate = duplicateBulkDraft(draft, nextNewDraftId.current--);
+    setNewDrafts((current) => {
+      const sourceIndex = current.findIndex((item) => item.id === draft.id);
+      if (sourceIndex < 0) return [...current, duplicate];
+      return [
+        ...current.slice(0, sourceIndex + 1),
+        duplicate,
+        ...current.slice(sourceIndex + 1),
+      ];
+    });
   };
 
   const updateTopLevel = (
@@ -815,6 +850,8 @@ export default function RecordsBulkEdit() {
                     dirty
                     isNew
                     newRecordNumber={index + 1}
+                    isSaving={isSaving}
+                    onDuplicate={() => duplicateNewDraft(newDraft)}
                     onRemove={() => setNewDrafts((current) => current.filter(
                       (draft) => draft.id !== newDraft.id,
                     ))}

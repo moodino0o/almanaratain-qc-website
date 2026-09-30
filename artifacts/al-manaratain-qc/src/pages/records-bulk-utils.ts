@@ -81,6 +81,16 @@ export const createEmptyBulkDraft = (sampleDate: string): BulkRecordDraft => ({
   details: {},
 });
 
+export const duplicateBulkDraft = (
+  draft: BulkRecordDraft,
+  id: number,
+): BulkRecordDraft => ({
+  ...draft,
+  id,
+  recordNo: "New",
+  details: structuredClone(draft.details),
+});
+
 export const updateDraftDetail = (
   draft: BulkRecordDraft,
   key: string,

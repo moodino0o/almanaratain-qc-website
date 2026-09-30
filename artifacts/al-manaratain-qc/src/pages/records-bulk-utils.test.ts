@@ -3,6 +3,7 @@ import test from "node:test";
 import { RecordStatus, TestType, type QcRecord } from "@workspace/api-client-react";
 import {
   bulkDraftToUpdate,
+  duplicateBulkDraft,
   recordToBulkDraft,
   updateDraftDetail,
   validateBulkDraft,
@@ -24,6 +25,23 @@ const record: QcRecord = {
     testRows: [{ load: 500, calculatedStrength: 22.22 }],
   },
 };
+
+test("duplicating a new bulk draft copies every entry without sharing nested test rows", () => {
+  const source = recordToBulkDraft(record);
+  const duplicate = duplicateBulkDraft(source, -8);
+
+  assert.equal(duplicate.id, -8);
+  assert.equal(duplicate.recordNo, "New");
+  assert.deepEqual(
+    { ...duplicate, id: source.id, recordNo: source.recordNo },
+    source,
+  );
+  assert.notStrictEqual(duplicate.details, source.details);
+  assert.notStrictEqual(duplicate.details.testRows, source.details.testRows);
+
+  (duplicate.details.testRows as Array<{ load: number }>)[0].load = 600;
+  assert.equal((source.details.testRows as Array<{ load: number }>)[0].load, 500);
+});
 
 test("bulk metadata edits preserve specimen results", () => {
   const draft = updateDraftDetail(recordToBulkDraft(record), "slump", "95");
