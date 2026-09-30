@@ -3,12 +3,17 @@ import type { ReactNode } from "react";
 import { useParams } from "wouter";
 import {
   useGetReport,
+  useListReportTemplates,
   useListSieveStandards,
   useListStrengthStandards,
+  getListReportTemplatesQueryKey,
 } from "@workspace/api-client-react";
 import type {
   QcRecord,
   ReportLayout,
+  ReportTemplateDesign,
+  ReportTemplateObject,
+  ReportTemplate,
   StrengthStandard,
 } from "@workspace/api-client-react";
 import { REPORT_LAYOUT_FIELD_GROUPS } from "./report-layout-fields";
@@ -39,26 +44,6 @@ type DetailMap = QcRecord["details"];
 type ValueMap = Record<string, unknown>;
 type LayoutColumn = ReportLayout["config"]["columns"][string][number];
 
-/** Non-sensitive records used by the layout editor's live preview. */
-export function createReportPreviewRecord(testType: QcRecord["testType"]): QcRecord {
-  const common = {
-    id: 0, recordNo: "PREVIEW-001", sampleDate: "2024-06-15", location: "Main Factory",
-    material: "Concrete", status: "Passed" as const, testedBy: "QC Technician",
-    reviewedBy: "QC Manager", remarks: "Preview record", createdAt: "2024-06-15T08:00:00Z",
-  };
-  const details: Record<string, unknown> = {
-    observation1: "Surface and dimensions conform to specification.",
-    observation2: "No visible defects.",
-  };
-  if (testType === "Precast") Object.assign(details, { customerName: "Sample Customer", averageStrength1Day: 18.5, averageStrength7Days: 29.2, averageStrength28Days: 41.7 });
-  if (testType === "Kerb Stone") Object.assign(details, { testingDate: "2024-07-13", age: 28, kerbType: "Type A", averageStrength: 42.1, minimumStrength: 38.4, maximumStrength: 45.6 });
-  if (testType === "Water") Object.assign(details, { source: "Production supply", ph: 7.2, tds: 210, chloride: 0.03, sulphate: 0.12 });
-  if (testType === "Ready Mix") Object.assign(details, { customerName: "Sample Customer", slump: 90, temperature: 24, testRows: [{ testAge: 28, dryWeight: 8.2, load: 620 }] });
-  if (testType === "Blocks" || testType === "Paving Blocks") Object.assign(details, { blockSize: "400 × 200 × 200 mm", blockType: "Concrete", testRows: [{ rowNo: 1, length: 400, width: 200, height: 200, load: 620, wetWeight: 18.5, dryWeight: 17.9 }] });
-  if (testType === "Sand Sieve" || testType === "Aggregate Sieve") Object.assign(details, { supplier: "Sample Supplier", sieveRows: [{ sieveSize: "4.75 mm", amountReturned: 120, retainedPercentage: 12 }] });
-  return { ...common, testType, details };
-}
-
 export type ReportDocumentProps = {
   report: { record: QcRecord; companyName: string; companySubtitle: string; layout?: ReportLayout };
   strengthStandards?: StrengthStandard[];
@@ -67,10 +52,41 @@ export type ReportDocumentProps = {
   accordingTo?: string | null;
   reportReferenceNumber?: string;
   defaultTitle?: string;
+  templateDesign?: ReportTemplateDesign;
 };
+
+const positionedSectionObjects = new WeakMap<ReportLayout, Map<string, ReportTemplateObject>>();
+
+function layoutWithTemplateDesign(
+  layout: ReportLayout | undefined,
+  record: QcRecord,
+  design: ReportTemplateDesign,
+) {
+  const sectionObjects = new Map(
+    design.objects
+      .filter((object) => object.type === "section" && object.sectionKey)
+      .map((object) => [object.sectionKey!, { ...object }]),
+  );
+  if (!design.page.showHeader && sectionObjects.has("header")) {
+    sectionObjects.get("header")!.visible = false;
+  }
+  if (!design.page.showFooter && sectionObjects.has("signatures")) {
+    sectionObjects.get("signatures")!.visible = false;
+  }
+  const result: ReportLayout = {
+    id: layout?.id ?? 0,
+    testType: layout?.testType ?? record.testType,
+    name: layout?.name ?? design.layout.title,
+    config: design.layout,
+  };
+  positionedSectionObjects.set(result, sectionObjects);
+  return result;
+}
 
 function layoutSectionVisible(layout: ReportLayout | undefined, key: string) {
   const section = layout?.config.sections.find((item) => item.key === key);
+  const positioned = layout ? positionedSectionObjects.get(layout)?.get(key) : undefined;
+  if (positioned) return positioned.visible;
   return section?.visible ?? true;
 }
 
@@ -81,6 +97,7 @@ function layoutSectionOrder(layout: ReportLayout | undefined, key: string) {
 
 function layoutSectionStyle(layout: ReportLayout | undefined, key: string): CSSProperties {
   const section = layout?.config.sections.find((item) => item.key === key);
+  const positioned = layout ? positionedSectionObjects.get(layout)?.get(key) : undefined;
   return {
     order: section?.order ?? 0,
     ...(section?.fontFamily ? { fontFamily: section.fontFamily } : {}),
@@ -91,6 +108,16 @@ function layoutSectionStyle(layout: ReportLayout | undefined, key: string): CSSP
     ...(section?.borderStyle && section.borderStyle !== "none"
       ? { border: `${section.borderWidth ?? 1}px ${section.borderStyle} ${section.borderColor ?? "#d1d5db"}` }
       : {}),
+    ...(positioned ? {
+      position: "absolute",
+      left: `${positioned.x}mm`,
+      top: `${positioned.y}mm`,
+      width: `${positioned.width}mm`,
+      minHeight: `${positioned.height}mm`,
+      zIndex: positioned.zIndex,
+      boxSizing: "border-box",
+      transform: positioned.rotation ? `rotate(${positioned.rotation}deg)` : undefined,
+    } : {}),
   };
 }
 
@@ -106,6 +133,169 @@ function LayoutElements({ layout, sectionKey, placement }: {
     return element.type === "divider"
       ? <div key={element.key} className="report-layout-divider" style={{ width, order: sectionOrder, borderTop: `1px ${element.lineStyle ?? "solid"} ${element.color ?? "#d1d5db"}`, margin: "8px 0" }} />
       : <div key={element.key} className="report-layout-text" style={{ width, order: sectionOrder, fontFamily: element.fontFamily, fontSize: element.fontSize ? `${element.fontSize}px` : undefined, color: element.color, fontWeight: element.bold ? 700 : undefined }}>{element.content ?? ""}</div>;
+  })}</>;
+}
+
+function reportTemplateFieldValues(record: QcRecord, companyName: string, reportTitle: string): Record<string, string> {
+  const details = record.details;
+  const sieveRows = Array.isArray(details.sieveRows) ? details.sieveRows : [];
+  const sieveRow = objectValue(sieveRows[0]);
+  return {
+    REPORT_TITLE: reportTitle,
+    "report.title": reportTitle,
+    REPORT_NUMBER: reportReferenceNumberFor(record),
+    REPORT_DATE: formatReportDate(record.createdAt),
+    SAMPLE_DATE: formatReportDate(record.sampleDate),
+    SUPPLIER: detailValue(details, ["supplier", "vendor", "customerName"]),
+    SAMPLE_DESCRIPTION: detailValue(details, ["sampleDescription", "description", "materialDescription"]),
+    PROJECT: detailValue(details, ["project", "projectName", "projectNumber"]),
+    TEST_METHOD: detailValue(details, ["testMethod", "standard", "bsStandard", "standardReference"], record.testType),
+    TEST_RESULT: record.status,
+    SIEVE_SIZE: rawTextValue(sieveRow?.sieveSize ?? sieveRow?.poreSize),
+    AMOUNT_RETAINED: textValue(sieveRow?.amountRetained ?? sieveRow?.retained),
+    AMOUNT_PASSING: textValue(sieveRow?.amountPassing ?? sieveRow?.passing),
+    PERCENT_PASSING: textValue(sieveRow?.passingPercentage ?? sieveRow?.percentPassing),
+    RETAINED_PERCENT: textValue(sieveRow?.retainedPercentage ?? sieveRow?.percentRetained),
+    LOWER_LIMIT: textValue(sieveRow?.lowerLimit),
+    UPPER_LIMIT: textValue(sieveRow?.upperLimit),
+    REMARKS: record.remarks || "",
+    COMPANY_NAME: companyName,
+    SAMPLE_NUMBER: record.recordNo,
+    MATERIAL: record.material,
+    LOCATION: record.location,
+    TESTED_BY: record.testedBy,
+    REVIEWED_BY: record.reviewedBy || "",
+    "record.recordNo": record.recordNo,
+    "record.sampleDate": formatReportDate(record.sampleDate),
+    "record.location": record.location,
+    "record.material": record.material,
+    "record.status": record.status,
+    "record.testedBy": record.testedBy,
+    "record.reviewedBy": record.reviewedBy || "",
+    "record.createdAt": formatReportDate(record.createdAt),
+  };
+}
+
+function resolveReportTemplateText(value: string, fieldValues: Record<string, string>) {
+  return value.replace(/\{\{([A-Z_]+)\}\}/g, (token, key: string) =>
+    Object.hasOwn(fieldValues, key) ? fieldValues[key] : token,
+  );
+}
+
+function ReportTemplateObjects({
+  design,
+  record,
+  companyName,
+  reportTitle,
+}: {
+  design: ReportTemplateDesign;
+  record: QcRecord;
+  companyName: string;
+  reportTitle: string;
+}) {
+  const fieldValues = reportTemplateFieldValues(record, companyName, reportTitle);
+  const objects = design.objects
+    .filter((object) => object.type !== "section" && object.visible)
+    .sort((left, right) => left.zIndex - right.zIndex);
+
+  return <>{objects.map((object) => {
+    const commonStyle: CSSProperties = {
+      position: "absolute",
+      left: `${object.x}mm`,
+      top: `${object.y}mm`,
+      width: `${object.width}mm`,
+      height: `${object.height}mm`,
+      zIndex: object.zIndex,
+      boxSizing: "border-box",
+      overflow: "hidden",
+      transform: object.rotation ? `rotate(${object.rotation}deg)` : undefined,
+      opacity: object.opacity ?? 1,
+      fontFamily: object.fontFamily,
+      fontSize: object.fontSize ? `${object.fontSize}px` : undefined,
+      fontWeight: object.bold ? 700 : undefined,
+      fontStyle: object.italic ? "italic" : undefined,
+      textDecoration: object.underline ? "underline" : undefined,
+      textAlign: object.textAlign,
+      lineHeight: object.lineHeight,
+      letterSpacing: object.letterSpacing === undefined ? undefined : `${object.letterSpacing}px`,
+      color: object.textColor,
+      backgroundColor: object.backgroundColor,
+      border: object.borderWidth
+        ? `${object.borderWidth}px ${object.lineStyle ?? "solid"} ${object.borderColor ?? "#20252b"}`
+        : undefined,
+      borderRadius: object.borderRadius ? `${object.borderRadius}px` : undefined,
+      padding: object.padding ? `${object.padding}px` : undefined,
+    };
+    const text = object.content
+      ? resolveReportTemplateText(object.content, fieldValues)
+      : object.fieldKey
+        ? resolveReportTemplateDynamicField(record, object.fieldKey, fieldValues)
+        : "";
+
+    if (object.type === "image") {
+      return <img
+        key={object.id}
+        className="report-template-object report-template-image"
+        data-report-object={object.id}
+        src={object.objectPath ? `/api/storage${object.objectPath}` : ""}
+        alt={object.name}
+        style={{ ...commonStyle, objectFit: "contain" }}
+      />;
+    }
+
+    if (object.type === "line") {
+      const isVertical = object.lineOrientation === "vertical";
+      const thickness = object.borderWidth ?? 1;
+      return <div
+        key={object.id}
+        className="report-template-object report-template-line"
+        data-report-object={object.id}
+        aria-hidden="true"
+        style={{
+          ...commonStyle,
+          width: isVertical ? `${thickness}px` : `${object.width}mm`,
+          height: isVertical ? `${object.height}mm` : `${thickness}px`,
+          border: 0,
+          borderTop: isVertical ? undefined : `${thickness}px ${object.lineStyle ?? "solid"} ${object.borderColor ?? object.textColor ?? "#20252b"}`,
+          borderLeft: isVertical ? `${thickness}px ${object.lineStyle ?? "solid"} ${object.borderColor ?? object.textColor ?? "#20252b"}` : undefined,
+          padding: 0,
+        }}
+      />;
+    }
+
+    if (object.type === "shape") {
+      const isDivider = object.shapeType === "divider";
+      return <div
+        key={object.id}
+        className={`report-template-object report-template-shape ${object.shapeType ? `shape-${object.shapeType}` : ""}`}
+        data-report-object={object.id}
+        aria-label={object.name}
+        style={{
+          ...commonStyle,
+          backgroundColor: isDivider ? "transparent" : object.fillColor ?? "transparent",
+          border: `${object.borderWidth ?? 1}px solid ${object.borderColor ?? "#20252b"}`,
+          borderRadius: object.shapeType === "circle" ? "50%" : `${object.borderRadius ?? 0}px`,
+        }}
+      />;
+    }
+
+    if (object.type === "table") {
+      return <div
+        key={object.id}
+        className="report-template-object report-template-table"
+        data-report-object={object.id}
+        style={commonStyle}
+      >
+        <ReportTemplateDataTable design={design} record={record} object={object} />
+      </div>;
+    }
+
+    return <div
+      key={object.id}
+      className="report-template-object report-template-text"
+      data-report-object={object.id}
+      style={{ ...commonStyle, whiteSpace: "pre-wrap" }}
+    >{text}</div>;
   })}</>;
 }
 
@@ -304,6 +494,171 @@ function formatReportDate(value: string | undefined | null) {
   })
     .format(date)
     .replace(/ /g, "-");
+}
+
+function resolveReportTemplateDynamicField(
+  record: QcRecord,
+  fieldKey: string,
+  fieldValues: Record<string, string>,
+) {
+  const mapped = fieldValues[fieldKey];
+  if (mapped !== undefined) return mapped;
+  if (!fieldKey.startsWith("details.")) return `{{${fieldKey}}}`;
+
+  const key = fieldKey.slice("details.".length).toLocaleLowerCase();
+  const details = record.details;
+  const recordFields: Record<string, string> = {
+    sampledate: formatReportDate(record.sampleDate),
+    location: record.location,
+    material: record.material,
+    testedby: record.testedBy,
+    remarks: record.remarks || "",
+  };
+  if (Object.hasOwn(recordFields, key)) return recordFields[key];
+  const direct = Object.entries(details).find(([name]) => name.toLocaleLowerCase() === key)?.[1];
+  if (direct !== undefined && direct !== null && direct !== "") {
+    return textValue(direct, "");
+  }
+
+  const rowArrays = [
+    details.testRows,
+    details.sieveRows,
+    details.specimens,
+    details.rows,
+  ].filter(Array.isArray) as unknown[][];
+  const aliases = new Set([
+    key,
+    ...(REPORT_TEMPLATE_TABLE_FIELD_ALIASES[key] ?? []).map((name) => name.toLocaleLowerCase()),
+  ]);
+  for (const rows of rowArrays) {
+    for (const row of rows) {
+      const values = objectValue(row);
+      if (!values) continue;
+      const value = Object.entries(values).find(([name]) => aliases.has(name.toLocaleLowerCase()))?.[1];
+      if (value !== undefined && value !== null && value !== "") {
+        return textValue(value, "");
+      }
+    }
+  }
+  return "";
+}
+
+function reportTemplateTableRows(record: QcRecord, tableKey: string): ValueMap[] {
+  const details = record.details;
+  const sourceKeys: Record<string, string[]> = {
+    readyMixResults: ["testRows", "cubeRows", "rows"],
+    blockCompression: ["testRows", "blockRows", "compressionRows", "rows"],
+    pavingResults: ["testRows", "pavingRows", "blockRows", "rows"],
+    sieveResults: ["sieveRows"],
+  };
+  for (const key of sourceKeys[tableKey] ?? []) {
+    const rows = details[key];
+    if (Array.isArray(rows)) {
+      return rows.map(objectValue).filter((row): row is ValueMap => Boolean(row));
+    }
+  }
+  if (tableKey === "genericContext") {
+    return [{
+      ...details,
+      sampleDate: record.sampleDate,
+      location: record.location,
+      material: record.material,
+      testedBy: record.testedBy,
+    }];
+  }
+  return [details];
+}
+
+const REPORT_TEMPLATE_TABLE_FIELD_ALIASES: Record<string, string[]> = {
+  no: ["rowNo", "rowNumber", "blockNo", "cubeNo", "sampleNo"],
+  age: ["testAge", "blockAge", "sampleAge"],
+  size: ["sieveSize", "poreSize"],
+  returned: ["amountReturned", "amountRetained", "massRetained"],
+  retained: ["retainedPercentage", "percentRetained"],
+  passing: ["amountPassing"],
+  percentage: ["passingPercentage", "percentPassing"],
+  lower: ["lowerLimit"],
+  upper: ["upperLimit"],
+  strength: ["calculatedStrength", "compressiveStrength", "normalizedStrength"],
+  weight: ["cubeWeight", "sampleWeight", "dryWeight"],
+  water: ["waterStrength", "wetStrength"],
+  airDry: ["airDryStrength"],
+  normalized: ["normalizedStrength"],
+  waterAbsorption: ["absorption", "absorptionPercentage"],
+  testingDate: ["date", "testDate"],
+};
+
+function reportTemplateTableCell(row: ValueMap, columnKey: string, rowIndex: number): string {
+  if (columnKey === "no" && !Object.hasOwn(row, "no") &&
+    !Object.hasOwn(row, "rowNo") && !Object.hasOwn(row, "rowNumber")) {
+    return String(rowIndex + 1);
+  }
+  const keys = [columnKey, ...(REPORT_TEMPLATE_TABLE_FIELD_ALIASES[columnKey] ?? [])];
+  const wanted = new Set(keys.map((key) => key.toLocaleLowerCase()));
+  const value = Object.entries(row).find(([key]) => wanted.has(key.toLocaleLowerCase()))?.[1];
+  return value === undefined || value === null ? "" : textValue(value, "");
+}
+
+function ReportTemplateDataTable({
+  design,
+  record,
+  object,
+}: {
+  design: ReportTemplateDesign;
+  record: QcRecord;
+  object: ReportTemplateObject;
+}) {
+  const tableKey = object.tableKey ?? "";
+  const fallback = (REPORT_LAYOUT_FIELD_GROUPS[record.testType]?.[tableKey] ?? [])
+    .map((field, order) => ({ ...field, visible: true, order }));
+  const columns = (design.layout.columns[tableKey] ?? fallback)
+    .filter((column) => column.visible)
+    .sort((left, right) => left.order - right.order);
+  const rows = reportTemplateTableRows(record, tableKey);
+  const borderColor = object.borderColor ?? "#9aa6b2";
+  return (
+    <table
+      className="report-template-data-table"
+      aria-label={object.name}
+      style={{
+        width: "100%",
+        height: "100%",
+        tableLayout: "fixed",
+        borderCollapse: "collapse",
+        fontFamily: object.fontFamily ?? "Arial",
+        fontSize: `${object.fontSize ?? 10}px`,
+        color: object.textColor ?? "#20252b",
+      }}
+    >
+      <thead><tr>{columns.map((column) => (
+        <th key={column.key} scope="col" style={{
+          width: `${column.width}%`,
+          border: `1px solid ${borderColor}`,
+          backgroundColor: object.backgroundColor ?? design.layout.accentColor,
+          color: object.backgroundColor ? object.textColor ?? "#20252b" : "#fff",
+          padding: "2px 3px",
+          textAlign: object.textAlign ?? "left",
+          overflowWrap: "anywhere",
+        }}>{column.label}</th>
+      ))}</tr></thead>
+      <tbody>
+        {!columns.length ? (
+          <tr><td colSpan={1} style={{ border: `1px solid ${borderColor}`, padding: 4 }}>No visible columns</td></tr>
+        ) : rows.length ? rows.map((row, rowIndex) => (
+          <tr key={rowIndex}>{columns.map((column) => (
+            <td key={column.key} style={{
+              border: `1px solid ${borderColor}`,
+              padding: "2px 3px",
+              verticalAlign: "top",
+              overflowWrap: "anywhere",
+            }}>{reportTemplateTableCell(row, column.key, rowIndex)}</td>
+          ))}</tr>
+        )) : (
+          <tr><td colSpan={columns.length} style={{ border: `1px solid ${borderColor}`, padding: 4 }}>No saved row data.</td></tr>
+        )}
+      </tbody>
+    </table>
+  );
 }
 
 function addDaysToDate(value: string, days: number) {
@@ -1831,8 +2186,19 @@ function defaultReportTitle(testType: QcRecord["testType"]) {
  * Print-only document surface.  Keeping the document separate from the
  * route/toolbar also lets the layout editor mount the same data renderer.
  */
-export function ReportDocument({ report, strengthStandards = [], sieveStandards = [], selectedStrengthStandardId, accordingTo: configuredAccordingTo, reportReferenceNumber: configuredReference, defaultTitle: configuredTitle }: ReportDocumentProps) {
-  const { record, companyName, companySubtitle, layout } = report;
+export function ReportDocument({ report, strengthStandards = [], sieveStandards = [], selectedStrengthStandardId, accordingTo: configuredAccordingTo, reportReferenceNumber: configuredReference, defaultTitle: configuredTitle, templateDesign }: ReportDocumentProps) {
+  const { record, companyName, companySubtitle } = report;
+  const layout = templateDesign
+    ? layoutWithTemplateDesign(report.layout, record, templateDesign)
+    : report.layout;
+  const hasPositionedSections = templateDesign?.objects.some((object) => object.type === "section") ?? false;
+  const page = templateDesign?.page;
+  const pageWidthMm = page
+    ? page.orientation === "landscape" ? page.heightMm : page.widthMm
+    : 210;
+  const pageHeightMm = page
+    ? page.orientation === "landscape" ? page.widthMm : page.heightMm
+    : 297;
   const reportReferenceNumber = configuredReference ?? reportReferenceNumberFor(record);
   const defaultTitle = configuredTitle ?? defaultReportTitle(record.testType);
   const reportTitle = layout?.config.title.trim() || defaultTitle;
@@ -1863,10 +2229,22 @@ export function ReportDocument({ report, strengthStandards = [], sieveStandards 
         ? configuredStandard || "BS EN 1338:2003"
         : configuredStandard || (record.testType === "Ready Mix" ? "BS EN 12390-3:2009" : null);
   const accordingTo = configuredAccordingTo === undefined ? automaticAccordingTo : configuredAccordingTo;
-  return <main className={`report-paper ${record.testType === "Ready Mix" ? "ready-mix-paper" : ""}`} style={layout ? {
-    fontFamily: layout.config.fontFamily, fontSize: `${Math.max(layout.config.fontSize, 13)}px`, color: layout.config.textColor,
-    padding: `${layout.config.paperPadding}mm`, "--report-accent-color": layout.config.accentColor,
-  } as CSSProperties : undefined}><div className="report-layout-content">
+  return <>
+    {templateDesign && <style data-testid="style-report-template-page">{`@page { size: ${pageWidthMm}mm ${pageHeightMm}mm; margin: 0; }`}</style>}
+    <main
+      className={`report-paper ${record.testType === "Ready Mix" ? "ready-mix-paper" : ""} ${templateDesign ? "report-template-paper" : ""} ${hasPositionedSections ? "report-template-positioned" : ""}`}
+      style={layout ? {
+        fontFamily: layout.config.fontFamily,
+        fontSize: `${Math.max(layout.config.fontSize, 13)}px`,
+        color: layout.config.textColor,
+        width: `${pageWidthMm}mm`,
+        minHeight: `${pageHeightMm}mm`,
+        padding: hasPositionedSections ? 0 : page
+          ? `${page.marginTopMm}mm ${page.marginRightMm}mm ${page.marginBottomMm}mm ${page.marginLeftMm}mm`
+          : `${layout.config.paperPadding}mm`,
+        "--report-accent-color": layout.config.accentColor,
+      } as CSSProperties : undefined}
+    ><div className={`report-layout-content ${templateDesign ? "report-layout-content-template" : ""} ${hasPositionedSections ? "report-layout-content-positioned" : ""}`}>
     {layoutSectionVisible(layout, "header") && <><LayoutElements layout={layout} sectionKey="header" placement="before" /><header className="report-header report-layout-section" style={layoutSectionStyle(layout, "header")}>
       <div className="report-company">{companySubtitle}</div><img src="/al-manaratain-logo.webp" alt="Al Manaratain Logo" className="report-logo" /><div className="report-title"><strong>{reportTitle}</strong><span>Ref: {reportReferenceNumber}</span></div>
     </header><LayoutElements layout={layout} sectionKey="header" placement="after" /></>}
@@ -1888,7 +2266,10 @@ export function ReportDocument({ report, strengthStandards = [], sieveStandards 
     )}
     {layoutSectionVisible(layout, "remarks") && record.remarks && <><LayoutElements layout={layout} sectionKey="remarks" placement="before" /><div className="report-remarks report-layout-section" style={layoutSectionStyle(layout, "remarks")}><span>Remarks:</span> {record.remarks}</div><LayoutElements layout={layout} sectionKey="remarks" placement="after" /></>}
     {layoutSectionVisible(layout, "signatures") && <><LayoutElements layout={layout} sectionKey="signatures" placement="before" /><footer className="report-signatures report-layout-section" style={layoutSectionStyle(layout, "signatures")}><div><span>Tested by:</span><strong>{record.testedBy}</strong></div><div><span>Approved by:</span><strong>{record.reviewedBy || "ADEL ABBAS EBRAHIM"}</strong></div><small>{companyName} · {companySubtitle}</small></footer><LayoutElements layout={layout} sectionKey="signatures" placement="after" /></>}
-  </div></main>;
+  </div>
+  {templateDesign && <ReportTemplateObjects design={templateDesign} record={record} companyName={companyName} reportTitle={reportTitle} />}
+  </main>
+  </>;
 }
 
 export default function ReportPrint() {
@@ -1896,11 +2277,27 @@ export default function ReportPrint() {
   const goBack = useAppBack("/reports");
   const reportId = Number(id);
   const { data: report, isLoading: reportLoading, error } = useGetReport(reportId);
+  const {
+    data: reportTemplates = [],
+    isLoading: templatesLoading,
+    isError: templatesError,
+  } = useListReportTemplates(
+    report ? { testType: report.record.testType } : undefined,
+    {
+      query: {
+        enabled: Boolean(report),
+        queryKey: getListReportTemplatesQueryKey(
+          report ? { testType: report.record.testType } : undefined,
+        ),
+      },
+    },
+  );
   const { data: strengthStandards = [], isLoading: strengthStandardsLoading } =
     useListStrengthStandards();
   const { data: sieveStandards = [], isLoading: sieveStandardsLoading } =
     useListSieveStandards();
   const [selectedStrengthStandardId, setSelectedStrengthStandardId] = useState("");
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState<Record<string, number>>({});
   useEffect(() => {
     if (report) {
       setSelectedStrengthStandardId(String(report.record.details.strengthStandardId ?? ""));
@@ -1923,6 +2320,11 @@ export default function ReportPrint() {
     (standard) => String(standard.id) === selectedStrengthStandardId,
   );
   const activeStrengthStandard = selectedStrengthStandard ?? matchingStrengthStandards[0];
+  const activeTemplate = report
+    ? reportTemplates.find((template) => template.id === selectedTemplateIds[report.record.testType]) ??
+      reportTemplates.find((template) => template.isDefault) ??
+      reportTemplates[0]
+    : undefined;
   const isLoading = reportLoading || strengthStandardsLoading || sieveStandardsLoading;
 
   if (isLoading) {
@@ -2020,20 +2422,51 @@ export default function ReportPrint() {
               </select>
             </label>
           )}
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Report template</span>
+            <select
+              data-testid="select-print-report-template"
+              value={activeTemplate?.id ?? ""}
+              disabled={templatesLoading || !reportTemplates.length}
+              onChange={(event) => setSelectedTemplateIds((current) => ({
+                ...current,
+                [record.testType]: Number(event.target.value),
+              }))}
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm outline-none focus:ring-2 focus:ring-ring"
+            >
+              {!reportTemplates.length && <option value="">Legacy report layout</option>}
+              {reportTemplates.map((template: ReportTemplate) => (
+                <option key={template.id} value={template.id}>
+                  {template.name}{template.isDefault ? " (default)" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
           <Button onClick={() => window.print()} className="gap-2">
             <Printer className="w-4 h-4" /> Print Certificate
           </Button>
         </div>
       </div>
 
+      {templatesError && (
+        <p className="print-hide mx-auto mb-3 max-w-4xl text-sm text-amber-700" role="status" data-testid="status-report-template-load-error">
+          Saved templates could not be loaded. The existing report layout is being used.
+        </p>
+      )}
       <ReportDocument
-        report={report}
+        report={{
+          ...report,
+          layout: activeTemplate
+            ? { id: activeTemplate.id, testType: activeTemplate.testType, name: activeTemplate.name, config: activeTemplate.design.layout }
+            : layout,
+        }}
         strengthStandards={strengthStandards}
         sieveStandards={sieveStandards}
         selectedStrengthStandardId={selectedStrengthStandardId}
         accordingTo={accordingTo}
         reportReferenceNumber={reportReferenceNumber}
         defaultTitle={defaultTitle}
+        templateDesign={activeTemplate?.design}
       />
     </div>
   );

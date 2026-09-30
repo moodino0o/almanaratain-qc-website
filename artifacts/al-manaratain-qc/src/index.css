@@ -341,10 +341,36 @@
   box-shadow: 0 8px 30px rgb(0 0 0 / 0.12);
 }
 
+.report-template-paper {
+  position: relative;
+  overflow: visible;
+}
+
 .report-layout-content {
   display: flex;
   flex-direction: column;
   min-height: 100%;
+}
+
+.report-layout-content-template {
+  position: relative;
+  width: 100%;
+}
+
+.report-layout-content-positioned {
+  position: absolute;
+  inset: 0;
+  display: block;
+  min-height: 100%;
+}
+
+.report-template-object {
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+.report-template-image {
+  display: block;
 }
 
 .report-layout-section {
@@ -1352,8 +1378,8 @@
   
   html,
   body {
-    width: 210mm;
-    min-height: 297mm;
+    width: auto;
+    min-height: 0;
     margin: 0 !important;
     background: white !important;
   }
@@ -1388,6 +1414,14 @@
     box-shadow: none;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
+  }
+
+  .report-template-paper {
+    overflow: visible;
+  }
+
+  .report-layout-content-positioned {
+    overflow: visible;
   }
 
   .ready-mix-paper {

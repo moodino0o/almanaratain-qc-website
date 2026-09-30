@@ -288,7 +288,7 @@ export const RequestUploadUrlBody = zod.object({
   "name": zod.string().min(1),
   "size": zod.number().min(1),
   "contentType": zod.string().min(1),
-  "purpose": zod.enum(['complaint', 'archive'])
+  "purpose": zod.enum(['complaint', 'archive', 'report-template'])
 })
 
 
@@ -303,7 +303,7 @@ export const RequestUploadUrlResponse = zod.object({
   "name": zod.string().min(1),
   "size": zod.number().min(1),
   "contentType": zod.string().min(1),
-  "purpose": zod.enum(['complaint', 'archive'])
+  "purpose": zod.enum(['complaint', 'archive', 'report-template'])
 })
 })
 
@@ -1799,6 +1799,2199 @@ export const UpdateReportLayoutResponse = zod.object({
   "lineStyle": zod.enum(['solid', 'dashed', 'dotted']).optional()
 })).max(updateReportLayoutResponseConfigElementsMax).optional()
 })
+})
+
+
+/**
+ * @summary List reusable report templates
+ */
+export const ListReportTemplatesQueryParams = zod.object({
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']).optional()
+})
+
+
+
+export const listReportTemplatesResponseDesignLayoutFontSizeMin = 8;
+export const listReportTemplatesResponseDesignLayoutFontSizeMax = 24;
+
+export const listReportTemplatesResponseDesignLayoutTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const listReportTemplatesResponseDesignLayoutAccentColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const listReportTemplatesResponseDesignLayoutPaperPaddingMin = 5;
+export const listReportTemplatesResponseDesignLayoutPaperPaddingMax = 30;
+
+
+
+export const listReportTemplatesResponseDesignLayoutSectionsItemOrderMin = 0;
+
+export const listReportTemplatesResponseDesignLayoutSectionsItemFontSizeMin = 8;
+export const listReportTemplatesResponseDesignLayoutSectionsItemFontSizeMax = 24;
+
+export const listReportTemplatesResponseDesignLayoutSectionsItemTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const listReportTemplatesResponseDesignLayoutSectionsItemBackgroundColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const listReportTemplatesResponseDesignLayoutSectionsItemBorderColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const listReportTemplatesResponseDesignLayoutSectionsItemBorderWidthMin = 0;
+export const listReportTemplatesResponseDesignLayoutSectionsItemBorderWidthMax = 4;
+
+
+
+export const listReportTemplatesResponseDesignLayoutColumnsItemOrderMin = 0;
+
+export const listReportTemplatesResponseDesignLayoutColumnsItemWidthMax = 100;
+
+export const listReportTemplatesResponseDesignLayoutElementsItemKeyMax = 80;
+
+export const listReportTemplatesResponseDesignLayoutElementsItemSectionKeyMax = 80;
+
+export const listReportTemplatesResponseDesignLayoutElementsItemOrderMin = 0;
+
+export const listReportTemplatesResponseDesignLayoutElementsItemContentMax = 500;
+
+export const listReportTemplatesResponseDesignLayoutElementsItemFontSizeMin = 8;
+export const listReportTemplatesResponseDesignLayoutElementsItemFontSizeMax = 24;
+
+export const listReportTemplatesResponseDesignLayoutElementsItemColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const listReportTemplatesResponseDesignLayoutElementsItemWidthMin = 10;
+export const listReportTemplatesResponseDesignLayoutElementsItemWidthMax = 100;
+
+export const listReportTemplatesResponseDesignLayoutElementsMax = 40;
+
+export const listReportTemplatesResponseDesignPageWidthMmMin = 50;
+export const listReportTemplatesResponseDesignPageWidthMmMax = 1000;
+
+export const listReportTemplatesResponseDesignPageHeightMmMin = 50;
+export const listReportTemplatesResponseDesignPageHeightMmMax = 1000;
+
+export const listReportTemplatesResponseDesignPageMarginTopMmMin = 0;
+export const listReportTemplatesResponseDesignPageMarginTopMmMax = 100;
+
+export const listReportTemplatesResponseDesignPageMarginRightMmMin = 0;
+export const listReportTemplatesResponseDesignPageMarginRightMmMax = 100;
+
+export const listReportTemplatesResponseDesignPageMarginBottomMmMin = 0;
+export const listReportTemplatesResponseDesignPageMarginBottomMmMax = 100;
+
+export const listReportTemplatesResponseDesignPageMarginLeftMmMin = 0;
+export const listReportTemplatesResponseDesignPageMarginLeftMmMax = 100;
+
+export const listReportTemplatesResponseDesignPageHeaderHeightMmMin = 0;
+export const listReportTemplatesResponseDesignPageHeaderHeightMmMax = 100;
+
+export const listReportTemplatesResponseDesignPageFooterHeightMmMin = 0;
+export const listReportTemplatesResponseDesignPageFooterHeightMmMax = 100;
+
+export const listReportTemplatesResponseDesignObjectsItemIdMax = 80;
+
+export const listReportTemplatesResponseDesignObjectsItemNameMax = 120;
+
+export const listReportTemplatesResponseDesignObjectsItemXMin = -1000;
+export const listReportTemplatesResponseDesignObjectsItemXMax = 5000;
+
+export const listReportTemplatesResponseDesignObjectsItemYMin = -1000;
+export const listReportTemplatesResponseDesignObjectsItemYMax = 5000;
+
+export const listReportTemplatesResponseDesignObjectsItemWidthMax = 5000;
+
+export const listReportTemplatesResponseDesignObjectsItemHeightMax = 5000;
+
+export const listReportTemplatesResponseDesignObjectsItemZIndexMin = -10000;
+export const listReportTemplatesResponseDesignObjectsItemZIndexMax = 10000;
+
+export const listReportTemplatesResponseDesignObjectsItemRotationMin = -360;
+export const listReportTemplatesResponseDesignObjectsItemRotationMax = 360;
+
+export const listReportTemplatesResponseDesignObjectsItemSectionKeyMax = 80;
+
+export const listReportTemplatesResponseDesignObjectsItemContentMax = 5000;
+
+export const listReportTemplatesResponseDesignObjectsItemFieldKeyMax = 80;
+
+export const listReportTemplatesResponseDesignObjectsItemObjectPathRegExp = new RegExp('^/objects/uploads/[A-Za-z0-9._/-]+$');
+export const listReportTemplatesResponseDesignObjectsItemFontSizeMin = 6;
+export const listReportTemplatesResponseDesignObjectsItemFontSizeMax = 96;
+
+export const listReportTemplatesResponseDesignObjectsItemTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const listReportTemplatesResponseDesignObjectsItemBackgroundColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const listReportTemplatesResponseDesignObjectsItemLineHeightMin = 0.5;
+export const listReportTemplatesResponseDesignObjectsItemLineHeightMax = 4;
+
+export const listReportTemplatesResponseDesignObjectsItemLetterSpacingMin = -10;
+export const listReportTemplatesResponseDesignObjectsItemLetterSpacingMax = 50;
+
+export const listReportTemplatesResponseDesignObjectsItemBorderColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const listReportTemplatesResponseDesignObjectsItemBorderWidthMin = 0;
+export const listReportTemplatesResponseDesignObjectsItemBorderWidthMax = 20;
+
+export const listReportTemplatesResponseDesignObjectsItemBorderRadiusMin = 0;
+export const listReportTemplatesResponseDesignObjectsItemBorderRadiusMax = 200;
+
+export const listReportTemplatesResponseDesignObjectsItemPaddingMin = 0;
+export const listReportTemplatesResponseDesignObjectsItemPaddingMax = 100;
+
+export const listReportTemplatesResponseDesignObjectsItemTableKeyMax = 80;
+
+export const listReportTemplatesResponseDesignObjectsItemFillColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const listReportTemplatesResponseDesignObjectsItemOpacityMin = 0;
+export const listReportTemplatesResponseDesignObjectsItemOpacityMax = 1;
+
+export const listReportTemplatesResponseDesignObjectsMax = 200;
+
+
+
+export const ListReportTemplatesResponseItem = zod.object({
+  "id": zod.number(),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "isDefault": zod.boolean(),
+  "version": zod.number().min(1),
+  "design": zod.object({
+  "schemaVersion": zod.literal(1),
+  "layout": zod.object({
+  "title": zod.string().min(1),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']),
+  "fontSize": zod.number().min(listReportTemplatesResponseDesignLayoutFontSizeMin).max(listReportTemplatesResponseDesignLayoutFontSizeMax),
+  "textColor": zod.string().regex(listReportTemplatesResponseDesignLayoutTextColorRegExp),
+  "accentColor": zod.string().regex(listReportTemplatesResponseDesignLayoutAccentColorRegExp),
+  "paperPadding": zod.number().min(listReportTemplatesResponseDesignLayoutPaperPaddingMin).max(listReportTemplatesResponseDesignLayoutPaperPaddingMax),
+  "sections": zod.array(zod.object({
+  "key": zod.string().min(1),
+  "label": zod.string().min(1),
+  "visible": zod.boolean(),
+  "order": zod.number().min(listReportTemplatesResponseDesignLayoutSectionsItemOrderMin),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(listReportTemplatesResponseDesignLayoutSectionsItemFontSizeMin).max(listReportTemplatesResponseDesignLayoutSectionsItemFontSizeMax).optional(),
+  "textColor": zod.string().regex(listReportTemplatesResponseDesignLayoutSectionsItemTextColorRegExp).optional(),
+  "backgroundColor": zod.string().regex(listReportTemplatesResponseDesignLayoutSectionsItemBackgroundColorRegExp).optional(),
+  "bold": zod.boolean().optional(),
+  "borderStyle": zod.enum(['none', 'solid', 'dashed', 'dotted']).optional(),
+  "borderColor": zod.string().regex(listReportTemplatesResponseDesignLayoutSectionsItemBorderColorRegExp).optional(),
+  "borderWidth": zod.number().min(listReportTemplatesResponseDesignLayoutSectionsItemBorderWidthMin).max(listReportTemplatesResponseDesignLayoutSectionsItemBorderWidthMax).optional()
+})),
+  "columns": zod.record(zod.string(), zod.array(zod.object({
+  "key": zod.string().min(1),
+  "label": zod.string().min(1),
+  "visible": zod.boolean(),
+  "order": zod.number().min(listReportTemplatesResponseDesignLayoutColumnsItemOrderMin),
+  "width": zod.number().min(1).max(listReportTemplatesResponseDesignLayoutColumnsItemWidthMax)
+}))),
+  "elements": zod.array(zod.object({
+  "key": zod.string().min(1).max(listReportTemplatesResponseDesignLayoutElementsItemKeyMax),
+  "type": zod.enum(['text', 'divider']),
+  "sectionKey": zod.string().min(1).max(listReportTemplatesResponseDesignLayoutElementsItemSectionKeyMax),
+  "placement": zod.enum(['before', 'after']),
+  "order": zod.number().min(listReportTemplatesResponseDesignLayoutElementsItemOrderMin),
+  "content": zod.string().max(listReportTemplatesResponseDesignLayoutElementsItemContentMax).optional(),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(listReportTemplatesResponseDesignLayoutElementsItemFontSizeMin).max(listReportTemplatesResponseDesignLayoutElementsItemFontSizeMax).optional(),
+  "color": zod.string().regex(listReportTemplatesResponseDesignLayoutElementsItemColorRegExp).optional(),
+  "bold": zod.boolean().optional(),
+  "width": zod.number().min(listReportTemplatesResponseDesignLayoutElementsItemWidthMin).max(listReportTemplatesResponseDesignLayoutElementsItemWidthMax).optional(),
+  "lineStyle": zod.enum(['solid', 'dashed', 'dotted']).optional()
+})).max(listReportTemplatesResponseDesignLayoutElementsMax).optional()
+}),
+  "page": zod.object({
+  "pageSize": zod.enum(['A4', 'A3', 'Letter', 'custom']),
+  "orientation": zod.enum(['portrait', 'landscape']),
+  "widthMm": zod.number().min(listReportTemplatesResponseDesignPageWidthMmMin).max(listReportTemplatesResponseDesignPageWidthMmMax),
+  "heightMm": zod.number().min(listReportTemplatesResponseDesignPageHeightMmMin).max(listReportTemplatesResponseDesignPageHeightMmMax),
+  "marginTopMm": zod.number().min(listReportTemplatesResponseDesignPageMarginTopMmMin).max(listReportTemplatesResponseDesignPageMarginTopMmMax),
+  "marginRightMm": zod.number().min(listReportTemplatesResponseDesignPageMarginRightMmMin).max(listReportTemplatesResponseDesignPageMarginRightMmMax),
+  "marginBottomMm": zod.number().min(listReportTemplatesResponseDesignPageMarginBottomMmMin).max(listReportTemplatesResponseDesignPageMarginBottomMmMax),
+  "marginLeftMm": zod.number().min(listReportTemplatesResponseDesignPageMarginLeftMmMin).max(listReportTemplatesResponseDesignPageMarginLeftMmMax),
+  "showHeader": zod.boolean(),
+  "showFooter": zod.boolean(),
+  "headerHeightMm": zod.number().min(listReportTemplatesResponseDesignPageHeaderHeightMmMin).max(listReportTemplatesResponseDesignPageHeaderHeightMmMax),
+  "footerHeightMm": zod.number().min(listReportTemplatesResponseDesignPageFooterHeightMmMin).max(listReportTemplatesResponseDesignPageFooterHeightMmMax)
+}),
+  "objects": zod.array(zod.object({
+  "id": zod.string().min(1).max(listReportTemplatesResponseDesignObjectsItemIdMax),
+  "type": zod.enum(['section', 'text', 'dynamicField', 'line', 'shape', 'image', 'table']),
+  "name": zod.string().min(1).max(listReportTemplatesResponseDesignObjectsItemNameMax),
+  "x": zod.number().min(listReportTemplatesResponseDesignObjectsItemXMin).max(listReportTemplatesResponseDesignObjectsItemXMax),
+  "y": zod.number().min(listReportTemplatesResponseDesignObjectsItemYMin).max(listReportTemplatesResponseDesignObjectsItemYMax),
+  "width": zod.number().min(1).max(listReportTemplatesResponseDesignObjectsItemWidthMax),
+  "height": zod.number().min(1).max(listReportTemplatesResponseDesignObjectsItemHeightMax),
+  "zIndex": zod.number().min(listReportTemplatesResponseDesignObjectsItemZIndexMin).max(listReportTemplatesResponseDesignObjectsItemZIndexMax),
+  "rotation": zod.number().min(listReportTemplatesResponseDesignObjectsItemRotationMin).max(listReportTemplatesResponseDesignObjectsItemRotationMax),
+  "locked": zod.boolean(),
+  "visible": zod.boolean(),
+  "sectionKey": zod.string().max(listReportTemplatesResponseDesignObjectsItemSectionKeyMax).optional(),
+  "content": zod.string().max(listReportTemplatesResponseDesignObjectsItemContentMax).optional(),
+  "fieldKey": zod.string().max(listReportTemplatesResponseDesignObjectsItemFieldKeyMax).optional(),
+  "objectPath": zod.string().regex(listReportTemplatesResponseDesignObjectsItemObjectPathRegExp).optional(),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(listReportTemplatesResponseDesignObjectsItemFontSizeMin).max(listReportTemplatesResponseDesignObjectsItemFontSizeMax).optional(),
+  "bold": zod.boolean().optional(),
+  "italic": zod.boolean().optional(),
+  "underline": zod.boolean().optional(),
+  "textAlign": zod.enum(['left', 'center', 'right', 'justify']).optional(),
+  "textColor": zod.string().regex(listReportTemplatesResponseDesignObjectsItemTextColorRegExp).optional(),
+  "backgroundColor": zod.string().regex(listReportTemplatesResponseDesignObjectsItemBackgroundColorRegExp).optional(),
+  "lineHeight": zod.number().min(listReportTemplatesResponseDesignObjectsItemLineHeightMin).max(listReportTemplatesResponseDesignObjectsItemLineHeightMax).optional(),
+  "letterSpacing": zod.number().min(listReportTemplatesResponseDesignObjectsItemLetterSpacingMin).max(listReportTemplatesResponseDesignObjectsItemLetterSpacingMax).optional(),
+  "borderColor": zod.string().regex(listReportTemplatesResponseDesignObjectsItemBorderColorRegExp).optional(),
+  "borderWidth": zod.number().min(listReportTemplatesResponseDesignObjectsItemBorderWidthMin).max(listReportTemplatesResponseDesignObjectsItemBorderWidthMax).optional(),
+  "borderRadius": zod.number().min(listReportTemplatesResponseDesignObjectsItemBorderRadiusMin).max(listReportTemplatesResponseDesignObjectsItemBorderRadiusMax).optional(),
+  "padding": zod.number().min(listReportTemplatesResponseDesignObjectsItemPaddingMin).max(listReportTemplatesResponseDesignObjectsItemPaddingMax).optional(),
+  "lineOrientation": zod.enum(['horizontal', 'vertical']).optional(),
+  "lineStyle": zod.enum(['solid', 'dashed', 'dotted']).optional(),
+  "shapeType": zod.enum(['rectangle', 'square', 'circle', 'divider']).optional(),
+  "tableKey": zod.string().max(listReportTemplatesResponseDesignObjectsItemTableKeyMax).optional(),
+  "fillColor": zod.string().regex(listReportTemplatesResponseDesignObjectsItemFillColorRegExp).optional(),
+  "opacity": zod.number().min(listReportTemplatesResponseDesignObjectsItemOpacityMin).max(listReportTemplatesResponseDesignObjectsItemOpacityMax).optional()
+})).max(listReportTemplatesResponseDesignObjectsMax)
+}),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListReportTemplatesResponse = zod.array(ListReportTemplatesResponseItem)
+
+
+/**
+ * @summary Create a reusable report template
+ */
+export const createReportTemplateBodyNameMax = 160;
+
+export const createReportTemplateBodyDescriptionMax = 1000;
+
+
+export const createReportTemplateBodyDesignLayoutFontSizeMin = 8;
+export const createReportTemplateBodyDesignLayoutFontSizeMax = 24;
+
+export const createReportTemplateBodyDesignLayoutTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const createReportTemplateBodyDesignLayoutAccentColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const createReportTemplateBodyDesignLayoutPaperPaddingMin = 5;
+export const createReportTemplateBodyDesignLayoutPaperPaddingMax = 30;
+
+
+
+export const createReportTemplateBodyDesignLayoutSectionsItemOrderMin = 0;
+
+export const createReportTemplateBodyDesignLayoutSectionsItemFontSizeMin = 8;
+export const createReportTemplateBodyDesignLayoutSectionsItemFontSizeMax = 24;
+
+export const createReportTemplateBodyDesignLayoutSectionsItemTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const createReportTemplateBodyDesignLayoutSectionsItemBackgroundColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const createReportTemplateBodyDesignLayoutSectionsItemBorderColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const createReportTemplateBodyDesignLayoutSectionsItemBorderWidthMin = 0;
+export const createReportTemplateBodyDesignLayoutSectionsItemBorderWidthMax = 4;
+
+
+
+export const createReportTemplateBodyDesignLayoutColumnsItemOrderMin = 0;
+
+export const createReportTemplateBodyDesignLayoutColumnsItemWidthMax = 100;
+
+export const createReportTemplateBodyDesignLayoutElementsItemKeyMax = 80;
+
+export const createReportTemplateBodyDesignLayoutElementsItemSectionKeyMax = 80;
+
+export const createReportTemplateBodyDesignLayoutElementsItemOrderMin = 0;
+
+export const createReportTemplateBodyDesignLayoutElementsItemContentMax = 500;
+
+export const createReportTemplateBodyDesignLayoutElementsItemFontSizeMin = 8;
+export const createReportTemplateBodyDesignLayoutElementsItemFontSizeMax = 24;
+
+export const createReportTemplateBodyDesignLayoutElementsItemColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const createReportTemplateBodyDesignLayoutElementsItemWidthMin = 10;
+export const createReportTemplateBodyDesignLayoutElementsItemWidthMax = 100;
+
+export const createReportTemplateBodyDesignLayoutElementsMax = 40;
+
+export const createReportTemplateBodyDesignPageWidthMmMin = 50;
+export const createReportTemplateBodyDesignPageWidthMmMax = 1000;
+
+export const createReportTemplateBodyDesignPageHeightMmMin = 50;
+export const createReportTemplateBodyDesignPageHeightMmMax = 1000;
+
+export const createReportTemplateBodyDesignPageMarginTopMmMin = 0;
+export const createReportTemplateBodyDesignPageMarginTopMmMax = 100;
+
+export const createReportTemplateBodyDesignPageMarginRightMmMin = 0;
+export const createReportTemplateBodyDesignPageMarginRightMmMax = 100;
+
+export const createReportTemplateBodyDesignPageMarginBottomMmMin = 0;
+export const createReportTemplateBodyDesignPageMarginBottomMmMax = 100;
+
+export const createReportTemplateBodyDesignPageMarginLeftMmMin = 0;
+export const createReportTemplateBodyDesignPageMarginLeftMmMax = 100;
+
+export const createReportTemplateBodyDesignPageHeaderHeightMmMin = 0;
+export const createReportTemplateBodyDesignPageHeaderHeightMmMax = 100;
+
+export const createReportTemplateBodyDesignPageFooterHeightMmMin = 0;
+export const createReportTemplateBodyDesignPageFooterHeightMmMax = 100;
+
+export const createReportTemplateBodyDesignObjectsItemIdMax = 80;
+
+export const createReportTemplateBodyDesignObjectsItemNameMax = 120;
+
+export const createReportTemplateBodyDesignObjectsItemXMin = -1000;
+export const createReportTemplateBodyDesignObjectsItemXMax = 5000;
+
+export const createReportTemplateBodyDesignObjectsItemYMin = -1000;
+export const createReportTemplateBodyDesignObjectsItemYMax = 5000;
+
+export const createReportTemplateBodyDesignObjectsItemWidthMax = 5000;
+
+export const createReportTemplateBodyDesignObjectsItemHeightMax = 5000;
+
+export const createReportTemplateBodyDesignObjectsItemZIndexMin = -10000;
+export const createReportTemplateBodyDesignObjectsItemZIndexMax = 10000;
+
+export const createReportTemplateBodyDesignObjectsItemRotationMin = -360;
+export const createReportTemplateBodyDesignObjectsItemRotationMax = 360;
+
+export const createReportTemplateBodyDesignObjectsItemSectionKeyMax = 80;
+
+export const createReportTemplateBodyDesignObjectsItemContentMax = 5000;
+
+export const createReportTemplateBodyDesignObjectsItemFieldKeyMax = 80;
+
+export const createReportTemplateBodyDesignObjectsItemObjectPathRegExp = new RegExp('^/objects/uploads/[A-Za-z0-9._/-]+$');
+export const createReportTemplateBodyDesignObjectsItemFontSizeMin = 6;
+export const createReportTemplateBodyDesignObjectsItemFontSizeMax = 96;
+
+export const createReportTemplateBodyDesignObjectsItemTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const createReportTemplateBodyDesignObjectsItemBackgroundColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const createReportTemplateBodyDesignObjectsItemLineHeightMin = 0.5;
+export const createReportTemplateBodyDesignObjectsItemLineHeightMax = 4;
+
+export const createReportTemplateBodyDesignObjectsItemLetterSpacingMin = -10;
+export const createReportTemplateBodyDesignObjectsItemLetterSpacingMax = 50;
+
+export const createReportTemplateBodyDesignObjectsItemBorderColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const createReportTemplateBodyDesignObjectsItemBorderWidthMin = 0;
+export const createReportTemplateBodyDesignObjectsItemBorderWidthMax = 20;
+
+export const createReportTemplateBodyDesignObjectsItemBorderRadiusMin = 0;
+export const createReportTemplateBodyDesignObjectsItemBorderRadiusMax = 200;
+
+export const createReportTemplateBodyDesignObjectsItemPaddingMin = 0;
+export const createReportTemplateBodyDesignObjectsItemPaddingMax = 100;
+
+export const createReportTemplateBodyDesignObjectsItemTableKeyMax = 80;
+
+export const createReportTemplateBodyDesignObjectsItemFillColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const createReportTemplateBodyDesignObjectsItemOpacityMin = 0;
+export const createReportTemplateBodyDesignObjectsItemOpacityMax = 1;
+
+export const createReportTemplateBodyDesignObjectsMax = 200;
+
+
+
+export const CreateReportTemplateBody = zod.object({
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
+  "name": zod.string().min(1).max(createReportTemplateBodyNameMax),
+  "description": zod.string().max(createReportTemplateBodyDescriptionMax).nullish(),
+  "isDefault": zod.boolean().optional(),
+  "design": zod.object({
+  "schemaVersion": zod.literal(1),
+  "layout": zod.object({
+  "title": zod.string().min(1),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']),
+  "fontSize": zod.number().min(createReportTemplateBodyDesignLayoutFontSizeMin).max(createReportTemplateBodyDesignLayoutFontSizeMax),
+  "textColor": zod.string().regex(createReportTemplateBodyDesignLayoutTextColorRegExp),
+  "accentColor": zod.string().regex(createReportTemplateBodyDesignLayoutAccentColorRegExp),
+  "paperPadding": zod.number().min(createReportTemplateBodyDesignLayoutPaperPaddingMin).max(createReportTemplateBodyDesignLayoutPaperPaddingMax),
+  "sections": zod.array(zod.object({
+  "key": zod.string().min(1),
+  "label": zod.string().min(1),
+  "visible": zod.boolean(),
+  "order": zod.number().min(createReportTemplateBodyDesignLayoutSectionsItemOrderMin),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(createReportTemplateBodyDesignLayoutSectionsItemFontSizeMin).max(createReportTemplateBodyDesignLayoutSectionsItemFontSizeMax).optional(),
+  "textColor": zod.string().regex(createReportTemplateBodyDesignLayoutSectionsItemTextColorRegExp).optional(),
+  "backgroundColor": zod.string().regex(createReportTemplateBodyDesignLayoutSectionsItemBackgroundColorRegExp).optional(),
+  "bold": zod.boolean().optional(),
+  "borderStyle": zod.enum(['none', 'solid', 'dashed', 'dotted']).optional(),
+  "borderColor": zod.string().regex(createReportTemplateBodyDesignLayoutSectionsItemBorderColorRegExp).optional(),
+  "borderWidth": zod.number().min(createReportTemplateBodyDesignLayoutSectionsItemBorderWidthMin).max(createReportTemplateBodyDesignLayoutSectionsItemBorderWidthMax).optional()
+})),
+  "columns": zod.record(zod.string(), zod.array(zod.object({
+  "key": zod.string().min(1),
+  "label": zod.string().min(1),
+  "visible": zod.boolean(),
+  "order": zod.number().min(createReportTemplateBodyDesignLayoutColumnsItemOrderMin),
+  "width": zod.number().min(1).max(createReportTemplateBodyDesignLayoutColumnsItemWidthMax)
+}))),
+  "elements": zod.array(zod.object({
+  "key": zod.string().min(1).max(createReportTemplateBodyDesignLayoutElementsItemKeyMax),
+  "type": zod.enum(['text', 'divider']),
+  "sectionKey": zod.string().min(1).max(createReportTemplateBodyDesignLayoutElementsItemSectionKeyMax),
+  "placement": zod.enum(['before', 'after']),
+  "order": zod.number().min(createReportTemplateBodyDesignLayoutElementsItemOrderMin),
+  "content": zod.string().max(createReportTemplateBodyDesignLayoutElementsItemContentMax).optional(),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(createReportTemplateBodyDesignLayoutElementsItemFontSizeMin).max(createReportTemplateBodyDesignLayoutElementsItemFontSizeMax).optional(),
+  "color": zod.string().regex(createReportTemplateBodyDesignLayoutElementsItemColorRegExp).optional(),
+  "bold": zod.boolean().optional(),
+  "width": zod.number().min(createReportTemplateBodyDesignLayoutElementsItemWidthMin).max(createReportTemplateBodyDesignLayoutElementsItemWidthMax).optional(),
+  "lineStyle": zod.enum(['solid', 'dashed', 'dotted']).optional()
+})).max(createReportTemplateBodyDesignLayoutElementsMax).optional()
+}),
+  "page": zod.object({
+  "pageSize": zod.enum(['A4', 'A3', 'Letter', 'custom']),
+  "orientation": zod.enum(['portrait', 'landscape']),
+  "widthMm": zod.number().min(createReportTemplateBodyDesignPageWidthMmMin).max(createReportTemplateBodyDesignPageWidthMmMax),
+  "heightMm": zod.number().min(createReportTemplateBodyDesignPageHeightMmMin).max(createReportTemplateBodyDesignPageHeightMmMax),
+  "marginTopMm": zod.number().min(createReportTemplateBodyDesignPageMarginTopMmMin).max(createReportTemplateBodyDesignPageMarginTopMmMax),
+  "marginRightMm": zod.number().min(createReportTemplateBodyDesignPageMarginRightMmMin).max(createReportTemplateBodyDesignPageMarginRightMmMax),
+  "marginBottomMm": zod.number().min(createReportTemplateBodyDesignPageMarginBottomMmMin).max(createReportTemplateBodyDesignPageMarginBottomMmMax),
+  "marginLeftMm": zod.number().min(createReportTemplateBodyDesignPageMarginLeftMmMin).max(createReportTemplateBodyDesignPageMarginLeftMmMax),
+  "showHeader": zod.boolean(),
+  "showFooter": zod.boolean(),
+  "headerHeightMm": zod.number().min(createReportTemplateBodyDesignPageHeaderHeightMmMin).max(createReportTemplateBodyDesignPageHeaderHeightMmMax),
+  "footerHeightMm": zod.number().min(createReportTemplateBodyDesignPageFooterHeightMmMin).max(createReportTemplateBodyDesignPageFooterHeightMmMax)
+}),
+  "objects": zod.array(zod.object({
+  "id": zod.string().min(1).max(createReportTemplateBodyDesignObjectsItemIdMax),
+  "type": zod.enum(['section', 'text', 'dynamicField', 'line', 'shape', 'image', 'table']),
+  "name": zod.string().min(1).max(createReportTemplateBodyDesignObjectsItemNameMax),
+  "x": zod.number().min(createReportTemplateBodyDesignObjectsItemXMin).max(createReportTemplateBodyDesignObjectsItemXMax),
+  "y": zod.number().min(createReportTemplateBodyDesignObjectsItemYMin).max(createReportTemplateBodyDesignObjectsItemYMax),
+  "width": zod.number().min(1).max(createReportTemplateBodyDesignObjectsItemWidthMax),
+  "height": zod.number().min(1).max(createReportTemplateBodyDesignObjectsItemHeightMax),
+  "zIndex": zod.number().min(createReportTemplateBodyDesignObjectsItemZIndexMin).max(createReportTemplateBodyDesignObjectsItemZIndexMax),
+  "rotation": zod.number().min(createReportTemplateBodyDesignObjectsItemRotationMin).max(createReportTemplateBodyDesignObjectsItemRotationMax),
+  "locked": zod.boolean(),
+  "visible": zod.boolean(),
+  "sectionKey": zod.string().max(createReportTemplateBodyDesignObjectsItemSectionKeyMax).optional(),
+  "content": zod.string().max(createReportTemplateBodyDesignObjectsItemContentMax).optional(),
+  "fieldKey": zod.string().max(createReportTemplateBodyDesignObjectsItemFieldKeyMax).optional(),
+  "objectPath": zod.string().regex(createReportTemplateBodyDesignObjectsItemObjectPathRegExp).optional(),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(createReportTemplateBodyDesignObjectsItemFontSizeMin).max(createReportTemplateBodyDesignObjectsItemFontSizeMax).optional(),
+  "bold": zod.boolean().optional(),
+  "italic": zod.boolean().optional(),
+  "underline": zod.boolean().optional(),
+  "textAlign": zod.enum(['left', 'center', 'right', 'justify']).optional(),
+  "textColor": zod.string().regex(createReportTemplateBodyDesignObjectsItemTextColorRegExp).optional(),
+  "backgroundColor": zod.string().regex(createReportTemplateBodyDesignObjectsItemBackgroundColorRegExp).optional(),
+  "lineHeight": zod.number().min(createReportTemplateBodyDesignObjectsItemLineHeightMin).max(createReportTemplateBodyDesignObjectsItemLineHeightMax).optional(),
+  "letterSpacing": zod.number().min(createReportTemplateBodyDesignObjectsItemLetterSpacingMin).max(createReportTemplateBodyDesignObjectsItemLetterSpacingMax).optional(),
+  "borderColor": zod.string().regex(createReportTemplateBodyDesignObjectsItemBorderColorRegExp).optional(),
+  "borderWidth": zod.number().min(createReportTemplateBodyDesignObjectsItemBorderWidthMin).max(createReportTemplateBodyDesignObjectsItemBorderWidthMax).optional(),
+  "borderRadius": zod.number().min(createReportTemplateBodyDesignObjectsItemBorderRadiusMin).max(createReportTemplateBodyDesignObjectsItemBorderRadiusMax).optional(),
+  "padding": zod.number().min(createReportTemplateBodyDesignObjectsItemPaddingMin).max(createReportTemplateBodyDesignObjectsItemPaddingMax).optional(),
+  "lineOrientation": zod.enum(['horizontal', 'vertical']).optional(),
+  "lineStyle": zod.enum(['solid', 'dashed', 'dotted']).optional(),
+  "shapeType": zod.enum(['rectangle', 'square', 'circle', 'divider']).optional(),
+  "tableKey": zod.string().max(createReportTemplateBodyDesignObjectsItemTableKeyMax).optional(),
+  "fillColor": zod.string().regex(createReportTemplateBodyDesignObjectsItemFillColorRegExp).optional(),
+  "opacity": zod.number().min(createReportTemplateBodyDesignObjectsItemOpacityMin).max(createReportTemplateBodyDesignObjectsItemOpacityMax).optional()
+})).max(createReportTemplateBodyDesignObjectsMax)
+})
+})
+
+
+
+export const createReportTemplateResponseDesignLayoutFontSizeMin = 8;
+export const createReportTemplateResponseDesignLayoutFontSizeMax = 24;
+
+export const createReportTemplateResponseDesignLayoutTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const createReportTemplateResponseDesignLayoutAccentColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const createReportTemplateResponseDesignLayoutPaperPaddingMin = 5;
+export const createReportTemplateResponseDesignLayoutPaperPaddingMax = 30;
+
+
+
+export const createReportTemplateResponseDesignLayoutSectionsItemOrderMin = 0;
+
+export const createReportTemplateResponseDesignLayoutSectionsItemFontSizeMin = 8;
+export const createReportTemplateResponseDesignLayoutSectionsItemFontSizeMax = 24;
+
+export const createReportTemplateResponseDesignLayoutSectionsItemTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const createReportTemplateResponseDesignLayoutSectionsItemBackgroundColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const createReportTemplateResponseDesignLayoutSectionsItemBorderColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const createReportTemplateResponseDesignLayoutSectionsItemBorderWidthMin = 0;
+export const createReportTemplateResponseDesignLayoutSectionsItemBorderWidthMax = 4;
+
+
+
+export const createReportTemplateResponseDesignLayoutColumnsItemOrderMin = 0;
+
+export const createReportTemplateResponseDesignLayoutColumnsItemWidthMax = 100;
+
+export const createReportTemplateResponseDesignLayoutElementsItemKeyMax = 80;
+
+export const createReportTemplateResponseDesignLayoutElementsItemSectionKeyMax = 80;
+
+export const createReportTemplateResponseDesignLayoutElementsItemOrderMin = 0;
+
+export const createReportTemplateResponseDesignLayoutElementsItemContentMax = 500;
+
+export const createReportTemplateResponseDesignLayoutElementsItemFontSizeMin = 8;
+export const createReportTemplateResponseDesignLayoutElementsItemFontSizeMax = 24;
+
+export const createReportTemplateResponseDesignLayoutElementsItemColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const createReportTemplateResponseDesignLayoutElementsItemWidthMin = 10;
+export const createReportTemplateResponseDesignLayoutElementsItemWidthMax = 100;
+
+export const createReportTemplateResponseDesignLayoutElementsMax = 40;
+
+export const createReportTemplateResponseDesignPageWidthMmMin = 50;
+export const createReportTemplateResponseDesignPageWidthMmMax = 1000;
+
+export const createReportTemplateResponseDesignPageHeightMmMin = 50;
+export const createReportTemplateResponseDesignPageHeightMmMax = 1000;
+
+export const createReportTemplateResponseDesignPageMarginTopMmMin = 0;
+export const createReportTemplateResponseDesignPageMarginTopMmMax = 100;
+
+export const createReportTemplateResponseDesignPageMarginRightMmMin = 0;
+export const createReportTemplateResponseDesignPageMarginRightMmMax = 100;
+
+export const createReportTemplateResponseDesignPageMarginBottomMmMin = 0;
+export const createReportTemplateResponseDesignPageMarginBottomMmMax = 100;
+
+export const createReportTemplateResponseDesignPageMarginLeftMmMin = 0;
+export const createReportTemplateResponseDesignPageMarginLeftMmMax = 100;
+
+export const createReportTemplateResponseDesignPageHeaderHeightMmMin = 0;
+export const createReportTemplateResponseDesignPageHeaderHeightMmMax = 100;
+
+export const createReportTemplateResponseDesignPageFooterHeightMmMin = 0;
+export const createReportTemplateResponseDesignPageFooterHeightMmMax = 100;
+
+export const createReportTemplateResponseDesignObjectsItemIdMax = 80;
+
+export const createReportTemplateResponseDesignObjectsItemNameMax = 120;
+
+export const createReportTemplateResponseDesignObjectsItemXMin = -1000;
+export const createReportTemplateResponseDesignObjectsItemXMax = 5000;
+
+export const createReportTemplateResponseDesignObjectsItemYMin = -1000;
+export const createReportTemplateResponseDesignObjectsItemYMax = 5000;
+
+export const createReportTemplateResponseDesignObjectsItemWidthMax = 5000;
+
+export const createReportTemplateResponseDesignObjectsItemHeightMax = 5000;
+
+export const createReportTemplateResponseDesignObjectsItemZIndexMin = -10000;
+export const createReportTemplateResponseDesignObjectsItemZIndexMax = 10000;
+
+export const createReportTemplateResponseDesignObjectsItemRotationMin = -360;
+export const createReportTemplateResponseDesignObjectsItemRotationMax = 360;
+
+export const createReportTemplateResponseDesignObjectsItemSectionKeyMax = 80;
+
+export const createReportTemplateResponseDesignObjectsItemContentMax = 5000;
+
+export const createReportTemplateResponseDesignObjectsItemFieldKeyMax = 80;
+
+export const createReportTemplateResponseDesignObjectsItemObjectPathRegExp = new RegExp('^/objects/uploads/[A-Za-z0-9._/-]+$');
+export const createReportTemplateResponseDesignObjectsItemFontSizeMin = 6;
+export const createReportTemplateResponseDesignObjectsItemFontSizeMax = 96;
+
+export const createReportTemplateResponseDesignObjectsItemTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const createReportTemplateResponseDesignObjectsItemBackgroundColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const createReportTemplateResponseDesignObjectsItemLineHeightMin = 0.5;
+export const createReportTemplateResponseDesignObjectsItemLineHeightMax = 4;
+
+export const createReportTemplateResponseDesignObjectsItemLetterSpacingMin = -10;
+export const createReportTemplateResponseDesignObjectsItemLetterSpacingMax = 50;
+
+export const createReportTemplateResponseDesignObjectsItemBorderColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const createReportTemplateResponseDesignObjectsItemBorderWidthMin = 0;
+export const createReportTemplateResponseDesignObjectsItemBorderWidthMax = 20;
+
+export const createReportTemplateResponseDesignObjectsItemBorderRadiusMin = 0;
+export const createReportTemplateResponseDesignObjectsItemBorderRadiusMax = 200;
+
+export const createReportTemplateResponseDesignObjectsItemPaddingMin = 0;
+export const createReportTemplateResponseDesignObjectsItemPaddingMax = 100;
+
+export const createReportTemplateResponseDesignObjectsItemTableKeyMax = 80;
+
+export const createReportTemplateResponseDesignObjectsItemFillColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const createReportTemplateResponseDesignObjectsItemOpacityMin = 0;
+export const createReportTemplateResponseDesignObjectsItemOpacityMax = 1;
+
+export const createReportTemplateResponseDesignObjectsMax = 200;
+
+
+
+export const CreateReportTemplateResponse = zod.object({
+  "id": zod.number(),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "isDefault": zod.boolean(),
+  "version": zod.number().min(1),
+  "design": zod.object({
+  "schemaVersion": zod.literal(1),
+  "layout": zod.object({
+  "title": zod.string().min(1),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']),
+  "fontSize": zod.number().min(createReportTemplateResponseDesignLayoutFontSizeMin).max(createReportTemplateResponseDesignLayoutFontSizeMax),
+  "textColor": zod.string().regex(createReportTemplateResponseDesignLayoutTextColorRegExp),
+  "accentColor": zod.string().regex(createReportTemplateResponseDesignLayoutAccentColorRegExp),
+  "paperPadding": zod.number().min(createReportTemplateResponseDesignLayoutPaperPaddingMin).max(createReportTemplateResponseDesignLayoutPaperPaddingMax),
+  "sections": zod.array(zod.object({
+  "key": zod.string().min(1),
+  "label": zod.string().min(1),
+  "visible": zod.boolean(),
+  "order": zod.number().min(createReportTemplateResponseDesignLayoutSectionsItemOrderMin),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(createReportTemplateResponseDesignLayoutSectionsItemFontSizeMin).max(createReportTemplateResponseDesignLayoutSectionsItemFontSizeMax).optional(),
+  "textColor": zod.string().regex(createReportTemplateResponseDesignLayoutSectionsItemTextColorRegExp).optional(),
+  "backgroundColor": zod.string().regex(createReportTemplateResponseDesignLayoutSectionsItemBackgroundColorRegExp).optional(),
+  "bold": zod.boolean().optional(),
+  "borderStyle": zod.enum(['none', 'solid', 'dashed', 'dotted']).optional(),
+  "borderColor": zod.string().regex(createReportTemplateResponseDesignLayoutSectionsItemBorderColorRegExp).optional(),
+  "borderWidth": zod.number().min(createReportTemplateResponseDesignLayoutSectionsItemBorderWidthMin).max(createReportTemplateResponseDesignLayoutSectionsItemBorderWidthMax).optional()
+})),
+  "columns": zod.record(zod.string(), zod.array(zod.object({
+  "key": zod.string().min(1),
+  "label": zod.string().min(1),
+  "visible": zod.boolean(),
+  "order": zod.number().min(createReportTemplateResponseDesignLayoutColumnsItemOrderMin),
+  "width": zod.number().min(1).max(createReportTemplateResponseDesignLayoutColumnsItemWidthMax)
+}))),
+  "elements": zod.array(zod.object({
+  "key": zod.string().min(1).max(createReportTemplateResponseDesignLayoutElementsItemKeyMax),
+  "type": zod.enum(['text', 'divider']),
+  "sectionKey": zod.string().min(1).max(createReportTemplateResponseDesignLayoutElementsItemSectionKeyMax),
+  "placement": zod.enum(['before', 'after']),
+  "order": zod.number().min(createReportTemplateResponseDesignLayoutElementsItemOrderMin),
+  "content": zod.string().max(createReportTemplateResponseDesignLayoutElementsItemContentMax).optional(),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(createReportTemplateResponseDesignLayoutElementsItemFontSizeMin).max(createReportTemplateResponseDesignLayoutElementsItemFontSizeMax).optional(),
+  "color": zod.string().regex(createReportTemplateResponseDesignLayoutElementsItemColorRegExp).optional(),
+  "bold": zod.boolean().optional(),
+  "width": zod.number().min(createReportTemplateResponseDesignLayoutElementsItemWidthMin).max(createReportTemplateResponseDesignLayoutElementsItemWidthMax).optional(),
+  "lineStyle": zod.enum(['solid', 'dashed', 'dotted']).optional()
+})).max(createReportTemplateResponseDesignLayoutElementsMax).optional()
+}),
+  "page": zod.object({
+  "pageSize": zod.enum(['A4', 'A3', 'Letter', 'custom']),
+  "orientation": zod.enum(['portrait', 'landscape']),
+  "widthMm": zod.number().min(createReportTemplateResponseDesignPageWidthMmMin).max(createReportTemplateResponseDesignPageWidthMmMax),
+  "heightMm": zod.number().min(createReportTemplateResponseDesignPageHeightMmMin).max(createReportTemplateResponseDesignPageHeightMmMax),
+  "marginTopMm": zod.number().min(createReportTemplateResponseDesignPageMarginTopMmMin).max(createReportTemplateResponseDesignPageMarginTopMmMax),
+  "marginRightMm": zod.number().min(createReportTemplateResponseDesignPageMarginRightMmMin).max(createReportTemplateResponseDesignPageMarginRightMmMax),
+  "marginBottomMm": zod.number().min(createReportTemplateResponseDesignPageMarginBottomMmMin).max(createReportTemplateResponseDesignPageMarginBottomMmMax),
+  "marginLeftMm": zod.number().min(createReportTemplateResponseDesignPageMarginLeftMmMin).max(createReportTemplateResponseDesignPageMarginLeftMmMax),
+  "showHeader": zod.boolean(),
+  "showFooter": zod.boolean(),
+  "headerHeightMm": zod.number().min(createReportTemplateResponseDesignPageHeaderHeightMmMin).max(createReportTemplateResponseDesignPageHeaderHeightMmMax),
+  "footerHeightMm": zod.number().min(createReportTemplateResponseDesignPageFooterHeightMmMin).max(createReportTemplateResponseDesignPageFooterHeightMmMax)
+}),
+  "objects": zod.array(zod.object({
+  "id": zod.string().min(1).max(createReportTemplateResponseDesignObjectsItemIdMax),
+  "type": zod.enum(['section', 'text', 'dynamicField', 'line', 'shape', 'image', 'table']),
+  "name": zod.string().min(1).max(createReportTemplateResponseDesignObjectsItemNameMax),
+  "x": zod.number().min(createReportTemplateResponseDesignObjectsItemXMin).max(createReportTemplateResponseDesignObjectsItemXMax),
+  "y": zod.number().min(createReportTemplateResponseDesignObjectsItemYMin).max(createReportTemplateResponseDesignObjectsItemYMax),
+  "width": zod.number().min(1).max(createReportTemplateResponseDesignObjectsItemWidthMax),
+  "height": zod.number().min(1).max(createReportTemplateResponseDesignObjectsItemHeightMax),
+  "zIndex": zod.number().min(createReportTemplateResponseDesignObjectsItemZIndexMin).max(createReportTemplateResponseDesignObjectsItemZIndexMax),
+  "rotation": zod.number().min(createReportTemplateResponseDesignObjectsItemRotationMin).max(createReportTemplateResponseDesignObjectsItemRotationMax),
+  "locked": zod.boolean(),
+  "visible": zod.boolean(),
+  "sectionKey": zod.string().max(createReportTemplateResponseDesignObjectsItemSectionKeyMax).optional(),
+  "content": zod.string().max(createReportTemplateResponseDesignObjectsItemContentMax).optional(),
+  "fieldKey": zod.string().max(createReportTemplateResponseDesignObjectsItemFieldKeyMax).optional(),
+  "objectPath": zod.string().regex(createReportTemplateResponseDesignObjectsItemObjectPathRegExp).optional(),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(createReportTemplateResponseDesignObjectsItemFontSizeMin).max(createReportTemplateResponseDesignObjectsItemFontSizeMax).optional(),
+  "bold": zod.boolean().optional(),
+  "italic": zod.boolean().optional(),
+  "underline": zod.boolean().optional(),
+  "textAlign": zod.enum(['left', 'center', 'right', 'justify']).optional(),
+  "textColor": zod.string().regex(createReportTemplateResponseDesignObjectsItemTextColorRegExp).optional(),
+  "backgroundColor": zod.string().regex(createReportTemplateResponseDesignObjectsItemBackgroundColorRegExp).optional(),
+  "lineHeight": zod.number().min(createReportTemplateResponseDesignObjectsItemLineHeightMin).max(createReportTemplateResponseDesignObjectsItemLineHeightMax).optional(),
+  "letterSpacing": zod.number().min(createReportTemplateResponseDesignObjectsItemLetterSpacingMin).max(createReportTemplateResponseDesignObjectsItemLetterSpacingMax).optional(),
+  "borderColor": zod.string().regex(createReportTemplateResponseDesignObjectsItemBorderColorRegExp).optional(),
+  "borderWidth": zod.number().min(createReportTemplateResponseDesignObjectsItemBorderWidthMin).max(createReportTemplateResponseDesignObjectsItemBorderWidthMax).optional(),
+  "borderRadius": zod.number().min(createReportTemplateResponseDesignObjectsItemBorderRadiusMin).max(createReportTemplateResponseDesignObjectsItemBorderRadiusMax).optional(),
+  "padding": zod.number().min(createReportTemplateResponseDesignObjectsItemPaddingMin).max(createReportTemplateResponseDesignObjectsItemPaddingMax).optional(),
+  "lineOrientation": zod.enum(['horizontal', 'vertical']).optional(),
+  "lineStyle": zod.enum(['solid', 'dashed', 'dotted']).optional(),
+  "shapeType": zod.enum(['rectangle', 'square', 'circle', 'divider']).optional(),
+  "tableKey": zod.string().max(createReportTemplateResponseDesignObjectsItemTableKeyMax).optional(),
+  "fillColor": zod.string().regex(createReportTemplateResponseDesignObjectsItemFillColorRegExp).optional(),
+  "opacity": zod.number().min(createReportTemplateResponseDesignObjectsItemOpacityMin).max(createReportTemplateResponseDesignObjectsItemOpacityMax).optional()
+})).max(createReportTemplateResponseDesignObjectsMax)
+}),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a reusable report template
+ */
+export const UpdateReportTemplateParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateReportTemplateBodyNameMax = 160;
+
+export const updateReportTemplateBodyDescriptionMax = 1000;
+
+
+export const updateReportTemplateBodyDesignLayoutFontSizeMin = 8;
+export const updateReportTemplateBodyDesignLayoutFontSizeMax = 24;
+
+export const updateReportTemplateBodyDesignLayoutTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportTemplateBodyDesignLayoutAccentColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportTemplateBodyDesignLayoutPaperPaddingMin = 5;
+export const updateReportTemplateBodyDesignLayoutPaperPaddingMax = 30;
+
+
+
+export const updateReportTemplateBodyDesignLayoutSectionsItemOrderMin = 0;
+
+export const updateReportTemplateBodyDesignLayoutSectionsItemFontSizeMin = 8;
+export const updateReportTemplateBodyDesignLayoutSectionsItemFontSizeMax = 24;
+
+export const updateReportTemplateBodyDesignLayoutSectionsItemTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportTemplateBodyDesignLayoutSectionsItemBackgroundColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportTemplateBodyDesignLayoutSectionsItemBorderColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportTemplateBodyDesignLayoutSectionsItemBorderWidthMin = 0;
+export const updateReportTemplateBodyDesignLayoutSectionsItemBorderWidthMax = 4;
+
+
+
+export const updateReportTemplateBodyDesignLayoutColumnsItemOrderMin = 0;
+
+export const updateReportTemplateBodyDesignLayoutColumnsItemWidthMax = 100;
+
+export const updateReportTemplateBodyDesignLayoutElementsItemKeyMax = 80;
+
+export const updateReportTemplateBodyDesignLayoutElementsItemSectionKeyMax = 80;
+
+export const updateReportTemplateBodyDesignLayoutElementsItemOrderMin = 0;
+
+export const updateReportTemplateBodyDesignLayoutElementsItemContentMax = 500;
+
+export const updateReportTemplateBodyDesignLayoutElementsItemFontSizeMin = 8;
+export const updateReportTemplateBodyDesignLayoutElementsItemFontSizeMax = 24;
+
+export const updateReportTemplateBodyDesignLayoutElementsItemColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportTemplateBodyDesignLayoutElementsItemWidthMin = 10;
+export const updateReportTemplateBodyDesignLayoutElementsItemWidthMax = 100;
+
+export const updateReportTemplateBodyDesignLayoutElementsMax = 40;
+
+export const updateReportTemplateBodyDesignPageWidthMmMin = 50;
+export const updateReportTemplateBodyDesignPageWidthMmMax = 1000;
+
+export const updateReportTemplateBodyDesignPageHeightMmMin = 50;
+export const updateReportTemplateBodyDesignPageHeightMmMax = 1000;
+
+export const updateReportTemplateBodyDesignPageMarginTopMmMin = 0;
+export const updateReportTemplateBodyDesignPageMarginTopMmMax = 100;
+
+export const updateReportTemplateBodyDesignPageMarginRightMmMin = 0;
+export const updateReportTemplateBodyDesignPageMarginRightMmMax = 100;
+
+export const updateReportTemplateBodyDesignPageMarginBottomMmMin = 0;
+export const updateReportTemplateBodyDesignPageMarginBottomMmMax = 100;
+
+export const updateReportTemplateBodyDesignPageMarginLeftMmMin = 0;
+export const updateReportTemplateBodyDesignPageMarginLeftMmMax = 100;
+
+export const updateReportTemplateBodyDesignPageHeaderHeightMmMin = 0;
+export const updateReportTemplateBodyDesignPageHeaderHeightMmMax = 100;
+
+export const updateReportTemplateBodyDesignPageFooterHeightMmMin = 0;
+export const updateReportTemplateBodyDesignPageFooterHeightMmMax = 100;
+
+export const updateReportTemplateBodyDesignObjectsItemIdMax = 80;
+
+export const updateReportTemplateBodyDesignObjectsItemNameMax = 120;
+
+export const updateReportTemplateBodyDesignObjectsItemXMin = -1000;
+export const updateReportTemplateBodyDesignObjectsItemXMax = 5000;
+
+export const updateReportTemplateBodyDesignObjectsItemYMin = -1000;
+export const updateReportTemplateBodyDesignObjectsItemYMax = 5000;
+
+export const updateReportTemplateBodyDesignObjectsItemWidthMax = 5000;
+
+export const updateReportTemplateBodyDesignObjectsItemHeightMax = 5000;
+
+export const updateReportTemplateBodyDesignObjectsItemZIndexMin = -10000;
+export const updateReportTemplateBodyDesignObjectsItemZIndexMax = 10000;
+
+export const updateReportTemplateBodyDesignObjectsItemRotationMin = -360;
+export const updateReportTemplateBodyDesignObjectsItemRotationMax = 360;
+
+export const updateReportTemplateBodyDesignObjectsItemSectionKeyMax = 80;
+
+export const updateReportTemplateBodyDesignObjectsItemContentMax = 5000;
+
+export const updateReportTemplateBodyDesignObjectsItemFieldKeyMax = 80;
+
+export const updateReportTemplateBodyDesignObjectsItemObjectPathRegExp = new RegExp('^/objects/uploads/[A-Za-z0-9._/-]+$');
+export const updateReportTemplateBodyDesignObjectsItemFontSizeMin = 6;
+export const updateReportTemplateBodyDesignObjectsItemFontSizeMax = 96;
+
+export const updateReportTemplateBodyDesignObjectsItemTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportTemplateBodyDesignObjectsItemBackgroundColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportTemplateBodyDesignObjectsItemLineHeightMin = 0.5;
+export const updateReportTemplateBodyDesignObjectsItemLineHeightMax = 4;
+
+export const updateReportTemplateBodyDesignObjectsItemLetterSpacingMin = -10;
+export const updateReportTemplateBodyDesignObjectsItemLetterSpacingMax = 50;
+
+export const updateReportTemplateBodyDesignObjectsItemBorderColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportTemplateBodyDesignObjectsItemBorderWidthMin = 0;
+export const updateReportTemplateBodyDesignObjectsItemBorderWidthMax = 20;
+
+export const updateReportTemplateBodyDesignObjectsItemBorderRadiusMin = 0;
+export const updateReportTemplateBodyDesignObjectsItemBorderRadiusMax = 200;
+
+export const updateReportTemplateBodyDesignObjectsItemPaddingMin = 0;
+export const updateReportTemplateBodyDesignObjectsItemPaddingMax = 100;
+
+export const updateReportTemplateBodyDesignObjectsItemTableKeyMax = 80;
+
+export const updateReportTemplateBodyDesignObjectsItemFillColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportTemplateBodyDesignObjectsItemOpacityMin = 0;
+export const updateReportTemplateBodyDesignObjectsItemOpacityMax = 1;
+
+export const updateReportTemplateBodyDesignObjectsMax = 200;
+
+
+
+export const UpdateReportTemplateBody = zod.object({
+  "name": zod.string().min(1).max(updateReportTemplateBodyNameMax).optional(),
+  "description": zod.string().max(updateReportTemplateBodyDescriptionMax).nullish(),
+  "design": zod.object({
+  "schemaVersion": zod.literal(1),
+  "layout": zod.object({
+  "title": zod.string().min(1),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']),
+  "fontSize": zod.number().min(updateReportTemplateBodyDesignLayoutFontSizeMin).max(updateReportTemplateBodyDesignLayoutFontSizeMax),
+  "textColor": zod.string().regex(updateReportTemplateBodyDesignLayoutTextColorRegExp),
+  "accentColor": zod.string().regex(updateReportTemplateBodyDesignLayoutAccentColorRegExp),
+  "paperPadding": zod.number().min(updateReportTemplateBodyDesignLayoutPaperPaddingMin).max(updateReportTemplateBodyDesignLayoutPaperPaddingMax),
+  "sections": zod.array(zod.object({
+  "key": zod.string().min(1),
+  "label": zod.string().min(1),
+  "visible": zod.boolean(),
+  "order": zod.number().min(updateReportTemplateBodyDesignLayoutSectionsItemOrderMin),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(updateReportTemplateBodyDesignLayoutSectionsItemFontSizeMin).max(updateReportTemplateBodyDesignLayoutSectionsItemFontSizeMax).optional(),
+  "textColor": zod.string().regex(updateReportTemplateBodyDesignLayoutSectionsItemTextColorRegExp).optional(),
+  "backgroundColor": zod.string().regex(updateReportTemplateBodyDesignLayoutSectionsItemBackgroundColorRegExp).optional(),
+  "bold": zod.boolean().optional(),
+  "borderStyle": zod.enum(['none', 'solid', 'dashed', 'dotted']).optional(),
+  "borderColor": zod.string().regex(updateReportTemplateBodyDesignLayoutSectionsItemBorderColorRegExp).optional(),
+  "borderWidth": zod.number().min(updateReportTemplateBodyDesignLayoutSectionsItemBorderWidthMin).max(updateReportTemplateBodyDesignLayoutSectionsItemBorderWidthMax).optional()
+})),
+  "columns": zod.record(zod.string(), zod.array(zod.object({
+  "key": zod.string().min(1),
+  "label": zod.string().min(1),
+  "visible": zod.boolean(),
+  "order": zod.number().min(updateReportTemplateBodyDesignLayoutColumnsItemOrderMin),
+  "width": zod.number().min(1).max(updateReportTemplateBodyDesignLayoutColumnsItemWidthMax)
+}))),
+  "elements": zod.array(zod.object({
+  "key": zod.string().min(1).max(updateReportTemplateBodyDesignLayoutElementsItemKeyMax),
+  "type": zod.enum(['text', 'divider']),
+  "sectionKey": zod.string().min(1).max(updateReportTemplateBodyDesignLayoutElementsItemSectionKeyMax),
+  "placement": zod.enum(['before', 'after']),
+  "order": zod.number().min(updateReportTemplateBodyDesignLayoutElementsItemOrderMin),
+  "content": zod.string().max(updateReportTemplateBodyDesignLayoutElementsItemContentMax).optional(),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(updateReportTemplateBodyDesignLayoutElementsItemFontSizeMin).max(updateReportTemplateBodyDesignLayoutElementsItemFontSizeMax).optional(),
+  "color": zod.string().regex(updateReportTemplateBodyDesignLayoutElementsItemColorRegExp).optional(),
+  "bold": zod.boolean().optional(),
+  "width": zod.number().min(updateReportTemplateBodyDesignLayoutElementsItemWidthMin).max(updateReportTemplateBodyDesignLayoutElementsItemWidthMax).optional(),
+  "lineStyle": zod.enum(['solid', 'dashed', 'dotted']).optional()
+})).max(updateReportTemplateBodyDesignLayoutElementsMax).optional()
+}),
+  "page": zod.object({
+  "pageSize": zod.enum(['A4', 'A3', 'Letter', 'custom']),
+  "orientation": zod.enum(['portrait', 'landscape']),
+  "widthMm": zod.number().min(updateReportTemplateBodyDesignPageWidthMmMin).max(updateReportTemplateBodyDesignPageWidthMmMax),
+  "heightMm": zod.number().min(updateReportTemplateBodyDesignPageHeightMmMin).max(updateReportTemplateBodyDesignPageHeightMmMax),
+  "marginTopMm": zod.number().min(updateReportTemplateBodyDesignPageMarginTopMmMin).max(updateReportTemplateBodyDesignPageMarginTopMmMax),
+  "marginRightMm": zod.number().min(updateReportTemplateBodyDesignPageMarginRightMmMin).max(updateReportTemplateBodyDesignPageMarginRightMmMax),
+  "marginBottomMm": zod.number().min(updateReportTemplateBodyDesignPageMarginBottomMmMin).max(updateReportTemplateBodyDesignPageMarginBottomMmMax),
+  "marginLeftMm": zod.number().min(updateReportTemplateBodyDesignPageMarginLeftMmMin).max(updateReportTemplateBodyDesignPageMarginLeftMmMax),
+  "showHeader": zod.boolean(),
+  "showFooter": zod.boolean(),
+  "headerHeightMm": zod.number().min(updateReportTemplateBodyDesignPageHeaderHeightMmMin).max(updateReportTemplateBodyDesignPageHeaderHeightMmMax),
+  "footerHeightMm": zod.number().min(updateReportTemplateBodyDesignPageFooterHeightMmMin).max(updateReportTemplateBodyDesignPageFooterHeightMmMax)
+}),
+  "objects": zod.array(zod.object({
+  "id": zod.string().min(1).max(updateReportTemplateBodyDesignObjectsItemIdMax),
+  "type": zod.enum(['section', 'text', 'dynamicField', 'line', 'shape', 'image', 'table']),
+  "name": zod.string().min(1).max(updateReportTemplateBodyDesignObjectsItemNameMax),
+  "x": zod.number().min(updateReportTemplateBodyDesignObjectsItemXMin).max(updateReportTemplateBodyDesignObjectsItemXMax),
+  "y": zod.number().min(updateReportTemplateBodyDesignObjectsItemYMin).max(updateReportTemplateBodyDesignObjectsItemYMax),
+  "width": zod.number().min(1).max(updateReportTemplateBodyDesignObjectsItemWidthMax),
+  "height": zod.number().min(1).max(updateReportTemplateBodyDesignObjectsItemHeightMax),
+  "zIndex": zod.number().min(updateReportTemplateBodyDesignObjectsItemZIndexMin).max(updateReportTemplateBodyDesignObjectsItemZIndexMax),
+  "rotation": zod.number().min(updateReportTemplateBodyDesignObjectsItemRotationMin).max(updateReportTemplateBodyDesignObjectsItemRotationMax),
+  "locked": zod.boolean(),
+  "visible": zod.boolean(),
+  "sectionKey": zod.string().max(updateReportTemplateBodyDesignObjectsItemSectionKeyMax).optional(),
+  "content": zod.string().max(updateReportTemplateBodyDesignObjectsItemContentMax).optional(),
+  "fieldKey": zod.string().max(updateReportTemplateBodyDesignObjectsItemFieldKeyMax).optional(),
+  "objectPath": zod.string().regex(updateReportTemplateBodyDesignObjectsItemObjectPathRegExp).optional(),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(updateReportTemplateBodyDesignObjectsItemFontSizeMin).max(updateReportTemplateBodyDesignObjectsItemFontSizeMax).optional(),
+  "bold": zod.boolean().optional(),
+  "italic": zod.boolean().optional(),
+  "underline": zod.boolean().optional(),
+  "textAlign": zod.enum(['left', 'center', 'right', 'justify']).optional(),
+  "textColor": zod.string().regex(updateReportTemplateBodyDesignObjectsItemTextColorRegExp).optional(),
+  "backgroundColor": zod.string().regex(updateReportTemplateBodyDesignObjectsItemBackgroundColorRegExp).optional(),
+  "lineHeight": zod.number().min(updateReportTemplateBodyDesignObjectsItemLineHeightMin).max(updateReportTemplateBodyDesignObjectsItemLineHeightMax).optional(),
+  "letterSpacing": zod.number().min(updateReportTemplateBodyDesignObjectsItemLetterSpacingMin).max(updateReportTemplateBodyDesignObjectsItemLetterSpacingMax).optional(),
+  "borderColor": zod.string().regex(updateReportTemplateBodyDesignObjectsItemBorderColorRegExp).optional(),
+  "borderWidth": zod.number().min(updateReportTemplateBodyDesignObjectsItemBorderWidthMin).max(updateReportTemplateBodyDesignObjectsItemBorderWidthMax).optional(),
+  "borderRadius": zod.number().min(updateReportTemplateBodyDesignObjectsItemBorderRadiusMin).max(updateReportTemplateBodyDesignObjectsItemBorderRadiusMax).optional(),
+  "padding": zod.number().min(updateReportTemplateBodyDesignObjectsItemPaddingMin).max(updateReportTemplateBodyDesignObjectsItemPaddingMax).optional(),
+  "lineOrientation": zod.enum(['horizontal', 'vertical']).optional(),
+  "lineStyle": zod.enum(['solid', 'dashed', 'dotted']).optional(),
+  "shapeType": zod.enum(['rectangle', 'square', 'circle', 'divider']).optional(),
+  "tableKey": zod.string().max(updateReportTemplateBodyDesignObjectsItemTableKeyMax).optional(),
+  "fillColor": zod.string().regex(updateReportTemplateBodyDesignObjectsItemFillColorRegExp).optional(),
+  "opacity": zod.number().min(updateReportTemplateBodyDesignObjectsItemOpacityMin).max(updateReportTemplateBodyDesignObjectsItemOpacityMax).optional()
+})).max(updateReportTemplateBodyDesignObjectsMax)
+}).optional()
+})
+
+
+
+export const updateReportTemplateResponseDesignLayoutFontSizeMin = 8;
+export const updateReportTemplateResponseDesignLayoutFontSizeMax = 24;
+
+export const updateReportTemplateResponseDesignLayoutTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportTemplateResponseDesignLayoutAccentColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportTemplateResponseDesignLayoutPaperPaddingMin = 5;
+export const updateReportTemplateResponseDesignLayoutPaperPaddingMax = 30;
+
+
+
+export const updateReportTemplateResponseDesignLayoutSectionsItemOrderMin = 0;
+
+export const updateReportTemplateResponseDesignLayoutSectionsItemFontSizeMin = 8;
+export const updateReportTemplateResponseDesignLayoutSectionsItemFontSizeMax = 24;
+
+export const updateReportTemplateResponseDesignLayoutSectionsItemTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportTemplateResponseDesignLayoutSectionsItemBackgroundColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportTemplateResponseDesignLayoutSectionsItemBorderColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportTemplateResponseDesignLayoutSectionsItemBorderWidthMin = 0;
+export const updateReportTemplateResponseDesignLayoutSectionsItemBorderWidthMax = 4;
+
+
+
+export const updateReportTemplateResponseDesignLayoutColumnsItemOrderMin = 0;
+
+export const updateReportTemplateResponseDesignLayoutColumnsItemWidthMax = 100;
+
+export const updateReportTemplateResponseDesignLayoutElementsItemKeyMax = 80;
+
+export const updateReportTemplateResponseDesignLayoutElementsItemSectionKeyMax = 80;
+
+export const updateReportTemplateResponseDesignLayoutElementsItemOrderMin = 0;
+
+export const updateReportTemplateResponseDesignLayoutElementsItemContentMax = 500;
+
+export const updateReportTemplateResponseDesignLayoutElementsItemFontSizeMin = 8;
+export const updateReportTemplateResponseDesignLayoutElementsItemFontSizeMax = 24;
+
+export const updateReportTemplateResponseDesignLayoutElementsItemColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportTemplateResponseDesignLayoutElementsItemWidthMin = 10;
+export const updateReportTemplateResponseDesignLayoutElementsItemWidthMax = 100;
+
+export const updateReportTemplateResponseDesignLayoutElementsMax = 40;
+
+export const updateReportTemplateResponseDesignPageWidthMmMin = 50;
+export const updateReportTemplateResponseDesignPageWidthMmMax = 1000;
+
+export const updateReportTemplateResponseDesignPageHeightMmMin = 50;
+export const updateReportTemplateResponseDesignPageHeightMmMax = 1000;
+
+export const updateReportTemplateResponseDesignPageMarginTopMmMin = 0;
+export const updateReportTemplateResponseDesignPageMarginTopMmMax = 100;
+
+export const updateReportTemplateResponseDesignPageMarginRightMmMin = 0;
+export const updateReportTemplateResponseDesignPageMarginRightMmMax = 100;
+
+export const updateReportTemplateResponseDesignPageMarginBottomMmMin = 0;
+export const updateReportTemplateResponseDesignPageMarginBottomMmMax = 100;
+
+export const updateReportTemplateResponseDesignPageMarginLeftMmMin = 0;
+export const updateReportTemplateResponseDesignPageMarginLeftMmMax = 100;
+
+export const updateReportTemplateResponseDesignPageHeaderHeightMmMin = 0;
+export const updateReportTemplateResponseDesignPageHeaderHeightMmMax = 100;
+
+export const updateReportTemplateResponseDesignPageFooterHeightMmMin = 0;
+export const updateReportTemplateResponseDesignPageFooterHeightMmMax = 100;
+
+export const updateReportTemplateResponseDesignObjectsItemIdMax = 80;
+
+export const updateReportTemplateResponseDesignObjectsItemNameMax = 120;
+
+export const updateReportTemplateResponseDesignObjectsItemXMin = -1000;
+export const updateReportTemplateResponseDesignObjectsItemXMax = 5000;
+
+export const updateReportTemplateResponseDesignObjectsItemYMin = -1000;
+export const updateReportTemplateResponseDesignObjectsItemYMax = 5000;
+
+export const updateReportTemplateResponseDesignObjectsItemWidthMax = 5000;
+
+export const updateReportTemplateResponseDesignObjectsItemHeightMax = 5000;
+
+export const updateReportTemplateResponseDesignObjectsItemZIndexMin = -10000;
+export const updateReportTemplateResponseDesignObjectsItemZIndexMax = 10000;
+
+export const updateReportTemplateResponseDesignObjectsItemRotationMin = -360;
+export const updateReportTemplateResponseDesignObjectsItemRotationMax = 360;
+
+export const updateReportTemplateResponseDesignObjectsItemSectionKeyMax = 80;
+
+export const updateReportTemplateResponseDesignObjectsItemContentMax = 5000;
+
+export const updateReportTemplateResponseDesignObjectsItemFieldKeyMax = 80;
+
+export const updateReportTemplateResponseDesignObjectsItemObjectPathRegExp = new RegExp('^/objects/uploads/[A-Za-z0-9._/-]+$');
+export const updateReportTemplateResponseDesignObjectsItemFontSizeMin = 6;
+export const updateReportTemplateResponseDesignObjectsItemFontSizeMax = 96;
+
+export const updateReportTemplateResponseDesignObjectsItemTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportTemplateResponseDesignObjectsItemBackgroundColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportTemplateResponseDesignObjectsItemLineHeightMin = 0.5;
+export const updateReportTemplateResponseDesignObjectsItemLineHeightMax = 4;
+
+export const updateReportTemplateResponseDesignObjectsItemLetterSpacingMin = -10;
+export const updateReportTemplateResponseDesignObjectsItemLetterSpacingMax = 50;
+
+export const updateReportTemplateResponseDesignObjectsItemBorderColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportTemplateResponseDesignObjectsItemBorderWidthMin = 0;
+export const updateReportTemplateResponseDesignObjectsItemBorderWidthMax = 20;
+
+export const updateReportTemplateResponseDesignObjectsItemBorderRadiusMin = 0;
+export const updateReportTemplateResponseDesignObjectsItemBorderRadiusMax = 200;
+
+export const updateReportTemplateResponseDesignObjectsItemPaddingMin = 0;
+export const updateReportTemplateResponseDesignObjectsItemPaddingMax = 100;
+
+export const updateReportTemplateResponseDesignObjectsItemTableKeyMax = 80;
+
+export const updateReportTemplateResponseDesignObjectsItemFillColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportTemplateResponseDesignObjectsItemOpacityMin = 0;
+export const updateReportTemplateResponseDesignObjectsItemOpacityMax = 1;
+
+export const updateReportTemplateResponseDesignObjectsMax = 200;
+
+
+
+export const UpdateReportTemplateResponse = zod.object({
+  "id": zod.number(),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "isDefault": zod.boolean(),
+  "version": zod.number().min(1),
+  "design": zod.object({
+  "schemaVersion": zod.literal(1),
+  "layout": zod.object({
+  "title": zod.string().min(1),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']),
+  "fontSize": zod.number().min(updateReportTemplateResponseDesignLayoutFontSizeMin).max(updateReportTemplateResponseDesignLayoutFontSizeMax),
+  "textColor": zod.string().regex(updateReportTemplateResponseDesignLayoutTextColorRegExp),
+  "accentColor": zod.string().regex(updateReportTemplateResponseDesignLayoutAccentColorRegExp),
+  "paperPadding": zod.number().min(updateReportTemplateResponseDesignLayoutPaperPaddingMin).max(updateReportTemplateResponseDesignLayoutPaperPaddingMax),
+  "sections": zod.array(zod.object({
+  "key": zod.string().min(1),
+  "label": zod.string().min(1),
+  "visible": zod.boolean(),
+  "order": zod.number().min(updateReportTemplateResponseDesignLayoutSectionsItemOrderMin),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(updateReportTemplateResponseDesignLayoutSectionsItemFontSizeMin).max(updateReportTemplateResponseDesignLayoutSectionsItemFontSizeMax).optional(),
+  "textColor": zod.string().regex(updateReportTemplateResponseDesignLayoutSectionsItemTextColorRegExp).optional(),
+  "backgroundColor": zod.string().regex(updateReportTemplateResponseDesignLayoutSectionsItemBackgroundColorRegExp).optional(),
+  "bold": zod.boolean().optional(),
+  "borderStyle": zod.enum(['none', 'solid', 'dashed', 'dotted']).optional(),
+  "borderColor": zod.string().regex(updateReportTemplateResponseDesignLayoutSectionsItemBorderColorRegExp).optional(),
+  "borderWidth": zod.number().min(updateReportTemplateResponseDesignLayoutSectionsItemBorderWidthMin).max(updateReportTemplateResponseDesignLayoutSectionsItemBorderWidthMax).optional()
+})),
+  "columns": zod.record(zod.string(), zod.array(zod.object({
+  "key": zod.string().min(1),
+  "label": zod.string().min(1),
+  "visible": zod.boolean(),
+  "order": zod.number().min(updateReportTemplateResponseDesignLayoutColumnsItemOrderMin),
+  "width": zod.number().min(1).max(updateReportTemplateResponseDesignLayoutColumnsItemWidthMax)
+}))),
+  "elements": zod.array(zod.object({
+  "key": zod.string().min(1).max(updateReportTemplateResponseDesignLayoutElementsItemKeyMax),
+  "type": zod.enum(['text', 'divider']),
+  "sectionKey": zod.string().min(1).max(updateReportTemplateResponseDesignLayoutElementsItemSectionKeyMax),
+  "placement": zod.enum(['before', 'after']),
+  "order": zod.number().min(updateReportTemplateResponseDesignLayoutElementsItemOrderMin),
+  "content": zod.string().max(updateReportTemplateResponseDesignLayoutElementsItemContentMax).optional(),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(updateReportTemplateResponseDesignLayoutElementsItemFontSizeMin).max(updateReportTemplateResponseDesignLayoutElementsItemFontSizeMax).optional(),
+  "color": zod.string().regex(updateReportTemplateResponseDesignLayoutElementsItemColorRegExp).optional(),
+  "bold": zod.boolean().optional(),
+  "width": zod.number().min(updateReportTemplateResponseDesignLayoutElementsItemWidthMin).max(updateReportTemplateResponseDesignLayoutElementsItemWidthMax).optional(),
+  "lineStyle": zod.enum(['solid', 'dashed', 'dotted']).optional()
+})).max(updateReportTemplateResponseDesignLayoutElementsMax).optional()
+}),
+  "page": zod.object({
+  "pageSize": zod.enum(['A4', 'A3', 'Letter', 'custom']),
+  "orientation": zod.enum(['portrait', 'landscape']),
+  "widthMm": zod.number().min(updateReportTemplateResponseDesignPageWidthMmMin).max(updateReportTemplateResponseDesignPageWidthMmMax),
+  "heightMm": zod.number().min(updateReportTemplateResponseDesignPageHeightMmMin).max(updateReportTemplateResponseDesignPageHeightMmMax),
+  "marginTopMm": zod.number().min(updateReportTemplateResponseDesignPageMarginTopMmMin).max(updateReportTemplateResponseDesignPageMarginTopMmMax),
+  "marginRightMm": zod.number().min(updateReportTemplateResponseDesignPageMarginRightMmMin).max(updateReportTemplateResponseDesignPageMarginRightMmMax),
+  "marginBottomMm": zod.number().min(updateReportTemplateResponseDesignPageMarginBottomMmMin).max(updateReportTemplateResponseDesignPageMarginBottomMmMax),
+  "marginLeftMm": zod.number().min(updateReportTemplateResponseDesignPageMarginLeftMmMin).max(updateReportTemplateResponseDesignPageMarginLeftMmMax),
+  "showHeader": zod.boolean(),
+  "showFooter": zod.boolean(),
+  "headerHeightMm": zod.number().min(updateReportTemplateResponseDesignPageHeaderHeightMmMin).max(updateReportTemplateResponseDesignPageHeaderHeightMmMax),
+  "footerHeightMm": zod.number().min(updateReportTemplateResponseDesignPageFooterHeightMmMin).max(updateReportTemplateResponseDesignPageFooterHeightMmMax)
+}),
+  "objects": zod.array(zod.object({
+  "id": zod.string().min(1).max(updateReportTemplateResponseDesignObjectsItemIdMax),
+  "type": zod.enum(['section', 'text', 'dynamicField', 'line', 'shape', 'image', 'table']),
+  "name": zod.string().min(1).max(updateReportTemplateResponseDesignObjectsItemNameMax),
+  "x": zod.number().min(updateReportTemplateResponseDesignObjectsItemXMin).max(updateReportTemplateResponseDesignObjectsItemXMax),
+  "y": zod.number().min(updateReportTemplateResponseDesignObjectsItemYMin).max(updateReportTemplateResponseDesignObjectsItemYMax),
+  "width": zod.number().min(1).max(updateReportTemplateResponseDesignObjectsItemWidthMax),
+  "height": zod.number().min(1).max(updateReportTemplateResponseDesignObjectsItemHeightMax),
+  "zIndex": zod.number().min(updateReportTemplateResponseDesignObjectsItemZIndexMin).max(updateReportTemplateResponseDesignObjectsItemZIndexMax),
+  "rotation": zod.number().min(updateReportTemplateResponseDesignObjectsItemRotationMin).max(updateReportTemplateResponseDesignObjectsItemRotationMax),
+  "locked": zod.boolean(),
+  "visible": zod.boolean(),
+  "sectionKey": zod.string().max(updateReportTemplateResponseDesignObjectsItemSectionKeyMax).optional(),
+  "content": zod.string().max(updateReportTemplateResponseDesignObjectsItemContentMax).optional(),
+  "fieldKey": zod.string().max(updateReportTemplateResponseDesignObjectsItemFieldKeyMax).optional(),
+  "objectPath": zod.string().regex(updateReportTemplateResponseDesignObjectsItemObjectPathRegExp).optional(),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(updateReportTemplateResponseDesignObjectsItemFontSizeMin).max(updateReportTemplateResponseDesignObjectsItemFontSizeMax).optional(),
+  "bold": zod.boolean().optional(),
+  "italic": zod.boolean().optional(),
+  "underline": zod.boolean().optional(),
+  "textAlign": zod.enum(['left', 'center', 'right', 'justify']).optional(),
+  "textColor": zod.string().regex(updateReportTemplateResponseDesignObjectsItemTextColorRegExp).optional(),
+  "backgroundColor": zod.string().regex(updateReportTemplateResponseDesignObjectsItemBackgroundColorRegExp).optional(),
+  "lineHeight": zod.number().min(updateReportTemplateResponseDesignObjectsItemLineHeightMin).max(updateReportTemplateResponseDesignObjectsItemLineHeightMax).optional(),
+  "letterSpacing": zod.number().min(updateReportTemplateResponseDesignObjectsItemLetterSpacingMin).max(updateReportTemplateResponseDesignObjectsItemLetterSpacingMax).optional(),
+  "borderColor": zod.string().regex(updateReportTemplateResponseDesignObjectsItemBorderColorRegExp).optional(),
+  "borderWidth": zod.number().min(updateReportTemplateResponseDesignObjectsItemBorderWidthMin).max(updateReportTemplateResponseDesignObjectsItemBorderWidthMax).optional(),
+  "borderRadius": zod.number().min(updateReportTemplateResponseDesignObjectsItemBorderRadiusMin).max(updateReportTemplateResponseDesignObjectsItemBorderRadiusMax).optional(),
+  "padding": zod.number().min(updateReportTemplateResponseDesignObjectsItemPaddingMin).max(updateReportTemplateResponseDesignObjectsItemPaddingMax).optional(),
+  "lineOrientation": zod.enum(['horizontal', 'vertical']).optional(),
+  "lineStyle": zod.enum(['solid', 'dashed', 'dotted']).optional(),
+  "shapeType": zod.enum(['rectangle', 'square', 'circle', 'divider']).optional(),
+  "tableKey": zod.string().max(updateReportTemplateResponseDesignObjectsItemTableKeyMax).optional(),
+  "fillColor": zod.string().regex(updateReportTemplateResponseDesignObjectsItemFillColorRegExp).optional(),
+  "opacity": zod.number().min(updateReportTemplateResponseDesignObjectsItemOpacityMin).max(updateReportTemplateResponseDesignObjectsItemOpacityMax).optional()
+})).max(updateReportTemplateResponseDesignObjectsMax)
+}),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a reusable report template
+ */
+export const DeleteReportTemplateParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteReportTemplateResponse = zod.void()
+
+
+/**
+ * @summary Duplicate a reusable report template
+ */
+export const DuplicateReportTemplateParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const duplicateReportTemplateBodyNameMax = 160;
+
+export const duplicateReportTemplateBodyDescriptionMax = 1000;
+
+
+export const duplicateReportTemplateBodyDesignLayoutFontSizeMin = 8;
+export const duplicateReportTemplateBodyDesignLayoutFontSizeMax = 24;
+
+export const duplicateReportTemplateBodyDesignLayoutTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const duplicateReportTemplateBodyDesignLayoutAccentColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const duplicateReportTemplateBodyDesignLayoutPaperPaddingMin = 5;
+export const duplicateReportTemplateBodyDesignLayoutPaperPaddingMax = 30;
+
+
+
+export const duplicateReportTemplateBodyDesignLayoutSectionsItemOrderMin = 0;
+
+export const duplicateReportTemplateBodyDesignLayoutSectionsItemFontSizeMin = 8;
+export const duplicateReportTemplateBodyDesignLayoutSectionsItemFontSizeMax = 24;
+
+export const duplicateReportTemplateBodyDesignLayoutSectionsItemTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const duplicateReportTemplateBodyDesignLayoutSectionsItemBackgroundColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const duplicateReportTemplateBodyDesignLayoutSectionsItemBorderColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const duplicateReportTemplateBodyDesignLayoutSectionsItemBorderWidthMin = 0;
+export const duplicateReportTemplateBodyDesignLayoutSectionsItemBorderWidthMax = 4;
+
+
+
+export const duplicateReportTemplateBodyDesignLayoutColumnsItemOrderMin = 0;
+
+export const duplicateReportTemplateBodyDesignLayoutColumnsItemWidthMax = 100;
+
+export const duplicateReportTemplateBodyDesignLayoutElementsItemKeyMax = 80;
+
+export const duplicateReportTemplateBodyDesignLayoutElementsItemSectionKeyMax = 80;
+
+export const duplicateReportTemplateBodyDesignLayoutElementsItemOrderMin = 0;
+
+export const duplicateReportTemplateBodyDesignLayoutElementsItemContentMax = 500;
+
+export const duplicateReportTemplateBodyDesignLayoutElementsItemFontSizeMin = 8;
+export const duplicateReportTemplateBodyDesignLayoutElementsItemFontSizeMax = 24;
+
+export const duplicateReportTemplateBodyDesignLayoutElementsItemColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const duplicateReportTemplateBodyDesignLayoutElementsItemWidthMin = 10;
+export const duplicateReportTemplateBodyDesignLayoutElementsItemWidthMax = 100;
+
+export const duplicateReportTemplateBodyDesignLayoutElementsMax = 40;
+
+export const duplicateReportTemplateBodyDesignPageWidthMmMin = 50;
+export const duplicateReportTemplateBodyDesignPageWidthMmMax = 1000;
+
+export const duplicateReportTemplateBodyDesignPageHeightMmMin = 50;
+export const duplicateReportTemplateBodyDesignPageHeightMmMax = 1000;
+
+export const duplicateReportTemplateBodyDesignPageMarginTopMmMin = 0;
+export const duplicateReportTemplateBodyDesignPageMarginTopMmMax = 100;
+
+export const duplicateReportTemplateBodyDesignPageMarginRightMmMin = 0;
+export const duplicateReportTemplateBodyDesignPageMarginRightMmMax = 100;
+
+export const duplicateReportTemplateBodyDesignPageMarginBottomMmMin = 0;
+export const duplicateReportTemplateBodyDesignPageMarginBottomMmMax = 100;
+
+export const duplicateReportTemplateBodyDesignPageMarginLeftMmMin = 0;
+export const duplicateReportTemplateBodyDesignPageMarginLeftMmMax = 100;
+
+export const duplicateReportTemplateBodyDesignPageHeaderHeightMmMin = 0;
+export const duplicateReportTemplateBodyDesignPageHeaderHeightMmMax = 100;
+
+export const duplicateReportTemplateBodyDesignPageFooterHeightMmMin = 0;
+export const duplicateReportTemplateBodyDesignPageFooterHeightMmMax = 100;
+
+export const duplicateReportTemplateBodyDesignObjectsItemIdMax = 80;
+
+export const duplicateReportTemplateBodyDesignObjectsItemNameMax = 120;
+
+export const duplicateReportTemplateBodyDesignObjectsItemXMin = -1000;
+export const duplicateReportTemplateBodyDesignObjectsItemXMax = 5000;
+
+export const duplicateReportTemplateBodyDesignObjectsItemYMin = -1000;
+export const duplicateReportTemplateBodyDesignObjectsItemYMax = 5000;
+
+export const duplicateReportTemplateBodyDesignObjectsItemWidthMax = 5000;
+
+export const duplicateReportTemplateBodyDesignObjectsItemHeightMax = 5000;
+
+export const duplicateReportTemplateBodyDesignObjectsItemZIndexMin = -10000;
+export const duplicateReportTemplateBodyDesignObjectsItemZIndexMax = 10000;
+
+export const duplicateReportTemplateBodyDesignObjectsItemRotationMin = -360;
+export const duplicateReportTemplateBodyDesignObjectsItemRotationMax = 360;
+
+export const duplicateReportTemplateBodyDesignObjectsItemSectionKeyMax = 80;
+
+export const duplicateReportTemplateBodyDesignObjectsItemContentMax = 5000;
+
+export const duplicateReportTemplateBodyDesignObjectsItemFieldKeyMax = 80;
+
+export const duplicateReportTemplateBodyDesignObjectsItemObjectPathRegExp = new RegExp('^/objects/uploads/[A-Za-z0-9._/-]+$');
+export const duplicateReportTemplateBodyDesignObjectsItemFontSizeMin = 6;
+export const duplicateReportTemplateBodyDesignObjectsItemFontSizeMax = 96;
+
+export const duplicateReportTemplateBodyDesignObjectsItemTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const duplicateReportTemplateBodyDesignObjectsItemBackgroundColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const duplicateReportTemplateBodyDesignObjectsItemLineHeightMin = 0.5;
+export const duplicateReportTemplateBodyDesignObjectsItemLineHeightMax = 4;
+
+export const duplicateReportTemplateBodyDesignObjectsItemLetterSpacingMin = -10;
+export const duplicateReportTemplateBodyDesignObjectsItemLetterSpacingMax = 50;
+
+export const duplicateReportTemplateBodyDesignObjectsItemBorderColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const duplicateReportTemplateBodyDesignObjectsItemBorderWidthMin = 0;
+export const duplicateReportTemplateBodyDesignObjectsItemBorderWidthMax = 20;
+
+export const duplicateReportTemplateBodyDesignObjectsItemBorderRadiusMin = 0;
+export const duplicateReportTemplateBodyDesignObjectsItemBorderRadiusMax = 200;
+
+export const duplicateReportTemplateBodyDesignObjectsItemPaddingMin = 0;
+export const duplicateReportTemplateBodyDesignObjectsItemPaddingMax = 100;
+
+export const duplicateReportTemplateBodyDesignObjectsItemTableKeyMax = 80;
+
+export const duplicateReportTemplateBodyDesignObjectsItemFillColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const duplicateReportTemplateBodyDesignObjectsItemOpacityMin = 0;
+export const duplicateReportTemplateBodyDesignObjectsItemOpacityMax = 1;
+
+export const duplicateReportTemplateBodyDesignObjectsMax = 200;
+
+
+
+export const DuplicateReportTemplateBody = zod.object({
+  "name": zod.string().min(1).max(duplicateReportTemplateBodyNameMax).optional(),
+  "description": zod.string().max(duplicateReportTemplateBodyDescriptionMax).nullish(),
+  "design": zod.object({
+  "schemaVersion": zod.literal(1),
+  "layout": zod.object({
+  "title": zod.string().min(1),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']),
+  "fontSize": zod.number().min(duplicateReportTemplateBodyDesignLayoutFontSizeMin).max(duplicateReportTemplateBodyDesignLayoutFontSizeMax),
+  "textColor": zod.string().regex(duplicateReportTemplateBodyDesignLayoutTextColorRegExp),
+  "accentColor": zod.string().regex(duplicateReportTemplateBodyDesignLayoutAccentColorRegExp),
+  "paperPadding": zod.number().min(duplicateReportTemplateBodyDesignLayoutPaperPaddingMin).max(duplicateReportTemplateBodyDesignLayoutPaperPaddingMax),
+  "sections": zod.array(zod.object({
+  "key": zod.string().min(1),
+  "label": zod.string().min(1),
+  "visible": zod.boolean(),
+  "order": zod.number().min(duplicateReportTemplateBodyDesignLayoutSectionsItemOrderMin),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(duplicateReportTemplateBodyDesignLayoutSectionsItemFontSizeMin).max(duplicateReportTemplateBodyDesignLayoutSectionsItemFontSizeMax).optional(),
+  "textColor": zod.string().regex(duplicateReportTemplateBodyDesignLayoutSectionsItemTextColorRegExp).optional(),
+  "backgroundColor": zod.string().regex(duplicateReportTemplateBodyDesignLayoutSectionsItemBackgroundColorRegExp).optional(),
+  "bold": zod.boolean().optional(),
+  "borderStyle": zod.enum(['none', 'solid', 'dashed', 'dotted']).optional(),
+  "borderColor": zod.string().regex(duplicateReportTemplateBodyDesignLayoutSectionsItemBorderColorRegExp).optional(),
+  "borderWidth": zod.number().min(duplicateReportTemplateBodyDesignLayoutSectionsItemBorderWidthMin).max(duplicateReportTemplateBodyDesignLayoutSectionsItemBorderWidthMax).optional()
+})),
+  "columns": zod.record(zod.string(), zod.array(zod.object({
+  "key": zod.string().min(1),
+  "label": zod.string().min(1),
+  "visible": zod.boolean(),
+  "order": zod.number().min(duplicateReportTemplateBodyDesignLayoutColumnsItemOrderMin),
+  "width": zod.number().min(1).max(duplicateReportTemplateBodyDesignLayoutColumnsItemWidthMax)
+}))),
+  "elements": zod.array(zod.object({
+  "key": zod.string().min(1).max(duplicateReportTemplateBodyDesignLayoutElementsItemKeyMax),
+  "type": zod.enum(['text', 'divider']),
+  "sectionKey": zod.string().min(1).max(duplicateReportTemplateBodyDesignLayoutElementsItemSectionKeyMax),
+  "placement": zod.enum(['before', 'after']),
+  "order": zod.number().min(duplicateReportTemplateBodyDesignLayoutElementsItemOrderMin),
+  "content": zod.string().max(duplicateReportTemplateBodyDesignLayoutElementsItemContentMax).optional(),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(duplicateReportTemplateBodyDesignLayoutElementsItemFontSizeMin).max(duplicateReportTemplateBodyDesignLayoutElementsItemFontSizeMax).optional(),
+  "color": zod.string().regex(duplicateReportTemplateBodyDesignLayoutElementsItemColorRegExp).optional(),
+  "bold": zod.boolean().optional(),
+  "width": zod.number().min(duplicateReportTemplateBodyDesignLayoutElementsItemWidthMin).max(duplicateReportTemplateBodyDesignLayoutElementsItemWidthMax).optional(),
+  "lineStyle": zod.enum(['solid', 'dashed', 'dotted']).optional()
+})).max(duplicateReportTemplateBodyDesignLayoutElementsMax).optional()
+}),
+  "page": zod.object({
+  "pageSize": zod.enum(['A4', 'A3', 'Letter', 'custom']),
+  "orientation": zod.enum(['portrait', 'landscape']),
+  "widthMm": zod.number().min(duplicateReportTemplateBodyDesignPageWidthMmMin).max(duplicateReportTemplateBodyDesignPageWidthMmMax),
+  "heightMm": zod.number().min(duplicateReportTemplateBodyDesignPageHeightMmMin).max(duplicateReportTemplateBodyDesignPageHeightMmMax),
+  "marginTopMm": zod.number().min(duplicateReportTemplateBodyDesignPageMarginTopMmMin).max(duplicateReportTemplateBodyDesignPageMarginTopMmMax),
+  "marginRightMm": zod.number().min(duplicateReportTemplateBodyDesignPageMarginRightMmMin).max(duplicateReportTemplateBodyDesignPageMarginRightMmMax),
+  "marginBottomMm": zod.number().min(duplicateReportTemplateBodyDesignPageMarginBottomMmMin).max(duplicateReportTemplateBodyDesignPageMarginBottomMmMax),
+  "marginLeftMm": zod.number().min(duplicateReportTemplateBodyDesignPageMarginLeftMmMin).max(duplicateReportTemplateBodyDesignPageMarginLeftMmMax),
+  "showHeader": zod.boolean(),
+  "showFooter": zod.boolean(),
+  "headerHeightMm": zod.number().min(duplicateReportTemplateBodyDesignPageHeaderHeightMmMin).max(duplicateReportTemplateBodyDesignPageHeaderHeightMmMax),
+  "footerHeightMm": zod.number().min(duplicateReportTemplateBodyDesignPageFooterHeightMmMin).max(duplicateReportTemplateBodyDesignPageFooterHeightMmMax)
+}),
+  "objects": zod.array(zod.object({
+  "id": zod.string().min(1).max(duplicateReportTemplateBodyDesignObjectsItemIdMax),
+  "type": zod.enum(['section', 'text', 'dynamicField', 'line', 'shape', 'image', 'table']),
+  "name": zod.string().min(1).max(duplicateReportTemplateBodyDesignObjectsItemNameMax),
+  "x": zod.number().min(duplicateReportTemplateBodyDesignObjectsItemXMin).max(duplicateReportTemplateBodyDesignObjectsItemXMax),
+  "y": zod.number().min(duplicateReportTemplateBodyDesignObjectsItemYMin).max(duplicateReportTemplateBodyDesignObjectsItemYMax),
+  "width": zod.number().min(1).max(duplicateReportTemplateBodyDesignObjectsItemWidthMax),
+  "height": zod.number().min(1).max(duplicateReportTemplateBodyDesignObjectsItemHeightMax),
+  "zIndex": zod.number().min(duplicateReportTemplateBodyDesignObjectsItemZIndexMin).max(duplicateReportTemplateBodyDesignObjectsItemZIndexMax),
+  "rotation": zod.number().min(duplicateReportTemplateBodyDesignObjectsItemRotationMin).max(duplicateReportTemplateBodyDesignObjectsItemRotationMax),
+  "locked": zod.boolean(),
+  "visible": zod.boolean(),
+  "sectionKey": zod.string().max(duplicateReportTemplateBodyDesignObjectsItemSectionKeyMax).optional(),
+  "content": zod.string().max(duplicateReportTemplateBodyDesignObjectsItemContentMax).optional(),
+  "fieldKey": zod.string().max(duplicateReportTemplateBodyDesignObjectsItemFieldKeyMax).optional(),
+  "objectPath": zod.string().regex(duplicateReportTemplateBodyDesignObjectsItemObjectPathRegExp).optional(),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(duplicateReportTemplateBodyDesignObjectsItemFontSizeMin).max(duplicateReportTemplateBodyDesignObjectsItemFontSizeMax).optional(),
+  "bold": zod.boolean().optional(),
+  "italic": zod.boolean().optional(),
+  "underline": zod.boolean().optional(),
+  "textAlign": zod.enum(['left', 'center', 'right', 'justify']).optional(),
+  "textColor": zod.string().regex(duplicateReportTemplateBodyDesignObjectsItemTextColorRegExp).optional(),
+  "backgroundColor": zod.string().regex(duplicateReportTemplateBodyDesignObjectsItemBackgroundColorRegExp).optional(),
+  "lineHeight": zod.number().min(duplicateReportTemplateBodyDesignObjectsItemLineHeightMin).max(duplicateReportTemplateBodyDesignObjectsItemLineHeightMax).optional(),
+  "letterSpacing": zod.number().min(duplicateReportTemplateBodyDesignObjectsItemLetterSpacingMin).max(duplicateReportTemplateBodyDesignObjectsItemLetterSpacingMax).optional(),
+  "borderColor": zod.string().regex(duplicateReportTemplateBodyDesignObjectsItemBorderColorRegExp).optional(),
+  "borderWidth": zod.number().min(duplicateReportTemplateBodyDesignObjectsItemBorderWidthMin).max(duplicateReportTemplateBodyDesignObjectsItemBorderWidthMax).optional(),
+  "borderRadius": zod.number().min(duplicateReportTemplateBodyDesignObjectsItemBorderRadiusMin).max(duplicateReportTemplateBodyDesignObjectsItemBorderRadiusMax).optional(),
+  "padding": zod.number().min(duplicateReportTemplateBodyDesignObjectsItemPaddingMin).max(duplicateReportTemplateBodyDesignObjectsItemPaddingMax).optional(),
+  "lineOrientation": zod.enum(['horizontal', 'vertical']).optional(),
+  "lineStyle": zod.enum(['solid', 'dashed', 'dotted']).optional(),
+  "shapeType": zod.enum(['rectangle', 'square', 'circle', 'divider']).optional(),
+  "tableKey": zod.string().max(duplicateReportTemplateBodyDesignObjectsItemTableKeyMax).optional(),
+  "fillColor": zod.string().regex(duplicateReportTemplateBodyDesignObjectsItemFillColorRegExp).optional(),
+  "opacity": zod.number().min(duplicateReportTemplateBodyDesignObjectsItemOpacityMin).max(duplicateReportTemplateBodyDesignObjectsItemOpacityMax).optional()
+})).max(duplicateReportTemplateBodyDesignObjectsMax)
+}).optional()
+})
+
+
+
+export const duplicateReportTemplateResponseDesignLayoutFontSizeMin = 8;
+export const duplicateReportTemplateResponseDesignLayoutFontSizeMax = 24;
+
+export const duplicateReportTemplateResponseDesignLayoutTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const duplicateReportTemplateResponseDesignLayoutAccentColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const duplicateReportTemplateResponseDesignLayoutPaperPaddingMin = 5;
+export const duplicateReportTemplateResponseDesignLayoutPaperPaddingMax = 30;
+
+
+
+export const duplicateReportTemplateResponseDesignLayoutSectionsItemOrderMin = 0;
+
+export const duplicateReportTemplateResponseDesignLayoutSectionsItemFontSizeMin = 8;
+export const duplicateReportTemplateResponseDesignLayoutSectionsItemFontSizeMax = 24;
+
+export const duplicateReportTemplateResponseDesignLayoutSectionsItemTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const duplicateReportTemplateResponseDesignLayoutSectionsItemBackgroundColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const duplicateReportTemplateResponseDesignLayoutSectionsItemBorderColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const duplicateReportTemplateResponseDesignLayoutSectionsItemBorderWidthMin = 0;
+export const duplicateReportTemplateResponseDesignLayoutSectionsItemBorderWidthMax = 4;
+
+
+
+export const duplicateReportTemplateResponseDesignLayoutColumnsItemOrderMin = 0;
+
+export const duplicateReportTemplateResponseDesignLayoutColumnsItemWidthMax = 100;
+
+export const duplicateReportTemplateResponseDesignLayoutElementsItemKeyMax = 80;
+
+export const duplicateReportTemplateResponseDesignLayoutElementsItemSectionKeyMax = 80;
+
+export const duplicateReportTemplateResponseDesignLayoutElementsItemOrderMin = 0;
+
+export const duplicateReportTemplateResponseDesignLayoutElementsItemContentMax = 500;
+
+export const duplicateReportTemplateResponseDesignLayoutElementsItemFontSizeMin = 8;
+export const duplicateReportTemplateResponseDesignLayoutElementsItemFontSizeMax = 24;
+
+export const duplicateReportTemplateResponseDesignLayoutElementsItemColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const duplicateReportTemplateResponseDesignLayoutElementsItemWidthMin = 10;
+export const duplicateReportTemplateResponseDesignLayoutElementsItemWidthMax = 100;
+
+export const duplicateReportTemplateResponseDesignLayoutElementsMax = 40;
+
+export const duplicateReportTemplateResponseDesignPageWidthMmMin = 50;
+export const duplicateReportTemplateResponseDesignPageWidthMmMax = 1000;
+
+export const duplicateReportTemplateResponseDesignPageHeightMmMin = 50;
+export const duplicateReportTemplateResponseDesignPageHeightMmMax = 1000;
+
+export const duplicateReportTemplateResponseDesignPageMarginTopMmMin = 0;
+export const duplicateReportTemplateResponseDesignPageMarginTopMmMax = 100;
+
+export const duplicateReportTemplateResponseDesignPageMarginRightMmMin = 0;
+export const duplicateReportTemplateResponseDesignPageMarginRightMmMax = 100;
+
+export const duplicateReportTemplateResponseDesignPageMarginBottomMmMin = 0;
+export const duplicateReportTemplateResponseDesignPageMarginBottomMmMax = 100;
+
+export const duplicateReportTemplateResponseDesignPageMarginLeftMmMin = 0;
+export const duplicateReportTemplateResponseDesignPageMarginLeftMmMax = 100;
+
+export const duplicateReportTemplateResponseDesignPageHeaderHeightMmMin = 0;
+export const duplicateReportTemplateResponseDesignPageHeaderHeightMmMax = 100;
+
+export const duplicateReportTemplateResponseDesignPageFooterHeightMmMin = 0;
+export const duplicateReportTemplateResponseDesignPageFooterHeightMmMax = 100;
+
+export const duplicateReportTemplateResponseDesignObjectsItemIdMax = 80;
+
+export const duplicateReportTemplateResponseDesignObjectsItemNameMax = 120;
+
+export const duplicateReportTemplateResponseDesignObjectsItemXMin = -1000;
+export const duplicateReportTemplateResponseDesignObjectsItemXMax = 5000;
+
+export const duplicateReportTemplateResponseDesignObjectsItemYMin = -1000;
+export const duplicateReportTemplateResponseDesignObjectsItemYMax = 5000;
+
+export const duplicateReportTemplateResponseDesignObjectsItemWidthMax = 5000;
+
+export const duplicateReportTemplateResponseDesignObjectsItemHeightMax = 5000;
+
+export const duplicateReportTemplateResponseDesignObjectsItemZIndexMin = -10000;
+export const duplicateReportTemplateResponseDesignObjectsItemZIndexMax = 10000;
+
+export const duplicateReportTemplateResponseDesignObjectsItemRotationMin = -360;
+export const duplicateReportTemplateResponseDesignObjectsItemRotationMax = 360;
+
+export const duplicateReportTemplateResponseDesignObjectsItemSectionKeyMax = 80;
+
+export const duplicateReportTemplateResponseDesignObjectsItemContentMax = 5000;
+
+export const duplicateReportTemplateResponseDesignObjectsItemFieldKeyMax = 80;
+
+export const duplicateReportTemplateResponseDesignObjectsItemObjectPathRegExp = new RegExp('^/objects/uploads/[A-Za-z0-9._/-]+$');
+export const duplicateReportTemplateResponseDesignObjectsItemFontSizeMin = 6;
+export const duplicateReportTemplateResponseDesignObjectsItemFontSizeMax = 96;
+
+export const duplicateReportTemplateResponseDesignObjectsItemTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const duplicateReportTemplateResponseDesignObjectsItemBackgroundColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const duplicateReportTemplateResponseDesignObjectsItemLineHeightMin = 0.5;
+export const duplicateReportTemplateResponseDesignObjectsItemLineHeightMax = 4;
+
+export const duplicateReportTemplateResponseDesignObjectsItemLetterSpacingMin = -10;
+export const duplicateReportTemplateResponseDesignObjectsItemLetterSpacingMax = 50;
+
+export const duplicateReportTemplateResponseDesignObjectsItemBorderColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const duplicateReportTemplateResponseDesignObjectsItemBorderWidthMin = 0;
+export const duplicateReportTemplateResponseDesignObjectsItemBorderWidthMax = 20;
+
+export const duplicateReportTemplateResponseDesignObjectsItemBorderRadiusMin = 0;
+export const duplicateReportTemplateResponseDesignObjectsItemBorderRadiusMax = 200;
+
+export const duplicateReportTemplateResponseDesignObjectsItemPaddingMin = 0;
+export const duplicateReportTemplateResponseDesignObjectsItemPaddingMax = 100;
+
+export const duplicateReportTemplateResponseDesignObjectsItemTableKeyMax = 80;
+
+export const duplicateReportTemplateResponseDesignObjectsItemFillColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const duplicateReportTemplateResponseDesignObjectsItemOpacityMin = 0;
+export const duplicateReportTemplateResponseDesignObjectsItemOpacityMax = 1;
+
+export const duplicateReportTemplateResponseDesignObjectsMax = 200;
+
+
+
+export const DuplicateReportTemplateResponse = zod.object({
+  "id": zod.number(),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "isDefault": zod.boolean(),
+  "version": zod.number().min(1),
+  "design": zod.object({
+  "schemaVersion": zod.literal(1),
+  "layout": zod.object({
+  "title": zod.string().min(1),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']),
+  "fontSize": zod.number().min(duplicateReportTemplateResponseDesignLayoutFontSizeMin).max(duplicateReportTemplateResponseDesignLayoutFontSizeMax),
+  "textColor": zod.string().regex(duplicateReportTemplateResponseDesignLayoutTextColorRegExp),
+  "accentColor": zod.string().regex(duplicateReportTemplateResponseDesignLayoutAccentColorRegExp),
+  "paperPadding": zod.number().min(duplicateReportTemplateResponseDesignLayoutPaperPaddingMin).max(duplicateReportTemplateResponseDesignLayoutPaperPaddingMax),
+  "sections": zod.array(zod.object({
+  "key": zod.string().min(1),
+  "label": zod.string().min(1),
+  "visible": zod.boolean(),
+  "order": zod.number().min(duplicateReportTemplateResponseDesignLayoutSectionsItemOrderMin),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(duplicateReportTemplateResponseDesignLayoutSectionsItemFontSizeMin).max(duplicateReportTemplateResponseDesignLayoutSectionsItemFontSizeMax).optional(),
+  "textColor": zod.string().regex(duplicateReportTemplateResponseDesignLayoutSectionsItemTextColorRegExp).optional(),
+  "backgroundColor": zod.string().regex(duplicateReportTemplateResponseDesignLayoutSectionsItemBackgroundColorRegExp).optional(),
+  "bold": zod.boolean().optional(),
+  "borderStyle": zod.enum(['none', 'solid', 'dashed', 'dotted']).optional(),
+  "borderColor": zod.string().regex(duplicateReportTemplateResponseDesignLayoutSectionsItemBorderColorRegExp).optional(),
+  "borderWidth": zod.number().min(duplicateReportTemplateResponseDesignLayoutSectionsItemBorderWidthMin).max(duplicateReportTemplateResponseDesignLayoutSectionsItemBorderWidthMax).optional()
+})),
+  "columns": zod.record(zod.string(), zod.array(zod.object({
+  "key": zod.string().min(1),
+  "label": zod.string().min(1),
+  "visible": zod.boolean(),
+  "order": zod.number().min(duplicateReportTemplateResponseDesignLayoutColumnsItemOrderMin),
+  "width": zod.number().min(1).max(duplicateReportTemplateResponseDesignLayoutColumnsItemWidthMax)
+}))),
+  "elements": zod.array(zod.object({
+  "key": zod.string().min(1).max(duplicateReportTemplateResponseDesignLayoutElementsItemKeyMax),
+  "type": zod.enum(['text', 'divider']),
+  "sectionKey": zod.string().min(1).max(duplicateReportTemplateResponseDesignLayoutElementsItemSectionKeyMax),
+  "placement": zod.enum(['before', 'after']),
+  "order": zod.number().min(duplicateReportTemplateResponseDesignLayoutElementsItemOrderMin),
+  "content": zod.string().max(duplicateReportTemplateResponseDesignLayoutElementsItemContentMax).optional(),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(duplicateReportTemplateResponseDesignLayoutElementsItemFontSizeMin).max(duplicateReportTemplateResponseDesignLayoutElementsItemFontSizeMax).optional(),
+  "color": zod.string().regex(duplicateReportTemplateResponseDesignLayoutElementsItemColorRegExp).optional(),
+  "bold": zod.boolean().optional(),
+  "width": zod.number().min(duplicateReportTemplateResponseDesignLayoutElementsItemWidthMin).max(duplicateReportTemplateResponseDesignLayoutElementsItemWidthMax).optional(),
+  "lineStyle": zod.enum(['solid', 'dashed', 'dotted']).optional()
+})).max(duplicateReportTemplateResponseDesignLayoutElementsMax).optional()
+}),
+  "page": zod.object({
+  "pageSize": zod.enum(['A4', 'A3', 'Letter', 'custom']),
+  "orientation": zod.enum(['portrait', 'landscape']),
+  "widthMm": zod.number().min(duplicateReportTemplateResponseDesignPageWidthMmMin).max(duplicateReportTemplateResponseDesignPageWidthMmMax),
+  "heightMm": zod.number().min(duplicateReportTemplateResponseDesignPageHeightMmMin).max(duplicateReportTemplateResponseDesignPageHeightMmMax),
+  "marginTopMm": zod.number().min(duplicateReportTemplateResponseDesignPageMarginTopMmMin).max(duplicateReportTemplateResponseDesignPageMarginTopMmMax),
+  "marginRightMm": zod.number().min(duplicateReportTemplateResponseDesignPageMarginRightMmMin).max(duplicateReportTemplateResponseDesignPageMarginRightMmMax),
+  "marginBottomMm": zod.number().min(duplicateReportTemplateResponseDesignPageMarginBottomMmMin).max(duplicateReportTemplateResponseDesignPageMarginBottomMmMax),
+  "marginLeftMm": zod.number().min(duplicateReportTemplateResponseDesignPageMarginLeftMmMin).max(duplicateReportTemplateResponseDesignPageMarginLeftMmMax),
+  "showHeader": zod.boolean(),
+  "showFooter": zod.boolean(),
+  "headerHeightMm": zod.number().min(duplicateReportTemplateResponseDesignPageHeaderHeightMmMin).max(duplicateReportTemplateResponseDesignPageHeaderHeightMmMax),
+  "footerHeightMm": zod.number().min(duplicateReportTemplateResponseDesignPageFooterHeightMmMin).max(duplicateReportTemplateResponseDesignPageFooterHeightMmMax)
+}),
+  "objects": zod.array(zod.object({
+  "id": zod.string().min(1).max(duplicateReportTemplateResponseDesignObjectsItemIdMax),
+  "type": zod.enum(['section', 'text', 'dynamicField', 'line', 'shape', 'image', 'table']),
+  "name": zod.string().min(1).max(duplicateReportTemplateResponseDesignObjectsItemNameMax),
+  "x": zod.number().min(duplicateReportTemplateResponseDesignObjectsItemXMin).max(duplicateReportTemplateResponseDesignObjectsItemXMax),
+  "y": zod.number().min(duplicateReportTemplateResponseDesignObjectsItemYMin).max(duplicateReportTemplateResponseDesignObjectsItemYMax),
+  "width": zod.number().min(1).max(duplicateReportTemplateResponseDesignObjectsItemWidthMax),
+  "height": zod.number().min(1).max(duplicateReportTemplateResponseDesignObjectsItemHeightMax),
+  "zIndex": zod.number().min(duplicateReportTemplateResponseDesignObjectsItemZIndexMin).max(duplicateReportTemplateResponseDesignObjectsItemZIndexMax),
+  "rotation": zod.number().min(duplicateReportTemplateResponseDesignObjectsItemRotationMin).max(duplicateReportTemplateResponseDesignObjectsItemRotationMax),
+  "locked": zod.boolean(),
+  "visible": zod.boolean(),
+  "sectionKey": zod.string().max(duplicateReportTemplateResponseDesignObjectsItemSectionKeyMax).optional(),
+  "content": zod.string().max(duplicateReportTemplateResponseDesignObjectsItemContentMax).optional(),
+  "fieldKey": zod.string().max(duplicateReportTemplateResponseDesignObjectsItemFieldKeyMax).optional(),
+  "objectPath": zod.string().regex(duplicateReportTemplateResponseDesignObjectsItemObjectPathRegExp).optional(),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(duplicateReportTemplateResponseDesignObjectsItemFontSizeMin).max(duplicateReportTemplateResponseDesignObjectsItemFontSizeMax).optional(),
+  "bold": zod.boolean().optional(),
+  "italic": zod.boolean().optional(),
+  "underline": zod.boolean().optional(),
+  "textAlign": zod.enum(['left', 'center', 'right', 'justify']).optional(),
+  "textColor": zod.string().regex(duplicateReportTemplateResponseDesignObjectsItemTextColorRegExp).optional(),
+  "backgroundColor": zod.string().regex(duplicateReportTemplateResponseDesignObjectsItemBackgroundColorRegExp).optional(),
+  "lineHeight": zod.number().min(duplicateReportTemplateResponseDesignObjectsItemLineHeightMin).max(duplicateReportTemplateResponseDesignObjectsItemLineHeightMax).optional(),
+  "letterSpacing": zod.number().min(duplicateReportTemplateResponseDesignObjectsItemLetterSpacingMin).max(duplicateReportTemplateResponseDesignObjectsItemLetterSpacingMax).optional(),
+  "borderColor": zod.string().regex(duplicateReportTemplateResponseDesignObjectsItemBorderColorRegExp).optional(),
+  "borderWidth": zod.number().min(duplicateReportTemplateResponseDesignObjectsItemBorderWidthMin).max(duplicateReportTemplateResponseDesignObjectsItemBorderWidthMax).optional(),
+  "borderRadius": zod.number().min(duplicateReportTemplateResponseDesignObjectsItemBorderRadiusMin).max(duplicateReportTemplateResponseDesignObjectsItemBorderRadiusMax).optional(),
+  "padding": zod.number().min(duplicateReportTemplateResponseDesignObjectsItemPaddingMin).max(duplicateReportTemplateResponseDesignObjectsItemPaddingMax).optional(),
+  "lineOrientation": zod.enum(['horizontal', 'vertical']).optional(),
+  "lineStyle": zod.enum(['solid', 'dashed', 'dotted']).optional(),
+  "shapeType": zod.enum(['rectangle', 'square', 'circle', 'divider']).optional(),
+  "tableKey": zod.string().max(duplicateReportTemplateResponseDesignObjectsItemTableKeyMax).optional(),
+  "fillColor": zod.string().regex(duplicateReportTemplateResponseDesignObjectsItemFillColorRegExp).optional(),
+  "opacity": zod.number().min(duplicateReportTemplateResponseDesignObjectsItemOpacityMin).max(duplicateReportTemplateResponseDesignObjectsItemOpacityMax).optional()
+})).max(duplicateReportTemplateResponseDesignObjectsMax)
+}),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Set a report template as the default for its report type
+ */
+export const SetReportTemplateDefaultParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+export const setReportTemplateDefaultResponseDesignLayoutFontSizeMin = 8;
+export const setReportTemplateDefaultResponseDesignLayoutFontSizeMax = 24;
+
+export const setReportTemplateDefaultResponseDesignLayoutTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const setReportTemplateDefaultResponseDesignLayoutAccentColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const setReportTemplateDefaultResponseDesignLayoutPaperPaddingMin = 5;
+export const setReportTemplateDefaultResponseDesignLayoutPaperPaddingMax = 30;
+
+
+
+export const setReportTemplateDefaultResponseDesignLayoutSectionsItemOrderMin = 0;
+
+export const setReportTemplateDefaultResponseDesignLayoutSectionsItemFontSizeMin = 8;
+export const setReportTemplateDefaultResponseDesignLayoutSectionsItemFontSizeMax = 24;
+
+export const setReportTemplateDefaultResponseDesignLayoutSectionsItemTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const setReportTemplateDefaultResponseDesignLayoutSectionsItemBackgroundColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const setReportTemplateDefaultResponseDesignLayoutSectionsItemBorderColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const setReportTemplateDefaultResponseDesignLayoutSectionsItemBorderWidthMin = 0;
+export const setReportTemplateDefaultResponseDesignLayoutSectionsItemBorderWidthMax = 4;
+
+
+
+export const setReportTemplateDefaultResponseDesignLayoutColumnsItemOrderMin = 0;
+
+export const setReportTemplateDefaultResponseDesignLayoutColumnsItemWidthMax = 100;
+
+export const setReportTemplateDefaultResponseDesignLayoutElementsItemKeyMax = 80;
+
+export const setReportTemplateDefaultResponseDesignLayoutElementsItemSectionKeyMax = 80;
+
+export const setReportTemplateDefaultResponseDesignLayoutElementsItemOrderMin = 0;
+
+export const setReportTemplateDefaultResponseDesignLayoutElementsItemContentMax = 500;
+
+export const setReportTemplateDefaultResponseDesignLayoutElementsItemFontSizeMin = 8;
+export const setReportTemplateDefaultResponseDesignLayoutElementsItemFontSizeMax = 24;
+
+export const setReportTemplateDefaultResponseDesignLayoutElementsItemColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const setReportTemplateDefaultResponseDesignLayoutElementsItemWidthMin = 10;
+export const setReportTemplateDefaultResponseDesignLayoutElementsItemWidthMax = 100;
+
+export const setReportTemplateDefaultResponseDesignLayoutElementsMax = 40;
+
+export const setReportTemplateDefaultResponseDesignPageWidthMmMin = 50;
+export const setReportTemplateDefaultResponseDesignPageWidthMmMax = 1000;
+
+export const setReportTemplateDefaultResponseDesignPageHeightMmMin = 50;
+export const setReportTemplateDefaultResponseDesignPageHeightMmMax = 1000;
+
+export const setReportTemplateDefaultResponseDesignPageMarginTopMmMin = 0;
+export const setReportTemplateDefaultResponseDesignPageMarginTopMmMax = 100;
+
+export const setReportTemplateDefaultResponseDesignPageMarginRightMmMin = 0;
+export const setReportTemplateDefaultResponseDesignPageMarginRightMmMax = 100;
+
+export const setReportTemplateDefaultResponseDesignPageMarginBottomMmMin = 0;
+export const setReportTemplateDefaultResponseDesignPageMarginBottomMmMax = 100;
+
+export const setReportTemplateDefaultResponseDesignPageMarginLeftMmMin = 0;
+export const setReportTemplateDefaultResponseDesignPageMarginLeftMmMax = 100;
+
+export const setReportTemplateDefaultResponseDesignPageHeaderHeightMmMin = 0;
+export const setReportTemplateDefaultResponseDesignPageHeaderHeightMmMax = 100;
+
+export const setReportTemplateDefaultResponseDesignPageFooterHeightMmMin = 0;
+export const setReportTemplateDefaultResponseDesignPageFooterHeightMmMax = 100;
+
+export const setReportTemplateDefaultResponseDesignObjectsItemIdMax = 80;
+
+export const setReportTemplateDefaultResponseDesignObjectsItemNameMax = 120;
+
+export const setReportTemplateDefaultResponseDesignObjectsItemXMin = -1000;
+export const setReportTemplateDefaultResponseDesignObjectsItemXMax = 5000;
+
+export const setReportTemplateDefaultResponseDesignObjectsItemYMin = -1000;
+export const setReportTemplateDefaultResponseDesignObjectsItemYMax = 5000;
+
+export const setReportTemplateDefaultResponseDesignObjectsItemWidthMax = 5000;
+
+export const setReportTemplateDefaultResponseDesignObjectsItemHeightMax = 5000;
+
+export const setReportTemplateDefaultResponseDesignObjectsItemZIndexMin = -10000;
+export const setReportTemplateDefaultResponseDesignObjectsItemZIndexMax = 10000;
+
+export const setReportTemplateDefaultResponseDesignObjectsItemRotationMin = -360;
+export const setReportTemplateDefaultResponseDesignObjectsItemRotationMax = 360;
+
+export const setReportTemplateDefaultResponseDesignObjectsItemSectionKeyMax = 80;
+
+export const setReportTemplateDefaultResponseDesignObjectsItemContentMax = 5000;
+
+export const setReportTemplateDefaultResponseDesignObjectsItemFieldKeyMax = 80;
+
+export const setReportTemplateDefaultResponseDesignObjectsItemObjectPathRegExp = new RegExp('^/objects/uploads/[A-Za-z0-9._/-]+$');
+export const setReportTemplateDefaultResponseDesignObjectsItemFontSizeMin = 6;
+export const setReportTemplateDefaultResponseDesignObjectsItemFontSizeMax = 96;
+
+export const setReportTemplateDefaultResponseDesignObjectsItemTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const setReportTemplateDefaultResponseDesignObjectsItemBackgroundColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const setReportTemplateDefaultResponseDesignObjectsItemLineHeightMin = 0.5;
+export const setReportTemplateDefaultResponseDesignObjectsItemLineHeightMax = 4;
+
+export const setReportTemplateDefaultResponseDesignObjectsItemLetterSpacingMin = -10;
+export const setReportTemplateDefaultResponseDesignObjectsItemLetterSpacingMax = 50;
+
+export const setReportTemplateDefaultResponseDesignObjectsItemBorderColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const setReportTemplateDefaultResponseDesignObjectsItemBorderWidthMin = 0;
+export const setReportTemplateDefaultResponseDesignObjectsItemBorderWidthMax = 20;
+
+export const setReportTemplateDefaultResponseDesignObjectsItemBorderRadiusMin = 0;
+export const setReportTemplateDefaultResponseDesignObjectsItemBorderRadiusMax = 200;
+
+export const setReportTemplateDefaultResponseDesignObjectsItemPaddingMin = 0;
+export const setReportTemplateDefaultResponseDesignObjectsItemPaddingMax = 100;
+
+export const setReportTemplateDefaultResponseDesignObjectsItemTableKeyMax = 80;
+
+export const setReportTemplateDefaultResponseDesignObjectsItemFillColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const setReportTemplateDefaultResponseDesignObjectsItemOpacityMin = 0;
+export const setReportTemplateDefaultResponseDesignObjectsItemOpacityMax = 1;
+
+export const setReportTemplateDefaultResponseDesignObjectsMax = 200;
+
+
+
+export const SetReportTemplateDefaultResponse = zod.object({
+  "id": zod.number(),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "isDefault": zod.boolean(),
+  "version": zod.number().min(1),
+  "design": zod.object({
+  "schemaVersion": zod.literal(1),
+  "layout": zod.object({
+  "title": zod.string().min(1),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']),
+  "fontSize": zod.number().min(setReportTemplateDefaultResponseDesignLayoutFontSizeMin).max(setReportTemplateDefaultResponseDesignLayoutFontSizeMax),
+  "textColor": zod.string().regex(setReportTemplateDefaultResponseDesignLayoutTextColorRegExp),
+  "accentColor": zod.string().regex(setReportTemplateDefaultResponseDesignLayoutAccentColorRegExp),
+  "paperPadding": zod.number().min(setReportTemplateDefaultResponseDesignLayoutPaperPaddingMin).max(setReportTemplateDefaultResponseDesignLayoutPaperPaddingMax),
+  "sections": zod.array(zod.object({
+  "key": zod.string().min(1),
+  "label": zod.string().min(1),
+  "visible": zod.boolean(),
+  "order": zod.number().min(setReportTemplateDefaultResponseDesignLayoutSectionsItemOrderMin),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(setReportTemplateDefaultResponseDesignLayoutSectionsItemFontSizeMin).max(setReportTemplateDefaultResponseDesignLayoutSectionsItemFontSizeMax).optional(),
+  "textColor": zod.string().regex(setReportTemplateDefaultResponseDesignLayoutSectionsItemTextColorRegExp).optional(),
+  "backgroundColor": zod.string().regex(setReportTemplateDefaultResponseDesignLayoutSectionsItemBackgroundColorRegExp).optional(),
+  "bold": zod.boolean().optional(),
+  "borderStyle": zod.enum(['none', 'solid', 'dashed', 'dotted']).optional(),
+  "borderColor": zod.string().regex(setReportTemplateDefaultResponseDesignLayoutSectionsItemBorderColorRegExp).optional(),
+  "borderWidth": zod.number().min(setReportTemplateDefaultResponseDesignLayoutSectionsItemBorderWidthMin).max(setReportTemplateDefaultResponseDesignLayoutSectionsItemBorderWidthMax).optional()
+})),
+  "columns": zod.record(zod.string(), zod.array(zod.object({
+  "key": zod.string().min(1),
+  "label": zod.string().min(1),
+  "visible": zod.boolean(),
+  "order": zod.number().min(setReportTemplateDefaultResponseDesignLayoutColumnsItemOrderMin),
+  "width": zod.number().min(1).max(setReportTemplateDefaultResponseDesignLayoutColumnsItemWidthMax)
+}))),
+  "elements": zod.array(zod.object({
+  "key": zod.string().min(1).max(setReportTemplateDefaultResponseDesignLayoutElementsItemKeyMax),
+  "type": zod.enum(['text', 'divider']),
+  "sectionKey": zod.string().min(1).max(setReportTemplateDefaultResponseDesignLayoutElementsItemSectionKeyMax),
+  "placement": zod.enum(['before', 'after']),
+  "order": zod.number().min(setReportTemplateDefaultResponseDesignLayoutElementsItemOrderMin),
+  "content": zod.string().max(setReportTemplateDefaultResponseDesignLayoutElementsItemContentMax).optional(),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(setReportTemplateDefaultResponseDesignLayoutElementsItemFontSizeMin).max(setReportTemplateDefaultResponseDesignLayoutElementsItemFontSizeMax).optional(),
+  "color": zod.string().regex(setReportTemplateDefaultResponseDesignLayoutElementsItemColorRegExp).optional(),
+  "bold": zod.boolean().optional(),
+  "width": zod.number().min(setReportTemplateDefaultResponseDesignLayoutElementsItemWidthMin).max(setReportTemplateDefaultResponseDesignLayoutElementsItemWidthMax).optional(),
+  "lineStyle": zod.enum(['solid', 'dashed', 'dotted']).optional()
+})).max(setReportTemplateDefaultResponseDesignLayoutElementsMax).optional()
+}),
+  "page": zod.object({
+  "pageSize": zod.enum(['A4', 'A3', 'Letter', 'custom']),
+  "orientation": zod.enum(['portrait', 'landscape']),
+  "widthMm": zod.number().min(setReportTemplateDefaultResponseDesignPageWidthMmMin).max(setReportTemplateDefaultResponseDesignPageWidthMmMax),
+  "heightMm": zod.number().min(setReportTemplateDefaultResponseDesignPageHeightMmMin).max(setReportTemplateDefaultResponseDesignPageHeightMmMax),
+  "marginTopMm": zod.number().min(setReportTemplateDefaultResponseDesignPageMarginTopMmMin).max(setReportTemplateDefaultResponseDesignPageMarginTopMmMax),
+  "marginRightMm": zod.number().min(setReportTemplateDefaultResponseDesignPageMarginRightMmMin).max(setReportTemplateDefaultResponseDesignPageMarginRightMmMax),
+  "marginBottomMm": zod.number().min(setReportTemplateDefaultResponseDesignPageMarginBottomMmMin).max(setReportTemplateDefaultResponseDesignPageMarginBottomMmMax),
+  "marginLeftMm": zod.number().min(setReportTemplateDefaultResponseDesignPageMarginLeftMmMin).max(setReportTemplateDefaultResponseDesignPageMarginLeftMmMax),
+  "showHeader": zod.boolean(),
+  "showFooter": zod.boolean(),
+  "headerHeightMm": zod.number().min(setReportTemplateDefaultResponseDesignPageHeaderHeightMmMin).max(setReportTemplateDefaultResponseDesignPageHeaderHeightMmMax),
+  "footerHeightMm": zod.number().min(setReportTemplateDefaultResponseDesignPageFooterHeightMmMin).max(setReportTemplateDefaultResponseDesignPageFooterHeightMmMax)
+}),
+  "objects": zod.array(zod.object({
+  "id": zod.string().min(1).max(setReportTemplateDefaultResponseDesignObjectsItemIdMax),
+  "type": zod.enum(['section', 'text', 'dynamicField', 'line', 'shape', 'image', 'table']),
+  "name": zod.string().min(1).max(setReportTemplateDefaultResponseDesignObjectsItemNameMax),
+  "x": zod.number().min(setReportTemplateDefaultResponseDesignObjectsItemXMin).max(setReportTemplateDefaultResponseDesignObjectsItemXMax),
+  "y": zod.number().min(setReportTemplateDefaultResponseDesignObjectsItemYMin).max(setReportTemplateDefaultResponseDesignObjectsItemYMax),
+  "width": zod.number().min(1).max(setReportTemplateDefaultResponseDesignObjectsItemWidthMax),
+  "height": zod.number().min(1).max(setReportTemplateDefaultResponseDesignObjectsItemHeightMax),
+  "zIndex": zod.number().min(setReportTemplateDefaultResponseDesignObjectsItemZIndexMin).max(setReportTemplateDefaultResponseDesignObjectsItemZIndexMax),
+  "rotation": zod.number().min(setReportTemplateDefaultResponseDesignObjectsItemRotationMin).max(setReportTemplateDefaultResponseDesignObjectsItemRotationMax),
+  "locked": zod.boolean(),
+  "visible": zod.boolean(),
+  "sectionKey": zod.string().max(setReportTemplateDefaultResponseDesignObjectsItemSectionKeyMax).optional(),
+  "content": zod.string().max(setReportTemplateDefaultResponseDesignObjectsItemContentMax).optional(),
+  "fieldKey": zod.string().max(setReportTemplateDefaultResponseDesignObjectsItemFieldKeyMax).optional(),
+  "objectPath": zod.string().regex(setReportTemplateDefaultResponseDesignObjectsItemObjectPathRegExp).optional(),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(setReportTemplateDefaultResponseDesignObjectsItemFontSizeMin).max(setReportTemplateDefaultResponseDesignObjectsItemFontSizeMax).optional(),
+  "bold": zod.boolean().optional(),
+  "italic": zod.boolean().optional(),
+  "underline": zod.boolean().optional(),
+  "textAlign": zod.enum(['left', 'center', 'right', 'justify']).optional(),
+  "textColor": zod.string().regex(setReportTemplateDefaultResponseDesignObjectsItemTextColorRegExp).optional(),
+  "backgroundColor": zod.string().regex(setReportTemplateDefaultResponseDesignObjectsItemBackgroundColorRegExp).optional(),
+  "lineHeight": zod.number().min(setReportTemplateDefaultResponseDesignObjectsItemLineHeightMin).max(setReportTemplateDefaultResponseDesignObjectsItemLineHeightMax).optional(),
+  "letterSpacing": zod.number().min(setReportTemplateDefaultResponseDesignObjectsItemLetterSpacingMin).max(setReportTemplateDefaultResponseDesignObjectsItemLetterSpacingMax).optional(),
+  "borderColor": zod.string().regex(setReportTemplateDefaultResponseDesignObjectsItemBorderColorRegExp).optional(),
+  "borderWidth": zod.number().min(setReportTemplateDefaultResponseDesignObjectsItemBorderWidthMin).max(setReportTemplateDefaultResponseDesignObjectsItemBorderWidthMax).optional(),
+  "borderRadius": zod.number().min(setReportTemplateDefaultResponseDesignObjectsItemBorderRadiusMin).max(setReportTemplateDefaultResponseDesignObjectsItemBorderRadiusMax).optional(),
+  "padding": zod.number().min(setReportTemplateDefaultResponseDesignObjectsItemPaddingMin).max(setReportTemplateDefaultResponseDesignObjectsItemPaddingMax).optional(),
+  "lineOrientation": zod.enum(['horizontal', 'vertical']).optional(),
+  "lineStyle": zod.enum(['solid', 'dashed', 'dotted']).optional(),
+  "shapeType": zod.enum(['rectangle', 'square', 'circle', 'divider']).optional(),
+  "tableKey": zod.string().max(setReportTemplateDefaultResponseDesignObjectsItemTableKeyMax).optional(),
+  "fillColor": zod.string().regex(setReportTemplateDefaultResponseDesignObjectsItemFillColorRegExp).optional(),
+  "opacity": zod.number().min(setReportTemplateDefaultResponseDesignObjectsItemOpacityMin).max(setReportTemplateDefaultResponseDesignObjectsItemOpacityMax).optional()
+})).max(setReportTemplateDefaultResponseDesignObjectsMax)
+}),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List prior report template versions
+ */
+export const ListReportTemplateVersionsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const ListReportTemplateVersionsResponseItem = zod.object({
+  "version": zod.number().min(1),
+  "createdAt": zod.coerce.date()
+})
+export const ListReportTemplateVersionsResponse = zod.array(ListReportTemplateVersionsResponseItem)
+
+
+/**
+ * @summary Restore a prior report template version
+ */
+
+
+
+export const RestoreReportTemplateVersionParams = zod.object({
+  "id": zod.coerce.number(),
+  "version": zod.coerce.number().min(1)
+})
+
+
+
+export const restoreReportTemplateVersionResponseDesignLayoutFontSizeMin = 8;
+export const restoreReportTemplateVersionResponseDesignLayoutFontSizeMax = 24;
+
+export const restoreReportTemplateVersionResponseDesignLayoutTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const restoreReportTemplateVersionResponseDesignLayoutAccentColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const restoreReportTemplateVersionResponseDesignLayoutPaperPaddingMin = 5;
+export const restoreReportTemplateVersionResponseDesignLayoutPaperPaddingMax = 30;
+
+
+
+export const restoreReportTemplateVersionResponseDesignLayoutSectionsItemOrderMin = 0;
+
+export const restoreReportTemplateVersionResponseDesignLayoutSectionsItemFontSizeMin = 8;
+export const restoreReportTemplateVersionResponseDesignLayoutSectionsItemFontSizeMax = 24;
+
+export const restoreReportTemplateVersionResponseDesignLayoutSectionsItemTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const restoreReportTemplateVersionResponseDesignLayoutSectionsItemBackgroundColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const restoreReportTemplateVersionResponseDesignLayoutSectionsItemBorderColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const restoreReportTemplateVersionResponseDesignLayoutSectionsItemBorderWidthMin = 0;
+export const restoreReportTemplateVersionResponseDesignLayoutSectionsItemBorderWidthMax = 4;
+
+
+
+export const restoreReportTemplateVersionResponseDesignLayoutColumnsItemOrderMin = 0;
+
+export const restoreReportTemplateVersionResponseDesignLayoutColumnsItemWidthMax = 100;
+
+export const restoreReportTemplateVersionResponseDesignLayoutElementsItemKeyMax = 80;
+
+export const restoreReportTemplateVersionResponseDesignLayoutElementsItemSectionKeyMax = 80;
+
+export const restoreReportTemplateVersionResponseDesignLayoutElementsItemOrderMin = 0;
+
+export const restoreReportTemplateVersionResponseDesignLayoutElementsItemContentMax = 500;
+
+export const restoreReportTemplateVersionResponseDesignLayoutElementsItemFontSizeMin = 8;
+export const restoreReportTemplateVersionResponseDesignLayoutElementsItemFontSizeMax = 24;
+
+export const restoreReportTemplateVersionResponseDesignLayoutElementsItemColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const restoreReportTemplateVersionResponseDesignLayoutElementsItemWidthMin = 10;
+export const restoreReportTemplateVersionResponseDesignLayoutElementsItemWidthMax = 100;
+
+export const restoreReportTemplateVersionResponseDesignLayoutElementsMax = 40;
+
+export const restoreReportTemplateVersionResponseDesignPageWidthMmMin = 50;
+export const restoreReportTemplateVersionResponseDesignPageWidthMmMax = 1000;
+
+export const restoreReportTemplateVersionResponseDesignPageHeightMmMin = 50;
+export const restoreReportTemplateVersionResponseDesignPageHeightMmMax = 1000;
+
+export const restoreReportTemplateVersionResponseDesignPageMarginTopMmMin = 0;
+export const restoreReportTemplateVersionResponseDesignPageMarginTopMmMax = 100;
+
+export const restoreReportTemplateVersionResponseDesignPageMarginRightMmMin = 0;
+export const restoreReportTemplateVersionResponseDesignPageMarginRightMmMax = 100;
+
+export const restoreReportTemplateVersionResponseDesignPageMarginBottomMmMin = 0;
+export const restoreReportTemplateVersionResponseDesignPageMarginBottomMmMax = 100;
+
+export const restoreReportTemplateVersionResponseDesignPageMarginLeftMmMin = 0;
+export const restoreReportTemplateVersionResponseDesignPageMarginLeftMmMax = 100;
+
+export const restoreReportTemplateVersionResponseDesignPageHeaderHeightMmMin = 0;
+export const restoreReportTemplateVersionResponseDesignPageHeaderHeightMmMax = 100;
+
+export const restoreReportTemplateVersionResponseDesignPageFooterHeightMmMin = 0;
+export const restoreReportTemplateVersionResponseDesignPageFooterHeightMmMax = 100;
+
+export const restoreReportTemplateVersionResponseDesignObjectsItemIdMax = 80;
+
+export const restoreReportTemplateVersionResponseDesignObjectsItemNameMax = 120;
+
+export const restoreReportTemplateVersionResponseDesignObjectsItemXMin = -1000;
+export const restoreReportTemplateVersionResponseDesignObjectsItemXMax = 5000;
+
+export const restoreReportTemplateVersionResponseDesignObjectsItemYMin = -1000;
+export const restoreReportTemplateVersionResponseDesignObjectsItemYMax = 5000;
+
+export const restoreReportTemplateVersionResponseDesignObjectsItemWidthMax = 5000;
+
+export const restoreReportTemplateVersionResponseDesignObjectsItemHeightMax = 5000;
+
+export const restoreReportTemplateVersionResponseDesignObjectsItemZIndexMin = -10000;
+export const restoreReportTemplateVersionResponseDesignObjectsItemZIndexMax = 10000;
+
+export const restoreReportTemplateVersionResponseDesignObjectsItemRotationMin = -360;
+export const restoreReportTemplateVersionResponseDesignObjectsItemRotationMax = 360;
+
+export const restoreReportTemplateVersionResponseDesignObjectsItemSectionKeyMax = 80;
+
+export const restoreReportTemplateVersionResponseDesignObjectsItemContentMax = 5000;
+
+export const restoreReportTemplateVersionResponseDesignObjectsItemFieldKeyMax = 80;
+
+export const restoreReportTemplateVersionResponseDesignObjectsItemObjectPathRegExp = new RegExp('^/objects/uploads/[A-Za-z0-9._/-]+$');
+export const restoreReportTemplateVersionResponseDesignObjectsItemFontSizeMin = 6;
+export const restoreReportTemplateVersionResponseDesignObjectsItemFontSizeMax = 96;
+
+export const restoreReportTemplateVersionResponseDesignObjectsItemTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const restoreReportTemplateVersionResponseDesignObjectsItemBackgroundColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const restoreReportTemplateVersionResponseDesignObjectsItemLineHeightMin = 0.5;
+export const restoreReportTemplateVersionResponseDesignObjectsItemLineHeightMax = 4;
+
+export const restoreReportTemplateVersionResponseDesignObjectsItemLetterSpacingMin = -10;
+export const restoreReportTemplateVersionResponseDesignObjectsItemLetterSpacingMax = 50;
+
+export const restoreReportTemplateVersionResponseDesignObjectsItemBorderColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const restoreReportTemplateVersionResponseDesignObjectsItemBorderWidthMin = 0;
+export const restoreReportTemplateVersionResponseDesignObjectsItemBorderWidthMax = 20;
+
+export const restoreReportTemplateVersionResponseDesignObjectsItemBorderRadiusMin = 0;
+export const restoreReportTemplateVersionResponseDesignObjectsItemBorderRadiusMax = 200;
+
+export const restoreReportTemplateVersionResponseDesignObjectsItemPaddingMin = 0;
+export const restoreReportTemplateVersionResponseDesignObjectsItemPaddingMax = 100;
+
+export const restoreReportTemplateVersionResponseDesignObjectsItemTableKeyMax = 80;
+
+export const restoreReportTemplateVersionResponseDesignObjectsItemFillColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const restoreReportTemplateVersionResponseDesignObjectsItemOpacityMin = 0;
+export const restoreReportTemplateVersionResponseDesignObjectsItemOpacityMax = 1;
+
+export const restoreReportTemplateVersionResponseDesignObjectsMax = 200;
+
+
+
+export const RestoreReportTemplateVersionResponse = zod.object({
+  "id": zod.number(),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "isDefault": zod.boolean(),
+  "version": zod.number().min(1),
+  "design": zod.object({
+  "schemaVersion": zod.literal(1),
+  "layout": zod.object({
+  "title": zod.string().min(1),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']),
+  "fontSize": zod.number().min(restoreReportTemplateVersionResponseDesignLayoutFontSizeMin).max(restoreReportTemplateVersionResponseDesignLayoutFontSizeMax),
+  "textColor": zod.string().regex(restoreReportTemplateVersionResponseDesignLayoutTextColorRegExp),
+  "accentColor": zod.string().regex(restoreReportTemplateVersionResponseDesignLayoutAccentColorRegExp),
+  "paperPadding": zod.number().min(restoreReportTemplateVersionResponseDesignLayoutPaperPaddingMin).max(restoreReportTemplateVersionResponseDesignLayoutPaperPaddingMax),
+  "sections": zod.array(zod.object({
+  "key": zod.string().min(1),
+  "label": zod.string().min(1),
+  "visible": zod.boolean(),
+  "order": zod.number().min(restoreReportTemplateVersionResponseDesignLayoutSectionsItemOrderMin),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(restoreReportTemplateVersionResponseDesignLayoutSectionsItemFontSizeMin).max(restoreReportTemplateVersionResponseDesignLayoutSectionsItemFontSizeMax).optional(),
+  "textColor": zod.string().regex(restoreReportTemplateVersionResponseDesignLayoutSectionsItemTextColorRegExp).optional(),
+  "backgroundColor": zod.string().regex(restoreReportTemplateVersionResponseDesignLayoutSectionsItemBackgroundColorRegExp).optional(),
+  "bold": zod.boolean().optional(),
+  "borderStyle": zod.enum(['none', 'solid', 'dashed', 'dotted']).optional(),
+  "borderColor": zod.string().regex(restoreReportTemplateVersionResponseDesignLayoutSectionsItemBorderColorRegExp).optional(),
+  "borderWidth": zod.number().min(restoreReportTemplateVersionResponseDesignLayoutSectionsItemBorderWidthMin).max(restoreReportTemplateVersionResponseDesignLayoutSectionsItemBorderWidthMax).optional()
+})),
+  "columns": zod.record(zod.string(), zod.array(zod.object({
+  "key": zod.string().min(1),
+  "label": zod.string().min(1),
+  "visible": zod.boolean(),
+  "order": zod.number().min(restoreReportTemplateVersionResponseDesignLayoutColumnsItemOrderMin),
+  "width": zod.number().min(1).max(restoreReportTemplateVersionResponseDesignLayoutColumnsItemWidthMax)
+}))),
+  "elements": zod.array(zod.object({
+  "key": zod.string().min(1).max(restoreReportTemplateVersionResponseDesignLayoutElementsItemKeyMax),
+  "type": zod.enum(['text', 'divider']),
+  "sectionKey": zod.string().min(1).max(restoreReportTemplateVersionResponseDesignLayoutElementsItemSectionKeyMax),
+  "placement": zod.enum(['before', 'after']),
+  "order": zod.number().min(restoreReportTemplateVersionResponseDesignLayoutElementsItemOrderMin),
+  "content": zod.string().max(restoreReportTemplateVersionResponseDesignLayoutElementsItemContentMax).optional(),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(restoreReportTemplateVersionResponseDesignLayoutElementsItemFontSizeMin).max(restoreReportTemplateVersionResponseDesignLayoutElementsItemFontSizeMax).optional(),
+  "color": zod.string().regex(restoreReportTemplateVersionResponseDesignLayoutElementsItemColorRegExp).optional(),
+  "bold": zod.boolean().optional(),
+  "width": zod.number().min(restoreReportTemplateVersionResponseDesignLayoutElementsItemWidthMin).max(restoreReportTemplateVersionResponseDesignLayoutElementsItemWidthMax).optional(),
+  "lineStyle": zod.enum(['solid', 'dashed', 'dotted']).optional()
+})).max(restoreReportTemplateVersionResponseDesignLayoutElementsMax).optional()
+}),
+  "page": zod.object({
+  "pageSize": zod.enum(['A4', 'A3', 'Letter', 'custom']),
+  "orientation": zod.enum(['portrait', 'landscape']),
+  "widthMm": zod.number().min(restoreReportTemplateVersionResponseDesignPageWidthMmMin).max(restoreReportTemplateVersionResponseDesignPageWidthMmMax),
+  "heightMm": zod.number().min(restoreReportTemplateVersionResponseDesignPageHeightMmMin).max(restoreReportTemplateVersionResponseDesignPageHeightMmMax),
+  "marginTopMm": zod.number().min(restoreReportTemplateVersionResponseDesignPageMarginTopMmMin).max(restoreReportTemplateVersionResponseDesignPageMarginTopMmMax),
+  "marginRightMm": zod.number().min(restoreReportTemplateVersionResponseDesignPageMarginRightMmMin).max(restoreReportTemplateVersionResponseDesignPageMarginRightMmMax),
+  "marginBottomMm": zod.number().min(restoreReportTemplateVersionResponseDesignPageMarginBottomMmMin).max(restoreReportTemplateVersionResponseDesignPageMarginBottomMmMax),
+  "marginLeftMm": zod.number().min(restoreReportTemplateVersionResponseDesignPageMarginLeftMmMin).max(restoreReportTemplateVersionResponseDesignPageMarginLeftMmMax),
+  "showHeader": zod.boolean(),
+  "showFooter": zod.boolean(),
+  "headerHeightMm": zod.number().min(restoreReportTemplateVersionResponseDesignPageHeaderHeightMmMin).max(restoreReportTemplateVersionResponseDesignPageHeaderHeightMmMax),
+  "footerHeightMm": zod.number().min(restoreReportTemplateVersionResponseDesignPageFooterHeightMmMin).max(restoreReportTemplateVersionResponseDesignPageFooterHeightMmMax)
+}),
+  "objects": zod.array(zod.object({
+  "id": zod.string().min(1).max(restoreReportTemplateVersionResponseDesignObjectsItemIdMax),
+  "type": zod.enum(['section', 'text', 'dynamicField', 'line', 'shape', 'image', 'table']),
+  "name": zod.string().min(1).max(restoreReportTemplateVersionResponseDesignObjectsItemNameMax),
+  "x": zod.number().min(restoreReportTemplateVersionResponseDesignObjectsItemXMin).max(restoreReportTemplateVersionResponseDesignObjectsItemXMax),
+  "y": zod.number().min(restoreReportTemplateVersionResponseDesignObjectsItemYMin).max(restoreReportTemplateVersionResponseDesignObjectsItemYMax),
+  "width": zod.number().min(1).max(restoreReportTemplateVersionResponseDesignObjectsItemWidthMax),
+  "height": zod.number().min(1).max(restoreReportTemplateVersionResponseDesignObjectsItemHeightMax),
+  "zIndex": zod.number().min(restoreReportTemplateVersionResponseDesignObjectsItemZIndexMin).max(restoreReportTemplateVersionResponseDesignObjectsItemZIndexMax),
+  "rotation": zod.number().min(restoreReportTemplateVersionResponseDesignObjectsItemRotationMin).max(restoreReportTemplateVersionResponseDesignObjectsItemRotationMax),
+  "locked": zod.boolean(),
+  "visible": zod.boolean(),
+  "sectionKey": zod.string().max(restoreReportTemplateVersionResponseDesignObjectsItemSectionKeyMax).optional(),
+  "content": zod.string().max(restoreReportTemplateVersionResponseDesignObjectsItemContentMax).optional(),
+  "fieldKey": zod.string().max(restoreReportTemplateVersionResponseDesignObjectsItemFieldKeyMax).optional(),
+  "objectPath": zod.string().regex(restoreReportTemplateVersionResponseDesignObjectsItemObjectPathRegExp).optional(),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(restoreReportTemplateVersionResponseDesignObjectsItemFontSizeMin).max(restoreReportTemplateVersionResponseDesignObjectsItemFontSizeMax).optional(),
+  "bold": zod.boolean().optional(),
+  "italic": zod.boolean().optional(),
+  "underline": zod.boolean().optional(),
+  "textAlign": zod.enum(['left', 'center', 'right', 'justify']).optional(),
+  "textColor": zod.string().regex(restoreReportTemplateVersionResponseDesignObjectsItemTextColorRegExp).optional(),
+  "backgroundColor": zod.string().regex(restoreReportTemplateVersionResponseDesignObjectsItemBackgroundColorRegExp).optional(),
+  "lineHeight": zod.number().min(restoreReportTemplateVersionResponseDesignObjectsItemLineHeightMin).max(restoreReportTemplateVersionResponseDesignObjectsItemLineHeightMax).optional(),
+  "letterSpacing": zod.number().min(restoreReportTemplateVersionResponseDesignObjectsItemLetterSpacingMin).max(restoreReportTemplateVersionResponseDesignObjectsItemLetterSpacingMax).optional(),
+  "borderColor": zod.string().regex(restoreReportTemplateVersionResponseDesignObjectsItemBorderColorRegExp).optional(),
+  "borderWidth": zod.number().min(restoreReportTemplateVersionResponseDesignObjectsItemBorderWidthMin).max(restoreReportTemplateVersionResponseDesignObjectsItemBorderWidthMax).optional(),
+  "borderRadius": zod.number().min(restoreReportTemplateVersionResponseDesignObjectsItemBorderRadiusMin).max(restoreReportTemplateVersionResponseDesignObjectsItemBorderRadiusMax).optional(),
+  "padding": zod.number().min(restoreReportTemplateVersionResponseDesignObjectsItemPaddingMin).max(restoreReportTemplateVersionResponseDesignObjectsItemPaddingMax).optional(),
+  "lineOrientation": zod.enum(['horizontal', 'vertical']).optional(),
+  "lineStyle": zod.enum(['solid', 'dashed', 'dotted']).optional(),
+  "shapeType": zod.enum(['rectangle', 'square', 'circle', 'divider']).optional(),
+  "tableKey": zod.string().max(restoreReportTemplateVersionResponseDesignObjectsItemTableKeyMax).optional(),
+  "fillColor": zod.string().regex(restoreReportTemplateVersionResponseDesignObjectsItemFillColorRegExp).optional(),
+  "opacity": zod.number().min(restoreReportTemplateVersionResponseDesignObjectsItemOpacityMin).max(restoreReportTemplateVersionResponseDesignObjectsItemOpacityMax).optional()
+})).max(restoreReportTemplateVersionResponseDesignObjectsMax)
+}),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
 })
 
 

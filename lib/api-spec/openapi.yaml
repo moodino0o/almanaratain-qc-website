@@ -1017,6 +1017,148 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ReportLayout"
+  /report-templates:
+    get:
+      operationId: listReportTemplates
+      tags: [qc]
+      summary: List reusable report templates
+      parameters:
+        - $ref: "#/components/parameters/TestTypeParam"
+      responses:
+        "200":
+          description: Reusable report templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReportTemplate"
+    post:
+      operationId: createReportTemplate
+      tags: [qc]
+      summary: Create a reusable report template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportTemplateInput"
+      responses:
+        "201":
+          description: Created report template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportTemplate"
+        "400": { description: Invalid template }
+        "409": { description: Template conflict }
+  /report-templates/{id}:
+    patch:
+      operationId: updateReportTemplate
+      tags: [qc]
+      summary: Update a reusable report template
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportTemplateUpdate"
+      responses:
+        "200":
+          description: Updated report template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportTemplate"
+        "400": { description: Invalid template }
+        "404": { description: Template not found }
+        "409": { description: Template conflict }
+    delete:
+      operationId: deleteReportTemplate
+      tags: [qc]
+      summary: Delete a reusable report template
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "204": { description: Template deleted }
+        "400": { description: The only template cannot be deleted }
+        "404": { description: Template not found }
+        "409": { description: The default template cannot be deleted }
+  /report-templates/{id}/duplicate:
+    post:
+      operationId: duplicateReportTemplate
+      tags: [qc]
+      summary: Duplicate a reusable report template
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportTemplateDuplicate"
+      responses:
+        "201":
+          description: Duplicated report template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportTemplate"
+        "404": { description: Template not found }
+  /report-templates/{id}/default:
+    patch:
+      operationId: setReportTemplateDefault
+      tags: [qc]
+      summary: Set a report template as the default for its report type
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "200":
+          description: Default report template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportTemplate"
+        "404": { description: Template not found }
+  /report-templates/{id}/versions:
+    get:
+      operationId: listReportTemplateVersions
+      tags: [qc]
+      summary: List prior report template versions
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "200":
+          description: Prior version metadata
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReportTemplateVersion"
+        "404": { description: Template not found }
+  /report-templates/{id}/restore/{version}:
+    post:
+      operationId: restoreReportTemplateVersion
+      tags: [qc]
+      summary: Restore a prior report template version
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+        - name: version
+          in: path
+          required: true
+          schema: { type: number, minimum: 1 }
+      responses:
+        "200":
+          description: Restored report template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportTemplate"
+        "400": { description: Invalid version }
+        "404": { description: Template or version not found }
 components:
   parameters:
     RecordIdParam:
@@ -2083,7 +2225,7 @@ components:
           minLength: 1
         purpose:
           type: string
-          enum: [complaint, archive]
+          enum: [complaint, archive, report-template]
     UploadUrlResponse:
       type: object
       required: [uploadURL, objectPath, metadata]
@@ -2411,6 +2553,119 @@ components:
           minLength: 1
         config:
           $ref: "#/components/schemas/ReportLayoutConfig"
+    ReportTemplatePage:
+      type: object
+      required: [pageSize, orientation, widthMm, heightMm, marginTopMm, marginRightMm, marginBottomMm, marginLeftMm, showHeader, showFooter, headerHeightMm, footerHeightMm]
+      properties:
+        pageSize: { type: string, enum: [A4, A3, Letter, custom] }
+        orientation: { type: string, enum: [portrait, landscape] }
+        widthMm: { type: number, minimum: 50, maximum: 1000 }
+        heightMm: { type: number, minimum: 50, maximum: 1000 }
+        marginTopMm: { type: number, minimum: 0, maximum: 100 }
+        marginRightMm: { type: number, minimum: 0, maximum: 100 }
+        marginBottomMm: { type: number, minimum: 0, maximum: 100 }
+        marginLeftMm: { type: number, minimum: 0, maximum: 100 }
+        showHeader: { type: boolean }
+        showFooter: { type: boolean }
+        headerHeightMm: { type: number, minimum: 0, maximum: 100 }
+        footerHeightMm: { type: number, minimum: 0, maximum: 100 }
+    ReportTemplateObject:
+      type: object
+      required: [id, type, name, x, y, width, height, zIndex, rotation, locked, visible]
+      properties:
+        id: { type: string, minLength: 1, maxLength: 80 }
+        type: { type: string, enum: [section, text, dynamicField, line, shape, image, table] }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        x: { type: number, minimum: -1000, maximum: 5000 }
+        y: { type: number, minimum: -1000, maximum: 5000 }
+        width: { type: number, minimum: 1, maximum: 5000 }
+        height: { type: number, minimum: 1, maximum: 5000 }
+        zIndex: { type: number, minimum: -10000, maximum: 10000 }
+        rotation: { type: number, minimum: -360, maximum: 360 }
+        locked: { type: boolean }
+        visible: { type: boolean }
+        sectionKey: { type: string, maxLength: 80 }
+        content: { type: string, maxLength: 5000 }
+        fieldKey: { type: string, maxLength: 80 }
+        objectPath: { type: string, pattern: "^/objects/uploads/[A-Za-z0-9._/-]+$" }
+        fontFamily: { type: string, enum: [Arial, Calibri, "Times New Roman", Helvetica] }
+        fontSize: { type: number, minimum: 6, maximum: 96 }
+        bold: { type: boolean }
+        italic: { type: boolean }
+        underline: { type: boolean }
+        textAlign: { type: string, enum: [left, center, right, justify] }
+        textColor: { type: string, pattern: "^#[0-9A-Fa-f]{6}$" }
+        backgroundColor: { type: string, pattern: "^#[0-9A-Fa-f]{6}$" }
+        lineHeight: { type: number, minimum: 0.5, maximum: 4 }
+        letterSpacing: { type: number, minimum: -10, maximum: 50 }
+        borderColor: { type: string, pattern: "^#[0-9A-Fa-f]{6}$" }
+        borderWidth: { type: number, minimum: 0, maximum: 20 }
+        borderRadius: { type: number, minimum: 0, maximum: 200 }
+        padding: { type: number, minimum: 0, maximum: 100 }
+        lineOrientation: { type: string, enum: [horizontal, vertical] }
+        lineStyle: { type: string, enum: [solid, dashed, dotted] }
+        shapeType: { type: string, enum: [rectangle, square, circle, divider] }
+        tableKey: { type: string, maxLength: 80 }
+        fillColor: { type: string, pattern: "^#[0-9A-Fa-f]{6}$" }
+        opacity: { type: number, minimum: 0, maximum: 1 }
+    ReportTemplateDesign:
+      type: object
+      required: [schemaVersion, layout, page, objects]
+      properties:
+        schemaVersion: { type: integer, enum: [1] }
+        layout:
+          $ref: "#/components/schemas/ReportLayoutConfig"
+        page:
+          $ref: "#/components/schemas/ReportTemplatePage"
+        objects:
+          type: array
+          maxItems: 200
+          items:
+            $ref: "#/components/schemas/ReportTemplateObject"
+    ReportTemplate:
+      type: object
+      required: [id, testType, name, description, isDefault, version, design, createdAt, updatedAt]
+      properties:
+        id: { type: number }
+        testType: { $ref: "#/components/schemas/TestType" }
+        name: { type: string }
+        description: { type: ["string", "null"] }
+        isDefault: { type: boolean }
+        version: { type: number, minimum: 1 }
+        design:
+          $ref: "#/components/schemas/ReportTemplateDesign"
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ReportTemplateInput:
+      type: object
+      required: [testType, name, design]
+      properties:
+        testType: { $ref: "#/components/schemas/TestType" }
+        name: { type: string, minLength: 1, maxLength: 160 }
+        description: { type: ["string", "null"], maxLength: 1000 }
+        isDefault: { type: boolean }
+        design:
+          $ref: "#/components/schemas/ReportTemplateDesign"
+    ReportTemplateUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 160 }
+        description: { type: ["string", "null"], maxLength: 1000 }
+        design:
+          $ref: "#/components/schemas/ReportTemplateDesign"
+    ReportTemplateDuplicate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 160 }
+        description: { type: ["string", "null"], maxLength: 1000 }
+        design:
+          $ref: "#/components/schemas/ReportTemplateDesign"
+    ReportTemplateVersion:
+      type: object
+      required: [version, createdAt]
+      properties:
+        version: { type: number, minimum: 1 }
+        createdAt: { type: string, format: date-time }
     EmployeeActivityResponse:
       type: object
       required: [records]

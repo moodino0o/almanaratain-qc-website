@@ -623,6 +623,7 @@ export type UploadUrlRequestPurpose = typeof UploadUrlRequestPurpose[keyof typeo
 export const UploadUrlRequestPurpose = {
   complaint: 'complaint',
   archive: 'archive',
+  'report-template': 'report-template',
 } as const;
 
 export interface UploadUrlRequest {
@@ -898,6 +899,317 @@ export interface ReportLayoutUpdate {
   config: ReportLayoutConfig;
 }
 
+export type ReportTemplatePagePageSize = typeof ReportTemplatePagePageSize[keyof typeof ReportTemplatePagePageSize];
+
+
+export const ReportTemplatePagePageSize = {
+  A4: 'A4',
+  A3: 'A3',
+  Letter: 'Letter',
+  custom: 'custom',
+} as const;
+
+export type ReportTemplatePageOrientation = typeof ReportTemplatePageOrientation[keyof typeof ReportTemplatePageOrientation];
+
+
+export const ReportTemplatePageOrientation = {
+  portrait: 'portrait',
+  landscape: 'landscape',
+} as const;
+
+export interface ReportTemplatePage {
+  pageSize: ReportTemplatePagePageSize;
+  orientation: ReportTemplatePageOrientation;
+  /**
+     * @minimum 50
+     * @maximum 1000
+     */
+  widthMm: number;
+  /**
+     * @minimum 50
+     * @maximum 1000
+     */
+  heightMm: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  marginTopMm: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  marginRightMm: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  marginBottomMm: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  marginLeftMm: number;
+  showHeader: boolean;
+  showFooter: boolean;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  headerHeightMm: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  footerHeightMm: number;
+}
+
+export type ReportTemplateObjectType = typeof ReportTemplateObjectType[keyof typeof ReportTemplateObjectType];
+
+
+export const ReportTemplateObjectType = {
+  section: 'section',
+  text: 'text',
+  dynamicField: 'dynamicField',
+  line: 'line',
+  shape: 'shape',
+  image: 'image',
+  table: 'table',
+} as const;
+
+export type ReportTemplateObjectFontFamily = typeof ReportTemplateObjectFontFamily[keyof typeof ReportTemplateObjectFontFamily];
+
+
+export const ReportTemplateObjectFontFamily = {
+  Arial: 'Arial',
+  Calibri: 'Calibri',
+  Times_New_Roman: 'Times New Roman',
+  Helvetica: 'Helvetica',
+} as const;
+
+export type ReportTemplateObjectTextAlign = typeof ReportTemplateObjectTextAlign[keyof typeof ReportTemplateObjectTextAlign];
+
+
+export const ReportTemplateObjectTextAlign = {
+  left: 'left',
+  center: 'center',
+  right: 'right',
+  justify: 'justify',
+} as const;
+
+export type ReportTemplateObjectLineOrientation = typeof ReportTemplateObjectLineOrientation[keyof typeof ReportTemplateObjectLineOrientation];
+
+
+export const ReportTemplateObjectLineOrientation = {
+  horizontal: 'horizontal',
+  vertical: 'vertical',
+} as const;
+
+export type ReportTemplateObjectLineStyle = typeof ReportTemplateObjectLineStyle[keyof typeof ReportTemplateObjectLineStyle];
+
+
+export const ReportTemplateObjectLineStyle = {
+  solid: 'solid',
+  dashed: 'dashed',
+  dotted: 'dotted',
+} as const;
+
+export type ReportTemplateObjectShapeType = typeof ReportTemplateObjectShapeType[keyof typeof ReportTemplateObjectShapeType];
+
+
+export const ReportTemplateObjectShapeType = {
+  rectangle: 'rectangle',
+  square: 'square',
+  circle: 'circle',
+  divider: 'divider',
+} as const;
+
+export interface ReportTemplateObject {
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  id: string;
+  type: ReportTemplateObjectType;
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  name: string;
+  /**
+     * @minimum -1000
+     * @maximum 5000
+     */
+  x: number;
+  /**
+     * @minimum -1000
+     * @maximum 5000
+     */
+  y: number;
+  /**
+     * @minimum 1
+     * @maximum 5000
+     */
+  width: number;
+  /**
+     * @minimum 1
+     * @maximum 5000
+     */
+  height: number;
+  /**
+     * @minimum -10000
+     * @maximum 10000
+     */
+  zIndex: number;
+  /**
+     * @minimum -360
+     * @maximum 360
+     */
+  rotation: number;
+  locked: boolean;
+  visible: boolean;
+  /** @maxLength 80 */
+  sectionKey?: string;
+  /** @maxLength 5000 */
+  content?: string;
+  /** @maxLength 80 */
+  fieldKey?: string;
+  /** @pattern ^/objects/uploads/[A-Za-z0-9._/-]+$ */
+  objectPath?: string;
+  fontFamily?: ReportTemplateObjectFontFamily;
+  /**
+     * @minimum 6
+     * @maximum 96
+     */
+  fontSize?: number;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  textAlign?: ReportTemplateObjectTextAlign;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  textColor?: string;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  backgroundColor?: string;
+  /**
+     * @minimum 0.5
+     * @maximum 4
+     */
+  lineHeight?: number;
+  /**
+     * @minimum -10
+     * @maximum 50
+     */
+  letterSpacing?: number;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  borderColor?: string;
+  /**
+     * @minimum 0
+     * @maximum 20
+     */
+  borderWidth?: number;
+  /**
+     * @minimum 0
+     * @maximum 200
+     */
+  borderRadius?: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  padding?: number;
+  lineOrientation?: ReportTemplateObjectLineOrientation;
+  lineStyle?: ReportTemplateObjectLineStyle;
+  shapeType?: ReportTemplateObjectShapeType;
+  /** @maxLength 80 */
+  tableKey?: string;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  fillColor?: string;
+  /**
+     * @minimum 0
+     * @maximum 1
+     */
+  opacity?: number;
+}
+
+export type ReportTemplateDesignSchemaVersion = typeof ReportTemplateDesignSchemaVersion[keyof typeof ReportTemplateDesignSchemaVersion];
+
+
+export const ReportTemplateDesignSchemaVersion = {
+  NUMBER_1: 1,
+} as const;
+
+export interface ReportTemplateDesign {
+  schemaVersion: ReportTemplateDesignSchemaVersion;
+  layout: ReportLayoutConfig;
+  page: ReportTemplatePage;
+  /** @maxItems 200 */
+  objects: ReportTemplateObject[];
+}
+
+export interface ReportTemplate {
+  id: number;
+  testType: TestType;
+  name: string;
+  /** @nullable */
+  description: string | null;
+  isDefault: boolean;
+  /** @minimum 1 */
+  version: number;
+  design: ReportTemplateDesign;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReportTemplateInput {
+  testType: TestType;
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  name: string;
+  /**
+     * @maxLength 1000
+     * @nullable
+     */
+  description?: string | null;
+  isDefault?: boolean;
+  design: ReportTemplateDesign;
+}
+
+export interface ReportTemplateUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  name?: string;
+  /**
+     * @maxLength 1000
+     * @nullable
+     */
+  description?: string | null;
+  design?: ReportTemplateDesign;
+}
+
+export interface ReportTemplateDuplicate {
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  name?: string;
+  /**
+     * @maxLength 1000
+     * @nullable
+     */
+  description?: string | null;
+  design?: ReportTemplateDesign;
+}
+
+export interface ReportTemplateVersion {
+  /** @minimum 1 */
+  version: number;
+  createdAt: string;
+}
+
 /**
  * @nullable
  */
@@ -1015,5 +1327,9 @@ export type ListComplaintsParams = {
 search?: string;
 complaintType?: string;
 materialType?: string;
+};
+
+export type ListReportTemplatesParams = {
+testType?: TestTypeParamParameter;
 };
 

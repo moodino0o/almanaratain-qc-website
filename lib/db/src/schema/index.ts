@@ -25,6 +25,7 @@ export * from "./qc-strength-standards";
 export * from "./qc-sieve-standards";
 export * from "./qc-shape-factors";
 export * from "./qc-report-layouts";
+export * from "./qc-report-templates";
 export * from "./employee-directory";
 export * from "./complaints";
 export * from "./employee-activity";

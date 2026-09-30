@@ -20,6 +20,7 @@ import {
   qcSieveStandardsTable,
   qcShapeFactorsTable,
   qcReportLayoutsTable,
+  qcReportTemplatesTable,
   qcStrengthStandardsTable,
 } from "@workspace/db";
 import {
@@ -45,6 +46,23 @@ import {
   GetReportParams,
   GetReportResponse,
   ListReportLayoutsResponse,
+  ListReportTemplatesQueryParams,
+  ListReportTemplatesResponse,
+  CreateReportTemplateBody,
+  CreateReportTemplateResponse,
+  UpdateReportTemplateParams,
+  UpdateReportTemplateBody,
+  UpdateReportTemplateResponse,
+  DeleteReportTemplateParams,
+  DuplicateReportTemplateParams,
+  DuplicateReportTemplateBody,
+  DuplicateReportTemplateResponse,
+  SetReportTemplateDefaultParams,
+  SetReportTemplateDefaultResponse,
+  ListReportTemplateVersionsParams,
+  ListReportTemplateVersionsResponse,
+  RestoreReportTemplateVersionParams,
+  RestoreReportTemplateVersionResponse,
   UpdateReportLayoutBody,
   UpdateReportLayoutParams,
   UpdateReportLayoutResponse,
@@ -795,6 +813,161 @@ async function ensureReportLayouts() {
         .where(eq(qcReportLayoutsTable.id, existing.id));
     }
   }
+}
+
+const REPORT_TEMPLATE_FIELD_KEYS = new Set([
+  "REPORT_TITLE", "REPORT_NUMBER", "REPORT_DATE", "SAMPLE_DATE",
+  "SUPPLIER", "SAMPLE_DESCRIPTION", "PROJECT", "TEST_METHOD",
+  "TEST_RESULT", "SIEVE_SIZE", "AMOUNT_RETAINED", "AMOUNT_PASSING",
+  "PERCENT_PASSING", "RETAINED_PERCENT", "LOWER_LIMIT", "UPPER_LIMIT",
+  "REMARKS", "COMPANY_NAME", "SAMPLE_NUMBER", "MATERIAL", "LOCATION",
+  "TESTED_BY", "REVIEWED_BY", "record.recordNo", "record.sampleDate",
+  "record.location", "record.material", "record.status", "record.testedBy",
+  "record.reviewedBy", "record.createdAt", "report.title",
+  ...[
+    "customerName", "customerLocation", "projectName", "otherDetails",
+    "castedBy", "sampleNumber", "slump", "temperature", "compactionType",
+    "testingDate", "age", "weight", "load", "strength", "absorption",
+    "blockSize", "blockAge", "machine", "sampleType", "conditioningMethod",
+    "preparationMethod", "shapeFactor", "blockType", "no", "length", "width",
+    "height", "water", "airDry", "normalized", "density", "wetWeight",
+    "pavingBlockSize", "correctionFactor", "dryWeight", "waterAbsorption",
+    "size", "returned", "retained", "passing", "percentage", "lower", "upper",
+    "remarks", "sampleAge", "supplier", "materialCondition", "siltBefore",
+    "siltAfter", "silverNitrateContent", "firstChlorideTitrationPoint",
+    "secondChlorideTitrationPoint", "crucibleWeight", "crucibleAshWeight",
+    "source", "ph", "tds", "chloride", "sulphate", "sampleDate", "location",
+    "material", "testedBy", "observation1", "observation2",
+    "averageStrength1Day", "averageStrength7Days", "averageStrength28Days",
+    "kerbType", "averageStrength", "minimumStrength", "maximumStrength",
+  ].map((key) => `details.${key}`),
+]);
+
+const REPORT_TEMPLATE_TABLE_KEYS = new Set([
+  "readyMixDetails", "readyMixResults", "blockDetails", "blockCompression",
+  "pavingDetails", "pavingResults", "sieveSampleDetails", "sieveResults",
+  "sieveChemicalDetails", "waterDetails", "genericContext",
+  "flakinessDetails", "rmxTrialDetails", "precastDetails", "kerbStoneDetails",
+]);
+const REPORT_TEMPLATE_COLUMN_KEYS = new Set(
+  [...REPORT_TEMPLATE_FIELD_KEYS]
+    .filter((key) => key.startsWith("details."))
+    .map((key) => key.slice("details.".length)),
+);
+
+function validateReportTemplateDesign(design: unknown): string | null {
+  if (typeof design !== "object" || design === null) return "A design is required.";
+  const value = design as Record<string, unknown>;
+  if (value.schemaVersion !== 1 || !Array.isArray(value.objects)) {
+    return "Unsupported report template design.";
+  }
+  for (const object of value.objects) {
+    if (typeof object !== "object" || object === null) return "Invalid report template object.";
+    const item = object as Record<string, unknown>;
+    if (item.type === "dynamicField" &&
+      (typeof item.fieldKey !== "string" || !REPORT_TEMPLATE_FIELD_KEYS.has(item.fieldKey))) {
+      return "Dynamic field is not allowed.";
+    }
+    if (item.type === "table" &&
+      (typeof item.tableKey !== "string" || !REPORT_TEMPLATE_TABLE_KEYS.has(item.tableKey))) {
+      return "Report table is not allowed.";
+    }
+    if (item.type === "image") {
+      if (typeof item.objectPath !== "string" ||
+        !/^\/objects\/uploads\/[A-Za-z0-9._/-]+$/.test(item.objectPath) ||
+        item.objectPath.includes("..")) {
+        return "Image objects must reference a private uploaded object.";
+      }
+    }
+    if (typeof item.content === "string") {
+      const tokens = [...item.content.matchAll(/\{\{([A-Z_]+)\}\}/g)];
+      if (tokens.some(([, key]) => !REPORT_TEMPLATE_FIELD_KEYS.has(key))) {
+        return "Template text contains an unknown dynamic field.";
+      }
+    }
+  }
+  const layout = value.layout;
+  if (typeof layout !== "object" || layout === null) return "A report layout is required.";
+  const columns = (layout as Record<string, unknown>).columns;
+  if (typeof columns !== "object" || columns === null || Array.isArray(columns)) {
+    return "Report table columns are invalid.";
+  }
+  for (const [groupKey, groupColumns] of Object.entries(columns)) {
+    if (!REPORT_TEMPLATE_TABLE_KEYS.has(groupKey) || !Array.isArray(groupColumns)) {
+      return "Report table columns are not allowed.";
+    }
+    for (const column of groupColumns) {
+      if (typeof column !== "object" || column === null ||
+        typeof (column as Record<string, unknown>).key !== "string" ||
+        !REPORT_TEMPLATE_COLUMN_KEYS.has((column as Record<string, unknown>).key as string)) {
+        return "Report table field is not allowed.";
+      }
+    }
+  }
+  return null;
+}
+
+function reportTemplateDesignFromLegacy(config: Record<string, unknown>) {
+  const paperPadding = typeof config.paperPadding === "number"
+    ? config.paperPadding
+    : 14;
+  return {
+    schemaVersion: 1 as const,
+    layout: config,
+    page: {
+      pageSize: "A4" as const,
+      orientation: "portrait" as const,
+      widthMm: 210,
+      heightMm: 297,
+      marginTopMm: paperPadding,
+      marginRightMm: paperPadding,
+      marginBottomMm: paperPadding,
+      marginLeftMm: paperPadding,
+      showHeader: true,
+      showFooter: true,
+      headerHeightMm: 24,
+      footerHeightMm: 18,
+    },
+    objects: [],
+  };
+}
+
+function toReportTemplate(row: typeof qcReportTemplatesTable.$inferSelect) {
+  return {
+    id: row.id,
+    testType: row.testType,
+    name: row.name,
+    description: row.description,
+    isDefault: row.isDefault,
+    version: row.version,
+    design: row.design,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+async function ensureReportTemplates() {
+  await ensureReportLayouts();
+  await db.transaction(async (tx) => {
+    const legacyLayouts = await tx.select().from(qcReportLayoutsTable);
+    for (const legacy of legacyLayouts) {
+      const [existing] = await tx.select({ id: qcReportTemplatesTable.id })
+        .from(qcReportTemplatesTable)
+        .where(eq(qcReportTemplatesTable.testType, legacy.testType))
+        .limit(1);
+      if (!existing) {
+        await tx.insert(qcReportTemplatesTable).values({
+          testType: legacy.testType,
+          name: legacy.name,
+          description: "Migrated from the legacy report layout.",
+          isDefault: true,
+          version: 1,
+          design: reportTemplateDesignFromLegacy(legacy.config),
+          history: [],
+        });
+      }
+    }
+  });
 }
 
 export async function ensureReferenceData() {
@@ -1594,6 +1767,244 @@ const toReportLayout = (row: typeof qcReportLayoutsTable.$inferSelect) => ({
   testType: row.testType,
   name: row.name,
   config: row.config,
+});
+
+router.get("/report-templates", async (req, res): Promise<void> => {
+  const query = ListReportTemplatesQueryParams.safeParse(req.query);
+  if (!query.success) {
+    res.status(400).json({ error: query.error.message });
+    return;
+  }
+  await ensureReportTemplates();
+  const templates = await db
+    .select()
+    .from(qcReportTemplatesTable)
+    .where(query.data.testType
+      ? eq(qcReportTemplatesTable.testType, query.data.testType)
+      : undefined)
+    .orderBy(asc(qcReportTemplatesTable.testType), asc(qcReportTemplatesTable.name));
+  res.json(ListReportTemplatesResponse.parse(templates.map(toReportTemplate)));
+});
+
+router.post("/report-templates", requireAdministrator, async (req, res): Promise<void> => {
+  const body = CreateReportTemplateBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+  const designError = validateReportTemplateDesign(body.data.design);
+  if (designError) {
+    res.status(400).json({ error: designError });
+    return;
+  }
+  await ensureReportTemplates();
+  const template = await db.transaction(async (tx) => {
+    if (body.data.isDefault) {
+      await tx.update(qcReportTemplatesTable)
+        .set({ isDefault: false })
+        .where(eq(qcReportTemplatesTable.testType, body.data.testType));
+    }
+    const [created] = await tx.insert(qcReportTemplatesTable).values({
+      testType: body.data.testType,
+      name: body.data.name.trim(),
+      description: body.data.description ?? null,
+      isDefault: body.data.isDefault ?? false,
+      version: 1,
+      design: body.data.design,
+      history: [],
+    }).returning();
+    return created;
+  });
+  res.status(201).json(CreateReportTemplateResponse.parse(toReportTemplate(template)));
+});
+
+router.patch("/report-templates/:id", requireAdministrator, async (req, res): Promise<void> => {
+  const params = UpdateReportTemplateParams.safeParse(req.params);
+  const body = UpdateReportTemplateBody.safeParse(req.body);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+  if (body.data.design) {
+    const designError = validateReportTemplateDesign(body.data.design);
+    if (designError) {
+      res.status(400).json({ error: designError });
+      return;
+    }
+  }
+  const [existing] = await db.select().from(qcReportTemplatesTable)
+    .where(eq(qcReportTemplatesTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Report template not found" });
+    return;
+  }
+  const designChanged = body.data.design !== undefined;
+  const history = Array.isArray(existing.history) ? [...existing.history] : [];
+  if (designChanged) {
+    history.push({
+      version: existing.version,
+      design: existing.design,
+      createdAt: existing.updatedAt.toISOString(),
+    });
+  }
+  const [updated] = await db.update(qcReportTemplatesTable).set({
+    ...(body.data.name !== undefined ? { name: body.data.name.trim() } : {}),
+    ...(body.data.description !== undefined ? { description: body.data.description } : {}),
+    ...(designChanged ? {
+      design: body.data.design,
+      version: existing.version + 1,
+      history,
+    } : {}),
+  }).where(eq(qcReportTemplatesTable.id, existing.id)).returning();
+  res.json(UpdateReportTemplateResponse.parse(toReportTemplate(updated)));
+});
+
+router.delete("/report-templates/:id", requireAdministrator, async (req, res): Promise<void> => {
+  const params = DeleteReportTemplateParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const [existing] = await db.select().from(qcReportTemplatesTable)
+    .where(eq(qcReportTemplatesTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Report template not found" });
+    return;
+  }
+  const templates = await db.select({ id: qcReportTemplatesTable.id })
+    .from(qcReportTemplatesTable)
+    .where(eq(qcReportTemplatesTable.testType, existing.testType));
+  if (templates.length <= 1) {
+    res.status(400).json({ error: "The only template for a report type cannot be deleted." });
+    return;
+  }
+  if (existing.isDefault) {
+    res.status(409).json({ error: "The default template cannot be deleted." });
+    return;
+  }
+  await db.delete(qcReportTemplatesTable).where(eq(qcReportTemplatesTable.id, existing.id));
+  res.sendStatus(204);
+});
+
+router.post("/report-templates/:id/duplicate", requireAdministrator, async (req, res): Promise<void> => {
+  const params = DuplicateReportTemplateParams.safeParse(req.params);
+  const body = DuplicateReportTemplateBody.safeParse(req.body ?? {});
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+  const [existing] = await db.select().from(qcReportTemplatesTable)
+    .where(eq(qcReportTemplatesTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Report template not found" });
+    return;
+  }
+  const duplicatedDesign = body.data.design ?? existing.design;
+  const designError = validateReportTemplateDesign(duplicatedDesign);
+  if (designError) {
+    res.status(400).json({ error: designError });
+    return;
+  }
+  const [created] = await db.insert(qcReportTemplatesTable).values({
+    testType: existing.testType,
+    name: body.data.name?.trim() || `${existing.name} copy`,
+    description: body.data.description === undefined ? existing.description : body.data.description,
+    isDefault: false,
+    version: 1,
+    design: duplicatedDesign,
+    history: [],
+  }).returning();
+  res.status(201).json(DuplicateReportTemplateResponse.parse(toReportTemplate(created)));
+});
+
+router.patch("/report-templates/:id/default", requireAdministrator, async (req, res): Promise<void> => {
+  const params = SetReportTemplateDefaultParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const [existing] = await db.select().from(qcReportTemplatesTable)
+    .where(eq(qcReportTemplatesTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Report template not found" });
+    return;
+  }
+  const updated = await db.transaction(async (tx) => {
+    await tx.update(qcReportTemplatesTable).set({ isDefault: false })
+      .where(eq(qcReportTemplatesTable.testType, existing.testType));
+    const [selected] = await tx.update(qcReportTemplatesTable)
+      .set({ isDefault: true })
+      .where(eq(qcReportTemplatesTable.id, existing.id))
+      .returning();
+    return selected;
+  });
+  res.json(SetReportTemplateDefaultResponse.parse(toReportTemplate(updated)));
+});
+
+router.get("/report-templates/:id/versions", async (req, res): Promise<void> => {
+  const params = ListReportTemplateVersionsParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const [existing] = await db.select().from(qcReportTemplatesTable)
+    .where(eq(qcReportTemplatesTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Report template not found" });
+    return;
+  }
+  const versions = (Array.isArray(existing.history) ? existing.history : [])
+    .map((entry) => ({
+      version: Number((entry as Record<string, unknown>).version),
+      createdAt: String((entry as Record<string, unknown>).createdAt),
+    }))
+    .filter((entry) => Number.isFinite(entry.version) && entry.createdAt !== "undefined");
+  res.json(ListReportTemplateVersionsResponse.parse(versions));
+});
+
+router.post("/report-templates/:id/restore/:version", requireAdministrator, async (req, res): Promise<void> => {
+  const params = RestoreReportTemplateVersionParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const [existing] = await db.select().from(qcReportTemplatesTable)
+    .where(eq(qcReportTemplatesTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Report template not found" });
+    return;
+  }
+  const target = (Array.isArray(existing.history) ? existing.history : [])
+    .find((entry) => Number((entry as Record<string, unknown>).version) === params.data.version);
+  if (!target || typeof (target as Record<string, unknown>).design !== "object") {
+    res.status(404).json({ error: "Report template version not found" });
+    return;
+  }
+  const targetDesign = (target as Record<string, unknown>).design;
+  const designError = validateReportTemplateDesign(targetDesign);
+  if (designError) {
+    res.status(400).json({ error: designError });
+    return;
+  }
+  const history = Array.isArray(existing.history) ? [...existing.history, {
+    version: existing.version,
+    design: existing.design,
+    createdAt: existing.updatedAt.toISOString(),
+  }] : [];
+  const [updated] = await db.update(qcReportTemplatesTable).set({
+    design: targetDesign as Record<string, unknown>,
+    version: existing.version + 1,
+    history,
+  }).where(eq(qcReportTemplatesTable.id, existing.id)).returning();
+  res.json(RestoreReportTemplateVersionResponse.parse(toReportTemplate(updated)));
 });
 
 router.get("/report-layouts", async (_req, res): Promise<void> => {
