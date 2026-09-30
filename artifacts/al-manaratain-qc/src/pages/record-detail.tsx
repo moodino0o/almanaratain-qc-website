@@ -604,6 +604,7 @@ export default function RecordDetail() {
   if (record.testType === "Ready Mix") {
     summaryEntries.push(
       ["Reference Number", detailText(recordDetails, "referenceNumber")],
+      ["Truck Number", detailText(recordDetails, "truckNumber")],
       ["Customer Name", detailText(recordDetails, "customerName", record.location)],
       ["Customer Location", detailText(recordDetails, "customerLocation", record.location)],
     );
