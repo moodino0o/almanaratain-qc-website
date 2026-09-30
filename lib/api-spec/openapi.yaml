@@ -1080,6 +1080,8 @@ components:
         - Water
         - Flakiness & Elongation
         - RMX Trial
+        - Precast
+        - Kerb Stone
     RecordStatus:
       type: string
       enum:

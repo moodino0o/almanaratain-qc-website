@@ -48,6 +48,7 @@ import {
   type BulkRecordDraft,
 } from "./records-bulk-utils";
 import { EMPLOYEE_ADDABLE_REFERENCE_CATEGORIES } from "./reference-data-permissions";
+import { registerSectionFromQuery } from "./register-sections";
 
 const today = () => {
   const value = new Date();
@@ -169,6 +170,7 @@ function DraftRow({
   onChange,
   onDetailChange,
   onTestTypeChange,
+  availableTestTypes,
   lookupOptions,
   canEditApprovedBy,
   referenceOptionProps,
@@ -183,6 +185,7 @@ function DraftRow({
   onChange: (key: DraftKey, value: string) => void;
   onDetailChange: (key: string, value: string) => void;
   onTestTypeChange: (value: BulkRecordDraft["testType"]) => void;
+  availableTestTypes: TestType[];
   lookupOptions: BulkLookupOptions;
   canEditApprovedBy: boolean;
   referenceOptionProps: (categoryKey?: string) => ReferenceOptionProps;
@@ -249,15 +252,17 @@ function DraftRow({
         )}
         className="h-8 w-full min-w-0 rounded-sm border bg-background px-1 text-[10px] outline-none focus:border-primary"
       >
-        {Object.values(TestType).map((type) => (
+        {availableTestTypes.map((type) => (
           <option key={type} value={type}>{type}</option>
         ))}
       </select>,
     ));
   }
 
+  const precast = draft.testType === TestType.Precast;
+  const kerbStone = draft.testType === TestType.Kerb_Stone;
   const sampleDateLabel =
-    blocks || pavingBlocks ? "Casting Date" : "Sample Date";
+    blocks || pavingBlocks || precast || kerbStone ? "Casting Date" : "Sample Date";
   fields.push(
     field(sampleDateLabel, (
       <CellInput
@@ -267,20 +272,20 @@ function DraftRow({
         type="date"
       />
     )),
-    field("Location / Plant", (
+    field(kerbStone ? "Factory" : "Location / Plant", (
       <LookupCell
         value={draft.location}
         onChange={(value) => onChange("location", value)}
-        label={`Location or plant for ${recordLabel}`}
+        label={`${kerbStone ? "Factory" : "Location or plant"} for ${recordLabel}`}
         options={lookupOptions.locations}
         {...referenceOptionProps("locations")}
       />
     )),
-    field("Material / Product", (
+    field(kerbStone ? "Kerb Type" : "Material / Product", (
       <LookupCell
         value={draft.material}
         onChange={(value) => onChange("material", value)}
-        label={`Material or product for ${recordLabel}`}
+        label={`${kerbStone ? "Kerb type" : "Material or product"} for ${recordLabel}`}
         options={materialOptions}
         {...referenceOptionProps(
           mixDesign ? "mixStrengths" : blockProduct ? undefined : "materials",
@@ -438,6 +443,31 @@ function DraftRow({
     ));
   }
 
+  if (precast) {
+    fields.push(
+      field("Customer Name", detailInput(
+        "customerName",
+        "Customer name",
+        "text",
+        lookupOptions.customers,
+        "customers",
+      )),
+      field("Avg. Strength (1 day)", detailInput("averageStrength1Day", "Average strength at 1 day", "number")),
+      field("Avg. Strength (7 days)", detailInput("averageStrength7Days", "Average strength at 7 days", "number")),
+      field("Avg. Strength (28 days)", detailInput("averageStrength28Days", "Average strength at 28 days", "number")),
+    );
+  }
+
+  if (kerbStone) {
+    fields.push(
+      field("Testing Date", detailInput("testingDate", "Testing date", "date")),
+      field("Age (days)", detailInput("age", "Age", "number")),
+      field("Avg. Strength", detailInput("averageStrength", "Average strength", "number")),
+      field("Min. Strength", detailInput("minimumStrength", "Minimum strength", "number")),
+      field("Max. Strength", detailInput("maximumStrength", "Maximum strength", "number")),
+    );
+  }
+
   fields.push(
     field("Tested By", (
       <LookupCell
@@ -527,7 +557,9 @@ function DraftRow({
 }
 
 export default function RecordsBulkEdit() {
-  const goBack = useAppBack("/records");
+  const registerSection = registerSectionFromQuery();
+  const goBack = useAppBack(registerSection?.href ?? "/records");
+  const availableTestTypes = registerSection?.testTypes ?? Object.values(TestType);
   const { role } = useAuth();
   const canEditQc = role === "technician" || role === "managerial" || role === "administrator";
   const canEditApprovedBy = role === "administrator";
@@ -536,15 +568,28 @@ export default function RecordsBulkEdit() {
   const { data: referenceData } = useGetReferenceData();
   const createReferenceItem = useCreateReferenceItem();
   const [testTypeFilter, setTestTypeFilter] = useState<TestType | "All">("All");
+  const queryTestType = testTypeFilter !== "All"
+    ? testTypeFilter
+    : availableTestTypes.length === 1
+      ? availableTestTypes[0]
+      : undefined;
   const { data: records = [], isLoading, isFetching, error } = useListRecords({
     limit: 1000,
-    testType: testTypeFilter === "All" ? undefined : testTypeFilter,
+    testType: queryTestType,
   });
+  const visibleRecords = useMemo(
+    () => records.filter((record) =>
+      availableTestTypes.includes(record.testType) &&
+      (testTypeFilter === "All" || record.testType === testTypeFilter),
+    ),
+    [availableTestTypes, records, testTypeFilter],
+  );
   const [drafts, setDrafts] = useState<BulkRecordDraft[]>([]);
   const [originals, setOriginals] = useState<BulkRecordDraft[]>([]);
   const [newDrafts, setNewDrafts] = useState<BulkRecordDraft[]>([]);
   const nextNewDraftId = useRef(-1);
-  const [loadedFilter, setLoadedFilter] = useState<TestType | "All" | null>(null);
+  const [loadedFilter, setLoadedFilter] = useState<string | null>(null);
+  const draftFilterKey = `${registerSection?.id ?? "all"}:${testTypeFilter}`;
   const [isSaving, setIsSaving] = useState(false);
   const referenceOptionProps = (categoryKey?: string): ReferenceOptionProps => {
     if (!categoryKey) return {};
@@ -603,14 +648,14 @@ export default function RecordsBulkEdit() {
   }), [lookups, referenceData]);
 
   useEffect(() => {
-    if (!isFetching && loadedFilter !== testTypeFilter) {
-      const nextDrafts = records.map(recordToBulkDraft);
+    if (!isFetching && loadedFilter !== draftFilterKey) {
+      const nextDrafts = visibleRecords.map(recordToBulkDraft);
       setDrafts(nextDrafts);
       setOriginals(nextDrafts.map(cloneDraft));
       setNewDrafts([]);
-      setLoadedFilter(testTypeFilter);
+      setLoadedFilter(draftFilterKey);
     }
-  }, [isFetching, loadedFilter, records, testTypeFilter]);
+  }, [draftFilterKey, isFetching, loadedFilter, visibleRecords]);
 
   const originalById = useMemo(
     () => new Map(originals.map((draft) => [draft.id, draft])),
@@ -627,6 +672,7 @@ export default function RecordsBulkEdit() {
       toast.error("Save or discard your unsaved changes before changing the test type filter.");
       return;
     }
+    if (value !== "All" && !availableTestTypes.includes(value)) return;
     setTestTypeFilter(value);
   };
 
@@ -647,7 +693,9 @@ export default function RecordsBulkEdit() {
       {
         ...emptyDraft,
         id,
-        testType: testTypeFilter === "All" ? emptyDraft.testType : testTypeFilter,
+        testType: testTypeFilter === "All"
+          ? registerSection?.defaultTestType ?? emptyDraft.testType
+          : testTypeFilter,
       },
     ]);
   };
@@ -796,10 +844,14 @@ export default function RecordsBulkEdit() {
           <div>
             <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight">
               <TableProperties className="h-7 w-7 text-primary" />
-              Edit All Records
+              Edit All Records{registerSection && registerSection.id !== "all"
+                ? ` — ${registerSection.label}`
+                : ""}
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Add or edit records. Each record shows only the fields for its test type, without horizontal scrolling.
+              {registerSection && registerSection.id !== "all"
+                ? `Add or edit ${registerSection.label} records only. Each record shows the fields for its test type.`
+                : "Add or edit records. Each record shows only the fields for its test type, without horizontal scrolling."}
             </p>
           </div>
         </div>
@@ -812,8 +864,12 @@ export default function RecordsBulkEdit() {
               <SelectValue placeholder="Filter by test type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="All">All test types</SelectItem>
-              {Object.values(TestType).map((type) => (
+              <SelectItem value="All">
+                {registerSection && registerSection.id !== "all"
+                  ? `All ${registerSection.label} types`
+                  : "All test types"}
+              </SelectItem>
+              {availableTestTypes.map((type) => (
                 <SelectItem key={type} value={type}>{type}</SelectItem>
               ))}
             </SelectContent>
@@ -871,6 +927,7 @@ export default function RecordsBulkEdit() {
                         ? { ...draft, testType, material: "", details: {} }
                         : draft)
                     ))}
+                    availableTestTypes={availableTestTypes}
                     lookupOptions={lookupOptions}
                     canEditApprovedBy={canEditApprovedBy}
                     referenceOptionProps={referenceOptionProps}
@@ -891,6 +948,7 @@ export default function RecordsBulkEdit() {
                       (current) => updateDetail(current, key, value),
                     )}
                     onTestTypeChange={() => undefined}
+                    availableTestTypes={availableTestTypes}
                     lookupOptions={lookupOptions}
                     canEditApprovedBy={canEditApprovedBy}
                     referenceOptionProps={referenceOptionProps}

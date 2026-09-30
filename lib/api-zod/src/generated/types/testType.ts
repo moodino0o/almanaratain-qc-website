@@ -18,4 +18,6 @@ export const TestType = {
   Water: 'Water',
   'Flakiness_&_Elongation': 'Flakiness & Elongation',
   RMX_Trial: 'RMX Trial',
+  Precast: 'Precast',
+  Kerb_Stone: 'Kerb Stone',
 } as const;

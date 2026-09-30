@@ -33,13 +33,13 @@ export const GetDashboardResponse = zod.object({
   "solvedComplaints": zod.number(),
   "openComplaints": zod.number(),
   "byType": zod.array(zod.object({
-  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
   "count": zod.number()
 })),
   "recentRecords": zod.array(zod.object({
   "id": zod.number(),
   "recordNo": zod.string(),
-  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
   "sampleDate": zod.coerce.date(),
   "location": zod.string(),
   "material": zod.string(),
@@ -611,7 +611,7 @@ export const DeleteReferenceItemResponse = zod.void()
  */
 export const ListStrengthStandardsResponseItem = zod.object({
   "id": zod.number(),
-  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
   "material": zod.string(),
   "blockType": zod.string().nullable(),
   "blockSize": zod.string().nullable(),
@@ -632,7 +632,7 @@ export const createStrengthStandardBodyRequiredStrengthMin = 0;
 export const createStrengthStandardBodyStrengthUnitDefault = `N/mm\xB2`;
 
 export const CreateStrengthStandardBody = zod.object({
-  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
   "material": zod.string().min(1),
   "blockType": zod.string().nullish(),
   "blockSize": zod.string().nullish(),
@@ -643,7 +643,7 @@ export const CreateStrengthStandardBody = zod.object({
 
 export const CreateStrengthStandardResponse = zod.object({
   "id": zod.number(),
-  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
   "material": zod.string(),
   "blockType": zod.string().nullable(),
   "blockSize": zod.string().nullable(),
@@ -667,7 +667,7 @@ export const updateStrengthStandardBodyRequiredStrengthMin = 0;
 
 
 export const UpdateStrengthStandardBody = zod.object({
-  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']).optional(),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']).optional(),
   "material": zod.string().min(1).optional(),
   "blockType": zod.string().nullish(),
   "blockSize": zod.string().nullish(),
@@ -678,7 +678,7 @@ export const UpdateStrengthStandardBody = zod.object({
 
 export const UpdateStrengthStandardResponse = zod.object({
   "id": zod.number(),
-  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
   "material": zod.string(),
   "blockType": zod.string().nullable(),
   "blockSize": zod.string().nullable(),
@@ -703,7 +703,7 @@ export const DeleteStrengthStandardResponse = zod.void()
  */
 export const ListSieveStandardsResponseItem = zod.object({
   "id": zod.number(),
-  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
   "materialReferenceItemId": zod.number(),
   "material": zod.string(),
   "sieveSizeReferenceItemId": zod.number(),
@@ -738,7 +738,7 @@ export const CreateSieveStandardBody = zod.object({
 
 export const CreateSieveStandardResponse = zod.object({
   "id": zod.number(),
-  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
   "materialReferenceItemId": zod.number(),
   "material": zod.string(),
   "sieveSizeReferenceItemId": zod.number(),
@@ -776,7 +776,7 @@ export const UpdateSieveStandardBody = zod.object({
 
 export const UpdateSieveStandardResponse = zod.object({
   "id": zod.number(),
-  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
   "materialReferenceItemId": zod.number(),
   "material": zod.string(),
   "sieveSizeReferenceItemId": zod.number(),
@@ -891,7 +891,7 @@ export const listRecordsQueryLimitMax = 1000;
 
 
 export const ListRecordsQueryParams = zod.object({
-  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']).optional(),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']).optional(),
   "search": zod.coerce.string().optional(),
   "limit": zod.coerce.number().min(1).max(listRecordsQueryLimitMax).default(listRecordsQueryLimitDefault)
 })
@@ -899,7 +899,7 @@ export const ListRecordsQueryParams = zod.object({
 export const ListRecordsResponseItem = zod.object({
   "id": zod.number(),
   "recordNo": zod.string(),
-  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
   "sampleDate": zod.coerce.date(),
   "location": zod.string(),
   "material": zod.string(),
@@ -923,7 +923,7 @@ export const ListRecordsResponse = zod.array(ListRecordsResponseItem)
 
 
 export const CreateRecordBody = zod.object({
-  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
   "sampleDate": zod.coerce.date(),
   "location": zod.string().min(1),
   "material": zod.string().min(1),
@@ -937,7 +937,7 @@ export const CreateRecordBody = zod.object({
 export const CreateRecordResponse = zod.object({
   "id": zod.number(),
   "recordNo": zod.string(),
-  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
   "sampleDate": zod.coerce.date(),
   "location": zod.string(),
   "material": zod.string(),
@@ -966,7 +966,7 @@ export const PreviewRecordAgeBackfillResponse = zod.object({
   "eligible": zod.array(zod.object({
   "id": zod.number(),
   "recordNo": zod.string(),
-  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
   "sampleDate": zod.string(),
   "testingDate": zod.string(),
   "age": zod.number().min(previewRecordAgeBackfillResponseEligibleItemAgeMin)
@@ -974,7 +974,7 @@ export const PreviewRecordAgeBackfillResponse = zod.object({
   "manualReview": zod.array(zod.object({
   "id": zod.number(),
   "recordNo": zod.string(),
-  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
   "sampleDate": zod.string().nullable(),
   "testingDate": zod.string().nullable(),
   "reason": zod.string()
@@ -994,7 +994,7 @@ export const ApplyRecordAgeBackfillBody = zod.object({
   "candidates": zod.array(zod.object({
   "id": zod.number(),
   "recordNo": zod.string(),
-  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
   "sampleDate": zod.string(),
   "testingDate": zod.string(),
   "age": zod.number().min(applyRecordAgeBackfillBodyCandidatesItemAgeMin)
@@ -1010,7 +1010,7 @@ export const ApplyRecordAgeBackfillResponse = zod.object({
   "skipped": zod.array(zod.object({
   "id": zod.number(),
   "recordNo": zod.string(),
-  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
   "sampleDate": zod.string().nullable(),
   "testingDate": zod.string().nullable(),
   "reason": zod.string()
@@ -1110,7 +1110,7 @@ export const GetRecordParams = zod.object({
 export const GetRecordResponse = zod.object({
   "id": zod.number(),
   "recordNo": zod.string(),
-  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
   "sampleDate": zod.coerce.date(),
   "location": zod.string(),
   "material": zod.string(),
@@ -1132,7 +1132,7 @@ export const UpdateRecordParams = zod.object({
 })
 
 export const UpdateRecordBody = zod.object({
-  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']).optional(),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']).optional(),
   "sampleDate": zod.coerce.date().optional(),
   "location": zod.string().optional(),
   "material": zod.string().optional(),
@@ -1146,7 +1146,7 @@ export const UpdateRecordBody = zod.object({
 export const UpdateRecordResponse = zod.object({
   "id": zod.number(),
   "recordNo": zod.string(),
-  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
   "sampleDate": zod.coerce.date(),
   "location": zod.string(),
   "material": zod.string(),
@@ -1405,7 +1405,7 @@ export const GetReportResponse = zod.object({
   "record": zod.object({
   "id": zod.number(),
   "recordNo": zod.string(),
-  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
   "sampleDate": zod.coerce.date(),
   "location": zod.string(),
   "material": zod.string(),
@@ -1421,7 +1421,7 @@ export const GetReportResponse = zod.object({
   "companySubtitle": zod.string(),
   "layout": zod.object({
   "id": zod.number(),
-  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
   "name": zod.string(),
   "config": zod.object({
   "title": zod.string().min(1),
@@ -1474,7 +1474,7 @@ export const listReportLayoutsResponseConfigColumnsItemWidthMax = 100;
 
 export const ListReportLayoutsResponseItem = zod.object({
   "id": zod.number(),
-  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
   "name": zod.string(),
   "config": zod.object({
   "title": zod.string().min(1),
@@ -1578,7 +1578,7 @@ export const updateReportLayoutResponseConfigColumnsItemWidthMax = 100;
 
 export const UpdateReportLayoutResponse = zod.object({
   "id": zod.number(),
-  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial']),
+  "testType": zod.enum(['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone']),
   "name": zod.string(),
   "config": zod.object({
   "title": zod.string().min(1),

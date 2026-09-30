@@ -50,6 +50,7 @@ import {
   type TestRow,
 } from "./record-form-utils";
 import { EMPLOYEE_ADDABLE_REFERENCE_CATEGORIES } from "./reference-data-permissions";
+import { registerSectionFromQuery } from "./register-sections";
 
 const REFERENCE_NUMBER_MAX_LENGTH = 32;
 const DEFAULT_APPROVED_BY = "ADEL ABBAS EBRAHIM";
@@ -85,8 +86,9 @@ export default function RecordForm() {
   const { id } = useParams();
   const recordId = id ? Number(id) : 0;
   const isEditing = Number.isInteger(recordId) && recordId > 0;
+  const registerSection = registerSectionFromQuery();
   const [, setLocation] = useLocation();
-  const fallbackRoute = isEditing ? `/records/${recordId}` : "/records";
+  const fallbackRoute = isEditing ? `/records/${recordId}` : registerSection?.href ?? "/records";
   const goBack = useAppBack(fallbackRoute);
   const { role } = useAuth();
   const canEditQc = role === "technician" || role === "managerial" || role === "administrator";
@@ -116,7 +118,9 @@ export default function RecordForm() {
   const submitAction = useRef<"save" | "duplicate">("save");
   const formRef = useRef<HTMLFormElement | null>(null);
 
-  const [testType, setTestType] = useState<TestType>(TestType.Ready_Mix);
+  const [testType, setTestType] = useState<TestType>(
+    registerSection?.defaultTestType ?? TestType.Ready_Mix,
+  );
   const [sampleDate, setSampleDate] = useState(new Date().toISOString().slice(0, 10));
   const [locationValue, setLocationValue] = useState("");
   const [material, setMaterial] = useState("");
@@ -503,6 +507,22 @@ export default function RecordForm() {
       case TestType.Sand_Sieve:
       case TestType.Aggregate_Sieve:
         return [];
+      case TestType.Precast:
+        return [
+          { key: "customerName", label: "Customer Name", type: "text" },
+          { key: "averageStrength1Day", label: "Avg. Strength (1 day)", type: "number" },
+          { key: "averageStrength7Days", label: "Avg. Strength (7 days)", type: "number" },
+          { key: "averageStrength28Days", label: "Avg. Strength (28 days)", type: "number" }
+        ];
+      case TestType.Kerb_Stone:
+        return [
+          { key: "testingDate", label: "Testing Date", type: "date" },
+          { key: "age", label: "Age (days)", type: "number" },
+          { key: "kerbType", label: "Kerb Type", type: "text" },
+          { key: "averageStrength", label: "Avg. Strength", type: "number" },
+          { key: "minimumStrength", label: "Min. Strength", type: "number" },
+          { key: "maximumStrength", label: "Max. Strength", type: "number" }
+        ];
       default:
         return [
           { key: "observation1", label: "Observation 1", type: "text" },
@@ -1096,7 +1116,7 @@ export default function RecordForm() {
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label>Test Type <span className="text-destructive">*</span></Label>
+                  <Label>Test Type <span className="text-destructive">*</span></Label>
                 <Select value={testType} onValueChange={(val: TestType) => {
                   setTestType(val);
                   if (val === TestType.Blocks || testType === TestType.Blocks) setMaterial("");
@@ -1110,7 +1130,10 @@ export default function RecordForm() {
                     <SelectValue placeholder="Select Test Type" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.values(TestType).map(type => (
+                    {(isEditing || !registerSection || registerSection.id === "all"
+                      ? Object.values(TestType)
+                      : registerSection.testTypes
+                    ).map(type => (
                       <SelectItem key={type} value={type}>{type}</SelectItem>
                     ))}
                   </SelectContent>
@@ -1136,7 +1159,9 @@ export default function RecordForm() {
 
               <div className="space-y-2">
                 <Label>
-                  {usesSieveRows ? "Factory" : "Plant / Production Location"}{" "}
+                    {usesSieveRows || testType === TestType.Kerb_Stone
+                      ? "Factory"
+                      : "Plant / Production Location"}{" "}
                   <span className="text-destructive">*</span>
                 </Label>
                 <TypeaheadInput
@@ -1151,7 +1176,11 @@ export default function RecordForm() {
               {testType !== TestType.Blocks && (
                 <div className="space-y-2">
                   <Label>
-                    {usesSieveRows ? "Material Type" : "Material / Product"}{" "}
+                    {usesSieveRows
+                      ? "Material Type"
+                      : testType === TestType.Kerb_Stone
+                        ? "Kerb Type"
+                        : "Material / Product"}{" "}
                     <span className="text-destructive">*</span>
                   </Label>
                   <TypeaheadInput

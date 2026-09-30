@@ -4,12 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { CheckCircle2, AlertTriangle, XCircle, Search, Plus, Printer, TableProperties } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 import { useAuth } from "@workspace/replit-auth-web";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useLocation } from "wouter";
+import { REGISTER_SECTIONS, type RegisterSection } from "./register-sections";
 import {
   calculateReadyMixAgeBandAverages,
   type ReadyMixAgeBandAverages,
@@ -19,7 +19,31 @@ import {
   type RecordStrengthSummary,
 } from "./reports-utils";
 
-type RegisterSection = "all" | "readymix" | "masonry" | "aggregate";
+function detailValue(record: QcRecord, keys: string[], fallback = "—") {
+  const details = record.details as Record<string, unknown>;
+  const normalized = new Map(
+    Object.entries(details).map(([key, value]) => [
+      key.toLowerCase().replace(/[^a-z0-9]/g, ""),
+      value,
+    ]),
+  );
+  const value = keys
+    .map((key) => normalized.get(key.toLowerCase().replace(/[^a-z0-9]/g, "")))
+    .find((candidate) => candidate !== undefined && candidate !== null && String(candidate).trim());
+  return value === undefined ? fallback : String(value);
+}
+
+function derivedAge(record: QcRecord) {
+  const direct = detailValue(record, ["age"], "").trim();
+  if (direct) return direct;
+  const testing = detailValue(record, ["testingDate"], "").slice(0, 10);
+  const casting = record.sampleDate.slice(0, 10);
+  const start = Date.parse(`${casting}T00:00:00.000Z`);
+  const end = Date.parse(`${testing}T00:00:00.000Z`);
+  if (!testing || !Number.isFinite(start) || !Number.isFinite(end) || end < start) return "—";
+  const days = (end - start) / 86_400_000;
+  return Number.isSafeInteger(days) ? String(days) : "—";
+}
 
 function formatRegisterDate(value: string | null | undefined) {
   if (!value) return "—";
@@ -100,10 +124,11 @@ function masonryBlockAge(record: QcRecord) {
 }
 
 export default function Records() {
+  const [location] = useLocation();
   const { role } = useAuth();
   const canEditQc = role === "technician" || role === "managerial" || role === "administrator";
   const [search, setSearch] = useState("");
-  const [section, setSection] = useState<RegisterSection>("all");
+  const section = REGISTER_SECTIONS.find(({ href }) => href === location)?.id ?? "all";
 
   const { data: records, isLoading } = useListRecords({
     search: search || undefined,
@@ -125,6 +150,10 @@ export default function Records() {
           record.testType === TestType.Aggregate_Sieve ||
           record.testType === TestType["Flakiness_&_Elongation"],
         );
+      case "precast":
+        return allRecords.filter((record) => record.testType === TestType.Precast);
+      case "kerbstone":
+        return allRecords.filter((record) => record.testType === TestType.Kerb_Stone);
       default:
         return allRecords;
     }
@@ -132,6 +161,8 @@ export default function Records() {
   const isReadyMixSection = section === "readymix";
   const isMasonrySection = section === "masonry";
   const isAggregateSection = section === "aggregate";
+  const isPrecastSection = section === "precast";
+  const isKerbStoneSection = section === "kerbstone";
   const hideCustomerAndSiteLocation =
     isMasonrySection || isAggregateSection;
   const tableColumnCount =
@@ -243,21 +274,7 @@ export default function Records() {
     details: Record<string, unknown>,
     keys: string[],
     fallback = "—",
-  ) => {
-    const normalized = new Map(
-      Object.entries(details).map(([key, value]) => [
-        key.toLowerCase().replace(/[^a-z0-9]/g, ""),
-        value,
-      ]),
-    );
-    const value = keys
-      .map((key) => normalized.get(key.toLowerCase().replace(/[^a-z0-9]/g, "")))
-      .find(
-        (candidate) =>
-          typeof candidate === "string" && candidate.trim().length > 0,
-      );
-    return typeof value === "string" ? value : fallback;
-  };
+  ) => detailValue({ details } as QcRecord, keys, fallback);
 
   return (
     <div className="space-y-6 flex flex-col h-full">
@@ -268,11 +285,11 @@ export default function Records() {
         </div>
          {canEditQc && (
            <div className="flex flex-wrap gap-2">
-             <Link href="/records/edit-all" className="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-5 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground">
+                <Link data-testid="link-edit-all-records" href={`/records/edit-all?section=${section}`} className="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-5 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground">
                <TableProperties className="mr-2 h-4 w-4" />
                Edit All Records
              </Link>
-             <Link href="/records/new" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary text-primary-foreground shadow hover:bg-primary/90 h-10 px-6">
+              <Link data-testid="link-new-record" href={`/records/new?section=${section}`} className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary text-primary-foreground shadow hover:bg-primary/90 h-10 px-6">
                <Plus className="w-4 h-4 mr-2" />
                New Record
              </Link>
@@ -292,21 +309,100 @@ export default function Records() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <Tabs
-              value={section}
-              onValueChange={(value) => setSection(value as RegisterSection)}
-              className="w-full"
-            >
-              <TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-4">
-                <TabsTrigger value="all">All Results</TabsTrigger>
-                <TabsTrigger value="readymix">ReadyMix</TabsTrigger>
-                <TabsTrigger value="masonry">Masonry</TabsTrigger>
-                <TabsTrigger value="aggregate">Aggregate</TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <nav aria-label="QC register sections" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+              {REGISTER_SECTIONS.map((item) => (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  data-testid={`register-section-${item.id}`}
+                  aria-current={section === item.id ? "page" : undefined}
+                  className={`inline-flex min-h-10 items-center justify-center rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                    section === item.id
+                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                      : "border-input bg-background hover:bg-accent hover:text-accent-foreground"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
           </div>
         </CardHeader>
         <CardContent className="flex-1 overflow-auto p-0">
+          {isPrecastSection ? (
+            <div className="qc-register-table-container w-full min-w-0">
+              <Table className="qc-register-table w-full table-fixed text-[10px]">
+                <TableHeader className="sticky top-0 z-10 bg-card shadow-sm">
+                  <TableRow>
+                    {["Record No.", "Customer Name", "Material", "Casting Date", "Remarks", "Avg. Strength (1 day)", "Avg. Strength (7 days)", "Avg. Strength (28 days)", "Actions"].map((label) => (
+                      <TableHead key={label} className="whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">{label}</TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow><TableCell colSpan={9} className="h-32 text-center text-muted-foreground">Loading register...</TableCell></TableRow>
+                  ) : sectionRecords.length === 0 ? (
+                    <TableRow><TableCell colSpan={9} className="h-32 text-center text-muted-foreground">No Precast records found.</TableCell></TableRow>
+                  ) : sectionRecords.map((record) => (
+                    <TableRow key={record.id}>
+                      <TableCell className="break-words px-2 py-2 font-semibold text-primary">{record.recordNo}</TableCell>
+                      <TableCell className="break-words px-2 py-2">{detailValue(record, ["customerName", "customer"])}</TableCell>
+                      <TableCell className="break-words px-2 py-2">{record.material}</TableCell>
+                      <TableCell className="break-words px-2 py-2 tabular-nums">{formatRegisterDate(record.sampleDate)}</TableCell>
+                      <TableCell className="break-words px-2 py-2">{record.remarks?.trim() || "—"}</TableCell>
+                      <TableCell className="px-2 py-2 text-right tabular-nums">{detailValue(record, ["averageStrength1Day", "avgStrength1Day", "day1AverageStrength"])}</TableCell>
+                      <TableCell className="px-2 py-2 text-right tabular-nums">{detailValue(record, ["averageStrength7Days", "avgStrength7Days", "day7AverageStrength"])}</TableCell>
+                      <TableCell className="px-2 py-2 text-right tabular-nums">{detailValue(record, ["averageStrength28Days", "avgStrength28Days", "day28AverageStrength"])}</TableCell>
+                      <TableCell className="px-2 py-2 text-right">
+                        <div className="flex justify-end gap-1">
+                          <Link href={`/records/${record.id}`} className="rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground">View</Link>
+                          <Link href={`/reports/${record.id}`} className="rounded-md border px-2 py-1 text-xs font-medium">Print</Link>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : isKerbStoneSection ? (
+            <div className="qc-register-table-container w-full min-w-0">
+              <Table className="qc-register-table w-full table-fixed text-[10px]">
+                <TableHeader className="sticky top-0 z-10 bg-card shadow-sm">
+                  <TableRow>
+                    {["Record No.", "Casting Date", "Testing Date", "Age", "Kerb Type", "Factory", "Avg. Strength", "Min. Strength", "Max. Strength", "Actions"].map((label) => (
+                      <TableHead key={label} className="whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">{label}</TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow><TableCell colSpan={10} className="h-32 text-center text-muted-foreground">Loading register...</TableCell></TableRow>
+                  ) : sectionRecords.length === 0 ? (
+                    <TableRow><TableCell colSpan={10} className="h-32 text-center text-muted-foreground">No Kerb Stone records found.</TableCell></TableRow>
+                  ) : sectionRecords.map((record) => (
+                    <TableRow key={record.id}>
+                      <TableCell className="break-words px-2 py-2 font-semibold text-primary">{record.recordNo}</TableCell>
+                      <TableCell className="break-words px-2 py-2 tabular-nums">{formatRegisterDate(record.sampleDate)}</TableCell>
+                      <TableCell className="break-words px-2 py-2 tabular-nums">{formatRegisterDate(detailValue(record, ["testingDate"], ""))}</TableCell>
+                      <TableCell className="px-2 py-2 text-center tabular-nums">{derivedAge(record)}</TableCell>
+                      <TableCell className="break-words px-2 py-2">{detailValue(record, ["kerbType", "productType"], record.material || "—")}</TableCell>
+                      <TableCell className="break-words px-2 py-2">{detailValue(record, ["factory"], record.location || "—")}</TableCell>
+                      <TableCell className="px-2 py-2 text-right tabular-nums">{detailValue(record, ["averageStrength", "avgStrength"])}</TableCell>
+                      <TableCell className="px-2 py-2 text-right tabular-nums">{detailValue(record, ["minimumStrength", "minStrength"])}</TableCell>
+                      <TableCell className="px-2 py-2 text-right tabular-nums">{detailValue(record, ["maximumStrength", "maxStrength"])}</TableCell>
+                      <TableCell className="px-2 py-2 text-right">
+                        <div className="flex justify-end gap-1">
+                          <Link href={`/records/${record.id}`} className="rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground">View</Link>
+                          <Link href={`/reports/${record.id}`} className="rounded-md border px-2 py-1 text-xs font-medium">Print</Link>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
           <div className="qc-register-table-container w-full min-w-0">
           <Table className="qc-register-table w-full table-fixed text-[9px] leading-tight sm:text-[10px]">
             <TableHeader className="sticky top-0 bg-card z-10 shadow-sm">
@@ -528,6 +624,7 @@ export default function Records() {
             </TableBody>
           </Table>
           </div>
+          )}
         </CardContent>
       </Card>
     </div>
