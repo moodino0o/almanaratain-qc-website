@@ -1,0 +1,61 @@
+/** The only record/detail keys that report layouts may bind to. */
+export type ReportLayoutField = {
+  key: string;
+  label: string;
+  width: number;
+};
+
+const fields = (items: Array<[string, string, number]>): ReportLayoutField[] =>
+  items.map(([key, label, width]) => ({ key, label, width }));
+
+export const REPORT_LAYOUT_FIELD_GROUPS: Record<string, Record<string, ReportLayoutField[]>> = {
+  "Ready Mix": {
+    readyMixDetails: fields([
+      ["customerName", "Customer Name", 25], ["customerLocation", "Customer Location", 25],
+      ["projectName", "Project Name", 25], ["otherDetails", "Other Details", 25],
+      ["castedBy", "Casted By", 25], ["sampleNumber", "Sample No.", 25],
+      ["slump", "Slump (mm)", 25], ["temperature", "Temperature", 25], ["compactionType", "Compaction Type", 25],
+    ]),
+    readyMixResults: fields([
+      ["testingDate", "Testing Date", 18], ["age", "Cube Age", 12], ["weight", "Cube Weight (g)", 16],
+      ["load", "Load (kN)", 16], ["strength", "Strength (N/mm²)", 19], ["absorption", "Water Absorption (%)", 19],
+    ]),
+  },
+  Blocks: {
+    blockDetails: fields([
+      ["blockSize", "Block Size", 25], ["testingDate", "Testing Date", 25], ["blockAge", "Block Age", 25],
+      ["machine", "Machine Type", 25], ["sampleType", "Sample Type", 25], ["conditioningMethod", "Conditioning", 25],
+      ["preparationMethod", "Preparation", 25], ["shapeFactor", "Shape Factor", 25], ["blockType", "Block Type", 25],
+    ]),
+    blockCompression: fields([
+      ["no", "No.", 7], ["length", "Length (mm)", 10], ["width", "Width (mm)", 10], ["height", "Height (mm)", 10],
+      ["load", "Load (kN)", 10], ["water", "Water (N/mm2)", 12], ["airDry", "Air Dry (N/mm2)", 12],
+      ["normalized", "Normalized (N/mm2)", 13], ["density", "Density (kg/m3)", 13], ["wetWeight", "Wet Weight (kg)", 13],
+    ]),
+  },
+  "Paving Blocks": {
+    pavingDetails: fields([["pavingBlockSize", "Block Size", 25], ["testingDate", "Testing Date", 25], ["blockAge", "Block Age", 25], ["machine", "Machine Type", 25], ["sampleType", "Sample Type", 25], ["correctionFactor", "Correction Factor", 25], ["blockType", "Paving Block Type", 25]]),
+    pavingResults: fields([["no", "Block No.", 7], ["age", "Test Age", 9], ["length", "Length (mm)", 10], ["width", "Width (mm)", 10], ["height", "Height (mm)", 10], ["dryWeight", "Dry Weight", 10], ["wetWeight", "Wet Weight", 10], ["load", "Load (kN)", 10], ["strength", "Calculated Strength", 14], ["density", "Density (kg/m³)", 11], ["waterAbsorption", "% Water Absorption", 11]]),
+  },
+  "Sand Sieve": { sieveSampleDetails: fields([["sampleAge", "Age (days)", 25], ["testingDate", "Testing Date", 25], ["supplier", "Supplier", 25], ["materialCondition", "Material Condition", 25]]), sieveResults: fields([["no", "No.", 6], ["size", "Sieve / Pore Size", 17], ["returned", "Mass Retained (g)", 13], ["retained", "Retained (%)", 9], ["passing", "Amount Passing (g)", 11], ["percentage", "Passing (%)", 8], ["lower", "Lower Limit", 12], ["upper", "Upper Limit", 12], ["remarks", "Remarks", 18]]), sieveChemicalDetails: fields([["siltBefore", "Silt Before", 25], ["siltAfter", "Silt After", 25]]) },
+  "Aggregate Sieve": { sieveSampleDetails: fields([["sampleAge", "Age (days)", 25], ["testingDate", "Testing Date", 25], ["supplier", "Supplier", 25], ["materialCondition", "Material Condition", 25]]), sieveResults: fields([["no", "No.", 6], ["size", "Sieve / Pore Size", 17], ["returned", "Mass Retained (g)", 13], ["retained", "Retained (%)", 9], ["passing", "Amount Passing (g)", 11], ["percentage", "Passing (%)", 8], ["lower", "Lower Limit", 12], ["upper", "Upper Limit", 12], ["remarks", "Remarks", 18]]), sieveChemicalDetails: fields([["siltBefore", "Silt Before", 20], ["siltAfter", "Silt After", 20], ["silverNitrateContent", "Silver Nitrate", 20], ["firstChlorideTitrationPoint", "First Titration", 20], ["secondChlorideTitrationPoint", "Second Titration", 20], ["crucibleWeight", "Crucible Weight", 20], ["crucibleAshWeight", "Crucible Ash Weight", 20]]) },
+  Water: { waterDetails: fields([["source", "Source", 20], ["ph", "pH", 20], ["tds", "TDS", 20], ["chloride", "Chloride", 20], ["sulphate", "Sulphate", 20]]), genericContext: fields([["sampleDate", "Sample Date", 25], ["location", "Location", 25], ["material", "Material", 25], ["testedBy", "Tested By", 25]]) },
+  "Flakiness & Elongation": { flakinessDetails: fields([["observation1", "Observation 1", 50], ["observation2", "Observation 2", 50]]) },
+  "RMX Trial": { rmxTrialDetails: fields([["observation1", "Observation 1", 50], ["observation2", "Observation 2", 50]]) },
+  Precast: { precastDetails: fields([["customerName", "Customer Name", 25], ["averageStrength1Day", "Avg. Strength (1 day)", 25], ["averageStrength7Days", "Avg. Strength (7 days)", 25], ["averageStrength28Days", "Avg. Strength (28 days)", 25]]) },
+  "Kerb Stone": { kerbStoneDetails: fields([["testingDate", "Testing Date", 20], ["age", "Age (days)", 16], ["kerbType", "Kerb Type", 20], ["averageStrength", "Avg. Strength", 16], ["minimumStrength", "Min. Strength", 14], ["maximumStrength", "Max. Strength", 14]]) },
+};
+
+const genericContext = fields([
+  ["sampleDate", "Sample Date", 25], ["location", "Location", 25],
+  ["material", "Material", 25], ["testedBy", "Tested By", 25],
+  ["observation1", "Observation 1", 25], ["observation2", "Observation 2", 25],
+]);
+for (const groups of Object.values(REPORT_LAYOUT_FIELD_GROUPS)) {
+  groups.genericContext ??= genericContext;
+}
+
+export const REPORT_LAYOUT_FIELDS = REPORT_LAYOUT_FIELD_GROUPS;
+export function fieldsForReport(testType: string, tableKey: string) {
+  return REPORT_LAYOUT_FIELD_GROUPS[testType]?.[tableKey] ?? [];
+}

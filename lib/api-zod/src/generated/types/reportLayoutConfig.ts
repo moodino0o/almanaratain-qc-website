@@ -7,6 +7,7 @@
  */
 import type { ReportLayoutConfigColumns } from './reportLayoutConfigColumns';
 import type { ReportLayoutConfigFontFamily } from './reportLayoutConfigFontFamily';
+import type { ReportLayoutElement } from './reportLayoutElement';
 import type { ReportLayoutSection } from './reportLayoutSection';
 
 export interface ReportLayoutConfig {
@@ -29,4 +30,6 @@ export interface ReportLayoutConfig {
   paperPadding: number;
   sections: ReportLayoutSection[];
   columns: ReportLayoutConfigColumns;
+  /** @maxItems 40 */
+  elements?: ReportLayoutElement[];
 }

@@ -1399,11 +1399,37 @@ export const getReportResponseLayoutConfigPaperPaddingMax = 30;
 
 export const getReportResponseLayoutConfigSectionsItemOrderMin = 0;
 
+export const getReportResponseLayoutConfigSectionsItemFontSizeMin = 8;
+export const getReportResponseLayoutConfigSectionsItemFontSizeMax = 24;
+
+export const getReportResponseLayoutConfigSectionsItemTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const getReportResponseLayoutConfigSectionsItemBackgroundColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const getReportResponseLayoutConfigSectionsItemBorderColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const getReportResponseLayoutConfigSectionsItemBorderWidthMin = 0;
+export const getReportResponseLayoutConfigSectionsItemBorderWidthMax = 4;
+
 
 
 export const getReportResponseLayoutConfigColumnsItemOrderMin = 0;
 
 export const getReportResponseLayoutConfigColumnsItemWidthMax = 100;
+
+export const getReportResponseLayoutConfigElementsItemKeyMax = 80;
+
+export const getReportResponseLayoutConfigElementsItemSectionKeyMax = 80;
+
+export const getReportResponseLayoutConfigElementsItemOrderMin = 0;
+
+export const getReportResponseLayoutConfigElementsItemContentMax = 500;
+
+export const getReportResponseLayoutConfigElementsItemFontSizeMin = 8;
+export const getReportResponseLayoutConfigElementsItemFontSizeMax = 24;
+
+export const getReportResponseLayoutConfigElementsItemColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const getReportResponseLayoutConfigElementsItemWidthMin = 10;
+export const getReportResponseLayoutConfigElementsItemWidthMax = 100;
+
+export const getReportResponseLayoutConfigElementsMax = 40;
 
 
 
@@ -1440,7 +1466,15 @@ export const GetReportResponse = zod.object({
   "key": zod.string().min(1),
   "label": zod.string().min(1),
   "visible": zod.boolean(),
-  "order": zod.number().min(getReportResponseLayoutConfigSectionsItemOrderMin)
+  "order": zod.number().min(getReportResponseLayoutConfigSectionsItemOrderMin),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(getReportResponseLayoutConfigSectionsItemFontSizeMin).max(getReportResponseLayoutConfigSectionsItemFontSizeMax).optional(),
+  "textColor": zod.string().regex(getReportResponseLayoutConfigSectionsItemTextColorRegExp).optional(),
+  "backgroundColor": zod.string().regex(getReportResponseLayoutConfigSectionsItemBackgroundColorRegExp).optional(),
+  "bold": zod.boolean().optional(),
+  "borderStyle": zod.enum(['none', 'solid', 'dashed', 'dotted']).optional(),
+  "borderColor": zod.string().regex(getReportResponseLayoutConfigSectionsItemBorderColorRegExp).optional(),
+  "borderWidth": zod.number().min(getReportResponseLayoutConfigSectionsItemBorderWidthMin).max(getReportResponseLayoutConfigSectionsItemBorderWidthMax).optional()
 })),
   "columns": zod.record(zod.string(), zod.array(zod.object({
   "key": zod.string().min(1),
@@ -1448,7 +1482,21 @@ export const GetReportResponse = zod.object({
   "visible": zod.boolean(),
   "order": zod.number().min(getReportResponseLayoutConfigColumnsItemOrderMin),
   "width": zod.number().min(1).max(getReportResponseLayoutConfigColumnsItemWidthMax)
-})))
+}))),
+  "elements": zod.array(zod.object({
+  "key": zod.string().min(1).max(getReportResponseLayoutConfigElementsItemKeyMax),
+  "type": zod.enum(['text', 'divider']),
+  "sectionKey": zod.string().min(1).max(getReportResponseLayoutConfigElementsItemSectionKeyMax),
+  "placement": zod.enum(['before', 'after']),
+  "order": zod.number().min(getReportResponseLayoutConfigElementsItemOrderMin),
+  "content": zod.string().max(getReportResponseLayoutConfigElementsItemContentMax).optional(),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(getReportResponseLayoutConfigElementsItemFontSizeMin).max(getReportResponseLayoutConfigElementsItemFontSizeMax).optional(),
+  "color": zod.string().regex(getReportResponseLayoutConfigElementsItemColorRegExp).optional(),
+  "bold": zod.boolean().optional(),
+  "width": zod.number().min(getReportResponseLayoutConfigElementsItemWidthMin).max(getReportResponseLayoutConfigElementsItemWidthMax).optional(),
+  "lineStyle": zod.enum(['solid', 'dashed', 'dotted']).optional()
+})).max(getReportResponseLayoutConfigElementsMax).optional()
 })
 }).optional()
 })
@@ -1470,11 +1518,37 @@ export const listReportLayoutsResponseConfigPaperPaddingMax = 30;
 
 export const listReportLayoutsResponseConfigSectionsItemOrderMin = 0;
 
+export const listReportLayoutsResponseConfigSectionsItemFontSizeMin = 8;
+export const listReportLayoutsResponseConfigSectionsItemFontSizeMax = 24;
+
+export const listReportLayoutsResponseConfigSectionsItemTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const listReportLayoutsResponseConfigSectionsItemBackgroundColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const listReportLayoutsResponseConfigSectionsItemBorderColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const listReportLayoutsResponseConfigSectionsItemBorderWidthMin = 0;
+export const listReportLayoutsResponseConfigSectionsItemBorderWidthMax = 4;
+
 
 
 export const listReportLayoutsResponseConfigColumnsItemOrderMin = 0;
 
 export const listReportLayoutsResponseConfigColumnsItemWidthMax = 100;
+
+export const listReportLayoutsResponseConfigElementsItemKeyMax = 80;
+
+export const listReportLayoutsResponseConfigElementsItemSectionKeyMax = 80;
+
+export const listReportLayoutsResponseConfigElementsItemOrderMin = 0;
+
+export const listReportLayoutsResponseConfigElementsItemContentMax = 500;
+
+export const listReportLayoutsResponseConfigElementsItemFontSizeMin = 8;
+export const listReportLayoutsResponseConfigElementsItemFontSizeMax = 24;
+
+export const listReportLayoutsResponseConfigElementsItemColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const listReportLayoutsResponseConfigElementsItemWidthMin = 10;
+export const listReportLayoutsResponseConfigElementsItemWidthMax = 100;
+
+export const listReportLayoutsResponseConfigElementsMax = 40;
 
 
 
@@ -1493,7 +1567,15 @@ export const ListReportLayoutsResponseItem = zod.object({
   "key": zod.string().min(1),
   "label": zod.string().min(1),
   "visible": zod.boolean(),
-  "order": zod.number().min(listReportLayoutsResponseConfigSectionsItemOrderMin)
+  "order": zod.number().min(listReportLayoutsResponseConfigSectionsItemOrderMin),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(listReportLayoutsResponseConfigSectionsItemFontSizeMin).max(listReportLayoutsResponseConfigSectionsItemFontSizeMax).optional(),
+  "textColor": zod.string().regex(listReportLayoutsResponseConfigSectionsItemTextColorRegExp).optional(),
+  "backgroundColor": zod.string().regex(listReportLayoutsResponseConfigSectionsItemBackgroundColorRegExp).optional(),
+  "bold": zod.boolean().optional(),
+  "borderStyle": zod.enum(['none', 'solid', 'dashed', 'dotted']).optional(),
+  "borderColor": zod.string().regex(listReportLayoutsResponseConfigSectionsItemBorderColorRegExp).optional(),
+  "borderWidth": zod.number().min(listReportLayoutsResponseConfigSectionsItemBorderWidthMin).max(listReportLayoutsResponseConfigSectionsItemBorderWidthMax).optional()
 })),
   "columns": zod.record(zod.string(), zod.array(zod.object({
   "key": zod.string().min(1),
@@ -1501,7 +1583,21 @@ export const ListReportLayoutsResponseItem = zod.object({
   "visible": zod.boolean(),
   "order": zod.number().min(listReportLayoutsResponseConfigColumnsItemOrderMin),
   "width": zod.number().min(1).max(listReportLayoutsResponseConfigColumnsItemWidthMax)
-})))
+}))),
+  "elements": zod.array(zod.object({
+  "key": zod.string().min(1).max(listReportLayoutsResponseConfigElementsItemKeyMax),
+  "type": zod.enum(['text', 'divider']),
+  "sectionKey": zod.string().min(1).max(listReportLayoutsResponseConfigElementsItemSectionKeyMax),
+  "placement": zod.enum(['before', 'after']),
+  "order": zod.number().min(listReportLayoutsResponseConfigElementsItemOrderMin),
+  "content": zod.string().max(listReportLayoutsResponseConfigElementsItemContentMax).optional(),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(listReportLayoutsResponseConfigElementsItemFontSizeMin).max(listReportLayoutsResponseConfigElementsItemFontSizeMax).optional(),
+  "color": zod.string().regex(listReportLayoutsResponseConfigElementsItemColorRegExp).optional(),
+  "bold": zod.boolean().optional(),
+  "width": zod.number().min(listReportLayoutsResponseConfigElementsItemWidthMin).max(listReportLayoutsResponseConfigElementsItemWidthMax).optional(),
+  "lineStyle": zod.enum(['solid', 'dashed', 'dotted']).optional()
+})).max(listReportLayoutsResponseConfigElementsMax).optional()
 })
 })
 export const ListReportLayoutsResponse = zod.array(ListReportLayoutsResponseItem)
@@ -1528,11 +1624,37 @@ export const updateReportLayoutBodyConfigPaperPaddingMax = 30;
 
 export const updateReportLayoutBodyConfigSectionsItemOrderMin = 0;
 
+export const updateReportLayoutBodyConfigSectionsItemFontSizeMin = 8;
+export const updateReportLayoutBodyConfigSectionsItemFontSizeMax = 24;
+
+export const updateReportLayoutBodyConfigSectionsItemTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportLayoutBodyConfigSectionsItemBackgroundColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportLayoutBodyConfigSectionsItemBorderColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportLayoutBodyConfigSectionsItemBorderWidthMin = 0;
+export const updateReportLayoutBodyConfigSectionsItemBorderWidthMax = 4;
+
 
 
 export const updateReportLayoutBodyConfigColumnsItemOrderMin = 0;
 
 export const updateReportLayoutBodyConfigColumnsItemWidthMax = 100;
+
+export const updateReportLayoutBodyConfigElementsItemKeyMax = 80;
+
+export const updateReportLayoutBodyConfigElementsItemSectionKeyMax = 80;
+
+export const updateReportLayoutBodyConfigElementsItemOrderMin = 0;
+
+export const updateReportLayoutBodyConfigElementsItemContentMax = 500;
+
+export const updateReportLayoutBodyConfigElementsItemFontSizeMin = 8;
+export const updateReportLayoutBodyConfigElementsItemFontSizeMax = 24;
+
+export const updateReportLayoutBodyConfigElementsItemColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportLayoutBodyConfigElementsItemWidthMin = 10;
+export const updateReportLayoutBodyConfigElementsItemWidthMax = 100;
+
+export const updateReportLayoutBodyConfigElementsMax = 40;
 
 
 
@@ -1549,7 +1671,15 @@ export const UpdateReportLayoutBody = zod.object({
   "key": zod.string().min(1),
   "label": zod.string().min(1),
   "visible": zod.boolean(),
-  "order": zod.number().min(updateReportLayoutBodyConfigSectionsItemOrderMin)
+  "order": zod.number().min(updateReportLayoutBodyConfigSectionsItemOrderMin),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(updateReportLayoutBodyConfigSectionsItemFontSizeMin).max(updateReportLayoutBodyConfigSectionsItemFontSizeMax).optional(),
+  "textColor": zod.string().regex(updateReportLayoutBodyConfigSectionsItemTextColorRegExp).optional(),
+  "backgroundColor": zod.string().regex(updateReportLayoutBodyConfigSectionsItemBackgroundColorRegExp).optional(),
+  "bold": zod.boolean().optional(),
+  "borderStyle": zod.enum(['none', 'solid', 'dashed', 'dotted']).optional(),
+  "borderColor": zod.string().regex(updateReportLayoutBodyConfigSectionsItemBorderColorRegExp).optional(),
+  "borderWidth": zod.number().min(updateReportLayoutBodyConfigSectionsItemBorderWidthMin).max(updateReportLayoutBodyConfigSectionsItemBorderWidthMax).optional()
 })),
   "columns": zod.record(zod.string(), zod.array(zod.object({
   "key": zod.string().min(1),
@@ -1557,7 +1687,21 @@ export const UpdateReportLayoutBody = zod.object({
   "visible": zod.boolean(),
   "order": zod.number().min(updateReportLayoutBodyConfigColumnsItemOrderMin),
   "width": zod.number().min(1).max(updateReportLayoutBodyConfigColumnsItemWidthMax)
-})))
+}))),
+  "elements": zod.array(zod.object({
+  "key": zod.string().min(1).max(updateReportLayoutBodyConfigElementsItemKeyMax),
+  "type": zod.enum(['text', 'divider']),
+  "sectionKey": zod.string().min(1).max(updateReportLayoutBodyConfigElementsItemSectionKeyMax),
+  "placement": zod.enum(['before', 'after']),
+  "order": zod.number().min(updateReportLayoutBodyConfigElementsItemOrderMin),
+  "content": zod.string().max(updateReportLayoutBodyConfigElementsItemContentMax).optional(),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(updateReportLayoutBodyConfigElementsItemFontSizeMin).max(updateReportLayoutBodyConfigElementsItemFontSizeMax).optional(),
+  "color": zod.string().regex(updateReportLayoutBodyConfigElementsItemColorRegExp).optional(),
+  "bold": zod.boolean().optional(),
+  "width": zod.number().min(updateReportLayoutBodyConfigElementsItemWidthMin).max(updateReportLayoutBodyConfigElementsItemWidthMax).optional(),
+  "lineStyle": zod.enum(['solid', 'dashed', 'dotted']).optional()
+})).max(updateReportLayoutBodyConfigElementsMax).optional()
 })
 })
 
@@ -1574,11 +1718,37 @@ export const updateReportLayoutResponseConfigPaperPaddingMax = 30;
 
 export const updateReportLayoutResponseConfigSectionsItemOrderMin = 0;
 
+export const updateReportLayoutResponseConfigSectionsItemFontSizeMin = 8;
+export const updateReportLayoutResponseConfigSectionsItemFontSizeMax = 24;
+
+export const updateReportLayoutResponseConfigSectionsItemTextColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportLayoutResponseConfigSectionsItemBackgroundColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportLayoutResponseConfigSectionsItemBorderColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportLayoutResponseConfigSectionsItemBorderWidthMin = 0;
+export const updateReportLayoutResponseConfigSectionsItemBorderWidthMax = 4;
+
 
 
 export const updateReportLayoutResponseConfigColumnsItemOrderMin = 0;
 
 export const updateReportLayoutResponseConfigColumnsItemWidthMax = 100;
+
+export const updateReportLayoutResponseConfigElementsItemKeyMax = 80;
+
+export const updateReportLayoutResponseConfigElementsItemSectionKeyMax = 80;
+
+export const updateReportLayoutResponseConfigElementsItemOrderMin = 0;
+
+export const updateReportLayoutResponseConfigElementsItemContentMax = 500;
+
+export const updateReportLayoutResponseConfigElementsItemFontSizeMin = 8;
+export const updateReportLayoutResponseConfigElementsItemFontSizeMax = 24;
+
+export const updateReportLayoutResponseConfigElementsItemColorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const updateReportLayoutResponseConfigElementsItemWidthMin = 10;
+export const updateReportLayoutResponseConfigElementsItemWidthMax = 100;
+
+export const updateReportLayoutResponseConfigElementsMax = 40;
 
 
 
@@ -1597,7 +1767,15 @@ export const UpdateReportLayoutResponse = zod.object({
   "key": zod.string().min(1),
   "label": zod.string().min(1),
   "visible": zod.boolean(),
-  "order": zod.number().min(updateReportLayoutResponseConfigSectionsItemOrderMin)
+  "order": zod.number().min(updateReportLayoutResponseConfigSectionsItemOrderMin),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(updateReportLayoutResponseConfigSectionsItemFontSizeMin).max(updateReportLayoutResponseConfigSectionsItemFontSizeMax).optional(),
+  "textColor": zod.string().regex(updateReportLayoutResponseConfigSectionsItemTextColorRegExp).optional(),
+  "backgroundColor": zod.string().regex(updateReportLayoutResponseConfigSectionsItemBackgroundColorRegExp).optional(),
+  "bold": zod.boolean().optional(),
+  "borderStyle": zod.enum(['none', 'solid', 'dashed', 'dotted']).optional(),
+  "borderColor": zod.string().regex(updateReportLayoutResponseConfigSectionsItemBorderColorRegExp).optional(),
+  "borderWidth": zod.number().min(updateReportLayoutResponseConfigSectionsItemBorderWidthMin).max(updateReportLayoutResponseConfigSectionsItemBorderWidthMax).optional()
 })),
   "columns": zod.record(zod.string(), zod.array(zod.object({
   "key": zod.string().min(1),
@@ -1605,7 +1783,21 @@ export const UpdateReportLayoutResponse = zod.object({
   "visible": zod.boolean(),
   "order": zod.number().min(updateReportLayoutResponseConfigColumnsItemOrderMin),
   "width": zod.number().min(1).max(updateReportLayoutResponseConfigColumnsItemWidthMax)
-})))
+}))),
+  "elements": zod.array(zod.object({
+  "key": zod.string().min(1).max(updateReportLayoutResponseConfigElementsItemKeyMax),
+  "type": zod.enum(['text', 'divider']),
+  "sectionKey": zod.string().min(1).max(updateReportLayoutResponseConfigElementsItemSectionKeyMax),
+  "placement": zod.enum(['before', 'after']),
+  "order": zod.number().min(updateReportLayoutResponseConfigElementsItemOrderMin),
+  "content": zod.string().max(updateReportLayoutResponseConfigElementsItemContentMax).optional(),
+  "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
+  "fontSize": zod.number().min(updateReportLayoutResponseConfigElementsItemFontSizeMin).max(updateReportLayoutResponseConfigElementsItemFontSizeMax).optional(),
+  "color": zod.string().regex(updateReportLayoutResponseConfigElementsItemColorRegExp).optional(),
+  "bold": zod.boolean().optional(),
+  "width": zod.number().min(updateReportLayoutResponseConfigElementsItemWidthMin).max(updateReportLayoutResponseConfigElementsItemWidthMax).optional(),
+  "lineStyle": zod.enum(['solid', 'dashed', 'dotted']).optional()
+})).max(updateReportLayoutResponseConfigElementsMax).optional()
 })
 })
 

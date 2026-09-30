@@ -326,6 +326,8 @@ const REPORT_LAYOUT_TEST_TYPES = [
   "Water",
   "Flakiness & Elongation",
   "RMX Trial",
+  "Precast",
+  "Kerb Stone",
 ] as const;
 
 const REPORT_LAYOUT_DEFAULTS: Record<string, Record<string, unknown>> = {
@@ -345,10 +347,12 @@ const REPORT_LAYOUT_DEFAULTS: Record<string, Record<string, unknown>> = {
     ],
     columns: {
       readyMixResults: [
-        { key: "age", label: "Age", visible: true, order: 0, width: 12 },
-        { key: "size", label: "Size", visible: true, order: 1, width: 16 },
-        { key: "load", label: "Load", visible: true, order: 2, width: 18 },
-        { key: "strength", label: "Strength", visible: true, order: 3, width: 20 },
+        { key: "testingDate", label: "Testing Date", visible: true, order: 0, width: 18 },
+        { key: "age", label: "Cube Age", visible: true, order: 1, width: 12 },
+        { key: "weight", label: "Cube Weight (g)", visible: true, order: 2, width: 16 },
+        { key: "load", label: "Load (kN)", visible: true, order: 3, width: 16 },
+        { key: "strength", label: "Strength (N/mm²)", visible: true, order: 4, width: 19 },
+        { key: "absorption", label: "Water Absorption (%)", visible: true, order: 5, width: 19 },
       ],
     },
   },
@@ -480,7 +484,15 @@ const REPORT_LAYOUT_DEFAULTS: Record<string, Record<string, unknown>> = {
       { key: "remarks", label: "Remarks", visible: true, order: 3 },
       { key: "signatures", label: "Signatures", visible: true, order: 4 },
     ],
-    columns: {},
+    columns: {
+      waterDetails: [
+        { key: "source", label: "Source", visible: true, order: 0, width: 20 },
+        { key: "ph", label: "pH", visible: true, order: 1, width: 20 },
+        { key: "tds", label: "TDS", visible: true, order: 2, width: 20 },
+        { key: "chloride", label: "Chloride", visible: true, order: 3, width: 20 },
+        { key: "sulphate", label: "Sulphate", visible: true, order: 4, width: 20 },
+      ],
+    },
   },
   "Flakiness & Elongation": {
     title: "Flakiness & Elongation Test Report",
@@ -496,7 +508,12 @@ const REPORT_LAYOUT_DEFAULTS: Record<string, Record<string, unknown>> = {
       { key: "remarks", label: "Remarks", visible: true, order: 3 },
       { key: "signatures", label: "Signatures", visible: true, order: 4 },
     ],
-    columns: {},
+    columns: {
+      flakinessDetails: [
+        { key: "observation1", label: "Observation 1", visible: true, order: 0, width: 50 },
+        { key: "observation2", label: "Observation 2", visible: true, order: 1, width: 50 },
+      ],
+    },
   },
   "RMX Trial": {
     title: "RMX Trial Report",
@@ -512,7 +529,60 @@ const REPORT_LAYOUT_DEFAULTS: Record<string, Record<string, unknown>> = {
       { key: "remarks", label: "Remarks", visible: true, order: 3 },
       { key: "signatures", label: "Signatures", visible: true, order: 4 },
     ],
-    columns: {},
+    columns: {
+      rmxTrialDetails: [
+        { key: "observation1", label: "Observation 1", visible: true, order: 0, width: 50 },
+        { key: "observation2", label: "Observation 2", visible: true, order: 1, width: 50 },
+      ],
+    },
+  },
+  Precast: {
+    title: "Precast Test Report",
+    fontFamily: "Arial",
+    fontSize: 11,
+    textColor: "#1f2937",
+    accentColor: "#be0055",
+    paperPadding: 14,
+    sections: [
+      { key: "header", label: "Header", visible: true, order: 0 },
+      { key: "standard", label: "Standard", visible: true, order: 1 },
+      { key: "results", label: "Results", visible: true, order: 2 },
+      { key: "remarks", label: "Remarks", visible: true, order: 3 },
+      { key: "signatures", label: "Signatures", visible: true, order: 4 },
+    ],
+    columns: {
+      precastDetails: [
+        { key: "customerName", label: "Customer Name", visible: true, order: 0, width: 25 },
+        { key: "averageStrength1Day", label: "Avg. Strength (1 day)", visible: true, order: 1, width: 25 },
+        { key: "averageStrength7Days", label: "Avg. Strength (7 days)", visible: true, order: 2, width: 25 },
+        { key: "averageStrength28Days", label: "Avg. Strength (28 days)", visible: true, order: 3, width: 25 },
+      ],
+    },
+  },
+  "Kerb Stone": {
+    title: "Kerb Stone Test Report",
+    fontFamily: "Arial",
+    fontSize: 11,
+    textColor: "#1f2937",
+    accentColor: "#be0055",
+    paperPadding: 14,
+    sections: [
+      { key: "header", label: "Header", visible: true, order: 0 },
+      { key: "standard", label: "Standard", visible: true, order: 1 },
+      { key: "results", label: "Results", visible: true, order: 2 },
+      { key: "remarks", label: "Remarks", visible: true, order: 3 },
+      { key: "signatures", label: "Signatures", visible: true, order: 4 },
+    ],
+    columns: {
+      kerbStoneDetails: [
+        { key: "testingDate", label: "Testing Date", visible: true, order: 0, width: 20 },
+        { key: "age", label: "Age (days)", visible: true, order: 1, width: 16 },
+        { key: "kerbType", label: "Kerb Type", visible: true, order: 2, width: 20 },
+        { key: "averageStrength", label: "Avg. Strength", visible: true, order: 3, width: 16 },
+        { key: "minimumStrength", label: "Min. Strength", visible: true, order: 4, width: 14 },
+        { key: "maximumStrength", label: "Max. Strength", visible: true, order: 5, width: 14 },
+      ],
+    },
   },
 };
 

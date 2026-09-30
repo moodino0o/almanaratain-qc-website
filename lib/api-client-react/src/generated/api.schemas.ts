@@ -719,6 +719,26 @@ export const ReportLayoutConfigFontFamily = {
   Helvetica: 'Helvetica',
 } as const;
 
+export type ReportLayoutSectionFontFamily = typeof ReportLayoutSectionFontFamily[keyof typeof ReportLayoutSectionFontFamily];
+
+
+export const ReportLayoutSectionFontFamily = {
+  Arial: 'Arial',
+  Calibri: 'Calibri',
+  Times_New_Roman: 'Times New Roman',
+  Helvetica: 'Helvetica',
+} as const;
+
+export type ReportLayoutSectionBorderStyle = typeof ReportLayoutSectionBorderStyle[keyof typeof ReportLayoutSectionBorderStyle];
+
+
+export const ReportLayoutSectionBorderStyle = {
+  none: 'none',
+  solid: 'solid',
+  dashed: 'dashed',
+  dotted: 'dotted',
+} as const;
+
 export interface ReportLayoutSection {
   /** @minLength 1 */
   key: string;
@@ -727,6 +747,25 @@ export interface ReportLayoutSection {
   visible: boolean;
   /** @minimum 0 */
   order: number;
+  fontFamily?: ReportLayoutSectionFontFamily;
+  /**
+     * @minimum 8
+     * @maximum 24
+     */
+  fontSize?: number;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  textColor?: string;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  backgroundColor?: string;
+  bold?: boolean;
+  borderStyle?: ReportLayoutSectionBorderStyle;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  borderColor?: string;
+  /**
+     * @minimum 0
+     * @maximum 4
+     */
+  borderWidth?: number;
 }
 
 export interface ReportLayoutColumn {
@@ -742,6 +781,75 @@ export interface ReportLayoutColumn {
      * @maximum 100
      */
   width: number;
+}
+
+export type ReportLayoutElementType = typeof ReportLayoutElementType[keyof typeof ReportLayoutElementType];
+
+
+export const ReportLayoutElementType = {
+  text: 'text',
+  divider: 'divider',
+} as const;
+
+export type ReportLayoutElementPlacement = typeof ReportLayoutElementPlacement[keyof typeof ReportLayoutElementPlacement];
+
+
+export const ReportLayoutElementPlacement = {
+  before: 'before',
+  after: 'after',
+} as const;
+
+export type ReportLayoutElementFontFamily = typeof ReportLayoutElementFontFamily[keyof typeof ReportLayoutElementFontFamily];
+
+
+export const ReportLayoutElementFontFamily = {
+  Arial: 'Arial',
+  Calibri: 'Calibri',
+  Times_New_Roman: 'Times New Roman',
+  Helvetica: 'Helvetica',
+} as const;
+
+export type ReportLayoutElementLineStyle = typeof ReportLayoutElementLineStyle[keyof typeof ReportLayoutElementLineStyle];
+
+
+export const ReportLayoutElementLineStyle = {
+  solid: 'solid',
+  dashed: 'dashed',
+  dotted: 'dotted',
+} as const;
+
+export interface ReportLayoutElement {
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  key: string;
+  type: ReportLayoutElementType;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  sectionKey: string;
+  placement: ReportLayoutElementPlacement;
+  /** @minimum 0 */
+  order: number;
+  /** @maxLength 500 */
+  content?: string;
+  fontFamily?: ReportLayoutElementFontFamily;
+  /**
+     * @minimum 8
+     * @maximum 24
+     */
+  fontSize?: number;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  color?: string;
+  bold?: boolean;
+  /**
+     * @minimum 10
+     * @maximum 100
+     */
+  width?: number;
+  lineStyle?: ReportLayoutElementLineStyle;
 }
 
 export type ReportLayoutConfigColumns = {[key: string]: ReportLayoutColumn[]};
@@ -766,6 +874,8 @@ export interface ReportLayoutConfig {
   paperPadding: number;
   sections: ReportLayoutSection[];
   columns: ReportLayoutConfigColumns;
+  /** @maxItems 40 */
+  elements?: ReportLayoutElement[];
 }
 
 export interface ReportLayout {

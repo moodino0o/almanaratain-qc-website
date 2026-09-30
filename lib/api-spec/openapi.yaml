@@ -2275,6 +2275,74 @@ components:
         order:
           type: number
           minimum: 0
+        fontFamily:
+          type: string
+          enum: [Arial, Calibri, "Times New Roman", Helvetica]
+        fontSize:
+          type: number
+          minimum: 8
+          maximum: 24
+        textColor:
+          type: string
+          pattern: "^#[0-9A-Fa-f]{6}$"
+        backgroundColor:
+          type: string
+          pattern: "^#[0-9A-Fa-f]{6}$"
+        bold:
+          type: boolean
+        borderStyle:
+          type: string
+          enum: [none, solid, dashed, dotted]
+        borderColor:
+          type: string
+          pattern: "^#[0-9A-Fa-f]{6}$"
+        borderWidth:
+          type: number
+          minimum: 0
+          maximum: 4
+    ReportLayoutElement:
+      type: object
+      required: [key, type, sectionKey, placement, order]
+      properties:
+        key:
+          type: string
+          minLength: 1
+          maxLength: 80
+        type:
+          type: string
+          enum: [text, divider]
+        sectionKey:
+          type: string
+          minLength: 1
+          maxLength: 80
+        placement:
+          type: string
+          enum: [before, after]
+        order:
+          type: number
+          minimum: 0
+        content:
+          type: string
+          maxLength: 500
+        fontFamily:
+          type: string
+          enum: [Arial, Calibri, "Times New Roman", Helvetica]
+        fontSize:
+          type: number
+          minimum: 8
+          maximum: 24
+        color:
+          type: string
+          pattern: "^#[0-9A-Fa-f]{6}$"
+        bold:
+          type: boolean
+        width:
+          type: number
+          minimum: 10
+          maximum: 100
+        lineStyle:
+          type: string
+          enum: [solid, dashed, dotted]
     ReportLayoutConfig:
       type: object
       required:
@@ -2317,6 +2385,11 @@ components:
             type: array
             items:
               $ref: "#/components/schemas/ReportLayoutColumn"
+        elements:
+          type: array
+          maxItems: 40
+          items:
+            $ref: "#/components/schemas/ReportLayoutElement"
     ReportLayout:
       type: object
       required: [id, testType, name, config]
