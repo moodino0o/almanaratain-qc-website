@@ -31,6 +31,7 @@ import {
   blockSizeMatches,
   blockTypeMatches,
   createEmptyRow,
+  createDefaultTestRows,
   evaluateContentAgainstLimit,
   evaluateSieveValue,
   evaluateSiltContent,
@@ -41,6 +42,7 @@ import {
   isSievePoreSizeAllowed,
   BLOCK_RECORD_MATERIAL,
   prepareDetailsForForm,
+  getReadyMixReferenceNumberError,
   sieveSizeNumber,
   stringValue,
   toFormRow,
@@ -130,6 +132,7 @@ export default function RecordForm() {
   const [blockAge, setBlockAge] = useState("");
   const [sampleAge, setSampleAge] = useState("");
   const [referenceNumber, setReferenceNumber] = useState("");
+  const [referenceNumberTouched, setReferenceNumberTouched] = useState(false);
   const [truckNumber, setTruckNumber] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerLocation, setCustomerLocation] = useState("");
@@ -138,8 +141,10 @@ export default function RecordForm() {
   const [strengthStandardMode, setStrengthStandardMode] = useState<"automatic" | "manual">("automatic");
   
   const [details, setDetails] = useState<Record<string, unknown>>({});
-  const [testRows, setTestRows] = useState<TestRow[]>([createEmptyRow(1)]);
-  const nextRowId = useRef(2);
+  const [testRows, setTestRows] = useState<TestRow[]>(() =>
+    createDefaultTestRows(testType),
+  );
+  const nextRowId = useRef(testRows.length + 1);
   const rowInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
   const sieveContextKeyRef = useRef("");
   const previousBlockSizeRef = useRef("");
@@ -265,7 +270,7 @@ export default function RecordForm() {
           : [];
     const loadedRows = loadedSourceRows.length
       ? loadedSourceRows.map((row, index) => toFormRow(row, index + 1))
-      : [createEmptyRow(1)];
+      : createDefaultTestRows(existingRecord.testType);
     const calculatedRows = existingRecord.testType === TestType.Sand_Sieve ||
       existingRecord.testType === TestType.Aggregate_Sieve
       ? calculateSieveResults(loadedRows)
@@ -275,7 +280,7 @@ export default function RecordForm() {
       ...(calculatedRows[index] ?? {}),
     })));
     sieveContextKeyRef.current = `${existingRecord.testType}|${String(savedDetails.materialReferenceItemId ?? existingRecord.material)}`;
-    nextRowId.current = Math.max(loadedSourceRows.length + 1, 2);
+    nextRowId.current = Math.max(loadedRows.length + 1, 2);
     initializedRecordId.current = recordId;
   }, [existingRecord, isEditing, recordId]);
 
@@ -653,6 +658,10 @@ export default function RecordForm() {
   const displayedTestRows = usesSieveRows
     ? visibleSieveRowEntries
     : testRows.map((row, rowIndex) => ({ row, rowIndex }));
+  const referenceNumberError =
+    referenceNumberTouched || referenceNumber.trim()
+      ? getReadyMixReferenceNumberError(referenceNumber)
+      : null;
 
   const sieveContextKey = `${testType}|${String(details.materialReferenceItemId ?? material.trim())}`;
 
@@ -781,6 +790,14 @@ export default function RecordForm() {
     e.preventDefault();
     const requestedAction = submitAction.current;
     submitAction.current = "save";
+    if (testType === TestType.Ready_Mix) {
+      const referenceError = getReadyMixReferenceNumberError(referenceNumber);
+      if (referenceError) {
+        setReferenceNumberTouched(true);
+        toast.error(referenceError);
+        return;
+      }
+    }
     if (!locationValue || (testType !== TestType.Blocks && !material) || !testedBy) {
       toast.error("Please fill in all required fields.");
       return;
@@ -1120,11 +1137,13 @@ export default function RecordForm() {
                 <Select value={testType} onValueChange={(val: TestType) => {
                   setTestType(val);
                   if (val === TestType.Blocks || testType === TestType.Blocks) setMaterial("");
+                  setReferenceNumberTouched(false);
                   setDetails({});
                   setSelectedStrengthStandardId("");
                   setStrengthStandardMode("automatic");
-                  setTestRows([createEmptyRow(1)]);
-                  nextRowId.current = 2;
+                  const defaultRows = createDefaultTestRows(val);
+                  setTestRows(defaultRows);
+                  nextRowId.current = defaultRows.length + 1;
                 }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select Test Type" />
@@ -1413,16 +1432,38 @@ export default function RecordForm() {
               {testType === TestType.Ready_Mix && (
                 <>
                   <div className="space-y-2">
-                    <Label>Reference Number</Label>
+                    <Label>
+                      Reference Number <span className="text-destructive">*</span>
+                    </Label>
                     <Input
                       value={referenceNumber}
                       onChange={(event) => setReferenceNumber(event.target.value)}
+                      onBlur={() => setReferenceNumberTouched(true)}
                       maxLength={REFERENCE_NUMBER_MAX_LENGTH}
-                      placeholder="e.g. PO-1042"
+                      placeholder="e.g. S.1042 or H.2042"
+                      aria-invalid={Boolean(referenceNumberError)}
+                      aria-describedby={
+                        referenceNumberError ? "ready-mix-reference-error" : undefined
+                      }
+                      className={
+                        referenceNumberError
+                          ? "border-destructive focus-visible:ring-destructive"
+                          : undefined
+                      }
                     />
-                    <p className="text-xs text-muted-foreground">
-                      Use a short identifier, such as PO-1042 or SITE-A7.
-                    </p>
+                    {referenceNumberError ? (
+                      <p
+                        id="ready-mix-reference-error"
+                        role="alert"
+                        className="text-xs font-medium text-destructive"
+                      >
+                        {referenceNumberError}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Enter a reference starting with S. or H., followed by a number.
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label>Truck Number</Label>

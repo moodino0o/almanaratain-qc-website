@@ -1,4 +1,4 @@
-import type { QcRecord } from "@workspace/api-client-react";
+import { TestType, type QcRecord } from "@workspace/api-client-react";
 
 export const BLOCK_RECORD_MATERIAL = "Concrete Block";
 
@@ -108,6 +108,30 @@ export const createEmptyRow = (id: number): TestRow => ({
   passingAmount: "",
   passingPercentage: "",
 });
+
+export const createDefaultTestRows = (
+  testType: QcRecord["testType"],
+  firstId = 1,
+): TestRow[] => {
+  const readyMixAges = testType === TestType.Ready_Mix
+    ? ["7", "7", "28", "28"]
+    : null;
+  const rowCount = readyMixAges?.length ??
+    (testType === TestType.Blocks || testType === TestType.Paving_Blocks ? 5 : 1);
+
+  return Array.from({ length: rowCount }, (_, index) => ({
+    ...createEmptyRow(firstId + index),
+    ...(readyMixAges ? { testAge: readyMixAges[index] } : {}),
+  }));
+};
+
+export const getReadyMixReferenceNumberError = (value: string): string | null => {
+  const referenceNumber = value.trim();
+  if (!referenceNumber) return "Reference Number is required.";
+  return /^[SH]\.\s*\d+/i.test(referenceNumber)
+    ? null
+    : "Reference Number must start with S. or H. followed by a number.";
+};
 
 export const stringValue = (value: unknown) => (value == null ? "" : String(value));
 
@@ -696,6 +720,6 @@ export const prepareRecordForForm = (record: QcRecord): RecordFormValues => {
     details,
     testRows: sourceRows.length
       ? sourceRows.map((row, index) => toFormRow(row, index + 1))
-      : [createEmptyRow(1)],
+      : createDefaultTestRows(record.testType),
   };
 };

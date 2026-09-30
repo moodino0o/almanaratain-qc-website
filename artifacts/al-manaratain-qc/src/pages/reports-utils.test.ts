@@ -231,8 +231,8 @@ test("summarizes Masonry records using their existing strength calculation basis
     material: "Concrete Block",
     details: {
       testRows: [
-        { calculatedStrength: 40, airDryStrength: 48 },
-        { calculatedStrength: 50, airDryStrength: 60 },
+        { load: 500, calculatedStrength: 40, airDryStrength: 48 },
+        { load: 600, calculatedStrength: 50, airDryStrength: 60 },
       ],
     },
   });
@@ -244,8 +244,8 @@ test("summarizes Masonry records using their existing strength calculation basis
     material: "Paving Block",
     details: {
       testRows: [
-        { tensileStrength: 4, correctedStrength: 4.5 },
-        { tensileStrength: 6, correctedStrength: 6.5 },
+        { load: 500, tensileStrength: 4, correctedStrength: 4.5 },
+        { load: 600, tensileStrength: 6, correctedStrength: 6.5 },
       ],
     },
   });
@@ -262,6 +262,57 @@ test("summarizes Masonry records using their existing strength calculation basis
   });
 });
 
+test("daily report summaries ignore Ready Mix and Masonry rows without load", () => {
+  const readyMix = qcRecord({
+    id: 92,
+    testType: "Ready Mix",
+    sampleDate: "2026-09-01",
+    location: "Plant A",
+    material: "25 N OPC",
+    details: {
+      designStrength: "25 N OPC",
+      testRows: [
+        { testAge: 7, load: "", calculatedStrength: 99 },
+        { testAge: 7, load: 500, calculatedStrength: 30 },
+      ],
+    },
+  });
+  const blocks = qcRecord({
+    id: 93,
+    testType: "Blocks",
+    sampleDate: "2026-09-01",
+    location: "Plant B",
+    material: "Concrete Block",
+    details: {
+      blockType: "Hollow Concrete Block",
+      blockAge: 7,
+      testRows: [
+        { load: "", airDryStrength: 99 },
+        { load: 800, airDryStrength: 12 },
+      ],
+    },
+  });
+
+  assert.deepEqual(summarizeRecordStrengths(readyMix), {
+    averageStrength: 30,
+    minimumStrength: 30,
+    maximumStrength: 30,
+  });
+  assert.deepEqual(summarizeRecordStrengths(blocks), {
+    averageStrength: 12,
+    minimumStrength: 12,
+    maximumStrength: 12,
+  });
+  assert.deepEqual(
+    buildDailyReportRows([readyMix, blocks], "2026-09-08", "2026-09-08")
+      .map(({ category, averageStrength }) => ({ category, averageStrength })),
+    [
+      { category: "Blocks", averageStrength: 12 },
+      { category: "Ready Mix", averageStrength: 30 },
+    ],
+  );
+});
+
 test("groups Ready Mix products by their first three words and summarizes each day", () => {
   const records = [
     qcRecord({
@@ -273,8 +324,8 @@ test("groups Ready Mix products by their first three words and summarizes each d
       details: {
         designStrength: "25 N OPC 20mm",
         testRows: [
-          { testAge: 28, calculatedStrength: 40 },
-          { testAge: 28, calculatedStrength: 44 },
+          { testAge: 28, load: 500, calculatedStrength: 40 },
+          { testAge: 28, load: 600, calculatedStrength: 44 },
         ],
       },
     }),
@@ -286,7 +337,7 @@ test("groups Ready Mix products by their first three words and summarizes each d
       material: "OPC",
       details: {
         designStrength: "25 N OPC 10mm",
-        testRows: [{ testAge: 28, calculatedStrength: 42 }],
+        testRows: [{ testAge: 28, load: 550, calculatedStrength: 42 }],
       },
     }),
   ];
@@ -327,8 +378,8 @@ test("daily Ready Mix results use calculated strength instead of air-dry strengt
           designStrength: "45 N OPC Ice",
           testRows: [
             { testAge: "", calculatedStrength: null, airDryStrength: null },
-            { testAge: "28", calculatedStrength: "54.96", strength: "54.96", airDryStrength: "66" },
-            { testAge: "28", calculatedStrength: "57.22", strength: "57.22", airDryStrength: "68.7" },
+            { testAge: "28", load: "500", calculatedStrength: "54.96", strength: "54.96", airDryStrength: "66" },
+            { testAge: "28", load: "600", calculatedStrength: "57.22", strength: "57.22", airDryStrength: "68.7" },
           ],
         },
       }),
@@ -355,8 +406,8 @@ test("daily Ready Mix results filter Site S and Plant H references or include al
         referenceNumber: "S-1",
         designStrength: "25 N OPC 20mm",
         testRows: [
-          { testAge: 7, calculatedStrength: 40 },
-          { testAge: 7, calculatedStrength: 44 },
+          { testAge: 7, load: 500, calculatedStrength: 40 },
+          { testAge: 7, load: 600, calculatedStrength: 44 },
         ],
       },
     }),
@@ -369,7 +420,7 @@ test("daily Ready Mix results filter Site S and Plant H references or include al
       details: {
         referenceNumber: "s-2",
         designStrength: "25 N OPC 20mm",
-        testRows: [{ testAge: 7, calculatedStrength: 50 }],
+        testRows: [{ testAge: 7, load: 550, calculatedStrength: 50 }],
       },
     }),
     qcRecord({
@@ -381,7 +432,7 @@ test("daily Ready Mix results filter Site S and Plant H references or include al
       details: {
         referenceNumber: "H-1",
         designStrength: "25 N OPC 20mm",
-        testRows: [{ testAge: 7, calculatedStrength: 60 }],
+        testRows: [{ testAge: 7, load: 500, calculatedStrength: 60 }],
       },
     }),
     qcRecord({
@@ -393,7 +444,7 @@ test("daily Ready Mix results filter Site S and Plant H references or include al
       details: {
         referenceNumber: "H-2",
         designStrength: "25 N OPC 20mm",
-        testRows: [{ testAge: 7, calculatedStrength: 64 }],
+        testRows: [{ testAge: 7, load: 600, calculatedStrength: 64 }],
       },
     }),
     qcRecord({
@@ -405,7 +456,7 @@ test("daily Ready Mix results filter Site S and Plant H references or include al
       details: {
         referenceNumber: "X-1",
         designStrength: "25 N OPC 20mm",
-        testRows: [{ testAge: 7, calculatedStrength: 100 }],
+        testRows: [{ testAge: 7, load: 700, calculatedStrength: 100 }],
       },
     }),
   ];
@@ -452,7 +503,7 @@ test("includes non-Ready Mix categories, date ranges, and selected product group
       details: {
         blockType: "Hollow Concrete Block",
         blockAge: "28",
-        testRows: [{ calculatedStrength: 8 }, { calculatedStrength: 10 }],
+        testRows: [{ load: 800, calculatedStrength: 8 }, { load: 1000, calculatedStrength: 10 }],
       },
     }),
     qcRecord({
@@ -497,8 +548,8 @@ test("Block daily report min and max use air-dry strength, including the Dammam 
           blockType: "Hollow Concrete Block",
           blockAge: 28,
           testRows: [
-            { waterStrength: 8, calculatedStrength: 8, airDryStrength: "", dryAirStrength: 12 },
-            { waterStrength: 10, calculatedStrength: 10, airDryStrength: 14 },
+            { load: 500, waterStrength: 8, calculatedStrength: 8, airDryStrength: "", dryAirStrength: 12 },
+            { load: 600, waterStrength: 10, calculatedStrength: 10, airDryStrength: 14 },
           ],
         },
       }),
@@ -512,8 +563,8 @@ test("Block daily report min and max use air-dry strength, including the Dammam 
           blockType: "Hollow Concrete Block",
           blockAge: 28,
           testRows: [
-            { waterStrength: "", calculatedStrength: 8, airDryStrength: 9.6 },
-            { waterStrength: 10, calculatedStrength: 10, airDryStrength: 12 },
+            { load: 500, waterStrength: "", calculatedStrength: 8, airDryStrength: 9.6 },
+            { load: 600, waterStrength: 10, calculatedStrength: 10, airDryStrength: 12 },
           ],
         },
       }),
@@ -543,7 +594,7 @@ test("uses the Block age-derived testing date instead of the entered legacy date
           blockType: "Hollow Concrete Block",
           blockAge: 28,
           testingDate: "2026-10-02",
-          testRows: [{ calculatedStrength: 10 }],
+          testRows: [{ load: 800, calculatedStrength: 10 }],
         },
       }),
     ],
@@ -591,7 +642,7 @@ test("derives Sand, Aggregate, and Paving testing dates from their saved ages", 
       details: {
         blockAge: 10,
         testingDate: "2026-09-20",
-        testRows: [{ tensileStrength: 8 }],
+        testRows: [{ load: 600, tensileStrength: 8 }],
       },
     }),
   ];
@@ -617,7 +668,7 @@ test("uses Block Age for block results and orders Ready Mix ages 7 days before 2
       material: "OPC",
       details: {
         designStrength: "25 N OPC 20mm",
-        testRows: [{ testAge: 28, calculatedStrength: 44 }],
+        testRows: [{ testAge: 28, load: 500, calculatedStrength: 44 }],
       },
     }),
     qcRecord({
@@ -628,7 +679,7 @@ test("uses Block Age for block results and orders Ready Mix ages 7 days before 2
       material: "OPC",
       details: {
         designStrength: "25 N OPC 20mm",
-        testRows: [{ testAge: 7, calculatedStrength: 30 }],
+        testRows: [{ testAge: 7, load: 550, calculatedStrength: 30 }],
       },
     }),
     qcRecord({
@@ -640,7 +691,7 @@ test("uses Block Age for block results and orders Ready Mix ages 7 days before 2
       details: {
         blockType: "Hollow Concrete Block",
         blockAge: "28",
-        testRows: [{ calculatedStrength: 10 }],
+        testRows: [{ load: 800, calculatedStrength: 10 }],
       },
     }),
   ];

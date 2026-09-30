@@ -5,6 +5,7 @@ import {
   type QcRecordInput,
   type QcRecordUpdate,
 } from "@workspace/api-client-react";
+import { getReadyMixReferenceNumberError } from "./record-form-utils";
 
 export type BulkRecordDraft = {
   id: number;
@@ -120,6 +121,8 @@ export const validateBulkDraft = (draft: BulkRecordDraft) => {
     !draft.location.trim() && "Location / plant",
     !draft.material.trim() && "Material / product",
     !draft.testedBy.trim() && "Tested by",
+    draft.testType === TestType.Ready_Mix &&
+      getReadyMixReferenceNumberError(detailText(draft.details, "referenceNumber")),
     ageKey && (!ageText || !Number.isSafeInteger(age) || age < 0) && "Age (days)",
     draft.testType === TestType.Paving_Blocks &&
       !detailText(draft.details, "pavingBlockSize").trim() &&

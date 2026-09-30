@@ -13,7 +13,7 @@ import type {
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer } from "lucide-react";
 import { useAppBack } from "@/hooks/use-app-back";
-import { formatShapeFactor } from "./report-print-utils";
+import { filterRowsWithLoad, formatShapeFactor } from "./report-print-utils";
 import {
   AGGREGATE_CHLORIDE_LIMIT_PERCENT,
   AGGREGATE_SULPHATE_LIMIT_PERCENT,
@@ -1185,11 +1185,12 @@ function ReadyMixReport({
           dryWeight: detailValue(details, ["dryWeight"]),
           wetWeight: detailValue(details, ["wetWeight"]),
           density: detailValue(details, ["density", "densityKgM3"]),
+          load: detailRawValue(details, ["load"], ""),
           strength: detailValue(details, ["strength", "compressiveStrength"]),
           waterAbsorption: detailValue(details, ["waterAbsorption", "absorption"]),
         },
       ];
-  const orderedTestRows = sortCubeRowsByAge(testRows);
+  const orderedTestRows = sortCubeRowsByAge(filterRowsWithLoad(testRows));
   const average28DayStrength = averageStrengthForAgeRange(orderedTestRows, 28, 29);
   const resultColumnDefaults: LayoutColumn[] = [
     { key: "testingDate", label: "Testing Date", visible: true, order: 0, width: 18 },
@@ -1293,7 +1294,7 @@ function ReadyMixReport({
                   details.age,
                 ]),
                 weight,
-                load: firstPresentValue([values.load, details.load]),
+                load: firstPresentValue([values.load]),
                 calculatedStrength: strength,
                 dryWeight: values.dryWeight,
                 wetWeight: values.wetWeight,
@@ -1353,7 +1354,8 @@ function BlocksReport({
 }) {
   const details = record.details;
   const evaluation = objectValue(details.strengthEvaluation);
-  const testRows = Array.isArray(details.testRows) ? details.testRows : [];
+  const savedTestRows = Array.isArray(details.testRows) ? details.testRows : [];
+  const testRows = filterRowsWithLoad(savedTestRows);
   const blockAge = blockAgeFromRecord(details, testRows);
   const enteredTestingDate =
     typeof details.testingDate === "string" ? details.testingDate : null;
@@ -1411,7 +1413,9 @@ function BlocksReport({
         <strong>Remarks:</strong>
         <span>{record.remarks || ""}</span>
       </div>
-      <BlockCompressionRowsTable rows={testRows} hideWaterStrength={useDammamBasis} />
+      {testRows.length > 0 && (
+        <BlockCompressionRowsTable rows={testRows} hideWaterStrength={useDammamBasis} />
+      )}
       <div className={`block-report-result ${compliance.toLocaleLowerCase()}`}>
         <span>Overall result</span>
         <strong>{complianceLabel}</strong>
@@ -1573,7 +1577,9 @@ function PavingBlocksReport({ record, standards, layout }: {
 }) {
   const details = record.details;
   const evaluation = objectValue(details.strengthEvaluation);
-  const rows = Array.isArray(details.testRows) ? details.testRows : [];
+  const rows = filterRowsWithLoad(
+    Array.isArray(details.testRows) ? details.testRows : [],
+  );
   const matchingStandard = standards
     .filter((standard) => strengthStandardMatchesRecord(standard, record))
     .sort((left, right) => left.id - right.id)[0];
@@ -1654,12 +1660,16 @@ function PavingBlocksReport({ record, standards, layout }: {
           <span>{record.remarks}</span>
         </div>
       )}
-      <SpecimenRowsTable
-        rows={rows}
-        status={status}
-        layout={layout}
-      />
-      <PavingStrengthStatistics rows={rows} />
+      {rows.length > 0 && (
+        <>
+          <SpecimenRowsTable
+            rows={rows}
+            status={status}
+            layout={layout}
+          />
+          <PavingStrengthStatistics rows={rows} />
+        </>
+      )}
     </div>
   );
 }

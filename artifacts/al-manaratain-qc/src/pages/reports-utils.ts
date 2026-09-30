@@ -3,6 +3,7 @@ import type {
   DailyReadyMixStrengthSummary,
   QcRecord,
 } from "@workspace/api-client-react";
+import { filterRowsWithLoad } from "./report-print-utils";
 
 export type GroupedDailyLocation = {
   location: string;
@@ -186,13 +187,19 @@ const blockAirDryStrength = (row: unknown, location: string) => {
 };
 
 const recordStrengths = (record: QcRecord, details: Record<string, unknown>) => {
-  const rows = Array.isArray(details.testRows) ? details.testRows : [];
+  const savedRows = Array.isArray(details.testRows) ? details.testRows : [];
+  const loadRequired =
+    record.testType === "Ready Mix" ||
+    record.testType === "Blocks" ||
+    record.testType === "Paving Blocks";
+  const rows = loadRequired ? filterRowsWithLoad(savedRows) : savedRows;
   const strengths = rows
     .map((row) => record.testType === "Blocks"
       ? blockAirDryStrength(row, record.location)
       : rowStrength(row, record.testType))
     .filter((value): value is number => value !== null);
   if (strengths.length) return strengths;
+  if (loadRequired && savedRows.length > 0 && rows.length === 0) return [];
   const directStrengthKeys = record.testType === "Ready Mix"
     ? ["averageStrength", "calculatedStrength", "strength", "compressiveStrength"]
     : record.testType === "Blocks"
@@ -310,7 +317,9 @@ export function buildDailyReportRows(
     }
     const product = recordProduct(record, details);
     if (record.testType === "Ready Mix") {
-      const rows = Array.isArray(details.testRows) ? details.testRows : [];
+      const rows = filterRowsWithLoad(
+        Array.isArray(details.testRows) ? details.testRows : [],
+      );
       const ageGroups = new Map<number, number[]>();
       for (const row of rows) {
         if (typeof row !== "object" || row === null) continue;

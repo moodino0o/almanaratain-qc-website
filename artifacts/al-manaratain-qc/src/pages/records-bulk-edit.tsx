@@ -47,6 +47,7 @@ import {
   validateBulkDraft,
   type BulkRecordDraft,
 } from "./records-bulk-utils";
+import { getReadyMixReferenceNumberError } from "./record-form-utils";
 import { EMPLOYEE_ADDABLE_REFERENCE_CATEGORIES } from "./reference-data-permissions";
 import { registerSectionFromQuery } from "./register-sections";
 
@@ -76,6 +77,7 @@ function CellInput({
   type = "text",
   placeholder,
   disabled = false,
+  invalid = false,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -83,6 +85,7 @@ function CellInput({
   type?: "text" | "date" | "number";
   placeholder?: string;
   disabled?: boolean;
+  invalid?: boolean;
 }) {
   if (disabled) {
     return <span className="block px-2 text-center text-muted-foreground/50">—</span>;
@@ -94,7 +97,12 @@ function CellInput({
       value={value}
       onChange={(event) => onChange(event.target.value)}
       placeholder={placeholder}
-      className="h-8 w-full min-w-0 rounded-sm border border-transparent bg-transparent px-1 text-[10px] leading-tight outline-none transition-colors hover:border-border focus:border-primary focus:bg-background focus:ring-1 focus:ring-primary/30"
+      className={[
+        "h-8 w-full min-w-0 rounded-sm border bg-transparent px-1 text-[10px] leading-tight outline-none transition-colors focus:bg-background focus:ring-1",
+        invalid
+          ? "border-destructive bg-destructive/5 focus:border-destructive focus:ring-destructive/30"
+          : "border-transparent hover:border-border focus:border-primary focus:ring-primary/30",
+      ].join(" ")}
     />
   );
 }
@@ -216,8 +224,13 @@ function DraftRow({
     type: "text" | "date" | "number" = "text",
     options: string[] = [],
     categoryKey?: string,
-  ) => (
-    (options.length > 0 || categoryKey !== undefined) && type === "text"
+  ) => {
+    const value = detailText(draft.details, key);
+    const referenceError =
+      readyMix && key === "referenceNumber" && value.trim()
+        ? getReadyMixReferenceNumberError(value)
+        : null;
+    const control = (options.length > 0 || categoryKey !== undefined) && type === "text"
       ? <LookupCell
           value={detailText(draft.details, key)}
           onChange={(value) => onDetailChange(key, value)}
@@ -230,8 +243,17 @@ function DraftRow({
           onChange={(value) => onDetailChange(key, value)}
           label={`${label} for ${recordLabel}`}
           type={type}
+          invalid={Boolean(referenceError)}
         />
-  );
+    return referenceError ? (
+      <div className="space-y-1">
+        {control}
+        <p role="alert" className="text-[9px] font-medium leading-tight text-destructive">
+          {referenceError}
+        </p>
+      </div>
+    ) : control;
+  };
   const field = (label: string, control: ReactNode, className = "") => (
     <div key={label} className={`min-w-0 ${className}`}>
       <div className="mb-1 text-[10px] font-medium leading-tight text-muted-foreground">

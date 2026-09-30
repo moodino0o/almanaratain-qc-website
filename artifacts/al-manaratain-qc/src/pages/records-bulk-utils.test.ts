@@ -21,7 +21,7 @@ const record: QcRecord = {
   testedBy: "Technician",
   remarks: "Original",
   details: {
-    referenceNumber: "H-100",
+    referenceNumber: "H.100",
     slump: 90,
     testRows: [{ load: 500, calculatedStrength: 22.22 }],
   },
@@ -60,7 +60,7 @@ test("bulk metadata edits preserve specimen results", () => {
 
   assert.equal(payload.details?.slump, "95");
   assert.deepEqual(payload.details?.testRows, record.details.testRows);
-  assert.equal(payload.details?.referenceNumber, "H-100");
+  assert.equal(payload.details?.referenceNumber, "H.100");
 });
 
 test("bulk drafts require the shared main record fields", () => {
@@ -69,6 +69,25 @@ test("bulk drafts require the shared main record fields", () => {
   assert.deepEqual(
     validateBulkDraft({ ...draft, location: "", material: "", testedBy: "" }),
     ["Location / plant", "Material / product", "Tested by"],
+  );
+});
+
+test("bulk Ready Mix drafts reject missing or invalid reference prefixes", () => {
+  const draft = recordToBulkDraft(record);
+  assert.deepEqual(validateBulkDraft(draft), []);
+  assert.deepEqual(
+    validateBulkDraft({
+      ...draft,
+      details: { ...draft.details, referenceNumber: "PO-100" },
+    }),
+    ["Reference Number must start with S. or H. followed by a number."],
+  );
+  assert.deepEqual(
+    validateBulkDraft({
+      ...draft,
+      details: { ...draft.details, referenceNumber: "" },
+    }),
+    ["Reference Number is required."],
   );
 });
 

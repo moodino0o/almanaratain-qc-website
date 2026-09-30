@@ -23,9 +23,42 @@ import {
   evaluateContentAgainstLimit,
   evaluateSiltContent,
   prepareRecordForForm,
+  createDefaultTestRows,
+  getReadyMixReferenceNumberError,
   filterSieveSizeItems,
   sieveSizeNumber,
 } from "./record-form-utils";
+
+test("defaults Ready Mix and Masonry entry rows to the requested ages and counts", () => {
+  const readyMixRows = createDefaultTestRows(TestType.Ready_Mix);
+  assert.equal(readyMixRows.length, 4);
+  assert.deepEqual(readyMixRows.map((row) => row.testAge), ["7", "7", "28", "28"]);
+
+  assert.equal(createDefaultTestRows(TestType.Blocks).length, 5);
+  assert.equal(createDefaultTestRows(TestType.Paving_Blocks).length, 5);
+  assert.deepEqual(
+    createDefaultTestRows(TestType.Ready_Mix, 10).map((row) => row.id),
+    [10, 11, 12, 13],
+  );
+});
+
+test("Ready Mix references require an S. or H. prefix followed by a number", () => {
+  for (const value of ["S.123", "H. 456", "s.78A"]) {
+    assert.equal(getReadyMixReferenceNumberError(value), null);
+  }
+  assert.equal(
+    getReadyMixReferenceNumberError("PO-1042"),
+    "Reference Number must start with S. or H. followed by a number.",
+  );
+  assert.equal(
+    getReadyMixReferenceNumberError("S."),
+    "Reference Number must start with S. or H. followed by a number.",
+  );
+  assert.equal(
+    getReadyMixReferenceNumberError(""),
+    "Reference Number is required.",
+  );
+});
 
 test("sorts sieve pore sizes from largest to smallest without reordering ties", () => {
   const rows = [
@@ -500,32 +533,9 @@ test("copies Paving Blocks material details", () => {
     strength: 42,
     correctionFactor: 1,
   });
-  assert.deepEqual(copied.testRows, [{
-    id: 1,
-    length: "",
-    width: "",
-    height: "",
-    dryWeight: "",
-    wetWeight: "",
-      weight: "",
-    sampleAge: "",
-    testAge: "",
-    load: "",
-    strength: "",
-    tensileStrength: "",
-    airDryStrength: "",
-    normalizedStrength: "",
-      compressiveStrength: "",
-      correctionFactor: "",
-      correctedStrength: "",
-    density: "",
-    waterAbsorption: "",
-    sieveSize: "",
-    sieveSizeReferenceItemId: null,
-    amountReturned: "",
-    passingAmount: "",
-    passingPercentage: "",
-  }]);
+  assert.equal(copied.testRows.length, 5);
+  assert.deepEqual(copied.testRows.map((row) => row.id), [1, 2, 3, 4, 5]);
+  assert.ok(copied.testRows.every((row) => row.load === ""));
 });
 
 test("applies paving correction factors by the size suffix", () => {
