@@ -62,12 +62,11 @@ export function createReportPreviewRecord(testType: QcRecord["testType"]): QcRec
 export type ReportDocumentProps = {
   report: { record: QcRecord; companyName: string; companySubtitle: string; layout?: ReportLayout };
   strengthStandards?: StrengthStandard[];
-  sieveStandards?: Array<{ testType: string; material: string; standardReference: string }>;
+  sieveStandards?: Array<{ id?: number; testType: string; material: string; standardReference: string }>;
   selectedStrengthStandardId?: string;
   accordingTo?: string | null;
   reportReferenceNumber?: string;
   defaultTitle?: string;
-  children?: ReactNode;
 };
 
 function layoutSectionVisible(layout: ReportLayout | undefined, key: string) {
@@ -101,9 +100,13 @@ function LayoutElements({ layout, sectionKey, placement }: {
   const elements = (layout?.config.elements ?? [])
     .filter((element) => element.sectionKey === sectionKey && element.placement === placement)
     .sort((a, b) => a.order - b.order);
-  return <>{elements.map((element) => element.type === "divider"
-    ? <div key={element.key} className="report-layout-divider" style={{ borderTop: `${element.width ?? 1}px ${element.lineStyle ?? "solid"} ${element.color ?? "#d1d5db"}`, margin: "8px 0" }} />
-    : <div key={element.key} className="report-layout-text" style={{ fontFamily: element.fontFamily, fontSize: element.fontSize ? `${element.fontSize}px` : undefined, color: element.color, fontWeight: element.bold ? 700 : undefined }}>{element.content ?? ""}</div>)}</>;
+  const sectionOrder = layout?.config.sections.find((section) => section.key === sectionKey)?.order ?? 0;
+  return <>{elements.map((element) => {
+    const width = `${Math.min(100, Math.max(10, element.width ?? 100))}%`;
+    return element.type === "divider"
+      ? <div key={element.key} className="report-layout-divider" style={{ width, order: sectionOrder, borderTop: `1px ${element.lineStyle ?? "solid"} ${element.color ?? "#d1d5db"}`, margin: "8px 0" }} />
+      : <div key={element.key} className="report-layout-text" style={{ width, order: sectionOrder, fontFamily: element.fontFamily, fontSize: element.fontSize ? `${element.fontSize}px` : undefined, color: element.color, fontWeight: element.bold ? 700 : undefined }}>{element.content ?? ""}</div>;
+  })}</>;
 }
 
 function layoutColumns(
@@ -112,7 +115,7 @@ function layoutColumns(
   fallback: LayoutColumn[],
 ) {
   const configured = layout?.config.columns[tableKey];
-  const selectedColumns = configured?.length ? configured : fallback;
+  const selectedColumns = configured === undefined ? fallback : configured;
   const compatibleColumns =
     tableKey === "sieveResults" && configured?.length
       ? (() => {
@@ -1282,16 +1285,16 @@ function ReadyMixReport({
     { key: "strength", label: "Strength (N/mm²)", visible: true, order: 4, width: 19 },
     { key: "absorption", label: "Water Absorption (%)", visible: true, order: 5, width: 19 },
   ];
-  const savedResultColumns = layout?.config.columns.readyMixResults ?? [];
-  const resultColumns = resultColumnDefaults
-    .map((fallback) => {
-      const saved = savedResultColumns.find((column) => column.key === fallback.key);
-      return saved ? { ...fallback, label: saved.label, order: saved.order, width: saved.width } : fallback;
-    })
-    .filter((column) => {
-      const saved = savedResultColumns.find((candidate) => candidate.key === column.key);
-      return saved?.visible ?? true;
-    })
+  const savedResultColumns = layout?.config.columns.readyMixResults;
+  const resultColumns = (savedResultColumns === undefined
+    ? resultColumnDefaults
+    : savedResultColumns
+        .filter((saved) => resultColumnDefaults.some((fallback) => fallback.key === saved.key))
+        .map((saved) => ({
+          ...resultColumnDefaults.find((fallback) => fallback.key === saved.key)!,
+          ...saved,
+        })))
+    .filter((column) => column.visible)
     .sort((left, right) => left.order - right.order);
   const customerName = detailRawValue(details, ["customerName", "customer"], "-");
   const customerLocation = detailRawValue(
@@ -1463,52 +1466,62 @@ function BlocksReport({
       ? "NOT PASS"
       : "REVIEW";
   return (
-    <div className="block-compression-report">
-      <div className="block-report-section-heading">
-        <div>
-          <span>Test details</span>
-        </div>
-        <strong className="block-report-air-dry-note">
-          {useDammamBasis
-            ? "Dammam: Air Dry compliance basis"
-            : "Air Dry strength compliance basis"}
-        </strong>
-      </div>
-      <div className="block-report-fields">
-        <ReportFields
-          entries={[
-            ["BLOCK SIZE:", detailValue(details, ["blockSize"])],
-            ["CASTING DATE:", formatReportDate(record.sampleDate)],
-            ["TESTING DATE:", formatReportDate(testingDate)],
-            ["Sp. Strength (N/mm²):", requiredStrength === null ? "-" : formatNumber(requiredStrength)],
-            ["Factory:", record.location],
-            ["STRENGTH BASIS:", "AIR DRY STRENGTH"],
-          ]}
-        />
-        <ReportFields
-          entries={[
-            ["BLOCK AGE IN DAYS:", blockAge === null ? "-" : formatNumber(blockAge)],
-            ["MACHINE TYPE:", detailValue(details, ["machine"])],
-            ["SAMPLE TYPE:", detailValue(details, ["sampleType"])],
-            ["METHOD OF CONDITIONING:", detailValue(details, ["conditioningMethod"])],
-            ["METHOD OF PREPARATION:", detailValue(details, ["preparationMethod"])],
-            ["SHAPE FACTOR:", formatShapeFactor(details.shapeFactor)],
-            ["BLOCK TYPE:", detailValue(details, ["blockType"], record.material)],
-          ]}
-        />
-      </div>
-      <div className="block-report-remarks">
-        <strong>Remarks:</strong>
-        <span>{record.remarks || ""}</span>
-      </div>
-      {testRows.length > 0 && (
-        <BlockCompressionRowsTable rows={testRows} hideWaterStrength={useDammamBasis} layout={layout} />
+    <>
+      {layoutSectionVisible(layout, "context") && (
+        <>
+          <LayoutElements layout={layout} sectionKey="context" placement="before" />
+          <section className="block-compression-report report-layout-section" style={layoutSectionStyle(layout, "context")}>
+            <div className="block-report-section-heading">
+              <div><span>Test details</span></div>
+              <strong className="block-report-air-dry-note">
+                {useDammamBasis
+                  ? "Dammam: Air Dry compliance basis"
+                  : "Air Dry strength compliance basis"}
+              </strong>
+            </div>
+            <div className="block-report-fields">
+              <ReportFields
+                entries={[
+                  ["BLOCK SIZE:", detailValue(details, ["blockSize"])],
+                  ["CASTING DATE:", formatReportDate(record.sampleDate)],
+                  ["TESTING DATE:", formatReportDate(testingDate)],
+                  ["Sp. Strength (N/mm²):", requiredStrength === null ? "-" : formatNumber(requiredStrength)],
+                  ["Factory:", record.location],
+                  ["STRENGTH BASIS:", "AIR DRY STRENGTH"],
+                ]}
+              />
+              <ReportFields
+                entries={[
+                  ["BLOCK AGE IN DAYS:", blockAge === null ? "-" : formatNumber(blockAge)],
+                  ["MACHINE TYPE:", detailValue(details, ["machine"])],
+                  ["SAMPLE TYPE:", detailValue(details, ["sampleType"])],
+                  ["METHOD OF CONDITIONING:", detailValue(details, ["conditioningMethod"])],
+                  ["METHOD OF PREPARATION:", detailValue(details, ["preparationMethod"])],
+                  ["SHAPE FACTOR:", formatShapeFactor(details.shapeFactor)],
+                  ["BLOCK TYPE:", detailValue(details, ["blockType"], record.material)],
+                ]}
+              />
+            </div>
+          </section>
+          <LayoutElements layout={layout} sectionKey="context" placement="after" />
+        </>
       )}
-      <div className={`block-report-result ${compliance.toLocaleLowerCase()}`}>
-        <span>Overall result</span>
-        <strong>{complianceLabel}</strong>
-      </div>
-    </div>
+      {layoutSectionVisible(layout, "results") && (
+        <>
+          <LayoutElements layout={layout} sectionKey="results" placement="before" />
+          <section className="block-compression-report report-layout-section" style={layoutSectionStyle(layout, "results")}>
+            {testRows.length > 0 && (
+              <BlockCompressionRowsTable rows={testRows} hideWaterStrength={useDammamBasis} layout={layout} />
+            )}
+            <div className={`block-report-result ${compliance.toLocaleLowerCase()}`}>
+              <span>Overall result</span>
+              <strong>{complianceLabel}</strong>
+            </div>
+          </section>
+          <LayoutElements layout={layout} sectionKey="results" placement="after" />
+        </>
+      )}
+    </>
   );
 }
 
@@ -1742,12 +1755,6 @@ function PavingBlocksReport({ record, standards, layout }: {
           ]}
         />
       </div>
-      {layoutSectionVisible(layout, "remarks") && record.remarks && (
-        <div className="block-report-remarks">
-          <strong>Remark:</strong>
-          <span>{record.remarks}</span>
-        </div>
-      )}
       {rows.length > 0 && (
         <>
           <SpecimenRowsTable
@@ -1765,7 +1772,7 @@ function PavingBlocksReport({ record, standards, layout }: {
 function ConfiguredDetailsReport({ record, tableKey, layout }: { record: QcRecord; tableKey: string; layout?: ReportLayout }) {
   const defaults = REPORT_LAYOUT_FIELD_GROUPS[record.testType]?.[tableKey] ?? [];
   const configured = layout?.config.columns[tableKey];
-  const columns = (configured?.length ? configured : defaults.map((field, order) => ({ ...field, visible: true, order })))
+  const columns = (configured === undefined ? defaults.map((field, order) => ({ ...field, visible: true, order })) : configured)
     .filter((field) => field.visible)
     .filter((field) => defaults.some((candidate) => candidate.key === field.key))
     .sort((a, b) => a.order - b.order);
@@ -1783,7 +1790,7 @@ function ConfiguredDetailsReport({ record, tableKey, layout }: { record: QcRecor
 function WaterReport({ record, layout }: { record: QcRecord; layout?: ReportLayout }) {
   const details = record.details;
   const configured = layout?.config.columns.waterDetails;
-  const waterFields = (configured?.length ? configured : REPORT_LAYOUT_FIELD_GROUPS.Water.waterDetails.map((field, order) => ({ ...field, visible: true, order })))
+  const waterFields = (configured === undefined ? REPORT_LAYOUT_FIELD_GROUPS.Water.waterDetails.map((field, order) => ({ ...field, visible: true, order })) : configured)
     .filter((field) => field.visible).sort((a, b) => a.order - b.order);
   return (
     <section>
@@ -1824,33 +1831,61 @@ function defaultReportTitle(testType: QcRecord["testType"]) {
  * Print-only document surface.  Keeping the document separate from the
  * route/toolbar also lets the layout editor mount the same data renderer.
  */
-export function ReportDocument({ report, strengthStandards = [], accordingTo: configuredAccordingTo, children }: ReportDocumentProps) {
+export function ReportDocument({ report, strengthStandards = [], sieveStandards = [], selectedStrengthStandardId, accordingTo: configuredAccordingTo, reportReferenceNumber: configuredReference, defaultTitle: configuredTitle }: ReportDocumentProps) {
   const { record, companyName, companySubtitle, layout } = report;
-  const reportReferenceNumber = reportReferenceNumberFor(record);
-  const defaultTitle = defaultReportTitle(record.testType);
-  const accordingTo = configuredAccordingTo ?? null;
-  if (children) {
-    return <main className={`report-paper ${record.testType === "Ready Mix" ? "ready-mix-paper" : ""}`} style={layout ? {
-      fontFamily: layout.config.fontFamily, fontSize: `${Math.max(layout.config.fontSize, 13)}px`, color: layout.config.textColor,
-      padding: `${layout.config.paperPadding}mm`, "--report-accent-color": layout.config.accentColor,
-    } as CSSProperties : undefined}>{children}</main>;
-  }
+  const reportReferenceNumber = configuredReference ?? reportReferenceNumberFor(record);
+  const defaultTitle = configuredTitle ?? defaultReportTitle(record.testType);
+  const reportTitle = layout?.config.title.trim() || defaultTitle;
+  const matchingStrengthStandards = strengthStandards
+    .filter((standard) => strengthStandardMatchesRecord(standard, record))
+    .sort((left, right) => left.id - right.id);
+  const selectedStrengthStandard = matchingStrengthStandards.find((standard) =>
+    String(standard.id) === String(selectedStrengthStandardId ?? ""),
+  ) ?? matchingStrengthStandards[0];
+  const matchingSieveStandard = sieveStandards
+    .filter((standard) => standard.testType === record.testType && matchesText(standard.material, record.material))
+    .sort((left, right) => (left.id ?? 0) - (right.id ?? 0))[0];
+  const strengthEvaluation = objectValue(record.details.strengthEvaluation);
+  const standardValue = firstPresentValue([
+    selectedStrengthStandard?.bsStandard,
+    strengthEvaluation?.bsStandard,
+    matchingSieveStandard?.standardReference,
+  ]);
+  const configuredStandard = standardValue === undefined ? null : String(standardValue);
+  const isSieveReport = record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve";
+  const automaticAccordingTo = record.testType === "Blocks"
+    ? isDammamLocation(record.location)
+      ? "ASTM C140/C140M:2020a"
+      : "BS EN 771-3:2003 (BS EN 772-1:2011)"
+    : isSieveReport
+      ? "BS812:PART103:1985"
+      : record.testType === "Paving Blocks"
+        ? configuredStandard || "BS EN 1338:2003"
+        : configuredStandard || (record.testType === "Ready Mix" ? "BS EN 12390-3:2009" : null);
+  const accordingTo = configuredAccordingTo === undefined ? automaticAccordingTo : configuredAccordingTo;
   return <main className={`report-paper ${record.testType === "Ready Mix" ? "ready-mix-paper" : ""}`} style={layout ? {
     fontFamily: layout.config.fontFamily, fontSize: `${Math.max(layout.config.fontSize, 13)}px`, color: layout.config.textColor,
     padding: `${layout.config.paperPadding}mm`, "--report-accent-color": layout.config.accentColor,
   } as CSSProperties : undefined}><div className="report-layout-content">
     {layoutSectionVisible(layout, "header") && <><LayoutElements layout={layout} sectionKey="header" placement="before" /><header className="report-header report-layout-section" style={layoutSectionStyle(layout, "header")}>
-      <div className="report-company">{companySubtitle}</div><img src="/al-manaratain-logo.webp" alt="Al Manaratain Logo" className="report-logo" /><div className="report-title"><strong>{layout?.config.title ?? defaultTitle}</strong><span>Ref: {reportReferenceNumber}</span></div>
+      <div className="report-company">{companySubtitle}</div><img src="/al-manaratain-logo.webp" alt="Al Manaratain Logo" className="report-logo" /><div className="report-title"><strong>{reportTitle}</strong><span>Ref: {reportReferenceNumber}</span></div>
     </header><LayoutElements layout={layout} sectionKey="header" placement="after" /></>}
     {layoutSectionVisible(layout, "standard") && <><LayoutElements layout={layout} sectionKey="standard" placement="before" /><p className="report-standard report-layout-section" style={layoutSectionStyle(layout, "standard")}>{accordingTo ? `ACCORDING TO ${accordingTo}` : "QUALITY CONTROL TEST REPORT"}</p><LayoutElements layout={layout} sectionKey="standard" placement="after" /></>}
-    {layoutSectionVisible(layout, "results") && <><LayoutElements layout={layout} sectionKey="results" placement="before" /><div className="report-layout-section" style={layoutSectionStyle(layout, "results")}>
-      {record.testType === "Ready Mix" ? <ReadyMixReport record={record} standards={strengthStandards} layout={layout} /> :
-        record.testType === "Blocks" ? <BlocksReport record={record} standards={strengthStandards} layout={layout} /> :
-        record.testType === "Water" ? <WaterReport record={record} layout={layout} /> :
-        record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve" ? <SieveReport record={record} layout={layout} /> :
-        record.testType === "Paving Blocks" ? <PavingBlocksReport record={record} standards={strengthStandards} layout={layout} /> :
-        <ConfiguredDetailsReport record={record} layout={layout} tableKey={record.testType === "Precast" ? "precastDetails" : record.testType === "Kerb Stone" ? "kerbStoneDetails" : record.testType === "RMX Trial" ? "rmxTrialDetails" : "flakinessDetails"} />}
-    </div><LayoutElements layout={layout} sectionKey="results" placement="after" /></>}
+    {record.testType === "Blocks" ? (
+      <BlocksReport record={record} standards={strengthStandards} layout={layout} />
+    ) : layoutSectionVisible(layout, "results") && (
+      <>
+        <LayoutElements layout={layout} sectionKey="results" placement="before" />
+        <div className="report-layout-section" style={layoutSectionStyle(layout, "results")}>
+          {record.testType === "Ready Mix" ? <ReadyMixReport record={record} standards={strengthStandards} selectedStandard={selectedStrengthStandard} layout={layout} /> :
+            record.testType === "Water" ? <WaterReport record={record} layout={layout} /> :
+            record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve" ? <SieveReport record={record} layout={layout} /> :
+            record.testType === "Paving Blocks" ? <PavingBlocksReport record={record} standards={strengthStandards} layout={layout} /> :
+            <ConfiguredDetailsReport record={record} layout={layout} tableKey={record.testType === "Precast" ? "precastDetails" : record.testType === "Kerb Stone" ? "kerbStoneDetails" : record.testType === "RMX Trial" ? "rmxTrialDetails" : "flakinessDetails"} />}
+        </div>
+        <LayoutElements layout={layout} sectionKey="results" placement="after" />
+      </>
+    )}
     {layoutSectionVisible(layout, "remarks") && record.remarks && <><LayoutElements layout={layout} sectionKey="remarks" placement="before" /><div className="report-remarks report-layout-section" style={layoutSectionStyle(layout, "remarks")}><span>Remarks:</span> {record.remarks}</div><LayoutElements layout={layout} sectionKey="remarks" placement="after" /></>}
     {layoutSectionVisible(layout, "signatures") && <><LayoutElements layout={layout} sectionKey="signatures" placement="before" /><footer className="report-signatures report-layout-section" style={layoutSectionStyle(layout, "signatures")}><div><span>Tested by:</span><strong>{record.testedBy}</strong></div><div><span>Approved by:</span><strong>{record.reviewedBy || "ADEL ABBAS EBRAHIM"}</strong></div><small>{companyName} · {companySubtitle}</small></footer><LayoutElements layout={layout} sectionKey="signatures" placement="after" /></>}
   </div></main>;
@@ -1948,15 +1983,6 @@ export default function ReportPrint() {
       : record.testType === "Ready Mix"
         ? "BS EN 12390-3:2009"
         : null;
-  const paperStyle = layout
-    ? {
-        fontFamily: layout.config.fontFamily,
-        fontSize: `${Math.max(layout.config.fontSize, 13)}px`,
-        color: layout.config.textColor,
-        padding: `${layout.config.paperPadding}mm`,
-        "--report-accent-color": layout.config.accentColor,
-      } as CSSProperties
-    : undefined;
   const defaultTitle =
     record.testType === "Ready Mix"
       ? "Readymix Cube Test Report"
@@ -2003,98 +2029,12 @@ export default function ReportPrint() {
       <ReportDocument
         report={report}
         strengthStandards={strengthStandards}
+        sieveStandards={sieveStandards}
+        selectedStrengthStandardId={selectedStrengthStandardId}
         accordingTo={accordingTo}
         reportReferenceNumber={reportReferenceNumber}
         defaultTitle={defaultTitle}
-      >
-        <div className="report-layout-content">
-        {layoutSectionVisible(layout, "header") && <><LayoutElements layout={layout} sectionKey="header" placement="before" /><header
-          className="report-header report-layout-section"
-          style={layoutSectionStyle(layout, "header")}
-        >
-          <div className="report-company">{companySubtitle}</div>
-          <img
-            src="/al-manaratain-logo.webp"
-            alt="Al Manaratain Logo"
-            className="report-logo"
-          />
-          <div className="report-title">
-            <strong>
-              {layout?.config.title || defaultTitle}
-            </strong>
-            <span>Ref: {reportReferenceNumber}</span>
-          </div>
-        </header><LayoutElements layout={layout} sectionKey="header" placement="after" /></>}
-        {layoutSectionVisible(layout, "standard") && <><LayoutElements layout={layout} sectionKey="standard" placement="before" /><p
-          className="report-standard report-layout-section"
-          style={layoutSectionStyle(layout, "standard")}
-        >
-          {accordingTo
-            ? `ACCORDING TO ${accordingTo}`
-            : "QUALITY CONTROL TEST REPORT"}
-        </p><LayoutElements layout={layout} sectionKey="standard" placement="after" /></>}
-        {layoutSectionVisible(layout, "results") && <><LayoutElements layout={layout} sectionKey="results" placement="before" /><div
-          className="report-layout-section"
-          style={layoutSectionStyle(layout, "results")}
-        >
-          {record.testType === "Ready Mix" ? (
-            <ReadyMixReport
-              record={record}
-              standards={strengthStandards}
-              selectedStandard={reportStrengthStandard}
-              layout={layout}
-            />
-          ) : record.testType === "Blocks" ? (
-          <BlocksReport record={record} standards={strengthStandards} layout={layout} />
-          ) : record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve" ? (
-            <SieveReport record={record} layout={layout} />
-          ) : record.testType === "Paving Blocks" ? (
-            <PavingBlocksReport record={record} standards={strengthStandards} layout={layout} />
-          ) : record.testType === "Water" ? (
-            <WaterReport record={record} layout={layout} />
-          ) : record.testType === "Precast" ? (
-            <ConfiguredDetailsReport record={record} layout={layout} tableKey="precastDetails" />
-          ) : record.testType === "Kerb Stone" ? (
-            <ConfiguredDetailsReport record={record} layout={layout} tableKey="kerbStoneDetails" />
-          ) : record.testType === "Flakiness & Elongation" ? (
-            <ConfiguredDetailsReport record={record} layout={layout} tableKey="flakinessDetails" />
-          ) : record.testType === "RMX Trial" ? (
-            <ConfiguredDetailsReport record={record} layout={layout} tableKey="rmxTrialDetails" />
-          ) : (
-            <FallbackReport record={record} />
-          )}
-        </div><LayoutElements layout={layout} sectionKey="results" placement="after" /></>}
-
-        {layoutSectionVisible(layout, "remarks") &&
-          record.testType !== "Blocks" &&
-          record.testType !== "Paving Blocks" &&
-          record.remarks && (
-          <><LayoutElements layout={layout} sectionKey="remarks" placement="before" /><div
-            className="report-remarks report-layout-section"
-            style={layoutSectionStyle(layout, "remarks")}
-          >
-            <span>Remarks:</span> {record.remarks}
-          </div><LayoutElements layout={layout} sectionKey="remarks" placement="after" /></>
-        )}
-
-        {layoutSectionVisible(layout, "signatures") && <><LayoutElements layout={layout} sectionKey="signatures" placement="before" /><footer
-          className="report-signatures report-layout-section"
-          style={layoutSectionStyle(layout, "signatures")}
-        >
-          <div>
-            <span>Tested by:</span>
-            <strong>{record.testedBy}</strong>
-          </div>
-          <div>
-            <span>Approved by:</span>
-            <strong>{record.reviewedBy || "ADEL ABBAS EBRAHIM"}</strong>
-          </div>
-          <small>
-            {companyName} · {companySubtitle}
-          </small>
-        </footer><LayoutElements layout={layout} sectionKey="signatures" placement="after" /></>}
-        </div>
-      </ReportDocument>
+      />
     </div>
   );
 }
