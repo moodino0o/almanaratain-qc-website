@@ -390,16 +390,6 @@
   font-size: 9px;
 }
 
-.report-creation-meta {
-  color: #666;
-  font-size: 7.5px;
-  font-weight: 400;
-  line-height: 1.25;
-  overflow-wrap: anywhere;
-  margin: 0 0 1mm;
-  text-align: right;
-}
-
 .report-standard {
   margin: 1mm 0 3.5mm;
   border-bottom: 1.5px solid var(--report-accent-color, #111);
@@ -1235,10 +1225,6 @@
 
 .report-paper .report-title span {
   font-size: 11px;
-}
-
-.report-paper .report-creation-meta {
-  font-size: 9px;
 }
 
 .report-paper .report-standard,

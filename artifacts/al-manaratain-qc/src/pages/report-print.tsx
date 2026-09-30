@@ -13,7 +13,6 @@ import type {
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer } from "lucide-react";
 import { useAppBack } from "@/hooks/use-app-back";
-import { formatDateTime } from "@/lib/utils";
 import { formatShapeFactor } from "./report-print-utils";
 import {
   AGGREGATE_CHLORIDE_LIMIT_PERCENT,
@@ -1869,10 +1868,6 @@ export default function ReportPrint() {
             <span>Ref: {reportReferenceNumber}</span>
           </div>
         </header>}
-        <div className="report-creation-meta">
-          Added by {record.createdBy?.trim() || "Not recorded"} ·{" "}
-          {formatDateTime(record.createdAt)}
-        </div>
         {layoutSectionVisible(layout, "standard") && <p
           className="report-standard report-layout-section"
           style={{ order: layoutSectionOrder(layout, "standard") }}
