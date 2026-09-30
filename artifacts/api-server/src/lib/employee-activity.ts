@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { isIP } from "node:net";
 import type { NextFunction, Request, Response } from "express";
 import { and, eq, isNull } from "drizzle-orm";
 import {
@@ -17,6 +18,40 @@ export function getEmployeeActivityRequestSessionId(
 
 export type ActivitySessionEndReason = "logout" | "expired" | "revoked";
 export type ActivityChangeAction = "created" | "updated" | "deleted";
+export type EmployeeLoginOutcome = "success" | "failure";
+
+export function normalizeClientIpAddress(value: string | undefined): string {
+  let address = value?.trim() ?? "";
+  if (address.toLowerCase().startsWith("::ffff:")) {
+    address = address.slice("::ffff:".length);
+  }
+  return address && isIP(address) ? address : "Unknown";
+}
+
+export async function recordEmployeeLoginAttempt(input: {
+  employeeId: string;
+  employeeName: string;
+  ipAddress: string;
+  outcome: EmployeeLoginOutcome;
+}, executor: Pick<typeof db, "insert"> = db): Promise<void> {
+  await executor.insert(employeeActivityEventsTable).values({
+    employeeId: input.employeeId.slice(0, 120) || "Unknown",
+    employeeName: input.employeeName.slice(0, 200) || "Unknown",
+    sessionFingerprint: null,
+    action: "created",
+    entityType: "Login attempt",
+    entityId: null,
+    summary: input.outcome === "success"
+      ? "Employee sign-in succeeded."
+      : "Employee sign-in failed.",
+    details: {
+      loginAttempt: true,
+      outcome: input.outcome,
+      ipAddress: normalizeClientIpAddress(input.ipAddress),
+      location: "Unavailable",
+    },
+  });
+}
 
 export function fingerprintSessionId(sessionId: string): string {
   return createHash("sha256").update(sessionId).digest("hex");

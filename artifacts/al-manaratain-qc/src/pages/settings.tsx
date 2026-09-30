@@ -460,6 +460,7 @@ function EmployeeAccessCard({ isAdmin }: { isAdmin: boolean }) {
         <CardDescription>
           Add the employee names and IDs that are allowed to enter the QC system.
           Disabled employees cannot log in.
+          Passwords cannot be viewed; use the password action to set or change one.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 p-4">
@@ -1406,6 +1407,24 @@ function EmployeeActivitySection({ isAdmin }: { isAdmin: boolean }) {
   const loginTotal = records.reduce((total, record) => total + record.loginCount, 0);
   const changeTotal = records.reduce((total, record) => total + record.changes.length, 0);
   const sessionTotal = records.reduce((total, record) => total + record.sessions.length, 0);
+  const loginAttempts = records
+    .flatMap((record) =>
+      record.loginAttempts.map((attempt) => ({
+        ...attempt,
+        employeeId: record.employeeId,
+        employeeName: record.employeeName,
+      })),
+    )
+    .sort(
+      (left, right) =>
+        new Date(right.occurredAt).getTime() -
+        new Date(left.occurredAt).getTime(),
+    );
+  const uniqueIpCount = new Set(
+    loginAttempts
+      .map((attempt) => attempt.ipAddress)
+      .filter((ipAddress) => ipAddress !== "Unknown"),
+  ).size;
 
   const applyRange = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1508,9 +1527,11 @@ function EmployeeActivitySection({ isAdmin }: { isAdmin: boolean }) {
         </CardContent>
       </Card>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {[
           { label: "Daily login count", value: loginTotal, icon: LogIn },
+          { label: "Sign-in attempts", value: loginAttempts.length, icon: ShieldAlert },
+          { label: "Unique IP addresses", value: uniqueIpCount, icon: MapPin },
           { label: "Tracked sessions", value: sessionTotal, icon: Clock3 },
           { label: "Recorded changes", value: changeTotal, icon: FileJson },
         ].map(({ label, value, icon: Icon }) => (
@@ -1525,6 +1546,58 @@ function EmployeeActivitySection({ isAdmin }: { isAdmin: boolean }) {
           </Card>
         ))}
       </div>
+
+      <Card className="overflow-hidden">
+        <CardHeader className="border-b border-border/60 bg-muted/20 px-4 py-4 sm:px-5">
+          <CardTitle className="text-base">Sign-in attempts</CardTitle>
+          <CardDescription className="mt-1">
+            Successful and failed sign-ins in the selected range. Location is unavailable because no outside geolocation service is used.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loginAttempts.length === 0 ? (
+            <p className="p-5 text-sm text-muted-foreground">
+              No sign-in attempts were recorded in this date range.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table className="min-w-[720px]" data-testid="table-login-attempts">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Time</TableHead>
+                    <TableHead>Employee / attempted ID</TableHead>
+                    <TableHead>IP address</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Outcome</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loginAttempts.map((attempt, index) => (
+                    <TableRow key={`${attempt.occurredAt}-${attempt.employeeId}-${index}`}>
+                      <TableCell className="whitespace-nowrap">
+                        {formatActivityDate(attempt.occurredAt, true)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="break-words font-medium">{attempt.employeeName}</div>
+                        <div className="break-all text-xs text-muted-foreground">{attempt.employeeId}</div>
+                      </TableCell>
+                      <TableCell className="break-all font-mono text-xs">
+                        {attempt.ipAddress}
+                      </TableCell>
+                      <TableCell>{attempt.location}</TableCell>
+                      <TableCell>
+                        <Badge variant={attempt.outcome === "success" ? "default" : "destructive"}>
+                          {attempt.outcome === "success" ? "Successful" : "Failed"}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card className="overflow-hidden">
         <CardHeader className="border-b border-border/60 bg-muted/20 px-4 py-4 sm:px-5">
@@ -1782,7 +1855,7 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="report-layouts" className="flex min-h-0 flex-1 flex-col">
-        <TabsList className="grid h-auto w-full max-w-5xl shrink-0 grid-cols-2 sm:grid-cols-5">
+        <TabsList className="grid h-auto w-full max-w-5xl shrink-0 grid-cols-2 sm:grid-cols-4">
           <TabsTrigger value="reference-data" className="gap-2 py-2.5">
             <Database className="h-4 w-4" /> Settings
           </TabsTrigger>
@@ -1795,17 +1868,10 @@ export default function Settings() {
           <TabsTrigger value="employee-activity" className="gap-2 py-2.5">
             <Activity className="h-4 w-4" /> Activity
           </TabsTrigger>
-          <TabsTrigger value="historical-ages" className="gap-2 py-2.5">
-            <CalendarDays className="h-4 w-4" /> Date Backfill
-          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="employee-access" className="mt-4 min-h-0 flex-1 overflow-y-auto">
           <EmployeeAccessSection isAdmin={isAdmin} />
-        </TabsContent>
-
-        <TabsContent value="historical-ages" className="mt-4 min-h-0 flex-1 overflow-y-auto">
-          <HistoricalAgeBackfillSection />
         </TabsContent>
 
         <TabsContent value="reference-data" className="mt-4 flex min-h-0 flex-1 flex-col">

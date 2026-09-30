@@ -42,12 +42,20 @@ type ChangeEntry = {
   details: Record<string, unknown>;
 };
 
+type LoginAttemptEntry = {
+  occurredAt: string;
+  ipAddress: string;
+  location: string;
+  outcome: "success" | "failure";
+};
+
 type ActivityDay = {
   employeeId: string;
   employeeName: string;
   date: string;
   loginCount: number;
   sessions: SessionEntry[];
+  loginAttempts: LoginAttemptEntry[];
   changes: ChangeEntry[];
 };
 
@@ -108,6 +116,7 @@ router.get(
           date,
           loginCount: 0,
           sessions: [],
+          loginAttempts: [],
           changes: [],
         };
         byDay.set(key, day);
@@ -146,6 +155,21 @@ router.get(
         change.employeeName,
         getRiyadhDate(change.occurredAt),
       );
+      if (change.entityType === "Login attempt") {
+        day.loginAttempts.push({
+          occurredAt: change.occurredAt.toISOString(),
+          ipAddress:
+            typeof change.details.ipAddress === "string"
+              ? change.details.ipAddress
+              : "Unknown",
+          location:
+            typeof change.details.location === "string"
+              ? change.details.location
+              : "Unavailable",
+          outcome: change.details.outcome === "success" ? "success" : "failure",
+        });
+        continue;
+      }
       day.changes.push({
         id: change.id,
         occurredAt: change.occurredAt.toISOString(),
@@ -166,6 +190,11 @@ router.get(
             new Date(right.startedAt).getTime(),
         ),
         changes: day.changes.sort(
+          (left, right) =>
+            new Date(right.occurredAt).getTime() -
+            new Date(left.occurredAt).getTime(),
+        ),
+        loginAttempts: day.loginAttempts.sort(
           (left, right) =>
             new Date(right.occurredAt).getTime() -
             new Date(left.occurredAt).getTime(),

@@ -94,6 +94,12 @@ export const GetEmployeeActivityResponse = zod.object({
   "endedAt": zod.coerce.date().nullable(),
   "endReason": zod.union([zod.literal('logout'),zod.literal('expired'),zod.literal('revoked'),zod.literal(null)]).nullable()
 })),
+  "loginAttempts": zod.array(zod.object({
+  "occurredAt": zod.coerce.date(),
+  "ipAddress": zod.string(),
+  "location": zod.string(),
+  "outcome": zod.enum(['success', 'failure'])
+})),
   "changes": zod.array(zod.object({
   "id": zod.number(),
   "occurredAt": zod.coerce.date(),

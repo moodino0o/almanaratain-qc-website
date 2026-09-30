@@ -2348,7 +2348,7 @@ components:
             $ref: "#/components/schemas/EmployeeActivityDay"
     EmployeeActivityDay:
       type: object
-      required: [employeeId, employeeName, date, loginCount, sessions, changes]
+      required: [employeeId, employeeName, date, loginCount, sessions, loginAttempts, changes]
       properties:
         employeeId:
           type: string
@@ -2363,10 +2363,28 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/EmployeeActivitySession"
+        loginAttempts:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmployeeLoginAttempt"
         changes:
           type: array
           items:
             $ref: "#/components/schemas/EmployeeActivityChange"
+    EmployeeLoginAttempt:
+      type: object
+      required: [occurredAt, ipAddress, location, outcome]
+      properties:
+        occurredAt:
+          type: string
+          format: date-time
+        ipAddress:
+          type: string
+        location:
+          type: string
+        outcome:
+          type: string
+          enum: [success, failure]
     EmployeeActivitySession:
       type: object
       required: [startedAt, lastSeenAt, expiresAt, endedAt, endReason]

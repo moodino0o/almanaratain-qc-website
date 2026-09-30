@@ -40,6 +40,8 @@ export * from './employeeActivityDay';
 export * from './employeeActivityResponse';
 export * from './employeeActivitySession';
 export * from './employeeActivitySessionEndReason';
+export * from './employeeLoginAttempt';
+export * from './employeeLoginAttemptOutcome';
 export * from './errorEnvelope';
 export * from './getDailyReadyMixResultsParams';
 export * from './getEmployeeActivityParams';

@@ -810,6 +810,21 @@ export interface EmployeeActivitySession {
   endReason: EmployeeActivitySessionEndReason;
 }
 
+export type EmployeeLoginAttemptOutcome = typeof EmployeeLoginAttemptOutcome[keyof typeof EmployeeLoginAttemptOutcome];
+
+
+export const EmployeeLoginAttemptOutcome = {
+  success: 'success',
+  failure: 'failure',
+} as const;
+
+export interface EmployeeLoginAttempt {
+  occurredAt: string;
+  ipAddress: string;
+  location: string;
+  outcome: EmployeeLoginAttemptOutcome;
+}
+
 export type EmployeeActivityChangeAction = typeof EmployeeActivityChangeAction[keyof typeof EmployeeActivityChangeAction];
 
 
@@ -838,6 +853,7 @@ export interface EmployeeActivityDay {
   date: string;
   loginCount: number;
   sessions: EmployeeActivitySession[];
+  loginAttempts: EmployeeLoginAttempt[];
   changes: EmployeeActivityChange[];
 }
 

@@ -38,6 +38,11 @@ import {
   verifyEmployeePassword,
 } from '../lib/employee-password';
 import {
+  normalizeClientIpAddress,
+  recordEmployeeLoginAttempt,
+  type EmployeeLoginOutcome,
+} from '../lib/employee-activity';
+import {
   requireAdministrator,
   requireAuthenticated,
 } from '../middlewares/requireAuthenticated';
@@ -65,6 +70,27 @@ function getSafeReturnTo(value: unknown): string {
   return value;
 }
 
+async function recordLoginAttemptSafely(
+  req: Request,
+  employeeId: string,
+  employeeName: string,
+  outcome: EmployeeLoginOutcome,
+): Promise<void> {
+  try {
+    await recordEmployeeLoginAttempt({
+      employeeId: employeeId.slice(0, 120) || "Unknown",
+      employeeName: employeeName.slice(0, 200) || "Unknown",
+      ipAddress: normalizeClientIpAddress(req.ip),
+      outcome,
+    });
+  } catch (error) {
+    req.log.error(
+      { err: error, outcome },
+      "Could not record employee login attempt.",
+    );
+  }
+}
+
 router.get('/auth/user', (req: Request, res: Response) => {
   void (async () => {
     const user = req.isAuthenticated() ? req.user : null;
@@ -88,6 +114,13 @@ router.post('/employee-login', async (req: Request, res: Response) => {
   const employee = await getActiveEmployee(employeeId);
   if (!employee || !isValidEmployeePassword(password) ||
       !(await verifyEmployeePassword(password, employee.passwordHash))) {
+    const attemptedEmployeeId = employeeId.slice(0, 120) || "Unknown";
+    await recordLoginAttemptSafely(
+      req,
+      attemptedEmployeeId,
+      employee?.name ?? attemptedEmployeeId,
+      "failure",
+    );
     res.status(401).json({ error: 'Invalid employee ID or password.' });
     return;
   }
@@ -128,6 +161,12 @@ router.post('/employee-login', async (req: Request, res: Response) => {
 
   const sid = await createSession(sessionData);
   setSessionCookie(res, sid);
+  await recordLoginAttemptSafely(
+    req,
+    employeeId,
+    employee.name,
+    "success",
+  );
   res.json({ user: sessionData.user });
 });
 

@@ -7,6 +7,7 @@
  */
 import type { EmployeeActivityChange } from './employeeActivityChange';
 import type { EmployeeActivitySession } from './employeeActivitySession';
+import type { EmployeeLoginAttempt } from './employeeLoginAttempt';
 
 export interface EmployeeActivityDay {
   employeeId: string;
@@ -14,5 +15,6 @@ export interface EmployeeActivityDay {
   date: Date;
   loginCount: number;
   sessions: EmployeeActivitySession[];
+  loginAttempts: EmployeeLoginAttempt[];
   changes: EmployeeActivityChange[];
 }
