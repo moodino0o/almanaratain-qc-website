@@ -1,0 +1,745 @@
+I want to completely upgrade the existing "Report Layouts" section in my Quality Control system into a fully visual report designer.
+
+IMPORTANT:
+Do NOT remove or break the existing report generation system, database, report data, calculations, or existing report layouts. This should be an upgrade to the current system.
+
+CURRENT SITUATION:
+The current Report Layouts page allows me to configure report fields/columns such as:
+- No.
+- Sieve/Pore Size
+- Amount Retained
+- Amount Passing
+- % Passing
+- Retained (%)
+- Lower Limit
+- Upper Limit
+- Remarks
+
+However, currently I have to change settings and then generate the report to see the result.
+
+I want a completely visual WYSIWYG report editor where I can directly edit the actual report design and immediately see how the final generated report will look.
+
+==================================================
+1. VISUAL REPORT DESIGNER
+==================================================
+
+Create a new Visual Report Designer inside:
+
+Settings → Report Layouts
+
+The editor should look and behave similarly to a simplified Microsoft Word / Canva style editor.
+
+The main area should show an actual report page, for example:
+
+A4 Portrait
+A4 Landscape
+
+The user should be able to visually edit the report directly on the page.
+
+The preview must represent the actual final PDF/report as accurately as possible.
+
+When I change something visually, the report preview must update immediately.
+
+==================================================
+2. ADD TEXT BOX
+==================================================
+
+Add a button:
+
++ Text
+
+When clicked, I should be able to add a text box directly onto the report.
+
+The text box should support:
+
+- Enter text
+- Edit text directly
+- Font family
+- Font size
+- Bold
+- Italic
+- Underline
+- Text alignment:
+  - Left
+  - Center
+  - Right
+  - Justify
+- Text color
+- Background color
+- Text box width
+- Text box height
+- Line height
+- Letter spacing
+- Rotation if practical
+- Border
+- Border thickness
+- Border color
+- Border radius
+- Padding
+
+The text box must be draggable and resizable.
+
+==================================================
+3. ADD LINES
+==================================================
+
+Add:
+
++ Line
+
+Allow the user to draw horizontal or vertical lines directly on the report.
+
+The line should support:
+
+- Position
+- Length
+- Thickness
+- Color
+- Solid / dashed / dotted style
+
+The line must be draggable and resizable.
+
+==================================================
+4. SHAPES
+==================================================
+
+Add:
+
++ Shape
+
+Allow basic shapes such as:
+
+- Rectangle
+- Square
+- Circle
+- Divider
+
+Allow changing:
+
+- Border color
+- Border thickness
+- Fill color
+- Transparency
+- Size
+- Position
+
+==================================================
+5. IMAGES / LOGO
+==================================================
+
+Add:
+
++ Image
+
+Allow uploading or selecting an image/logo.
+
+The image must be:
+
+- Draggable
+- Resizable
+- Croppable if practical
+- Rotatable if practical
+
+Allow:
+
+- Width
+- Height
+- Position
+- Opacity
+
+This should allow me to place the company logo anywhere on the report.
+
+==================================================
+6. EXISTING REPORT DATA FIELDS
+==================================================
+
+VERY IMPORTANT:
+
+The existing report data must remain dynamic.
+
+I need to be able to insert dynamic fields into the report.
+
+For example:
+
+{{REPORT_NUMBER}}
+{{REPORT_DATE}}
+{{SAMPLE_DATE}}
+{{SUPPLIER}}
+{{SAMPLE_DESCRIPTION}}
+{{PROJECT}}
+{{TEST_METHOD}}
+{{TEST_RESULT}}
+
+Also support existing table/report fields such as:
+
+{{SIEVE_SIZE}}
+{{AMOUNT_RETAINED}}
+{{AMOUNT_PASSING}}
+{{PERCENT_PASSING}}
+{{RETAINED_PERCENT}}
+{{LOWER_LIMIT}}
+{{UPPER_LIMIT}}
+{{REMARKS}}
+
+Create a "Dynamic Field" button/dropdown.
+
+When I select a dynamic field, it should be inserted into the visual report.
+
+Example:
+
+"Report No: {{REPORT_NUMBER}}"
+
+The actual generated report should replace the variable with the real database value.
+
+==================================================
+7. TABLE DESIGNER
+==================================================
+
+The existing report tables must also be visually configurable.
+
+I should be able to:
+
+- Add table
+- Delete table
+- Add column
+- Delete column
+- Reorder columns
+- Change column width
+- Change row height
+- Change font
+- Change font size
+- Change text alignment
+- Change header background
+- Change header text color
+- Change border color
+- Change border thickness
+- Change cell padding
+- Merge cells where practical
+
+The table must continue receiving dynamic data from the existing system.
+
+Do NOT convert the dynamic report table into static text.
+
+==================================================
+8. REPORT PAGE SETTINGS
+==================================================
+
+Add a page settings panel.
+
+Allow:
+
+- A4 Portrait
+- A4 Landscape
+- Page width
+- Page height
+- Top margin
+- Bottom margin
+- Left margin
+- Right margin
+
+Also allow:
+
+- Show/hide header
+- Show/hide footer
+- Header height
+- Footer height
+
+==================================================
+9. HEADER AND FOOTER
+==================================================
+
+Create dedicated header and footer areas.
+
+I should be able to add:
+
+- Logo
+- Text
+- Lines
+- Dynamic fields
+- Page number
+- Date
+- Report number
+
+For example:
+
+Page {{PAGE_NUMBER}} of {{TOTAL_PAGES}}
+
+The header/footer should automatically appear on every generated page when enabled.
+
+==================================================
+10. LAYERS / OBJECT MANAGEMENT
+==================================================
+
+Every element added to the report should be an independent object.
+
+For example:
+
+Text Box
+Line
+Image
+Shape
+Table
+Dynamic Field
+
+Add controls:
+
+- Bring to front
+- Send to back
+- Bring forward
+- Send backward
+- Duplicate
+- Delete
+- Lock
+- Unlock
+- Hide
+- Show
+
+Add an object/layers panel showing all elements.
+
+Example:
+
+LAYERS
+
+☑ Company Logo
+☑ Report Title
+☑ Red Divider
+☑ Sample Details
+☑ Aggregate Table
+☑ Remarks
+☑ Footer
+
+Allow drag-and-drop reordering.
+
+==================================================
+11. ALIGNMENT AND POSITIONING
+==================================================
+
+Add visual alignment tools:
+
+- Align left
+- Align center
+- Align right
+- Align top
+- Align middle
+- Align bottom
+- Distribute horizontally
+- Distribute vertically
+
+Add optional grid/snap functionality.
+
+Allow precise X/Y positioning.
+
+For example:
+
+X: 120 px
+Y: 250 px
+Width: 400 px
+Height: 50 px
+
+This allows precise report formatting.
+
+==================================================
+12. UNDO / REDO
+==================================================
+
+Add:
+
+Undo
+Redo
+
+The user must be able to safely experiment with the report design.
+
+Also add:
+
+Reset Changes
+
+with a confirmation dialog.
+
+==================================================
+13. SAVE REPORT TEMPLATE
+==================================================
+
+This is VERY IMPORTANT.
+
+I need to be able to save the complete report design as a reusable template.
+
+Add:
+
+Save Template
+
+When saving, ask for:
+
+Template Name
+Description
+Report Type
+Page Size
+Orientation
+
+Example templates:
+
+- Aggregate Sieve Analysis
+- Aggregate Sieve Analysis - Client
+- Concrete Cube Test
+- Paving Block Test
+- Block Compression Test
+- Sand Test
+
+The template must save ALL visual settings:
+
+- Text
+- Fonts
+- Font sizes
+- Colors
+- Positions
+- Sizes
+- Lines
+- Shapes
+- Images
+- Tables
+- Dynamic fields
+- Header
+- Footer
+- Margins
+- Page settings
+- Layers/order
+- Visibility
+- Lock status
+
+==================================================
+14. TEMPLATE MANAGEMENT
+==================================================
+
+Create a Template Management section.
+
+Show saved templates as cards/list.
+
+Each template should have:
+
+Template Name
+Report Type
+Created Date
+Last Modified
+Created By
+Status
+
+Actions:
+
+Open
+Edit
+Duplicate
+Rename
+Delete
+Set as Default
+
+Example:
+
+------------------------------------
+Aggregate Sieve Analysis
+Client Report
+
+[Open] [Edit] [Duplicate] [Delete]
+------------------------------------
+
+I should be able to switch between templates at any time.
+
+==================================================
+15. DEFAULT TEMPLATE
+==================================================
+
+Allow one template to be marked as:
+
+Default
+
+When a new report is generated, the system automatically uses the default template for that report type.
+
+However, the user should still be able to select another template before generating the report.
+
+==================================================
+16. LIVE PREVIEW
+==================================================
+
+The most important requirement:
+
+The visual editor must show the ACTUAL report.
+
+If I move the logo:
+
+→ logo moves immediately in the preview.
+
+If I change font size:
+
+→ font changes immediately.
+
+If I change a line:
+
+→ line changes immediately.
+
+If I add a text box:
+
+→ text box appears immediately.
+
+If I change table column width:
+
+→ table changes immediately.
+
+There should be no need to save and regenerate just to see design changes.
+
+==================================================
+17. EDIT EXISTING REPORT
+==================================================
+
+When I open an existing report template, load all its existing elements into the visual editor.
+
+Do not create a separate disconnected preview system.
+
+The visual editor and actual PDF/report generator must use the SAME template definition.
+
+This is extremely important.
+
+There must be one source of truth for the report design.
+
+==================================================
+18. PDF GENERATION
+==================================================
+
+The final PDF generator must use the exact saved template.
+
+The PDF should preserve:
+
+- Positions
+- Fonts
+- Colors
+- Lines
+- Images
+- Tables
+- Dynamic data
+- Page size
+- Margins
+- Header
+- Footer
+
+The visual preview should be as close as technically possible to the final PDF.
+
+==================================================
+19. DATABASE DESIGN
+==================================================
+
+Create/update the database structure to support reusable report templates.
+
+Suggested structure:
+
+report_templates
+- id
+- name
+- description
+- report_type
+- page_size
+- orientation
+- width
+- height
+- margins
+- is_default
+- created_by
+- created_at
+- updated_at
+
+report_template_elements
+- id
+- template_id
+- type
+- name
+- x
+- y
+- width
+- height
+- rotation
+- z_index
+- locked
+- visible
+- properties
+- created_at
+- updated_at
+
+Store element-specific properties in a structured JSON field where appropriate.
+
+For example:
+
+{
+  "fontFamily": "Arial",
+  "fontSize": 14,
+  "fontWeight": "bold",
+  "color": "#000000",
+  "backgroundColor": "#FFFFFF",
+  "textAlign": "center"
+}
+
+Do not destroy the existing database structure. Modify it safely and maintain backward compatibility.
+
+==================================================
+20. EXISTING REPORTS MUST CONTINUE WORKING
+==================================================
+
+This is critical.
+
+Before making changes:
+
+1. Inspect the existing report generation code.
+2. Inspect the existing Report Layouts implementation.
+3. Inspect the database schema.
+4. Identify how report data is currently passed to the PDF generator.
+5. Identify existing report types.
+6. Preserve existing functionality.
+
+Then implement the visual designer on top of the existing system.
+
+Do not rewrite unrelated parts of the application.
+
+==================================================
+21. UI DESIGN
+==================================================
+
+Use a professional Quality Control Laboratory style.
+
+The editor should have:
+
+LEFT SIDEBAR:
+- Text
+- Dynamic Field
+- Line
+- Shape
+- Image
+- Table
+
+CENTER:
+- Actual A4 report canvas
+
+RIGHT SIDEBAR:
+Properties
+
+Example:
+
+PROPERTIES
+
+Position
+X: ___
+Y: ___
+
+Size
+Width: ___
+Height: ___
+
+Text
+Font: Arial
+Size: 12
+Bold [ ]
+Italic [ ]
+Underline [ ]
+
+Color
+Text Color
+Background Color
+
+Border
+Color
+Thickness
+
+BOTTOM / TOP TOOLBAR:
+- Undo
+- Redo
+- Zoom
+- Grid
+- Snap
+- Preview
+- Save
+- Save As Template
+
+==================================================
+22. TEMPLATE VERSIONING
+==================================================
+
+When editing an existing template, do not immediately destroy the previous version.
+
+Allow:
+
+Save
+Save As
+Duplicate Template
+
+Ideally maintain template versions:
+
+v1
+v2
+v3
+
+so I can return to an earlier design if necessary.
+
+==================================================
+23. IMPORTANT USER WORKFLOW
+==================================================
+
+The final workflow should be:
+
+Settings
+→ Report Layouts
+→ Select Report Type
+→ Select Template
+→ Open Visual Designer
+→ Edit report visually
+→ Save
+→ Set as Default if required
+
+Then when generating a report:
+
+Select Report Type
+→ Select Template
+→ Enter/Load report data
+→ Generate PDF
+
+The generated PDF must use the selected template.
+
+==================================================
+24. IMPLEMENTATION REQUIREMENT
+==================================================
+
+First inspect my existing project and determine:
+
+- Current frontend framework
+- Current backend
+- Current database
+- Current PDF/report generation library
+- Current Report Layouts implementation
+
+Then propose the implementation plan.
+
+After that, implement it step-by-step.
+
+Do NOT use fake/mock data for the final implementation.
+
+Use the actual existing database and report generation system.
+
+Make sure existing reports continue working after the changes.
+
+At the end, test:
+
+1. Create a new template.
+2. Add text.
+3. Change font size.
+4. Change text color.
+5. Add a line.
+6. Move the line.
+7. Add an image.
+8. Resize the image.
+9. Modify a table.
+10. Insert a dynamic field.
+11. Save the template.
+12. Close and reopen the template.
+13. Confirm all formatting is preserved.
+14. Generate a PDF.
+15. Compare the PDF with the visual designer.
+16. Switch to another template.
+17. Generate another PDF.
+18. Confirm both templates remain independent.
+
+The final goal is:
+
+I want to edit the report itself visually, save the design as a reusable template, and switch between different saved report designs whenever I need, without having to modify the source code or manually change report settings.
