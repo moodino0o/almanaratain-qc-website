@@ -29,6 +29,7 @@ import Complaints from '@/pages/complaints';
 import ComplaintForm from '@/pages/complaint-form';
 import ComplaintDetail from '@/pages/complaint-detail';
 import ComplaintPrint from '@/pages/complaint-print';
+import { KerbStoneRegister, PrecastRegister } from '@/pages/additional-registers';
 import { Button } from '@/components/ui/button';
 import { ShieldAlert } from 'lucide-react';
 
@@ -60,6 +61,8 @@ function Router() {
           <Switch>
             <Route path="/" component={Home} />
             <Route path="/records" component={Records} />
+            <Route path="/precast-register" component={PrecastRegister} />
+            <Route path="/kerb-stone-register" component={KerbStoneRegister} />
             <Route path="/records/new" component={RecordForm} />
             <Route path="/records/edit-all" component={RecordsBulkEdit} />
             <Route path="/records/:id/edit" component={RecordForm} />
