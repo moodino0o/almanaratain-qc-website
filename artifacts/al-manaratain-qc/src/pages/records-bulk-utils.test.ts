@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { RecordStatus, TestType, type QcRecord } from "@workspace/api-client-react";
 import {
+  bulkDraftToCreate,
   bulkDraftToUpdate,
   duplicateBulkDraft,
   recordToBulkDraft,
@@ -25,6 +26,16 @@ const record: QcRecord = {
     testRows: [{ load: 500, calculatedStrength: 22.22 }],
   },
 };
+
+test("preserves Ready Mix truck numbers in create and update payloads", () => {
+  const draft = recordToBulkDraft({
+    ...record,
+    details: { ...record.details, truckNumber: "TRK-204" },
+  });
+
+  assert.equal(bulkDraftToCreate(draft).details?.truckNumber, "TRK-204");
+  assert.equal(bulkDraftToUpdate(draft).details?.truckNumber, "TRK-204");
+});
 
 test("duplicating a new bulk draft copies every entry without sharing nested test rows", () => {
   const source = recordToBulkDraft(record);

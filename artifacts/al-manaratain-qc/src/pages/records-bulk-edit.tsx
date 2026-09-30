@@ -292,6 +292,7 @@ function DraftRow({
   if (readyMix) {
     fields.push(
       field("Reference No.", detailInput("referenceNumber", "Reference number")),
+      field("Truck Number", detailInput("truckNumber", "Truck number")),
       field("Customer Name", detailInput(
         "customerName",
         "Customer name",

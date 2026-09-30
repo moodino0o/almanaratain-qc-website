@@ -126,6 +126,7 @@ export default function RecordForm() {
   const [blockAge, setBlockAge] = useState("");
   const [sampleAge, setSampleAge] = useState("");
   const [referenceNumber, setReferenceNumber] = useState("");
+  const [truckNumber, setTruckNumber] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerLocation, setCustomerLocation] = useState("");
   const [remarks, setRemarks] = useState("");
@@ -219,6 +220,7 @@ export default function RecordForm() {
     setReviewedBy(existingRecord.reviewedBy || DEFAULT_APPROVED_BY);
     setRemarks(existingRecord.remarks ?? "");
     setReferenceNumber(stringValue(savedDetails.referenceNumber));
+    setTruckNumber(stringValue(savedDetails.truckNumber));
     setCustomerName(stringValue(savedDetails.customerName));
     setCustomerLocation(stringValue(savedDetails.customerLocation));
     setMachine(stringValue(savedDetails.machine));
@@ -856,6 +858,7 @@ export default function RecordForm() {
       payloadDetails.customerName = customerName;
       payloadDetails.customerLocation = customerLocation;
       payloadDetails.referenceNumber = referenceNumber.trim();
+      payloadDetails.truckNumber = truckNumber.trim();
     }
     if (
       testType === TestType.Ready_Mix ||
@@ -1391,6 +1394,14 @@ export default function RecordForm() {
                     <p className="text-xs text-muted-foreground">
                       Use a short identifier, such as PO-1042 or SITE-A7.
                     </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Truck Number</Label>
+                    <Input
+                      value={truckNumber}
+                      onChange={(event) => setTruckNumber(event.target.value)}
+                      placeholder="Enter truck number"
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Ready Mix Customer Name</Label>
