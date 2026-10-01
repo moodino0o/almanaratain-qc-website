@@ -1,0 +1,251 @@
+URGENT BUG FIX – REPORT DESIGNER IS RENDERING EVERYTHING AS SOLID PURPLE BLOCKS
+
+Look at the current Visual Report Designer.
+
+The report canvas is currently showing large solid purple/magenta rectangles instead of the actual report content, fields, labels, tables, and dynamic data.
+
+For example, objects such as:
+
+- Company header
+- Report standard
+- Test results
+- Remarks
+- Signatures
+
+are being rendered as large solid colored blocks.
+
+THIS IS WRONG.
+
+Do NOT simply change the purple color.
+
+The problem is that the visual designer is rendering SECTION/CONTAINER objects as filled rectangles instead of rendering their actual child content.
+
+==================================================
+ROOT CAUSE TO INVESTIGATE
+==================================================
+
+Inspect the current report designer implementation and determine:
+
+1. How report sections are stored.
+2. How section children/elements are stored.
+3. How the visual canvas renders sections.
+4. How dynamic fields are stored.
+5. How tables are stored.
+6. How the existing PDF generator renders the same report.
+7. Whether the visual designer and PDF renderer are using different rendering logic.
+
+There must NOT be a separate fake visual representation of the report.
+
+The visual designer must represent the actual report structure.
+
+==================================================
+SECTION RENDERING
+==================================================
+
+A section such as:
+
+Company Header
+Test Results
+Remarks
+Signatures
+
+must NOT automatically have a solid background color.
+
+Sections should normally have:
+
+background: transparent
+
+unless the user explicitly chooses a background color.
+
+For example:
+
+<section style="background: transparent">
+
+not:
+
+<section style="background: #C0005A">
+
+The magenta/purple color currently appearing appears to be incorrectly inherited from the application's primary/accent color.
+
+Do NOT use the application's theme/accent color as the default background of report sections.
+
+==================================================
+ACTUAL CONTENT MUST BE VISIBLE
+==================================================
+
+If a section contains:
+
+Text
+Dynamic Fields
+Images
+Lines
+Tables
+Shapes
+
+all of those objects must be rendered inside the section.
+
+Example:
+
+Company Header
+
+Should display:
+
+[LOGO]
+
+Al Manaratain
+Quality Control Laboratory
+
+Report No: {{REPORT_NUMBER}}
+
+Date: {{REPORT_DATE}}
+
+NOT a purple rectangle.
+
+==================================================
+DYNAMIC FIELDS
+==================================================
+
+Dynamic fields must appear in the designer as visible placeholders.
+
+For example:
+
+{{REPORT_NUMBER}}
+
+should appear as:
+
+Report No: {{REPORT_NUMBER}}
+
+or visually as:
+
+Report No: [Report Number]
+
+The user must be able to see where the field will appear.
+
+When the actual report is generated, the placeholder must be replaced with the real database value.
+
+==================================================
+TABLES
+==================================================
+
+The Test Results section must render the actual table.
+
+For example:
+
+┌──────────┬──────────────┬──────────────┬───────────┐
+│ Sieve    │ Retained     │ Passing      │ % Passing │
+├──────────┼──────────────┼──────────────┼───────────┤
+│ 5.00 mm  │ ...          │ ...          │ ...       │
+│ 2.36 mm  │ ...          │ ...          │ ...       │
+│ 1.18 mm  │ ...          │ ...          │ ...       │
+└──────────┴──────────────┴──────────────┴───────────┘
+
+The table must not be represented by one large colored rectangle.
+
+==================================================
+SECTION BACKGROUND
+==================================================
+
+Add a proper section property:
+
+Background Color
+
+Default:
+
+transparent
+
+Allow the user to explicitly choose:
+
+Transparent
+White
+Custom Color
+
+If the user chooses a color, ONLY then should the section have a colored background.
+
+==================================================
+OBJECT HIERARCHY
+==================================================
+
+Make sure the data structure supports:
+
+Report
+  ├── Page
+  │
+  ├── Company Header
+  │     ├── Image
+  │     ├── Text
+  │     ├── Dynamic Field
+  │     └── Line
+  │
+  ├── Sample Details
+  │     ├── Text
+  │     └── Dynamic Fields
+  │
+  ├── Test Results
+  │     └── Table
+  │           ├── Column
+  │           └── Dynamic Rows
+  │
+  ├── Remarks
+  │     └── Text/Dynamic Field
+  │
+  └── Signatures
+        ├── Text
+        ├── Image
+        └── Signature Field
+
+The section itself is only a logical container.
+
+It should NOT replace its children visually.
+
+==================================================
+VERY IMPORTANT
+==================================================
+
+Do not delete the existing report data.
+
+Do not delete the existing report layouts.
+
+Do not replace dynamic report fields with static text.
+
+Do not create mock report content.
+
+Use the existing database data and existing report generation system.
+
+==================================================
+VISUAL DESIGNER AND PDF MUST MATCH
+==================================================
+
+The Visual Designer and PDF generator must use the same report definition.
+
+If the designer shows:
+
+Logo
+Report title
+Sample details
+Test table
+Remarks
+Signatures
+
+then the generated PDF must show exactly the same elements in the same positions.
+
+==================================================
+TEST THIS
+==================================================
+
+After fixing the issue:
+
+1. Open an existing report template.
+2. Confirm that no large purple blocks appear by default.
+3. Confirm sections have transparent backgrounds.
+4. Confirm Company Header displays its actual content.
+5. Confirm dynamic fields are visible.
+6. Confirm Test Results displays the actual table.
+7. Confirm Remarks displays its text.
+8. Confirm Signatures displays its fields.
+9. Change a section background manually and confirm ONLY that section changes.
+10. Save the template.
+11. Reload the template.
+12. Generate the PDF.
+13. Confirm the PDF matches the visual designer.
+
+Do not consider the task complete until the actual report content is visible instead of solid purple blocks.
