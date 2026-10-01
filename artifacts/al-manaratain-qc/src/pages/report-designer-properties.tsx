@@ -34,7 +34,7 @@ export function ReportDesignerProperties({ design, selected, testType, onPageCha
   const sections = design.objects.filter((object) => object.type === "section" && object.sectionKey);
   const selectedLegacyTable = Object.entries(design.layout.columns).find(([, columns]) => columns.some((column) => column.key === selected?.fieldKey));
   return (
-    <aside className="min-h-0 overflow-y-auto border-l border-border/70 bg-card" data-testid="report-designer-right-panel">
+      <aside className="h-full min-h-0 overflow-y-auto bg-card" data-testid="report-designer-right-panel">
       <div className="border-b border-border/70 px-3 py-3">
         <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Inspector</p>
         <p className="mt-1 flex items-center gap-2 text-sm font-semibold"><SlidersHorizontal className="h-4 w-4 text-primary" /> Properties</p>

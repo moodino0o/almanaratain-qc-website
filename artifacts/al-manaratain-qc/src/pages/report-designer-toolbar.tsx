@@ -121,8 +121,8 @@ export function ReportDesignerToolbar(props: ToolbarProps) {
           )}
         </select>
         <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => props.onZoom(0.1)} data-testid="button-zoom-in" aria-label="Zoom in"><ZoomIn className="h-4 w-4" /></Button>
-        <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-[11px]" onClick={props.onFitToScreen} data-testid="button-fit-screen">Fit screen</Button>
-        <Button type="button" variant="ghost" size="sm" className="hidden h-8 px-2 text-[11px] sm:inline-flex" onClick={props.onFitToWidth} data-testid="button-fit-width">Fit width</Button>
+        <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-[11px]" onClick={props.onFitToScreen} data-testid="button-fit-screen">Fit to Screen</Button>
+        <Button type="button" variant="ghost" size="sm" className="hidden h-8 px-2 text-[11px] sm:inline-flex" onClick={props.onFitToWidth} data-testid="button-fit-width">Fit to Width</Button>
         <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5 px-2 text-[11px]" onClick={props.onToggleFullscreen} data-testid="button-toggle-designer-fullscreen">
           {props.isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
           <span className="hidden md:inline">{props.isFullscreen ? "Exit fullscreen" : "Fullscreen"}</span>

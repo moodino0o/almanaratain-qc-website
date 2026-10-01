@@ -113,6 +113,7 @@
     order: 2;
   }
   .report-designer-inspector-shell {
+    width: 100% !important;
     max-height: 420px;
     flex: 0 0 auto;
     order: 3;
