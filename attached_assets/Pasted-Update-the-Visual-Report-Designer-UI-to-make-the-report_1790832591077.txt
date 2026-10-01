@@ -1,0 +1,272 @@
+Update the Visual Report Designer UI to make the report editing canvas much larger and more usable.
+
+IMPORTANT:
+Do NOT change the report data, report generation logic, database, templates, or existing report elements. This is ONLY a UI/UX improvement to the Visual Report Designer.
+
+==================================================
+1. ENLARGE THE REPORT CANVAS
+==================================================
+
+The report editing canvas should use as much available screen space as possible.
+
+Currently the report page is too small because the left toolbar and right Inspector panel take too much space.
+
+Make the central report canvas significantly larger.
+
+The layout should be:
+
+┌─────────────────────────────────────────────────────────────┐
+│ Toolbar                                                     │
+├──────────────┬──────────────────────────────────┬───────────┤
+│              │                                  │           │
+│ Left tools   │                                  │ Inspector │
+│              │         LARGE REPORT             │           │
+│              │            CANVAS                │           │
+│              │                                  │           │
+│              │                                  │           │
+└──────────────┴──────────────────────────────────┴───────────┘
+
+The report page should automatically fit into the available vertical and horizontal space.
+
+Use a flexible layout such as:
+
+height: calc(100vh - toolbar/header height)
+
+Do not use a fixed small height.
+
+The editor should feel like a professional desktop report-design application.
+
+==================================================
+2. RIGHT INSPECTOR PANEL
+==================================================
+
+The Inspector panel on the right must be collapsible.
+
+Add a button at the top of the Inspector:
+
+< Close Inspector
+
+When clicked:
+
+- Hide the Inspector panel completely.
+- Give the report canvas the additional space.
+- Expand the canvas into the freed space.
+
+When the Inspector is closed, show a small floating button on the right side:
+
+[ > Inspector ]
+
+Clicking it should reopen the Inspector.
+
+==================================================
+3. TOGGLE BEHAVIOR
+==================================================
+
+The Inspector should behave like a collapsible sidebar.
+
+OPEN:
+
+Canvas | Inspector
+
+CLOSED:
+
+Canvas
+
+The report canvas must automatically resize when the Inspector opens/closes.
+
+Do NOT leave an empty blank area where the Inspector used to be.
+
+==================================================
+4. RESIZABLE INSPECTOR
+==================================================
+
+If practical, make the Inspector panel resizable by dragging its left edge.
+
+For example:
+
+Minimum width: 280px
+Default width: 320px
+Maximum width: 500px
+
+The user should be able to make it narrower or wider.
+
+The canvas should automatically adjust.
+
+==================================================
+5. LEFT TOOLBAR
+==================================================
+
+Keep the existing left toolbar:
+
++ Text
++ Field
++ Line
++ Shape
++ Image
++ Table
+
+But make it compact enough so it does not unnecessarily reduce the report canvas width.
+
+If possible, allow the left toolbar to collapse as well.
+
+When collapsed, show only icons.
+
+For example:
+
+T
+F
+—
+□
+IMG
+▦
+
+And provide:
+
+[ > ]
+
+to reopen it.
+
+==================================================
+6. FULLSCREEN DESIGN MODE
+==================================================
+
+Add a button:
+
+⛶ Fullscreen
+
+When clicked, the Visual Report Designer should occupy the entire browser viewport.
+
+Hide unnecessary application navigation/header elements while in fullscreen mode.
+
+Provide:
+
+[ Exit Fullscreen ]
+
+to return to normal mode.
+
+The report canvas should become as large as possible.
+
+==================================================
+7. ZOOM CONTROLS
+==================================================
+
+Add zoom controls near the canvas:
+
+−   75%   +   Fit
+
+Options:
+
+50%
+75%
+100%
+125%
+150%
+200%
+
+Also provide:
+
+Fit to Screen
+
+Fit to Width
+
+When the window size changes, the report should remain properly centered.
+
+==================================================
+8. CANVAS CENTERING
+==================================================
+
+The report page should always remain centered in the available canvas.
+
+When the Inspector is closed, automatically recalculate the center position.
+
+For example:
+
+Inspector OPEN:
+
+        [ REPORT PAGE ]
+             ↑
+      centered in canvas
+
+Inspector CLOSED:
+
+             [ REPORT PAGE ]
+             ↑
+      centered in larger canvas
+
+Do not keep the report positioned according to the old canvas width.
+
+==================================================
+9. RESPONSIVE BEHAVIOR
+==================================================
+
+The designer must work properly on:
+
+Desktop
+Laptop
+Large monitors
+
+Do not allow the report page to be cut off unnecessarily.
+
+The canvas should have its own scrolling if the report is larger than the available viewport.
+
+==================================================
+10. IMPORTANT UX REQUIREMENT
+==================================================
+
+The Inspector must NOT permanently consume screen space.
+
+The user should be able to work in two modes:
+
+DESIGN MODE:
+
+[Tools]   [Large Report Canvas]   [Inspector]
+
+FOCUS MODE:
+
+[Tools]   [Very Large Report Canvas]
+
+This allows me to design the report without the properties panel taking up space.
+
+==================================================
+11. PERSIST USER PREFERENCE
+==================================================
+
+Remember whether the Inspector was open or closed.
+
+If I close the Inspector and reload the page, keep it closed.
+
+If I reopen it and reload the page, keep it open.
+
+Use localStorage or the existing user preference mechanism.
+
+==================================================
+12. DO NOT BREAK EXISTING FUNCTIONALITY
+==================================================
+
+Do not change:
+
+- Report data
+- Dynamic fields
+- Tables
+- Templates
+- PDF generation
+- Database
+- Report calculations
+- Existing object properties
+
+Only improve the Visual Report Designer interface and available workspace.
+
+After implementing, test:
+
+1. Open Report Layouts.
+2. Confirm the report canvas is significantly larger.
+3. Close Inspector.
+4. Confirm the canvas expands.
+5. Reopen Inspector.
+6. Confirm the canvas shrinks correctly.
+7. Resize Inspector.
+8. Confirm the canvas responds correctly.
+9. Enter fullscreen.
+10. Exit fullscreen.
+11. Change zoom.
+12. Reload the page and confirm Inspector state is remembered.

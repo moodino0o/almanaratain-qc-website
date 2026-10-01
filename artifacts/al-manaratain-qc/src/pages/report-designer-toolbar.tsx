@@ -12,6 +12,8 @@ import {
   Save,
   Settings2,
   Undo2,
+  Maximize2,
+  Minimize2,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
@@ -30,6 +32,11 @@ type ToolbarProps = {
   onSave: () => void;
   onSaveAs: () => void;
   onZoom: (delta: number) => void;
+  onSetZoom: (value: number) => void;
+  onFitToScreen: () => void;
+  onFitToWidth: () => void;
+  onToggleFullscreen: () => void;
+  isFullscreen: boolean;
   zoom: number;
   grid: boolean;
   snap: boolean;
@@ -40,6 +47,8 @@ type ToolbarProps = {
   isDirty: boolean;
   isSaving: boolean;
 };
+
+const zoomPresets = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
 const tools: Array<{ id: DesignerTool; label: string; icon: typeof Plus }> = [
   { id: "select", label: "Select", icon: Settings2 },
@@ -97,8 +106,27 @@ export function ReportDesignerToolbar(props: ToolbarProps) {
       </div>
       <div className="ml-auto flex items-center gap-1">
         <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => props.onZoom(-0.1)} data-testid="button-zoom-out" aria-label="Zoom out"><ZoomOut className="h-4 w-4" /></Button>
-        <span className="w-11 text-center font-mono text-[11px] text-muted-foreground" data-testid="text-designer-zoom">{Math.round(props.zoom * 100)}%</span>
+        <select
+          value={zoomPresets.find((value) => Math.abs(value - props.zoom) < 0.001)?.toString() ?? "custom"}
+          onChange={(event) => {
+            if (event.target.value !== "custom") props.onSetZoom(Number(event.target.value));
+          }}
+          className="h-8 min-w-[92px] rounded-md border border-input bg-background px-2 text-center font-mono text-[11px]"
+          data-testid="select-designer-zoom"
+          aria-label="Zoom level"
+        >
+          {zoomPresets.map((value) => <option key={value} value={value}>{Math.round(value * 100)}%</option>)}
+          {!zoomPresets.some((value) => Math.abs(value - props.zoom) < 0.001) && (
+            <option value="custom">{Math.round(props.zoom * 100)}% (fit)</option>
+          )}
+        </select>
         <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => props.onZoom(0.1)} data-testid="button-zoom-in" aria-label="Zoom in"><ZoomIn className="h-4 w-4" /></Button>
+        <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-[11px]" onClick={props.onFitToScreen} data-testid="button-fit-screen">Fit screen</Button>
+        <Button type="button" variant="ghost" size="sm" className="hidden h-8 px-2 text-[11px] sm:inline-flex" onClick={props.onFitToWidth} data-testid="button-fit-width">Fit width</Button>
+        <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5 px-2 text-[11px]" onClick={props.onToggleFullscreen} data-testid="button-toggle-designer-fullscreen">
+          {props.isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+          <span className="hidden md:inline">{props.isFullscreen ? "Exit fullscreen" : "Fullscreen"}</span>
+        </Button>
         <Button type="button" variant="outline" size="sm" className="ml-2 h-8 gap-1.5 text-xs" onClick={props.onSaveAs} data-testid="button-save-as">
           <Copy className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Save as</span>
         </Button>

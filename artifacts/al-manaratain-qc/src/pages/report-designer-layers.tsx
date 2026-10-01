@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp, Eye, EyeOff, GripVertical, Lock, LockOpen, MoreHorizontal, Plus, Trash2, Copy } from "lucide-react";
+import { Braces, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Eye, EyeOff, GripVertical, Image, Lock, LockOpen, Minus, MoreHorizontal, Plus, Square, Table2, Trash2, Copy, Type } from "lucide-react";
 import type { ReportTemplateObject } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,9 +13,20 @@ type LayersProps = {
   onDuplicate: (id: string) => void;
   onMove: (id: string, direction: "up" | "down") => void;
   onAdd: (type: ReportTemplateObject["type"]) => void;
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
 };
 
-export function ReportDesignerLayers({ objects, selectedId, onSelect, onPatch, onDelete, onDuplicate, onMove, onAdd }: LayersProps) {
+const insertTools = [
+  { type: "text", label: "Text", Icon: Type },
+  { type: "dynamicField", label: "Field", Icon: Braces },
+  { type: "line", label: "Line", Icon: Minus },
+  { type: "shape", label: "Shape", Icon: Square },
+  { type: "image", label: "Image", Icon: Image },
+  { type: "table", label: "Table", Icon: Table2 },
+] as const;
+
+export function ReportDesignerLayers({ objects, selectedId, onSelect, onPatch, onDelete, onDuplicate, onMove, onAdd, collapsed, onToggleCollapsed }: LayersProps) {
   const ordered = [...objects].sort((a, b) => b.zIndex - a.zIndex);
   const sectionNames = new Map(
     objects
@@ -23,20 +34,38 @@ export function ReportDesignerLayers({ objects, selectedId, onSelect, onPatch, o
       .map((object) => [object.sectionKey!, object.name]),
   );
   return (
-    <aside className="flex min-h-0 flex-col border-r border-border/70 bg-[hsl(var(--sidebar))] text-[hsl(var(--sidebar-foreground))]" data-testid="report-designer-left-panel">
+    <aside className={`flex min-h-0 min-w-0 flex-col border-r border-border/70 bg-[hsl(var(--sidebar))] text-[hsl(var(--sidebar-foreground))] ${collapsed ? "items-center" : ""}`} data-testid="report-designer-left-panel" data-collapsed={collapsed}>
+      {collapsed ? (
+        <>
+          <div className="flex w-full justify-center border-b border-[hsl(var(--sidebar-border))] p-2">
+            <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={onToggleCollapsed} aria-label="Expand tools and layers" title="Expand tools and layers" data-testid="button-expand-designer-tools"><ChevronRight className="h-4 w-4" /></Button>
+          </div>
+          <div className="flex flex-col items-center gap-1 p-1.5">
+            {insertTools.map(({ type, label, Icon }) => (
+              <Button key={type} type="button" variant="ghost" size="icon" className="h-9 w-9" onClick={() => onAdd(type)} aria-label={`Add ${label}`} title={`Add ${label}`} data-testid={`button-layer-add-${type}`}>
+                <Icon className="h-4 w-4" />
+              </Button>
+            ))}
+          </div>
+        </>
+      ) : (
+        <>
       <div className="border-b border-[hsl(var(--sidebar-border))] px-3 py-3">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[hsl(var(--sidebar-foreground)/.6)]">Template objects</p>
             <p className="mt-1 text-sm font-semibold">Layers</p>
           </div>
-          <span className="font-mono text-[11px] text-[hsl(var(--sidebar-foreground)/.55)]" data-testid="text-layer-count">{objects.length}/200</span>
+          <div className="flex items-center gap-1">
+            <span className="font-mono text-[11px] text-[hsl(var(--sidebar-foreground)/.55)]" data-testid="text-layer-count">{objects.length}/200</span>
+            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={onToggleCollapsed} aria-label="Collapse tools and layers" title="Collapse tools and layers" data-testid="button-collapse-designer-tools"><ChevronLeft className="h-4 w-4" /></Button>
+          </div>
         </div>
       </div>
       <div className="grid grid-cols-3 gap-1 border-b border-[hsl(var(--sidebar-border))] p-2">
-        {(["text", "dynamicField", "line", "shape", "image", "table"] as const).map((type) => (
+        {insertTools.map(({ type, label, Icon }) => (
           <Button key={type} variant="ghost" size="sm" className="h-8 justify-start gap-1 px-2 text-[11px] text-[hsl(var(--sidebar-foreground)/.8)] hover:bg-[hsl(var(--sidebar-accent))] hover:text-[hsl(var(--sidebar-accent-foreground))]" onClick={() => onAdd(type)} data-testid={`button-layer-add-${type}`}>
-            <Plus className="h-3 w-3" /> {type === "dynamicField" ? "Field" : type === "table" ? "Table" : type}
+            <Icon className="h-3 w-3" /> {label}
           </Button>
         ))}
       </div>
@@ -73,6 +102,8 @@ export function ReportDesignerLayers({ objects, selectedId, onSelect, onPatch, o
       <div className="border-t border-[hsl(var(--sidebar-border))] p-2 text-[10px] text-[hsl(var(--sidebar-foreground)/.55)]">
         <div className="flex items-center gap-1"><MoreHorizontal className="h-3 w-3" /> Top layer renders last</div>
       </div>
+        </>
+      )}
     </aside>
   );
 }
