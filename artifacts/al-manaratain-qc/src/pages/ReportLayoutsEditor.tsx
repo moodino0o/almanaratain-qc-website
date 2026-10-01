@@ -41,7 +41,7 @@ import "./report-designer.css";
 type ReportDocumentWithTemplate = (props: ComponentProps<typeof ReportDocument> & { templateDesign?: ReportTemplateDesign }) => ReactElement;
 const TemplateReportDocument = ReportDocument as unknown as ReportDocumentWithTemplate;
 
-function initialObject(type: ReportTemplateObject["type"], index: number, testType: string): ReportTemplateObject {
+function initialObject(type: ReportTemplateObject["type"], index: number, testType: string, parentSection?: ReportTemplateObject): ReportTemplateObject {
   const tableKey = ({
     "Ready Mix": "readyMixResults",
     Blocks: "blockCompression",
@@ -49,7 +49,10 @@ function initialObject(type: ReportTemplateObject["type"], index: number, testTy
     "Sand Sieve": "sieveResults",
     "Aggregate Sieve": "sieveResults",
   } as Record<string, string>)[testType] ?? Object.keys(REPORT_LAYOUT_FIELD_GROUPS[testType] ?? {})[0] ?? "genericContext";
-  const base = { id: `object-${Date.now()}-${index}`, name: type === "dynamicField" ? "Approved field" : type === "line" ? "Divider line" : type === "shape" ? "Rectangle" : type === "image" ? "Image" : type === "table" ? "QC data table" : "Text box", x: type === "table" ? 13 : 24 + (index % 4) * 10, y: type === "table" ? 205 : 68 + index * 12, width: type === "line" ? 160 : type === "table" ? 184 : 70, height: type === "line" ? 1 : type === "text" ? 16 : type === "table" ? 35 : 28, zIndex: index + 10, rotation: 0, locked: false, visible: true } satisfies Partial<ReportTemplateObject>;
+  const inSection = Boolean(parentSection);
+  const sectionWidth = parentSection?.width ?? 0;
+  const sectionHeight = parentSection?.height ?? 0;
+  const base = { id: `object-${Date.now()}-${index}`, name: type === "dynamicField" ? "Approved field" : type === "line" ? "Divider line" : type === "shape" ? "Rectangle" : type === "image" ? "Image" : type === "table" ? "QC data table" : "Text box", x: inSection ? 3 : type === "table" ? 13 : 24 + (index % 4) * 10, y: inSection ? 3 : type === "table" ? 205 : 68 + index * 12, width: type === "line" ? (inSection ? Math.max(1, sectionWidth - 6) : 160) : type === "table" ? (inSection ? Math.max(1, sectionWidth - 6) : 184) : 70, height: type === "line" ? 1 : type === "text" ? (inSection ? Math.max(1, Math.min(16, sectionHeight - 6)) : 16) : type === "table" ? (inSection ? Math.max(1, Math.min(35, sectionHeight - 6)) : 35) : 28, zIndex: index + 10, rotation: 0, locked: false, visible: true, ...(parentSection?.sectionKey ? { sectionKey: parentSection.sectionKey } : {}) } satisfies Partial<ReportTemplateObject>;
   if (type === "text") return { ...base, type, content: "Additional note", fontFamily: "Arial", fontSize: 12, textColor: "#20252b" } as ReportTemplateObject;
   if (type === "dynamicField") return { ...base, type, fieldKey: "REPORT_NUMBER", fontFamily: "Arial", fontSize: 12, textColor: "#20252b" } as ReportTemplateObject;
   if (type === "line") return { ...base, type, lineOrientation: "horizontal", lineStyle: "solid", borderColor: "#9b1739" } as ReportTemplateObject;
@@ -142,7 +145,23 @@ export function ReportLayoutsEditor() {
   const patchDesign = (patch: (design: ReportTemplateDesign) => ReportTemplateDesign) => { if (draft) addHistory(patch(cloneDesign(draft.design))); };
   const patchObject = (id: string, patch: Partial<ReportTemplateObject>) => patchDesign((design) => {
     const target = design.objects.find((object) => object.id === id);
-    const objects = design.objects.map((object) => object.id === id ? { ...object, ...patch } : object);
+    let adjustedPatch = patch;
+    if (target && target.type !== "section" && Object.hasOwn(patch, "sectionKey")) {
+      const oldParent = design.objects.find((object) =>
+        object.type === "section" && object.sectionKey === target.sectionKey,
+      );
+      const newParent = design.objects.find((object) =>
+        object.type === "section" && object.sectionKey === patch.sectionKey,
+      );
+      const absoluteX = target.x + (oldParent?.x ?? 0);
+      const absoluteY = target.y + (oldParent?.y ?? 0);
+      adjustedPatch = {
+        ...patch,
+        x: absoluteX - (newParent?.x ?? 0),
+        y: absoluteY - (newParent?.y ?? 0),
+      };
+    }
+    const objects = design.objects.map((object) => object.id === id ? { ...object, ...adjustedPatch } : object);
     const page = { ...design.page };
     if (target?.type === "section" && patch.height !== undefined) {
       if (target.sectionKey === "header") page.headerHeightMm = patch.height;
@@ -216,18 +235,37 @@ export function ReportLayoutsEditor() {
   };
   const addObject = (type: ReportTemplateObject["type"]) => {
     if (!draft || draft.design.objects.length >= 200) return;
-    const object = initialObject(type, draft.design.objects.length, testType);
+    const selected = draft.design.objects.find((object) => object.id === selectedObjectId);
+    const parentSection = selected?.type === "section"
+      ? selected
+      : selected?.sectionKey
+        ? draft.design.objects.find((object) => object.type === "section" && object.sectionKey === selected.sectionKey)
+        : undefined;
+    const object = initialObject(type, draft.design.objects.length, testType, parentSection);
     patchDesign((design) => ({ ...design, objects: [...design.objects, object] }));
     setSelectedObjectId(object.id);
     setTool("select");
   };
   const duplicateObject = (id: string) => {
     const object = draft?.design.objects.find((item) => item.id === id);
-    if (!object || !draft) return;
+    if (!object || object.type === "section" || !draft) return;
     const copy = { ...cloneDesign(object), id: `object-${Date.now()}`, name: `${object.name} copy`, x: object.x + 4, y: object.y + 4, zIndex: Math.max(...draft.design.objects.map((item) => item.zIndex), 0) + 1 };
     patchDesign((design) => ({ ...design, objects: [...design.objects, copy] })); setSelectedObjectId(copy.id);
   };
-  const deleteObject = (id: string) => { patchDesign((design) => ({ ...design, objects: design.objects.filter((object) => object.id !== id) })); if (selectedObjectId === id) setSelectedObjectId(undefined); };
+  const deleteObject = (id: string) => {
+    const section = draft?.design.objects.find((object) => object.id === id && object.type === "section");
+    patchDesign((design) => ({
+      ...design,
+      objects: design.objects
+        .filter((object) => object.id !== id)
+        .map((object) => {
+          if (!section?.sectionKey || object.type === "section" || object.sectionKey !== section.sectionKey) return object;
+          const { sectionKey: _sectionKey, ...pageLevelObject } = object;
+          return { ...pageLevelObject, x: object.x + section.x, y: object.y + section.y };
+        }),
+    }));
+    if (selectedObjectId === id) setSelectedObjectId(undefined);
+  };
   const moveLayer = (id: string, direction: "up" | "down") => {
     const object = draft?.design.objects.find((item) => item.id === id);
     if (object) patchObject(id, { zIndex: object.zIndex + (direction === "up" ? 1 : -1) });
@@ -237,7 +275,13 @@ export function ReportLayoutsEditor() {
     const page = draft.design.page;
     const pageWidth = page.orientation === "landscape" ? page.heightMm : page.widthMm;
     const pageHeight = page.orientation === "landscape" ? page.widthMm : page.heightMm;
-    const patch: Partial<ReportTemplateObject> = alignment === "left" ? { x: page.marginLeftMm } : alignment === "right" ? { x: pageWidth - page.marginRightMm - selectedObject.width } : alignment === "center" ? { x: (pageWidth - selectedObject.width) / 2 } : alignment === "top" ? { y: page.marginTopMm } : alignment === "bottom" ? { y: pageHeight - page.marginBottomMm - selectedObject.height } : { y: (pageHeight - selectedObject.height) / 2 };
+    const parentSection = selectedObject.type !== "section" && selectedObject.sectionKey
+      ? draft.design.objects.find((object) => object.type === "section" && object.sectionKey === selectedObject.sectionKey)
+      : undefined;
+    const bounds = parentSection
+      ? { width: parentSection.width, height: parentSection.height, left: 0, right: 0, top: 0, bottom: 0 }
+      : { width: pageWidth, height: pageHeight, left: page.marginLeftMm, right: page.marginRightMm, top: page.marginTopMm, bottom: page.marginBottomMm };
+    const patch: Partial<ReportTemplateObject> = alignment === "left" ? { x: bounds.left } : alignment === "right" ? { x: bounds.width - bounds.right - selectedObject.width } : alignment === "center" ? { x: (bounds.width - selectedObject.width) / 2 } : alignment === "top" ? { y: bounds.top } : alignment === "bottom" ? { y: bounds.height - bounds.bottom - selectedObject.height } : { y: (bounds.height - selectedObject.height) / 2 };
     patchObject(selectedObject.id, patch);
   };
   const uploadImage = async (file: File) => {

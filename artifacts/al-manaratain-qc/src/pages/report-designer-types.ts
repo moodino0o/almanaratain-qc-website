@@ -134,16 +134,20 @@ export function addDefaultSectionObjects(
   const objectIds = new Set(design.objects.map((object) => object.id));
   const sections = defaults
     .filter((object) => object.type === "section")
-    .map((object) => ({
-      ...object,
-      height: object.sectionKey === "header"
-        ? design.page.headerHeightMm
-        : object.sectionKey === "signatures"
-          ? design.page.footerHeightMm
-          : object.height,
-      id: objectIds.has(object.id) ? `section-${object.sectionKey}-${Date.now()}` : object.id,
-      zIndex: Math.max(0, ...design.objects.map((item) => item.zIndex)) + object.zIndex,
-    }));
+    .map((object) => {
+      const legacySection = design.layout.sections.find((section) => section.key === object.sectionKey);
+      return {
+        ...object,
+        height: object.sectionKey === "header"
+          ? design.page.headerHeightMm
+          : object.sectionKey === "signatures"
+            ? design.page.footerHeightMm
+            : object.height,
+        ...(legacySection?.backgroundColor ? { backgroundColor: legacySection.backgroundColor } : {}),
+        id: objectIds.has(object.id) ? `section-${object.sectionKey}-${Date.now()}` : object.id,
+        zIndex: Math.max(0, ...design.objects.map((item) => item.zIndex)) + object.zIndex,
+      };
+    });
   return { ...design, objects: [...design.objects, ...sections] };
 }
 

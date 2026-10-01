@@ -17,6 +17,11 @@ type LayersProps = {
 
 export function ReportDesignerLayers({ objects, selectedId, onSelect, onPatch, onDelete, onDuplicate, onMove, onAdd }: LayersProps) {
   const ordered = [...objects].sort((a, b) => b.zIndex - a.zIndex);
+  const sectionNames = new Map(
+    objects
+      .filter((object) => object.type === "section" && object.sectionKey)
+      .map((object) => [object.sectionKey!, object.name]),
+  );
   return (
     <aside className="flex min-h-0 flex-col border-r border-border/70 bg-[hsl(var(--sidebar))] text-[hsl(var(--sidebar-foreground))]" data-testid="report-designer-left-panel">
       <div className="border-b border-[hsl(var(--sidebar-border))] px-3 py-3">
@@ -42,7 +47,14 @@ export function ReportDesignerLayers({ objects, selectedId, onSelect, onPatch, o
           <div key={object.id} className={`group mb-1 rounded-md border px-1.5 py-1.5 ${selectedId === object.id ? "border-[hsl(var(--sidebar-accent))] bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-accent-foreground))]" : "border-transparent hover:border-[hsl(var(--sidebar-border))]"}`} data-testid={`row-layer-${object.id}`}>
             <div className="flex items-center gap-1">
               <GripVertical className="h-3.5 w-3.5 shrink-0 opacity-40" />
-              <button type="button" onClick={() => onSelect(object.id)} className="min-w-0 flex-1 truncate text-left text-xs font-medium" data-testid={`button-select-layer-${object.id}`}>{objectLabel(object)}</button>
+              <div className="min-w-0 flex-1">
+                <button type="button" onClick={() => onSelect(object.id)} className="block w-full truncate text-left text-xs font-medium" data-testid={`button-select-layer-${object.id}`}>{objectLabel(object)}</button>
+                {object.type !== "section" && object.sectionKey && (
+                  <p className="truncate pl-2 text-[9px] text-current/60" data-testid={`text-layer-parent-${object.id}`}>
+                    in {sectionNames.get(object.sectionKey) ?? object.sectionKey}
+                  </p>
+                )}
+              </div>
               <button type="button" className="rounded p-1 opacity-70 hover:opacity-100" onClick={() => onPatch(object.id, { visible: !object.visible })} data-testid={`button-toggle-visibility-${object.id}`} aria-label={object.visible ? "Hide object" : "Show object"}>{object.visible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}</button>
               <button type="button" className="rounded p-1 opacity-70 hover:opacity-100" onClick={() => onPatch(object.id, { locked: !object.locked })} data-testid={`button-toggle-lock-${object.id}`} aria-label={object.locked ? "Unlock object" : "Lock object"}>{object.locked ? <Lock className="h-3.5 w-3.5" /> : <LockOpen className="h-3.5 w-3.5" />}</button>
             </div>
@@ -51,7 +63,7 @@ export function ReportDesignerLayers({ objects, selectedId, onSelect, onPatch, o
                 <Input value={object.name} onChange={(event) => onPatch(object.id, { name: event.target.value })} className="h-7 border-0 bg-transparent px-1 text-[11px] text-inherit shadow-none" data-testid={`input-layer-name-${object.id}`} aria-label="Object name" />
                 <button type="button" onClick={() => onMove(object.id, "up")} className="rounded p-1 hover:bg-black/10" data-testid={`button-layer-up-${object.id}`} aria-label="Move layer up"><ChevronUp className="h-3 w-3" /></button>
                 <button type="button" onClick={() => onMove(object.id, "down")} className="rounded p-1 hover:bg-black/10" data-testid={`button-layer-down-${object.id}`} aria-label="Move layer down"><ChevronDown className="h-3 w-3" /></button>
-                <button type="button" onClick={() => onDuplicate(object.id)} className="rounded p-1 hover:bg-black/10" data-testid={`button-layer-duplicate-${object.id}`} aria-label="Duplicate layer"><Copy className="h-3 w-3" /></button>
+                {object.type !== "section" && <button type="button" onClick={() => onDuplicate(object.id)} className="rounded p-1 hover:bg-black/10" data-testid={`button-layer-duplicate-${object.id}`} aria-label="Duplicate layer"><Copy className="h-3 w-3" /></button>}
                 <button type="button" onClick={() => onDelete(object.id)} className="rounded p-1 text-destructive hover:bg-black/10" data-testid={`button-layer-delete-${object.id}`} aria-label="Delete layer"><Trash2 className="h-3 w-3" /></button>
               </div>
             )}

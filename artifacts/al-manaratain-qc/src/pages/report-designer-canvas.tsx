@@ -25,22 +25,45 @@ function objectStyle(object: ReportTemplateObject, scale: number) {
     width: object.width * PX_PER_MM * scale,
     height: object.height * PX_PER_MM * scale,
     transform: `rotate(${object.rotation}deg)`,
-    opacity: object.opacity ?? 1,
+    opacity: 1,
     zIndex: object.zIndex,
     display: object.visible ? undefined : "none",
   };
 }
 
-function renderObject(object: ReportTemplateObject) {
-  const common = { color: object.textColor ?? "#20252b", fontFamily: object.fontFamily ?? "Arial", fontSize: `${(object.fontSize ?? 12) * 0.85}px`, fontWeight: object.bold ? 700 : 400, textAlign: object.textAlign ?? "left" as const };
-  if (object.type === "text") return <span style={common}>{object.content || "Text box"}</span>;
-  if (object.type === "dynamicField") return <span style={{ ...common, fontStyle: "italic" }}>{object.fieldKey ? `{{ ${object.fieldKey} }}` : "Choose field"}</span>;
-  if (object.type === "line") return <div className="h-full w-full" style={{ borderTop: object.lineOrientation === "vertical" ? undefined : `1px ${object.lineStyle ?? "solid"} ${object.borderColor ?? "#9b1739"}`, borderLeft: object.lineOrientation === "vertical" ? `1px ${object.lineStyle ?? "solid"} ${object.borderColor ?? "#9b1739"}` : undefined }} />;
-  if (object.type === "image") return object.objectPath ? <img src={`/api/storage${object.objectPath}`} alt={object.name} className="h-full w-full object-contain" /> : <div className="flex h-full w-full items-center justify-center border border-dashed border-primary/50 text-[10px] text-primary">Image</div>;
-  if (object.type === "table") return <div className="h-full w-full overflow-hidden border border-border bg-card/90 p-1"><div className="grid h-full grid-rows-4 gap-px border border-border bg-border">{Array.from({ length: 4 }, (_, row) => <div key={row} className="grid grid-cols-4 gap-px">{Array.from({ length: 4 }, (_, column) => <div key={column} className={row === 0 ? "bg-primary/10" : "bg-background"} />)}</div>)}</div></div>;
-  if (object.type === "section") return <div className="h-full w-full rounded-sm border border-dashed border-primary/40 bg-primary/[.025]" />;
-  const shape = object.shapeType ?? "rectangle";
-  return <div className="h-full w-full" style={{ background: object.fillColor ?? "transparent", border: `${object.borderWidth ?? 1}px solid ${object.borderColor ?? "#9aa6b2"}`, borderRadius: shape === "circle" ? "50%" : `${object.borderRadius ?? 0}px` }} />;
+function objectHandle(object: ReportTemplateObject) {
+  if (object.type === "section") {
+    return <div
+      className="h-full w-full border border-dashed border-slate-400/50 bg-transparent"
+      aria-hidden="true"
+    />;
+  }
+  return <div className="h-full w-full bg-transparent" aria-hidden="true" />;
+}
+
+function canvasObjectPosition(
+  object: ReportTemplateObject,
+  objects: ReportTemplateObject[],
+  page: ReportTemplatePage,
+) {
+  if (object.type === "section") {
+    const pageVisibility = object.sectionKey === "header"
+      ? page.showHeader
+      : object.sectionKey === "signatures"
+        ? page.showFooter
+        : true;
+    return { ...object, visible: object.visible && pageVisibility };
+  }
+  if (!object.sectionKey) return object;
+  const parent = objects.find((candidate) =>
+    candidate.type === "section" && candidate.sectionKey === object.sectionKey,
+  );
+  const parentVisible = parent?.visible !== false &&
+    !(object.sectionKey === "header" && !page.showHeader) &&
+    !(object.sectionKey === "signatures" && !page.showFooter);
+  return parent
+    ? { ...object, x: parent.x + object.x, y: parent.y + object.y, visible: object.visible && parentVisible }
+    : object;
 }
 
 export function ReportDesignerCanvas({ page, objects, selectedId, zoom, grid, snap, onSelect, onMove, preview }: CanvasProps) {
@@ -90,7 +113,11 @@ export function ReportDesignerCanvas({ page, objects, selectedId, zoom, grid, sn
       <div className="absolute inset-0">
         {objects.map((object) => {
           const selected = object.id === selectedId;
-          const previewObject = dragPreview?.id === object.id ? { ...object, ...dragPreview.patch } : object;
+          const previewObject = canvasObjectPosition(
+            dragPreview?.id === object.id ? { ...object, ...dragPreview.patch } : object,
+            objects,
+            page,
+          );
           return (
             <div
               key={object.id}
@@ -110,7 +137,7 @@ export function ReportDesignerCanvas({ page, objects, selectedId, zoom, grid, sn
               tabIndex={0}
               aria-label={`Select ${object.name}`}
             >
-              {renderObject(object)}
+              {objectHandle(object)}
               {selected && !object.locked && (
                 <button
                   type="button"

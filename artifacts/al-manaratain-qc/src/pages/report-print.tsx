@@ -98,12 +98,15 @@ function layoutSectionOrder(layout: ReportLayout | undefined, key: string) {
 function layoutSectionStyle(layout: ReportLayout | undefined, key: string): CSSProperties {
   const section = layout?.config.sections.find((item) => item.key === key);
   const positioned = layout ? positionedSectionObjects.get(layout)?.get(key) : undefined;
+  const sectionBackground = positioned
+    ? positioned.backgroundColor ?? "transparent"
+    : section?.backgroundColor;
   return {
     order: section?.order ?? 0,
     ...(section?.fontFamily ? { fontFamily: section.fontFamily } : {}),
     ...(section?.fontSize ? { fontSize: `${section.fontSize}px` } : {}),
     ...(section?.textColor ? { color: section.textColor } : {}),
-    ...(section?.backgroundColor ? { backgroundColor: section.backgroundColor } : {}),
+    ...(sectionBackground ? { backgroundColor: sectionBackground } : {}),
     ...(section?.bold ? { fontWeight: 700 } : {}),
     ...(section?.borderStyle && section.borderStyle !== "none"
       ? { border: `${section.borderWidth ?? 1}px ${section.borderStyle} ${section.borderColor ?? "#d1d5db"}` }
@@ -194,15 +197,31 @@ function ReportTemplateObjects({
   reportTitle: string;
 }) {
   const fieldValues = reportTemplateFieldValues(record, companyName, reportTitle);
+  const sections = new Map(
+    design.objects
+      .filter((object) => object.type === "section" && object.sectionKey)
+      .map((object) => [object.sectionKey!, object]),
+  );
   const objects = design.objects
-    .filter((object) => object.type !== "section" && object.visible)
+    .filter((object) => {
+      if (object.type === "section" || !object.visible) return false;
+      if (!object.sectionKey) return true;
+      const section = sections.get(object.sectionKey);
+      if (section?.visible === false) return false;
+      if (object.sectionKey === "header" && !design.page.showHeader) return false;
+      if (object.sectionKey === "signatures" && !design.page.showFooter) return false;
+      return true;
+    })
     .sort((left, right) => left.zIndex - right.zIndex);
 
   return <>{objects.map((object) => {
+    const parent = object.sectionKey ? sections.get(object.sectionKey) : undefined;
+    const objectX = object.x + (parent?.x ?? 0);
+    const objectY = object.y + (parent?.y ?? 0);
     const commonStyle: CSSProperties = {
       position: "absolute",
-      left: `${object.x}mm`,
-      top: `${object.y}mm`,
+      left: `${objectX}mm`,
+      top: `${objectY}mm`,
       width: `${object.width}mm`,
       height: `${object.height}mm`,
       zIndex: object.zIndex,

@@ -31,6 +31,7 @@ function NumberField({ label, value, min, max, onChange, testId }: { label: stri
 export function ReportDesignerProperties({ design, selected, testType, onPageChange, onObjectChange, onLayoutChange, onUpload }: PropertiesProps) {
   const fields = Object.values(REPORT_LAYOUT_FIELD_GROUPS[testType] ?? {}).flat();
   const tableGroups = Object.keys(REPORT_LAYOUT_FIELD_GROUPS[testType] ?? {});
+  const sections = design.objects.filter((object) => object.type === "section" && object.sectionKey);
   const selectedLegacyTable = Object.entries(design.layout.columns).find(([, columns]) => columns.some((column) => column.key === selected?.fieldKey));
   return (
     <aside className="min-h-0 overflow-y-auto border-l border-border/70 bg-card" data-testid="report-designer-right-panel">
@@ -55,6 +56,67 @@ export function ReportDesignerProperties({ design, selected, testType, onPageCha
                 <NumberField label="Opacity" value={selected.opacity ?? 1} min={0} max={1} onChange={(value) => onObjectChange({ opacity: value })} testId="input-object-opacity" />
               </div>
             </section>
+
+            {selected.type === "section" ? (
+              <section className="space-y-3 border-t border-border/70 pt-4">
+                <p className="text-xs font-semibold">Section background</p>
+                <label className="space-y-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Background color</span>
+                  <select
+                    value={!selected.backgroundColor ? "transparent" : selected.backgroundColor.toLowerCase() === "#ffffff" ? "white" : "custom"}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      onObjectChange({
+                        backgroundColor: value === "transparent"
+                          ? undefined
+                          : value === "white"
+                            ? "#ffffff"
+                            : selected.backgroundColor && selected.backgroundColor.toLowerCase() !== "#ffffff"
+                              ? selected.backgroundColor
+                              : "#e5e7eb",
+                      });
+                    }}
+                    className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
+                    data-testid="select-section-background"
+                  >
+                    <option value="transparent">Transparent</option>
+                    <option value="white">White</option>
+                    <option value="custom">Custom color</option>
+                  </select>
+                </label>
+                {selected.backgroundColor && (
+                  <label className="flex items-center gap-2 text-xs">
+                    <span>{selected.backgroundColor.toLowerCase() === "#ffffff" ? "White" : "Custom color"}</span>
+                    <Input
+                      type="color"
+                      value={selected.backgroundColor}
+                      onChange={(event) => onObjectChange({ backgroundColor: event.target.value })}
+                      className="h-8 w-12 p-1"
+                      data-testid="input-section-background"
+                    />
+                  </label>
+                )}
+              </section>
+            ) : (
+              <section className="space-y-3 border-t border-border/70 pt-4">
+                <p className="text-xs font-semibold">Object hierarchy</p>
+                <label className="space-y-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Contained in section</span>
+                  <select
+                    value={selected.sectionKey ?? ""}
+                    onChange={(event) => onObjectChange({ sectionKey: event.target.value || undefined })}
+                    className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
+                    data-testid="select-object-section"
+                  >
+                    <option value="">Page-level object</option>
+                    {sections.map((section) => (
+                      <option key={section.id} value={section.sectionKey}>{section.name}</option>
+                    ))}
+                  </select>
+                </label>
+                <p className="text-[10px] leading-4 text-muted-foreground">Section objects are transparent containers. Their content stays visible in the live report preview.</p>
+              </section>
+            )}
 
             {(selected.type === "text" || selected.type === "dynamicField") && (
               <section className="space-y-3 border-t border-border/70 pt-4">

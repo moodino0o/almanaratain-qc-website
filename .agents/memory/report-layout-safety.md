@@ -14,3 +14,9 @@ The Block report’s legacy table shape is the baseline: keep its fixed headers,
 **Why:** A generic responsive table renderer made the printable Block report visibly messy even though its data was still correct.
 
 **How to apply:** Put shared approval metadata outside report-type-specific forms, but do not replace the Block renderer with the generic table renderer just to support other report types.
+
+The visual designer must use the shared report renderer as its only source of content. Editor overlays are transparent interaction and selection targets, not duplicate text, table, image, or field previews. New section containers default to transparent; retain explicit legacy section fills when initializing them.
+
+**Why:** Duplicate mock layers can cover real saved values and tables, while implicit accent fills can hide report content. Keeping one renderer also keeps the designer aligned with browser printing.
+
+**How to apply:** Add report content and data bindings to the shared renderer; keep canvas overlays limited to hit targets and selection outlines. Only apply a section fill when an administrator explicitly sets one, while preserving any previously saved fill.
