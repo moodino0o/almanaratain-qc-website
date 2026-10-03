@@ -304,6 +304,7 @@ test("calculates Block density from wet weight and specimen dimensions", () => {
 test("calculates Precast density from cube weight and applies age thresholds", () => {
   assert.equal(calculateCubeDensity("100*100*100", "2400"), "2400.00");
   assert.equal(calculateCubeDensity("100*100*100", "2.4", "kg"), "2400.00");
+  assert.equal(calculateCubeDensity("200*100*100", "4000"), "2000.00");
   assert.equal(cubeWeightInGrams("2.4", "kg"), "2400");
   assert.equal(calculateCubeDensity("invalid", "2.4"), "");
 

@@ -143,7 +143,7 @@ test("maps paving sizes ending in 60 and 80 to correction factors", () => {
 test("evaluates Precast age thresholds and calculates cube density from weight", () => {
   const result = evaluateStrengthRecord(
     precastRecord([
-      { rowNo: 1, testAge: 1, length: 100, width: 100, height: 100, load: 300, weight: 2400 },
+      { rowNo: 1, testAge: 1, length: 200, width: 100, height: 100, load: 600, weight: 4000 },
       { rowNo: 2, testAge: 7, length: 100, width: 100, height: 100, load: 520, weight: 2400 },
       { rowNo: 3, testAge: 7, length: 100, width: 100, height: 100, load: 520, weight: 2400 },
       { rowNo: 4, testAge: 28, length: 100, width: 100, height: 100, load: 650, weight: 2400 },
@@ -169,7 +169,7 @@ test("evaluates Precast age thresholds and calculates cube density from weight",
       { age: 28, minimumStrength: 65, averageStrength: 65, outcome: "Pass" },
     ],
   );
-  assert.equal(rows[0].density, "2400.00");
+  assert.equal(rows[0].density, "2000.00");
 });
 
 test("keeps existing Precast weights saved in kilograms compatible", () => {

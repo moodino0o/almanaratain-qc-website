@@ -717,11 +717,13 @@ export const calculateCubeDensity = (
   if (!text) return "";
   const value = Number(text);
   if (!Number.isFinite(value) || value < 0) return "";
-  const weightKg = unit === "g" ? value / 1000 : value;
-  return calculateBlockDensity({
-    ...dimensions,
-    wetWeight: String(weightKg),
-  });
+  const weightGrams = unit === "kg" ? value * 1000 : value;
+  const volumeMm3 =
+    Number(dimensions.length) *
+    Number(dimensions.height) *
+    Number(dimensions.width);
+  if (!Number.isFinite(volumeMm3) || volumeMm3 <= 0) return "";
+  return ((weightGrams / volumeMm3) * 1_000_000).toFixed(2);
 };
 
 export const applySizeDimensionDefaults = <T extends BlockDimensions>(

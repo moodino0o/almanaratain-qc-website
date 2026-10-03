@@ -427,9 +427,12 @@ function calculateRow(
   const precastWeight = numericValue(values.weight);
   const densityWeight = isPrecast
     ? precastWeight !== null
-      ? precastWeight / (precastWeightIsGrams ? 1000 : 1)
-      : wetWeight
+      ? precastWeight * (precastWeightIsGrams ? 1 : 1000)
+      : wetWeight === null
+        ? null
+        : wetWeight * 1000
     : wetWeight;
+  const densityMultiplier = isPrecast ? 1_000_000 : 1_000_000_000;
   const density =
     densityWeight !== null &&
     length !== null &&
@@ -440,7 +443,7 @@ function calculateRow(
     width > 0 &&
     numericValue(values.height)! > 0
       ? rounded(
-          (densityWeight * 1_000_000_000) /
+          (densityWeight * densityMultiplier) /
           (length * width * numericValue(values.height)!),
         )
       : null;
