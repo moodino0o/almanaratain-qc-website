@@ -1199,14 +1199,11 @@
   max-width: 100%;
   margin: 0 auto 1mm;
   padding: 0.7mm 2mm;
-  background: #ffe14a;
   color: #111;
   font-size: 8px;
   letter-spacing: normal;
   text-align: center;
   text-transform: none;
-  print-color-adjust: exact;
-  -webkit-print-color-adjust: exact;
 }
 
 .precast-standard-block .report-strength-table {
