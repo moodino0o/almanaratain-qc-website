@@ -44,6 +44,7 @@ export * from './employeeLoginAttempt';
 export * from './employeeLoginAttemptOutcome';
 export * from './errorEnvelope';
 export * from './getDailyReadyMixResultsParams';
+export * from './getDashboardParams';
 export * from './getEmployeeActivityParams';
 export * from './healthStatus';
 export * from './limitParamParameter';

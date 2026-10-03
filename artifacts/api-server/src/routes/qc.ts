@@ -36,6 +36,7 @@ import {
   DeleteRecordParams,
   DeleteReferenceCategoryParams,
   DeleteReferenceItemParams,
+  GetDashboardQueryParams,
   GetDashboardResponse,
   GetLookupsResponse,
   GetReferenceDataResponse,
@@ -1339,11 +1340,25 @@ async function listSieveStandards() {
   return (await loadSieveStandards()).map(toSieveStandard);
 }
 
-router.get("/dashboard", async (_req, res): Promise<void> => {
-  const currentMonth = sql`
-    ${qcRecordsTable.sampleDate} >= date_trunc('month', current_date)
-    and ${qcRecordsTable.sampleDate} < date_trunc('month', current_date) + interval '1 month'
-  `;
+router.get("/dashboard", async (req, res): Promise<void> => {
+  const query = GetDashboardQueryParams.safeParse(req.query);
+  if (!query.success) {
+    res.status(400).json({ error: query.error.message });
+    return;
+  }
+
+  const selectedMonthStart = query.data.month
+    ? `${query.data.month}-01`
+    : null;
+  const currentMonth = selectedMonthStart
+    ? sql`
+        ${qcRecordsTable.sampleDate} >= ${selectedMonthStart}::date
+        and ${qcRecordsTable.sampleDate} < ${selectedMonthStart}::date + interval '1 month'
+      `
+    : sql`
+        ${qcRecordsTable.sampleDate} >= date_trunc('month', current_date)
+        and ${qcRecordsTable.sampleDate} < date_trunc('month', current_date) + interval '1 month'
+      `;
   const [totals] = await db
     .select({
       totalRecords: count(),

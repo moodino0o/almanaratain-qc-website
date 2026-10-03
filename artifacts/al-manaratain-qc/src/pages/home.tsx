@@ -121,8 +121,19 @@ function StatusBadge({ status }: { status: string }) {
 export default function Home() {
   const { role } = useAuth();
   const canViewComplaints = role !== "technician";
-  const dashboardQuery = useGetDashboard();
+  const [selectedQcMonth, setSelectedQcMonth] = useState(() => {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const dashboardQuery = useGetDashboard({ month: selectedQcMonth });
   const [recordSearch, setRecordSearch] = useState("");
+  const [selectedYear, selectedMonthNumber] = selectedQcMonth
+    .split("-")
+    .map(Number);
+  const selectedQcMonthLabel = new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    year: "numeric",
+  }).format(new Date(selectedYear, selectedMonthNumber - 1, 1));
   const searchTerm = recordSearch.trim();
   const recordsSearchParams = { search: searchTerm || undefined, limit: 100 };
   const complaintsSearchParams = { search: searchTerm || undefined };
@@ -314,15 +325,29 @@ export default function Home() {
               <div>
                 <CardTitle id="qc-heading" className="text-base">QC test status</CardTitle>
               </div>
-              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <CalendarDays className="h-3.5 w-3.5" /> {new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(new Date())}
-              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  {selectedQcMonthLabel}
+                </span>
+                <Input
+                  type="month"
+                  value={selectedQcMonth}
+                  onChange={(event) => {
+                    if (event.target.value) {
+                      setSelectedQcMonth(event.target.value);
+                    }
+                  }}
+                  aria-label="Choose month for QC test status"
+                  className="h-8 w-[156px] px-2 text-xs"
+                />
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4 p-4">
             <div className="grid gap-3 sm:grid-cols-2">
               <StatusSummary
-                label="Records this month"
+                label="Records in selected month"
                 value={dashboard.recordsThisMonth}
                 detail="In the QC register"
                 icon={FileText}
@@ -352,7 +377,7 @@ export default function Home() {
             </div>
             <div>
               <div className="mb-1.5 flex items-center justify-between text-xs text-muted-foreground">
-                <span>Pass rate this month</span>
+                <span>Pass rate for selected month</span>
                 <span className="font-semibold text-foreground">{passRate.toFixed(1)}%</span>
               </div>
               <div className="h-3 overflow-hidden rounded-full bg-muted">

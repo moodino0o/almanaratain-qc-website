@@ -20,6 +20,13 @@ export const HealthCheckResponse = zod.object({
 /**
  * @summary Get QC dashboard summary
  */
+export const getDashboardQueryMonthRegExp = new RegExp('^\\d{4}-(0[1-9]|1[0-2])$');
+
+
+export const GetDashboardQueryParams = zod.object({
+  "month": zod.coerce.string().regex(getDashboardQueryMonthRegExp).optional().describe('Calendar month for the monthly QC status summary; defaults to the current month.')
+})
+
 export const GetDashboardResponse = zod.object({
   "totalRecords": zod.number(),
   "passedRecords": zod.number(),

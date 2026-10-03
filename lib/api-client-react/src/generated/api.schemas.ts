@@ -1291,6 +1291,14 @@ export type LimitParamParameter = number;
 
 export type AuthorizationSessionHeaderParameter = string;
 
+export type GetDashboardParams = {
+/**
+ * Calendar month for the monthly QC status summary; defaults to the current month.
+ * @pattern ^\d{4}-(0[1-9]|1[0-2])$
+ */
+month?: string;
+};
+
 export type GetEmployeeActivityParams = {
 from: string;
 to: string;

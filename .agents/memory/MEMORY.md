@@ -15,3 +15,4 @@
 - [Precast workflow and criteria](precast-workflow-differences.md) — preserve integer identifiers, gram weights, age thresholds, and distinct reporting.
 - [Paving correction factors](paving-correction-factors.md) — use the reference tensile formula, apply size factors, and evaluate the average against the matching standard.
 - [Employee activity audit](employee-activity-audit.md) — never expose session bearer IDs; distinguish explicit sign-out from expiry and last confirmed activity.
+- [Dashboard month status](dashboard-month-status.md) — QC Test Status groups records by sample/test date for the selected calendar month.
