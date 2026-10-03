@@ -78,6 +78,7 @@ function CellInput({
   placeholder,
   disabled = false,
   invalid = false,
+  onBlur,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -86,6 +87,7 @@ function CellInput({
   placeholder?: string;
   disabled?: boolean;
   invalid?: boolean;
+  onBlur?: () => void;
 }) {
   if (disabled) {
     return <span className="block px-2 text-center text-muted-foreground/50">—</span>;
@@ -96,6 +98,7 @@ function CellInput({
       type={type}
       value={value}
       onChange={(event) => onChange(event.target.value)}
+      onBlur={onBlur}
       placeholder={placeholder}
       className={[
         "h-8 w-full min-w-0 rounded-sm border bg-transparent px-1 text-[10px] leading-tight outline-none transition-colors focus:bg-background focus:ring-1",
@@ -198,6 +201,7 @@ function DraftRow({
   canEditApprovedBy: boolean;
   referenceOptionProps: (categoryKey?: string) => ReferenceOptionProps;
 }) {
+  const [referenceNumberTouched, setReferenceNumberTouched] = useState(false);
   const readyMix = draft.testType === TestType.Ready_Mix;
   const mixDesign =
     readyMix || draft.testType === TestType.RMX_Trial;
@@ -227,7 +231,7 @@ function DraftRow({
   ) => {
     const value = detailText(draft.details, key);
     const referenceError =
-      readyMix && key === "referenceNumber" && value.trim()
+      readyMix && key === "referenceNumber" && referenceNumberTouched
         ? getReadyMixReferenceNumberError(value)
         : null;
     const control = (options.length > 0 || categoryKey !== undefined) && type === "text"
@@ -244,6 +248,11 @@ function DraftRow({
           label={`${label} for ${recordLabel}`}
           type={type}
           invalid={Boolean(referenceError)}
+          onBlur={
+            readyMix && key === "referenceNumber"
+              ? () => setReferenceNumberTouched(true)
+              : undefined
+          }
         />
     return referenceError ? (
       <div className="space-y-1">
@@ -269,9 +278,10 @@ function DraftRow({
       <select
         aria-label="Test type for new record"
         value={draft.testType}
-        onChange={(event) => onTestTypeChange(
-          event.target.value as BulkRecordDraft["testType"],
-        )}
+        onChange={(event) => {
+          setReferenceNumberTouched(false);
+          onTestTypeChange(event.target.value as BulkRecordDraft["testType"]);
+        }}
         className="h-8 w-full min-w-0 rounded-sm border bg-background px-1 text-[10px] outline-none focus:border-primary"
       >
         {availableTestTypes.map((type) => (

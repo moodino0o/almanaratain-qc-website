@@ -246,6 +246,7 @@ export default function RecordForm() {
     setReviewedBy(existingRecord.reviewedBy || DEFAULT_APPROVED_BY);
     setRemarks(existingRecord.remarks ?? "");
     setReferenceNumber(stringValue(savedDetails.referenceNumber));
+    setReferenceNumberTouched(false);
     setTruckNumber(stringValue(savedDetails.truckNumber));
     setCustomerName(stringValue(savedDetails.customerName));
     setCustomerLocation(stringValue(savedDetails.customerLocation));
@@ -727,10 +728,9 @@ export default function RecordForm() {
   const displayedTestRows = usesSieveRows
     ? visibleSieveRowEntries
     : testRows.map((row, rowIndex) => ({ row, rowIndex }));
-  const referenceNumberError =
-    referenceNumberTouched || referenceNumber.trim()
-      ? getReadyMixReferenceNumberError(referenceNumber)
-      : null;
+  const referenceNumberError = referenceNumberTouched
+    ? getReadyMixReferenceNumberError(referenceNumber)
+    : null;
 
   const sieveContextKey = `${testType}|${String(details.materialReferenceItemId ?? material.trim())}`;
 
