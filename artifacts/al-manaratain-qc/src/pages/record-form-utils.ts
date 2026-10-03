@@ -68,6 +68,25 @@ export type BlockDimensions = {
 export const PRECAST_CUBE_AGES = ["1", "7", "7", "28", "28"] as const;
 export const DEFAULT_PRECAST_CUBE_SIZE = "100*100*100";
 export const DEFAULT_PRECAST_COMPACTION = "Mechanical compaction";
+export const PRECAST_AGE_STRENGTH_CRITERIA = [
+  {
+    age: 1,
+    minimumStrength: 30,
+    passOutcome: "Approved for demolding",
+    failOutcome: "Not approved for demolding",
+  },
+  { age: 7, minimumStrength: 52, passOutcome: "Pass", failOutcome: "Fail" },
+  { age: 28, minimumStrength: 65, passOutcome: "Pass", failOutcome: "Fail" },
+] as const;
+
+export const precastStrengthOutcome = (age: number, averageStrength: number | null) => {
+  const criterion = PRECAST_AGE_STRENGTH_CRITERIA.find((item) => item.age === age);
+  if (!criterion) return "—";
+  if (averageStrength === null) return "Pending";
+  return averageStrength >= criterion.minimumStrength
+    ? criterion.passOutcome
+    : criterion.failOutcome;
+};
 
 const NUMERIC_DETAIL_KEYS = [
   "slump",
@@ -641,6 +660,12 @@ export const blockDimensionsFromSize = (value: unknown): BlockDimensions | null 
     width: widthByInchSize[inchSize],
     height: "200",
   };
+};
+
+export const calculateCubeDensity = (cubeSize: unknown, weightKg: unknown) => {
+  const dimensions = blockDimensionsFromSize(cubeSize);
+  if (!dimensions) return "";
+  return calculateBlockDensity({ ...dimensions, wetWeight: stringValue(weightKg) });
 };
 
 export const applySizeDimensionDefaults = <T extends BlockDimensions>(
