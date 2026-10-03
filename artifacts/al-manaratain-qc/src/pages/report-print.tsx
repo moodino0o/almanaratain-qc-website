@@ -39,7 +39,6 @@ import {
   findSieveEvaluationCriterion,
   PRECAST_AGE_STRENGTH_CRITERIA,
   precastAgeStrengthSummary,
-  precastStrengthOutcome,
   SIEVE_SILT_LIMIT_PERCENT,
   stringValue,
   sortSieveRowsByPoreSize,
@@ -2226,153 +2225,124 @@ function PrecastReport({ record, layout }: { record: QcRecord; layout?: ReportLa
     7: ["averageStrength7Days", "avgStrength7Days", "day7AverageStrength"],
     28: ["averageStrength28Days", "avgStrength28Days", "day28AverageStrength"],
   };
+  const averageStrengthRows = PRECAST_AGE_STRENGTH_CRITERIA.map((criterion) => {
+    const summary = precastAgeStrengthSummary(rows, criterion.age);
+    const legacyAverage = detailValue(details, legacyAverageKeys[criterion.age]);
+    const legacyNumber = Number(legacyAverage);
+    const average = summary.averageStrength ??
+      (Number.isFinite(legacyNumber) ? legacyNumber : null);
+    return {
+      age: criterion.age,
+      average: average === null
+        ? legacyAverage
+        : formatNumber(average),
+    };
+  });
   return (
     <>
-      <ConfiguredDetailsReport
-        record={record}
-        layout={layout}
-        tableKey="precastDetails"
-      />
-      <section>
-        <SectionHeading>Precast Compression Results</SectionHeading>
-        {rows.length ? (
-          <>
-            <table className="report-table">
-              <thead>
-                <tr>
-                  {columns.map((column) => (
-                    <th key={column.key} style={{ width: `${column.width}%` }}>
-                      {column.label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, index) => {
-                  const values = objectValue(row) ?? {};
-                  const rowAge =
-                    values.testAge ?? values.sampleAge ?? values.cubeAge ?? values.age;
-                  const strength = cubeRowStrength(row);
-                  const hasSavedWeight =
-                    values.weight !== undefined &&
-                    values.weight !== null &&
-                    values.weight !== "";
-                  const weight = hasSavedWeight ? values.weight : values.wetWeight;
-                  const weightUnit =
-                    hasSavedWeight && details.cubeWeightUnit === "g" ? "g" : "kg";
-                  const density =
-                    values.density ||
-                    calculateCubeDensity(
-                      detailValue(details, ["cubeSize"], "100*100*100"),
-                      weight,
-                      weightUnit,
-                    );
-                  const densityNumber = Number(density);
-                  const cells: Record<string, string> = {
-                    age: rowAge == null || rowAge === "" ? "-" : String(rowAge),
-                    cubeSize,
-                    weight: rawTextValue(cubeWeightInGrams(weight, weightUnit)),
-                    density: Number.isFinite(densityNumber)
-                      ? `${formatNumber(densityNumber)} kg/m³`
-                      : "-",
-                    load: values.load == null || values.load === "" ? "-" : String(values.load),
-                    strength: strength === null ? "-" : formatNumber(strength),
-                  };
-                  return (
-                    <tr key={index}>
-                      {columns.map((column) => (
-                        <td key={column.key}>{cells[column.key] ?? "-"}</td>
-                      ))}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            <div className="report-average-block">
-              <p className="report-centered-title">Average Strength by Cube Age</p>
-              <table className="report-table report-average-table">
-                <thead>
-                  <tr>
-                    <th>Cube Age</th>
-                    <th>Average Strength (N/mm²)</th>
-                    <th>Minimum (N/mm²)</th>
-                    <th>Result</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {PRECAST_AGE_STRENGTH_CRITERIA.map((criterion) => {
-                    const summary = precastAgeStrengthSummary(rows, criterion.age);
-                    const legacyAverage = detailValue(
-                      details,
-                      legacyAverageKeys[criterion.age],
-                    );
-                    const legacyNumber = Number(legacyAverage);
-                    const average = summary.averageStrength ??
-                      (Number.isFinite(legacyNumber) ? legacyNumber : null);
-                    const complete = rows.length
-                      ? summary.complete
-                      : average !== null;
-                    const outcome = precastStrengthOutcome(
-                      criterion.age,
-                      average,
-                      complete,
-                    );
-                    return (
-                      <tr key={criterion.age}>
-                        <td>{criterion.age} day{criterion.age === 1 ? "" : "s"}</td>
-                        <td>
-                          {average === null
-                            ? legacyAverage
-                            : formatNumber(average)}
-                        </td>
-                        <td>≥ {criterion.minimumStrength}</td>
-                        <td>{outcome}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </>
-        ) : (
-          <table className="report-table">
+      <div className="precast-overview">
+        <ConfiguredDetailsReport
+          record={record}
+          layout={layout}
+          tableKey="precastDetails"
+        />
+        <div className="report-average-block precast-average-block">
+          <p className="report-centered-title">Average Strength</p>
+          <table className="report-table report-average-table precast-average-table">
             <thead>
               <tr>
                 <th>Cube Age</th>
                 <th>Average Strength (N/mm²)</th>
-                <th>Minimum (N/mm²)</th>
-                <th>Result</th>
               </tr>
             </thead>
             <tbody>
-              {PRECAST_AGE_STRENGTH_CRITERIA.map((criterion) => {
-                const legacyAverage = detailValue(
-                  details,
-                  legacyAverageKeys[criterion.age],
-                );
-                const legacyNumber = Number(legacyAverage);
-                const average = Number.isFinite(legacyNumber)
-                  ? legacyNumber
-                  : null;
+              {averageStrengthRows.map((row) => (
+                <tr key={row.age}>
+                  <td>{row.age} day{row.age === 1 ? "" : "s"}</td>
+                  <td>{row.average}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <section>
+        <SectionHeading>Precast Compression Results</SectionHeading>
+        {rows.length ? (
+          <table className="report-table">
+            <thead>
+              <tr>
+                {columns.map((column) => (
+                  <th key={column.key} style={{ width: `${column.width}%` }}>
+                    {column.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, index) => {
+                const values = objectValue(row) ?? {};
+                const rowAge =
+                  values.testAge ?? values.sampleAge ?? values.cubeAge ?? values.age;
+                const strength = cubeRowStrength(row);
+                const hasSavedWeight =
+                  values.weight !== undefined &&
+                  values.weight !== null &&
+                  values.weight !== "";
+                const weight = hasSavedWeight ? values.weight : values.wetWeight;
+                const weightUnit =
+                  hasSavedWeight && details.cubeWeightUnit === "g" ? "g" : "kg";
+                const density =
+                  values.density ||
+                  calculateCubeDensity(
+                    detailValue(details, ["cubeSize"], "100*100*100"),
+                    weight,
+                    weightUnit,
+                  );
+                const densityNumber = Number(density);
+                const cells: Record<string, string> = {
+                  age: rowAge == null || rowAge === "" ? "-" : String(rowAge),
+                  cubeSize,
+                  weight: rawTextValue(cubeWeightInGrams(weight, weightUnit)),
+                  density: Number.isFinite(densityNumber)
+                    ? `${formatNumber(densityNumber)} kg/m³`
+                    : "-",
+                  load: values.load == null || values.load === "" ? "-" : String(values.load),
+                  strength: strength === null ? "-" : formatNumber(strength),
+                };
                 return (
-                  <tr key={criterion.age}>
-                    <td>{criterion.age} day{criterion.age === 1 ? "" : "s"}</td>
-                    <td>{average === null ? legacyAverage : formatNumber(average)}</td>
-                    <td>≥ {criterion.minimumStrength}</td>
-                    <td>
-                      {precastStrengthOutcome(
-                        criterion.age,
-                        average,
-                        average !== null,
-                      )}
-                    </td>
+                  <tr key={index}>
+                    {columns.map((column) => (
+                      <td key={column.key}>{cells[column.key] ?? "-"}</td>
+                    ))}
                   </tr>
                 );
               })}
             </tbody>
           </table>
+        ) : (
+          <p className="report-precast-empty">No specimen results entered.</p>
         )}
       </section>
+      <div className="report-standard-block precast-standard-block">
+        <p className="report-centered-title">Standard Required Strength:</p>
+        <table className="report-table report-strength-table precast-strength-table">
+          <thead>
+            <tr>
+              <th>CUBE AGE</th>
+              <th>INTENDED STRENGTH</th>
+            </tr>
+          </thead>
+          <tbody>
+            {PRECAST_AGE_STRENGTH_CRITERIA.map((criterion) => (
+              <tr key={criterion.age}>
+                <td>{criterion.age} DAY{criterion.age === 1 ? "" : "S"}</td>
+                <td>{formatNumber(criterion.minimumStrength)} N/mm²</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </>
   );
 }
