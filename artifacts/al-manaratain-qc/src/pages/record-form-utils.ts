@@ -246,6 +246,11 @@ export const getReadyMixReferenceNumberError = (value: string): string | null =>
 
 export const stringValue = (value: unknown) => (value == null ? "" : String(value));
 
+export const integerIdentifierValue = (value: unknown) => {
+  const text = stringValue(value).trim();
+  return /^\d+$/.test(text) ? text : "";
+};
+
 export const numericInputValue = (value: unknown) => {
   const match = stringValue(value).match(/[-+]?(?:\d+\.?\d*|\.\d+)/);
   return match?.[0] ?? "";
@@ -689,10 +694,34 @@ export const blockDimensionsFromSize = (value: unknown): BlockDimensions | null 
   };
 };
 
-export const calculateCubeDensity = (cubeSize: unknown, weightKg: unknown) => {
+export const cubeWeightInGrams = (
+  weight: unknown,
+  unit: "g" | "kg" = "g",
+) => {
+  const text = stringValue(weight).trim();
+  if (!text) return "";
+  const value = Number(text);
+  if (!Number.isFinite(value)) return text;
+  const grams = unit === "kg" ? value * 1000 : value;
+  return String(Number(grams.toFixed(2)));
+};
+
+export const calculateCubeDensity = (
+  cubeSize: unknown,
+  weight: unknown,
+  unit: "g" | "kg" = "g",
+) => {
   const dimensions = blockDimensionsFromSize(cubeSize);
   if (!dimensions) return "";
-  return calculateBlockDensity({ ...dimensions, wetWeight: stringValue(weightKg) });
+  const text = stringValue(weight).trim();
+  if (!text) return "";
+  const value = Number(text);
+  if (!Number.isFinite(value) || value < 0) return "";
+  const weightKg = unit === "g" ? value / 1000 : value;
+  return calculateBlockDensity({
+    ...dimensions,
+    wetWeight: String(weightKg),
+  });
 };
 
 export const applySizeDimensionDefaults = <T extends BlockDimensions>(
@@ -822,6 +851,16 @@ export const prepareDetailsForForm = (details: unknown) => {
 
 export const prepareRecordForForm = (record: QcRecord): RecordFormValues => {
   const { details, sourceRows } = prepareDetailsForForm(record.details);
+  const isPrecast = record.testType === TestType.Precast;
+  const savedCubeWeightUnit =
+    stringValue(details.cubeWeightUnit).toLocaleLowerCase() === "g"
+      ? "g"
+      : "kg";
+  if (isPrecast) {
+    details.sampleNo = integerIdentifierValue(details.sampleNo);
+    details.precastMouldNo = integerIdentifierValue(details.precastMouldNo);
+    details.cubeWeightUnit = "g";
+  }
   return {
     testType: record.testType,
     sampleDate: record.sampleDate.slice(0, 10),
@@ -836,7 +875,21 @@ export const prepareRecordForForm = (record: QcRecord): RecordFormValues => {
     selectedStrengthStandardId: stringValue(details.strengthStandardId),
     details,
     testRows: sourceRows.length
-      ? sourceRows.map((row, index) => toFormRow(row, index + 1))
+      ? sourceRows.map((row, index) => {
+          const formRow = toFormRow(row, index + 1);
+          if (!isPrecast) return formRow;
+          const values =
+            typeof row === "object" && row !== null
+              ? row as Record<string, unknown>
+              : {};
+          const savedWeight = numericInputValue(
+            values.weight ?? values.wetWeight,
+          );
+          return {
+            ...formRow,
+            weight: cubeWeightInGrams(savedWeight, savedCubeWeightUnit),
+          };
+        })
       : createDefaultTestRows(record.testType),
   };
 };

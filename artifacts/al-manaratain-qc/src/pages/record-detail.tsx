@@ -17,6 +17,7 @@ import {
   AGGREGATE_SULPHATE_LIMIT_PERCENT,
   blockAirDryRowStrength,
   calculateCubeDensity,
+  cubeWeightInGrams,
   calculateRetainedPercentage,
   calculateSieveSampleWeight,
   calculateChlorideContent,
@@ -1007,10 +1008,10 @@ export default function RecordDetail() {
           <CardContent className="p-0">
             {specimenRows.length ? (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[560px] text-sm">
+                <table className="w-full min-w-[460px] text-sm">
                   <thead className="bg-muted/50">
                     <tr className="border-b">
-                      {["No.", "Cube Age (days)", "Weight (kg)", "Density (kg/m³)"].map((label) => (
+                      {["Cube Age (days)", "Weight (g)", "Density (kg/m³)"].map((label) => (
                         <th key={label} className="px-3 py-3 text-left font-semibold">{label}</th>
                       ))}
                     </tr>
@@ -1020,10 +1021,20 @@ export default function RecordDetail() {
                       const values = typeof row === "object" && row !== null
                         ? row as Record<string, unknown>
                         : {};
-                      const weight = values.weight ?? values.wetWeight;
+                      const hasSavedWeight =
+                        values.weight !== undefined &&
+                        values.weight !== null &&
+                        values.weight !== "";
+                      const weight = hasSavedWeight ? values.weight : values.wetWeight;
+                      const weightUnit =
+                        hasSavedWeight && recordDetails.cubeWeightUnit === "g"
+                          ? "g"
+                          : "kg";
+                      const displayedWeight = cubeWeightInGrams(weight, weightUnit);
                       const calculatedDensity = calculateCubeDensity(
                         detailText(recordDetails, "cubeSize", "100*100*100"),
                         weight,
+                        weightUnit,
                       );
                       const density = displayValue(
                         values.density || calculatedDensity,
@@ -1031,11 +1042,10 @@ export default function RecordDetail() {
                       );
                       return (
                         <tr key={index} className="border-b last:border-b-0">
-                          <td className="px-3 py-2">{index + 1}</td>
                           <td className="px-3 py-2">
                             {displayValue(values.testAge ?? values.sampleAge ?? values.cubeAge ?? values.age)}
                           </td>
-                          <td className="px-3 py-2">{displayValue(weight)}</td>
+                          <td className="px-3 py-2">{displayValue(displayedWeight)}</td>
                           <td className="px-3 py-2 font-semibold">
                             {density === "—" ? density : `${density} kg/m³`}
                           </td>

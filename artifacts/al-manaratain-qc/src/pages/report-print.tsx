@@ -29,6 +29,7 @@ import {
   blockTypeMatches,
   calculateChlorideContent,
   calculateCubeDensity,
+  cubeWeightInGrams,
   calculateRetainedPercentage,
   calculateSieveSampleWeight,
   calculateSiltContent,
@@ -2208,13 +2209,12 @@ function PrecastReport({ record, layout }: { record: QcRecord; layout?: ReportLa
     Array.isArray(details.testRows) ? details.testRows : [],
   );
   const columns = layoutColumns(layout, "precastResults", [
-    { key: "no", label: "No.", visible: true, order: 0, width: 7 },
-    { key: "age", label: "Cube Age (days)", visible: true, order: 1, width: 11 },
-    { key: "cubeSize", label: "Cube Size (mm)", visible: true, order: 2, width: 15 },
-    { key: "weight", label: "Weight (kg)", visible: true, order: 3, width: 12 },
-    { key: "density", label: "Density (kg/m³)", visible: true, order: 4, width: 15 },
-    { key: "load", label: "Load (kN)", visible: true, order: 5, width: 14 },
-    { key: "strength", label: "Compressive Strength (N/mm²)", visible: true, order: 6, width: 26 },
+    { key: "age", label: "Cube Age (days)", visible: true, order: 0, width: 12 },
+    { key: "cubeSize", label: "Cube Size (mm)", visible: true, order: 1, width: 16 },
+    { key: "weight", label: "Weight (g)", visible: true, order: 2, width: 13 },
+    { key: "density", label: "Density (kg/m³)", visible: true, order: 3, width: 15 },
+    { key: "load", label: "Load (kN)", visible: true, order: 4, width: 15 },
+    { key: "strength", label: "Compressive Strength (N/mm²)", visible: true, order: 5, width: 29 },
   ]);
   const cubeSize = detailValue(
     details,
@@ -2253,19 +2253,25 @@ function PrecastReport({ record, layout }: { record: QcRecord; layout?: ReportLa
                   const rowAge =
                     values.testAge ?? values.sampleAge ?? values.cubeAge ?? values.age;
                   const strength = cubeRowStrength(row);
-                  const weight = values.weight ?? values.wetWeight;
+                  const hasSavedWeight =
+                    values.weight !== undefined &&
+                    values.weight !== null &&
+                    values.weight !== "";
+                  const weight = hasSavedWeight ? values.weight : values.wetWeight;
+                  const weightUnit =
+                    hasSavedWeight && details.cubeWeightUnit === "g" ? "g" : "kg";
                   const density =
                     values.density ||
                     calculateCubeDensity(
                       detailValue(details, ["cubeSize"], "100*100*100"),
                       weight,
+                      weightUnit,
                     );
                   const densityNumber = Number(density);
                   const cells: Record<string, string> = {
-                    no: String(index + 1),
                     age: rowAge == null || rowAge === "" ? "-" : String(rowAge),
                     cubeSize,
-                    weight: rawTextValue(weight),
+                    weight: rawTextValue(cubeWeightInGrams(weight, weightUnit)),
                     density: Number.isFinite(densityNumber)
                       ? `${formatNumber(densityNumber)} kg/m³`
                       : "-",

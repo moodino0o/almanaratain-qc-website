@@ -27,6 +27,8 @@ import {
   calculateSulphateContent,
   calculateBlockDensity,
   calculateCubeDensity,
+  integerIdentifierValue,
+  cubeWeightInGrams,
   calculateBlockStrengths,
   calculatePavingStrengths,
   blockDimensionsFromSize,
@@ -966,8 +968,9 @@ export default function RecordForm() {
       payloadDetails.compactionType = String(
         details.compactionType || DEFAULT_PRECAST_COMPACTION,
       ).trim();
-      payloadDetails.sampleNo = String(details.sampleNo ?? "").trim();
-      payloadDetails.precastMouldNo = String(details.precastMouldNo ?? "").trim();
+      payloadDetails.cubeWeightUnit = "g";
+      payloadDetails.sampleNo = integerIdentifierValue(details.sampleNo);
+      payloadDetails.precastMouldNo = integerIdentifierValue(details.precastMouldNo);
       payloadDetails.jobNo = String(details.jobNo ?? "").trim();
       payloadDetails.customerName = String(details.customerName ?? "").trim();
     }
@@ -1605,16 +1608,27 @@ export default function RecordForm() {
                     ["sampleNo", "Sample No."],
                     ["precastMouldNo", "Precast Mould No."],
                     ["jobNo", "Job No."],
-                  ].map(([key, label]) => (
-                    <div key={key} className="space-y-2">
-                      <Label>{label}</Label>
+                  ].map(([key, label]) => {
+                    const isIntegerIdentifier =
+                      key === "sampleNo" || key === "precastMouldNo";
+                    return (
+                      <div key={key} className="space-y-2">
+                        <Label>{label}</Label>
                       <Input
+                        type="text"
+                        inputMode={isIntegerIdentifier ? "numeric" : undefined}
+                        pattern={isIntegerIdentifier ? "[0-9]*" : undefined}
                         value={String(details[key] ?? "")}
-                        onChange={(event) => handleDetailChange(key, event.target.value)}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          if (isIntegerIdentifier && !/^\d*$/.test(value)) return;
+                          handleDetailChange(key, value);
+                        }}
                         placeholder={`Enter ${label.toLowerCase()}`}
                       />
-                    </div>
-                  ))}
+                      </div>
+                    );
+                  })}
                   <div className="space-y-2">
                     <Label>Customer Name</Label>
                     <TypeaheadInput
@@ -2118,16 +2132,15 @@ export default function RecordForm() {
                         <div>
                           <h3 className="font-semibold">Cube Weight &amp; Density</h3>
                           <p className="text-sm text-muted-foreground">
-                            Enter each cube’s weight in kg. Density is calculated from the cube size in kg/m³.
+                            Enter each cube’s weight in grams. Density is calculated from the cube size in kg/m³.
                           </p>
                         </div>
                         <div className="overflow-x-auto rounded-md border">
-                          <table className="w-full min-w-[560px] text-sm">
+                          <table className="w-full min-w-[460px] text-sm">
                             <thead className="bg-muted/50">
                               <tr className="border-b text-left">
-                                <th className="px-3 py-2 font-semibold">No.</th>
                                 <th className="px-3 py-2 font-semibold">Cube Age (days)</th>
-                                <th className="px-3 py-2 font-semibold">Weight (kg)</th>
+                                <th className="px-3 py-2 font-semibold">Weight (g)</th>
                                 <th className="px-3 py-2 font-semibold">Density (kg/m³)</th>
                               </tr>
                             </thead>
@@ -2139,7 +2152,6 @@ export default function RecordForm() {
                                 );
                                 return (
                                   <tr key={row.id} className="border-b last:border-b-0">
-                                    <td className="px-3 py-2 font-medium">{rowIndex + 1}</td>
                                     <td className="px-3 py-2">{row.testAge || "—"}</td>
                                     <td className="px-2 py-2">
                                       <Input
@@ -2149,8 +2161,8 @@ export default function RecordForm() {
                                         onChange={(event) =>
                                           updateTestRow(rowIndex, "weight", event.target.value)
                                         }
-                                        placeholder="kg"
-                                        aria-label={`Cube weight in kilograms for specimen ${rowIndex + 1}`}
+                                        placeholder="g"
+                                        aria-label={`Cube weight in grams for specimen ${rowIndex + 1}`}
                                       />
                                     </td>
                                     <td className="px-3 py-2 font-semibold">

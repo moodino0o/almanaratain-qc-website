@@ -360,6 +360,7 @@ function calculateRow(
   isPaving = false,
   isDammam = false,
   isPrecast = false,
+  precastWeightIsGrams = false,
 ) {
   if (typeof row !== "object" || row === null) {
     return { row, calculatedStrength: null, loadedFaceArea: null, complete: false };
@@ -423,8 +424,11 @@ function calculateRow(
       : null;
   const dryWeight = numericValue(values.dryWeight);
   const wetWeight = numericValue(values.wetWeight);
+  const precastWeight = numericValue(values.weight);
   const densityWeight = isPrecast
-    ? numericValue(values.weight ?? values.wetWeight)
+    ? precastWeight !== null
+      ? precastWeight / (precastWeightIsGrams ? 1000 : 1)
+      : wetWeight
     : wetWeight;
   const density =
     densityWeight !== null &&
@@ -502,8 +506,10 @@ function evaluatePrecastStrengthRecord(record: RecordForStrength) {
   const sourceRows = Array.isArray(record.details.testRows)
     ? record.details.testRows
     : [];
+  const precastWeightIsGrams =
+    textValue(record.details.cubeWeightUnit)?.toLocaleLowerCase() === "g";
   const calculatedRows = sourceRows.map((row) =>
-    calculateRow(row, undefined, undefined, false, false, true),
+    calculateRow(row, undefined, undefined, false, false, true, precastWeightIsGrams),
   );
   const ageEvaluations = PRECAST_AGE_STRENGTH_CRITERIA.map((criterion) => {
     const ageRows = calculatedRows.filter((row) => {

@@ -582,13 +582,12 @@ const REPORT_LAYOUT_DEFAULTS: Record<string, Record<string, unknown>> = {
         { key: "testedBy", label: "Tested By", visible: true, order: 9, width: 14 },
       ],
       precastResults: [
-        { key: "no", label: "No.", visible: true, order: 0, width: 7 },
-        { key: "age", label: "Cube Age (days)", visible: true, order: 1, width: 11 },
-        { key: "cubeSize", label: "Cube Size (mm)", visible: true, order: 2, width: 15 },
-        { key: "weight", label: "Weight (kg)", visible: true, order: 3, width: 12 },
-        { key: "density", label: "Density (kg/m³)", visible: true, order: 4, width: 15 },
-        { key: "load", label: "Load (kN)", visible: true, order: 5, width: 14 },
-        { key: "strength", label: "Compressive Strength (N/mm²)", visible: true, order: 6, width: 26 },
+        { key: "age", label: "Cube Age (days)", visible: true, order: 0, width: 12 },
+        { key: "cubeSize", label: "Cube Size (mm)", visible: true, order: 1, width: 16 },
+        { key: "weight", label: "Weight (g)", visible: true, order: 2, width: 13 },
+        { key: "density", label: "Density (kg/m³)", visible: true, order: 3, width: 15 },
+        { key: "load", label: "Load (kN)", visible: true, order: 4, width: 15 },
+        { key: "strength", label: "Compressive Strength (N/mm²)", visible: true, order: 5, width: 29 },
       ],
     },
   },
@@ -788,10 +787,31 @@ async function ensureReportLayouts() {
         continue;
       }
 
-      const currentColumns = currentValue.filter(
+      let currentColumns = currentValue.filter(
         (column): column is Record<string, unknown> =>
           typeof column === "object" && column !== null,
       );
+      if (testType === "Precast" && key === "precastResults") {
+        const normalizedColumns: Record<string, unknown>[] = [];
+        let normalized = false;
+        for (const column of currentColumns) {
+          if (column.key === "no") {
+            normalized = true;
+            continue;
+          }
+          if (column.key === "weight" && column.label === "Weight (kg)") {
+            normalizedColumns.push({ ...column, label: "Weight (g)" });
+            normalized = true;
+            continue;
+          }
+          normalizedColumns.push(column);
+        }
+        if (normalized) {
+          currentColumns = normalizedColumns;
+          mergedColumns[key] = currentColumns;
+          columnsChanged = true;
+        }
+      }
       const defaultSieveColumns = defaultValue.filter(
         (column): column is Record<string, unknown> =>
           typeof column === "object" && column !== null,

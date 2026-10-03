@@ -10,6 +10,8 @@ import {
   blockTypeMatches,
   calculateBlockDensity,
   calculateCubeDensity,
+  cubeWeightInGrams,
+  integerIdentifierValue,
   calculateBlockStrengths,
   calculateCubeCompressiveStrength,
   averageCubeStrengthAtAge,
@@ -300,7 +302,9 @@ test("calculates Block density from wet weight and specimen dimensions", () => {
 });
 
 test("calculates Precast density from cube weight and applies age thresholds", () => {
-  assert.equal(calculateCubeDensity("100*100*100", "2.4"), "2400.00");
+  assert.equal(calculateCubeDensity("100*100*100", "2400"), "2400.00");
+  assert.equal(calculateCubeDensity("100*100*100", "2.4", "kg"), "2400.00");
+  assert.equal(cubeWeightInGrams("2.4", "kg"), "2400");
   assert.equal(calculateCubeDensity("invalid", "2.4"), "");
 
   const summary = precastAgeStrengthSummary(
@@ -317,6 +321,35 @@ test("calculates Precast density from cube weight and applies age thresholds", (
   assert.equal(precastStrengthOutcome(28, 65), "Pass");
   assert.equal(precastStrengthOutcome(7, 52, false), "Pending");
   assert.equal(precastStrengthOutcome(28, 64), "Fail");
+});
+
+test("keeps Precast sample and mould numbers whole and converts legacy weights to grams", () => {
+  assert.equal(integerIdentifierValue("0042"), "0042");
+  assert.equal(integerIdentifierValue(42), "42");
+  assert.equal(integerIdentifierValue("42.5"), "");
+
+  const source = baseRecord(TestType.Precast, {
+    sampleNo: "0042",
+    precastMouldNo: "0017",
+    cubeSize: "100*100*100",
+    testRows: [
+      {
+        testAge: 1,
+        length: 100,
+        width: 100,
+        height: 100,
+        load: 300,
+        weight: 2.4,
+      },
+    ],
+  });
+
+  const copied = prepareRecordForForm(source);
+
+  assert.equal(copied.details.sampleNo, "0042");
+  assert.equal(copied.details.precastMouldNo, "0017");
+  assert.equal(copied.details.cubeWeightUnit, "g");
+  assert.equal(copied.testRows[0].weight, "2400");
 });
 
 test("calculates and rounds Block air-dry and normalized strengths", () => {
