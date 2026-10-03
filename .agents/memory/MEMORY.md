@@ -12,5 +12,6 @@
 - [Block derived strengths](block-derived-strengths.md) — calculate air-dry and normalized Block strengths from wet strength and shape factor, rounded to one decimal.
 - [Shape factor defaults](shape-factor-defaults.md) — seed one editable row per Block size, but keep the numeric value empty until an approved standard is provided.
 - [Report layout safety](report-layout-safety.md) — persist validated presentation settings and allowlisted columns, with the fixed renderer as a safe fallback.
+- [Precast workflow differences](precast-workflow-differences.md) — calculations may follow Ready Mix, but Precast needs its own view, data entry, and report format based on user-provided details.
 - [Paving correction factors](paving-correction-factors.md) — use the reference tensile formula, apply size factors, and evaluate the average against the matching standard.
 - [Employee activity audit](employee-activity-audit.md) — never expose session bearer IDs; distinguish explicit sign-out from expiry and last confirmed activity.
