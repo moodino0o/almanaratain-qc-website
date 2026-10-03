@@ -780,9 +780,11 @@ function StrengthStandardsFolder({
 function PrecastStrengthStandardsFolder({
   expanded,
   onToggle,
+  precastTypes,
 }: {
   expanded: boolean;
   onToggle: () => void;
+  precastTypes: string[];
 }) {
   return (
     <Card className="border-border shadow-sm">
@@ -803,7 +805,7 @@ function PrecastStrengthStandardsFolder({
               Precast strength standards
             </span>
             <span className="block text-xs text-muted-foreground">
-              3 age-based criteria
+              3 age-based criteria · shared across all types
             </span>
           </span>
         </span>
@@ -814,29 +816,39 @@ function PrecastStrengthStandardsFolder({
         />
       </button>
       {expanded && (
-        <div className="overflow-x-auto border-t border-border">
-          <table className="w-full min-w-[680px] text-xs sm:text-sm">
-            <thead className="bg-muted/40 text-left text-foreground">
-              <tr className="border-b">
-                <th className="px-4 py-3 font-semibold">Cube Age</th>
-                <th className="px-4 py-3 font-semibold">Minimum Average Strength</th>
-                <th className="px-4 py-3 font-semibold">When Met</th>
-                <th className="px-4 py-3 font-semibold">When Below Minimum</th>
-              </tr>
-            </thead>
-            <tbody>
-              {PRECAST_AGE_STRENGTH_CRITERIA.map((criterion) => (
-                <tr key={criterion.age} className="border-b last:border-b-0">
-                  <td className="px-4 py-3">{criterion.age} day{criterion.age === 1 ? "" : "s"}</td>
-                  <td className="px-4 py-3 font-semibold">
-                    ≥ {criterion.minimumStrength} N/mm²
-                  </td>
-                  <td className="px-4 py-3">{criterion.passOutcome}</td>
-                  <td className="px-4 py-3">{criterion.failOutcome}</td>
+        <div className="border-t border-border">
+          <p className="border-b border-border px-4 py-3 text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">
+              Applies to all Precast types:
+            </span>{" "}
+            {precastTypes.length
+              ? precastTypes.join(", ")
+              : "types configured in Settings."}
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[680px] text-xs sm:text-sm">
+              <thead className="bg-muted/40 text-left text-foreground">
+                <tr className="border-b">
+                  <th className="px-4 py-3 font-semibold">Cube Age</th>
+                  <th className="px-4 py-3 font-semibold">Minimum Average Strength</th>
+                  <th className="px-4 py-3 font-semibold">When Met</th>
+                  <th className="px-4 py-3 font-semibold">When Below Minimum</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {PRECAST_AGE_STRENGTH_CRITERIA.map((criterion) => (
+                  <tr key={criterion.age} className="border-b last:border-b-0">
+                    <td className="px-4 py-3">{criterion.age} day{criterion.age === 1 ? "" : "s"}</td>
+                    <td className="px-4 py-3 font-semibold">
+                      ≥ {criterion.minimumStrength} N/mm²
+                    </td>
+                    <td className="px-4 py-3">{criterion.passOutcome}</td>
+                    <td className="px-4 py-3">{criterion.failOutcome}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </Card>
@@ -1674,6 +1686,13 @@ export default function Standards() {
         ?.items ?? [],
     [referenceData],
   );
+  const precastTypes = useMemo(
+    () =>
+      referenceData?.categories
+        .find((category) => category.key === "precastTypes")
+        ?.items.map((item) => item.value) ?? [],
+    [referenceData],
+  );
   const sieveItems = useMemo(
     () =>
       referenceData?.categories.find(
@@ -2393,6 +2412,7 @@ export default function Standards() {
             ))}
             <PrecastStrengthStandardsFolder
               expanded={expandedStrengthFolders.precast}
+              precastTypes={precastTypes}
               onToggle={() =>
                 setExpandedStrengthFolders((current) => ({
                   ...current,

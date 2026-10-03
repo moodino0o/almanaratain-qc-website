@@ -56,9 +56,10 @@ const blockRecord = (
 const precastRecord = (
   rows: Record<string, unknown>[],
   cubeWeightUnit: string | null = "g",
+  material = "150 mm slab",
 ): Parameters<typeof evaluateStrengthRecord>[0] => ({
   testType: "Precast",
-  material: "150 mm slab",
+  material,
   details: {
     ...(cubeWeightUnit ? { cubeWeightUnit } : {}),
     cubeSize: "100*100*100",
@@ -170,6 +171,37 @@ test("evaluates Precast age thresholds and calculates cube density from weight",
     ],
   );
   assert.equal(rows[0].density, "2000.00");
+});
+
+test("applies the same Precast age thresholds to other product types", () => {
+  const result = evaluateStrengthRecord(
+    precastRecord(
+      [
+        { rowNo: 1, testAge: 1, length: 100, width: 100, height: 100, load: 300 },
+        { rowNo: 2, testAge: 7, length: 100, width: 100, height: 100, load: 520 },
+        { rowNo: 3, testAge: 28, length: 100, width: 100, height: 100, load: 650 },
+      ],
+      "g",
+      "200",
+    ),
+    [],
+  );
+  const details = result.details as Record<string, unknown>;
+  const evaluations = details.precastAgeEvaluations as Array<Record<string, unknown>>;
+
+  assert.equal(result.status, "Passed");
+  assert.deepEqual(
+    evaluations.map(({ age, minimumStrength, outcome }) => ({
+      age,
+      minimumStrength,
+      outcome,
+    })),
+    [
+      { age: 1, minimumStrength: 30, outcome: "Approved for demolding" },
+      { age: 7, minimumStrength: 52, outcome: "Pass" },
+      { age: 28, minimumStrength: 65, outcome: "Pass" },
+    ],
+  );
 });
 
 test("keeps existing Precast weights saved in kilograms compatible", () => {

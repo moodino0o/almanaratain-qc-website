@@ -258,6 +258,11 @@ const REFERENCE_SEED = [
     values: ["Mechanical compaction"],
   },
   {
+    key: "precastTypes",
+    label: "Precast Types",
+    values: ["150 mm slab", "200", "250", "260"],
+  },
+  {
     key: "sieveSizes",
     label: "Sieve / Pore Sizes",
     values: [

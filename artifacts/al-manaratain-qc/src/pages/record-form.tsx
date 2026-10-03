@@ -479,6 +479,22 @@ export default function RecordForm() {
     () => referenceData?.categories.find((category) => category.key === "compactionTypes")?.items.map((item) => item.value) ?? [],
     [referenceData],
   );
+  const precastTypeOptions = useMemo(() => {
+    const configuredCategory = referenceData?.categories.find(
+      (category) => category.key === "precastTypes",
+    );
+    const configuredOptions = configuredCategory
+      ? configuredCategory.items.map((item) => item.value)
+      : ["150 mm slab", "200", "250", "260"];
+    const savedType =
+      testType === TestType.Precast ? material.trim() : "";
+    return Array.from(
+      new Set([
+        ...configuredOptions,
+        ...(savedType ? [savedType] : []),
+      ]),
+    );
+  }, [material, referenceData, testType]);
   const defaultCompactionType =
     compactionTypeOptions[0] ?? DEFAULT_PRECAST_COMPACTION;
 
@@ -1326,7 +1342,7 @@ export default function RecordForm() {
                         <SelectValue placeholder="Select product type..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {["150 mm slab", "200", "250", "260"].map((productType) => (
+                        {precastTypeOptions.map((productType) => (
                           <SelectItem key={productType} value={productType}>
                             {productType}
                           </SelectItem>
