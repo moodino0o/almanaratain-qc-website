@@ -9,9 +9,12 @@ import {
   blockSizeMatches,
   blockTypeMatches,
   calculateBlockDensity,
+  calculateCubeDensity,
   calculateBlockStrengths,
   calculateCubeCompressiveStrength,
   averageCubeStrengthAtAge,
+  precastAgeStrengthSummary,
+  precastStrengthOutcome,
   calculateChlorideContent,
   calculateMoistureContent,
   calculateRetainedPercentage,
@@ -294,6 +297,26 @@ test("calculates Block density from wet weight and specimen dimensions", () => {
     }),
     "466.25",
   );
+});
+
+test("calculates Precast density from cube weight and applies age thresholds", () => {
+  assert.equal(calculateCubeDensity("100*100*100", "2.4"), "2400.00");
+  assert.equal(calculateCubeDensity("invalid", "2.4"), "");
+
+  const summary = precastAgeStrengthSummary(
+    [
+      { testAge: "7", length: "100", width: "100", load: "520" },
+      { testAge: "7", length: "100", width: "100", load: "" },
+    ],
+    7,
+  );
+  assert.equal(summary.averageStrength, 52);
+  assert.equal(summary.complete, false);
+  assert.equal(precastStrengthOutcome(1, 30), "Approved for demolding");
+  assert.equal(precastStrengthOutcome(7, 52), "Pass");
+  assert.equal(precastStrengthOutcome(28, 65), "Pass");
+  assert.equal(precastStrengthOutcome(7, 52, false), "Pending");
+  assert.equal(precastStrengthOutcome(28, 64), "Fail");
 });
 
 test("calculates and rounds Block air-dry and normalized strengths", () => {

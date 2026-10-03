@@ -26,6 +26,7 @@ import {
   calculateCubeCompressiveStrength,
   calculateSulphateContent,
   calculateBlockDensity,
+  calculateCubeDensity,
   calculateBlockStrengths,
   calculatePavingStrengths,
   blockDimensionsFromSize,
@@ -36,6 +37,9 @@ import {
   DEFAULT_PRECAST_COMPACTION,
   DEFAULT_PRECAST_CUBE_SIZE,
   PRECAST_CUBE_AGES,
+  PRECAST_AGE_STRENGTH_CRITERIA,
+  precastAgeStrengthSummary,
+  precastStrengthOutcome,
   evaluateContentAgainstLimit,
   evaluateSieveValue,
   evaluateSiltContent,
@@ -985,6 +989,12 @@ export default function RecordForm() {
             testType === TestType.Precast ? blockDimensionsFromSize(payloadDetails.cubeSize)?.height : ""),
         dryWeight: row.dryWeight,
         wetWeight: row.wetWeight,
+        ...(testType === TestType.Precast
+          ? {
+              weight: row.weight,
+              density: calculateCubeDensity(payloadDetails.cubeSize, row.weight),
+            }
+          : {}),
         ...(testType === TestType.Ready_Mix
           ? {
               load: row.load,
@@ -2044,6 +2054,116 @@ export default function RecordForm() {
                         </span>
                       )}
                     </div>
+                  )}
+                  {testType === TestType.Precast && (
+                    <>
+                      <section className="space-y-3 rounded-md border border-primary/20 bg-primary/[0.02] p-4">
+                        <div>
+                          <h3 className="font-semibold">Precast Strength Criteria</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Decisions use the average strength of all entered specimens at each age.
+                          </p>
+                        </div>
+                        <div className="overflow-x-auto rounded-md border bg-background">
+                          <table className="w-full min-w-[620px] text-sm">
+                            <thead className="bg-muted/50">
+                              <tr className="border-b text-left">
+                                <th className="px-3 py-2 font-semibold">Cube Age</th>
+                                <th className="px-3 py-2 font-semibold">Minimum Average</th>
+                                <th className="px-3 py-2 font-semibold">Current Average</th>
+                                <th className="px-3 py-2 font-semibold">Result</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {PRECAST_AGE_STRENGTH_CRITERIA.map((criterion) => {
+                                const summary = precastAgeStrengthSummary(
+                                  testRows.map((row) => ({
+                                    ...row,
+                                    calculatedStrength: calculatePrecastStrength(row),
+                                  })),
+                                  criterion.age,
+                                );
+                                const outcome = precastStrengthOutcome(
+                                  criterion.age,
+                                  summary.averageStrength,
+                                  summary.complete,
+                                );
+                                return (
+                                  <tr key={criterion.age} className="border-b last:border-b-0">
+                                    <td className="px-3 py-2">{criterion.age} day{criterion.age === 1 ? "" : "s"}</td>
+                                    <td className="px-3 py-2">≥ {criterion.minimumStrength} N/mm²</td>
+                                    <td className="px-3 py-2">
+                                      {summary.averageStrength === null
+                                        ? "—"
+                                        : `${summary.averageStrength.toFixed(2)} N/mm²`}
+                                    </td>
+                                    <td className={`px-3 py-2 font-semibold ${
+                                      outcome === "Pass" || outcome === "Approved for demolding"
+                                        ? "text-emerald-700"
+                                        : outcome === "Pending"
+                                          ? "text-muted-foreground"
+                                          : "text-destructive"
+                                    }`}>
+                                      {outcome}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </section>
+
+                      <section className="space-y-3 rounded-md border p-4">
+                        <div>
+                          <h3 className="font-semibold">Cube Weight &amp; Density</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Enter each cube’s weight in kg. Density is calculated from the cube size in kg/m³.
+                          </p>
+                        </div>
+                        <div className="overflow-x-auto rounded-md border">
+                          <table className="w-full min-w-[560px] text-sm">
+                            <thead className="bg-muted/50">
+                              <tr className="border-b text-left">
+                                <th className="px-3 py-2 font-semibold">No.</th>
+                                <th className="px-3 py-2 font-semibold">Cube Age (days)</th>
+                                <th className="px-3 py-2 font-semibold">Weight (kg)</th>
+                                <th className="px-3 py-2 font-semibold">Density (kg/m³)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {testRows.map((row, rowIndex) => {
+                                const density = calculateCubeDensity(
+                                  details.cubeSize || DEFAULT_PRECAST_CUBE_SIZE,
+                                  row.weight,
+                                );
+                                return (
+                                  <tr key={row.id} className="border-b last:border-b-0">
+                                    <td className="px-3 py-2 font-medium">{rowIndex + 1}</td>
+                                    <td className="px-3 py-2">{row.testAge || "—"}</td>
+                                    <td className="px-2 py-2">
+                                      <Input
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={row.weight}
+                                        onChange={(event) =>
+                                          updateTestRow(rowIndex, "weight", event.target.value)
+                                        }
+                                        placeholder="kg"
+                                        aria-label={`Cube weight in kilograms for specimen ${rowIndex + 1}`}
+                                      />
+                                    </td>
+                                    <td className="px-3 py-2 font-semibold">
+                                      {density ? `${density} kg/m³` : "Enter weight and a valid cube size"}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </section>
+                    </>
                   )}
                    {usesSieveRows && !sieveEntryItems.length ? null : <div className={`${isCompactBlockTable ? "overflow-hidden" : "overflow-x-auto"} rounded-md border`}>
                        <table className={`w-full ${usesSieveRows ? "min-w-[1240px] text-sm" : isCompactBlockTable ? "table-fixed text-[11px]" : testType === TestType.Paving_Blocks ? "min-w-[1440px] text-sm" : testType === TestType.Precast ? "min-w-[760px] text-sm" : "min-w-[1080px] text-sm"}`}>

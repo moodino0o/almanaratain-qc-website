@@ -28,6 +28,7 @@ import {
   blockSizeMatches,
   blockTypeMatches,
   calculateChlorideContent,
+  calculateCubeDensity,
   calculateRetainedPercentage,
   calculateSieveSampleWeight,
   calculateSiltContent,
@@ -35,6 +36,9 @@ import {
   evaluateContentAgainstLimit,
   evaluateSiltContent,
   findSieveEvaluationCriterion,
+  PRECAST_AGE_STRENGTH_CRITERIA,
+  precastAgeStrengthSummary,
+  precastStrengthOutcome,
   SIEVE_SILT_LIMIT_PERCENT,
   stringValue,
   sortSieveRowsByPoreSize,
@@ -406,6 +410,22 @@ function layoutColumns(
             }));
           return [...deduplicated, ...newlyAddedColumns];
         })()
+      : tableKey === "precastResults" && configured?.length
+        ? (() => {
+            const existingKeys = new Set(configured.map((column) => column.key));
+            const lastOrder = Math.max(-1, ...configured.map((column) => column.order));
+            const addedColumns = fallback
+              .filter(
+                (column) =>
+                  !existingKeys.has(column.key) &&
+                  ["weight", "density"].includes(column.key),
+              )
+              .map((column, index) => ({
+                ...column,
+                order: lastOrder + index + 1,
+              }));
+            return [...configured, ...addedColumns];
+          })()
       : selectedColumns;
   return compatibleColumns
     .filter((column) => column.visible)
@@ -2188,11 +2208,13 @@ function PrecastReport({ record, layout }: { record: QcRecord; layout?: ReportLa
     Array.isArray(details.testRows) ? details.testRows : [],
   );
   const columns = layoutColumns(layout, "precastResults", [
-    { key: "no", label: "No.", visible: true, order: 0, width: 10 },
-    { key: "age", label: "Cube Age (days)", visible: true, order: 1, width: 18 },
-    { key: "cubeSize", label: "Cube Size (mm)", visible: true, order: 2, width: 24 },
-    { key: "load", label: "Load (kN)", visible: true, order: 3, width: 20 },
-    { key: "strength", label: "Compressive Strength (N/mm²)", visible: true, order: 4, width: 28 },
+    { key: "no", label: "No.", visible: true, order: 0, width: 7 },
+    { key: "age", label: "Cube Age (days)", visible: true, order: 1, width: 11 },
+    { key: "cubeSize", label: "Cube Size (mm)", visible: true, order: 2, width: 15 },
+    { key: "weight", label: "Weight (kg)", visible: true, order: 3, width: 12 },
+    { key: "density", label: "Density (kg/m³)", visible: true, order: 4, width: 15 },
+    { key: "load", label: "Load (kN)", visible: true, order: 5, width: 14 },
+    { key: "strength", label: "Compressive Strength (N/mm²)", visible: true, order: 6, width: 26 },
   ]);
   const cubeSize = detailValue(
     details,
@@ -2231,10 +2253,22 @@ function PrecastReport({ record, layout }: { record: QcRecord; layout?: ReportLa
                   const rowAge =
                     values.testAge ?? values.sampleAge ?? values.cubeAge ?? values.age;
                   const strength = cubeRowStrength(row);
+                  const weight = values.weight ?? values.wetWeight;
+                  const density =
+                    values.density ||
+                    calculateCubeDensity(
+                      detailValue(details, ["cubeSize"], "100*100*100"),
+                      weight,
+                    );
+                  const densityNumber = Number(density);
                   const cells: Record<string, string> = {
                     no: String(index + 1),
                     age: rowAge == null || rowAge === "" ? "-" : String(rowAge),
                     cubeSize,
+                    weight: rawTextValue(weight),
+                    density: Number.isFinite(densityNumber)
+                      ? `${formatNumber(densityNumber)} kg/m³`
+                      : "-",
                     load: values.load == null || values.load === "" ? "-" : String(values.load),
                     strength: strength === null ? "-" : formatNumber(strength),
                   };
@@ -2255,20 +2289,38 @@ function PrecastReport({ record, layout }: { record: QcRecord; layout?: ReportLa
                   <tr>
                     <th>Cube Age</th>
                     <th>Average Strength (N/mm²)</th>
+                    <th>Minimum (N/mm²)</th>
+                    <th>Result</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {[1, 7, 28].map((age) => {
-                    const average = averageStrengthForAgeRange(rows, age, age);
-                    const legacyAverage = detailValue(details, legacyAverageKeys[age]);
+                  {PRECAST_AGE_STRENGTH_CRITERIA.map((criterion) => {
+                    const summary = precastAgeStrengthSummary(rows, criterion.age);
+                    const legacyAverage = detailValue(
+                      details,
+                      legacyAverageKeys[criterion.age],
+                    );
+                    const legacyNumber = Number(legacyAverage);
+                    const average = summary.averageStrength ??
+                      (Number.isFinite(legacyNumber) ? legacyNumber : null);
+                    const complete = rows.length
+                      ? summary.complete
+                      : average !== null;
+                    const outcome = precastStrengthOutcome(
+                      criterion.age,
+                      average,
+                      complete,
+                    );
                     return (
-                      <tr key={age}>
-                        <td>{age} day{age === 1 ? "" : "s"}</td>
+                      <tr key={criterion.age}>
+                        <td>{criterion.age} day{criterion.age === 1 ? "" : "s"}</td>
                         <td>
                           {average === null
                             ? legacyAverage
                             : formatNumber(average)}
                         </td>
+                        <td>≥ {criterion.minimumStrength}</td>
+                        <td>{outcome}</td>
                       </tr>
                     );
                   })}
@@ -2282,15 +2334,35 @@ function PrecastReport({ record, layout }: { record: QcRecord; layout?: ReportLa
               <tr>
                 <th>Cube Age</th>
                 <th>Average Strength (N/mm²)</th>
+                <th>Minimum (N/mm²)</th>
+                <th>Result</th>
               </tr>
             </thead>
             <tbody>
-              {[1, 7, 28].map((age) => (
-                <tr key={age}>
-                  <td>{age} day{age === 1 ? "" : "s"}</td>
-                  <td>{detailValue(details, legacyAverageKeys[age])}</td>
-                </tr>
-              ))}
+              {PRECAST_AGE_STRENGTH_CRITERIA.map((criterion) => {
+                const legacyAverage = detailValue(
+                  details,
+                  legacyAverageKeys[criterion.age],
+                );
+                const legacyNumber = Number(legacyAverage);
+                const average = Number.isFinite(legacyNumber)
+                  ? legacyNumber
+                  : null;
+                return (
+                  <tr key={criterion.age}>
+                    <td>{criterion.age} day{criterion.age === 1 ? "" : "s"}</td>
+                    <td>{average === null ? legacyAverage : formatNumber(average)}</td>
+                    <td>≥ {criterion.minimumStrength}</td>
+                    <td>
+                      {precastStrengthOutcome(
+                        criterion.age,
+                        average,
+                        average !== null,
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}

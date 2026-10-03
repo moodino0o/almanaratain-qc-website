@@ -65,6 +65,7 @@ import {
   BLOCK_RECORD_MATERIAL,
   blockSizeMatches,
   blockTypeMatches,
+  PRECAST_AGE_STRENGTH_CRITERIA,
 } from "./record-form-utils";
 
 type AutomatedTestType = "Ready Mix" | "Blocks" | "Paving Blocks";
@@ -648,7 +649,7 @@ function SieveEditor({
   );
 }
 
-type StrengthFolderKey = "readyMix" | "blocks" | "paving";
+type StrengthFolderKey = "readyMix" | "blocks" | "paving" | "precast";
 
 function StrengthStandardsFolder({
   label,
@@ -770,6 +771,72 @@ function StrengthStandardsFolder({
               </Button>
             </div>
           )}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function PrecastStrengthStandardsFolder({
+  expanded,
+  onToggle,
+}: {
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <Card className="border-border shadow-sm">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        className="flex w-full items-center justify-between gap-4 rounded-lg px-4 py-3 text-left transition-colors hover:bg-muted/40"
+      >
+        <span className="flex min-w-0 items-center gap-3">
+          {expanded ? (
+            <FolderOpen className="h-5 w-5 shrink-0 text-foreground" />
+          ) : (
+            <Folder className="h-5 w-5 shrink-0 text-foreground" />
+          )}
+          <span className="min-w-0">
+            <span className="block truncate font-semibold text-foreground">
+              Precast strength standards
+            </span>
+            <span className="block text-xs text-muted-foreground">
+              3 age-based criteria
+            </span>
+          </span>
+        </span>
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${
+            expanded ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+      {expanded && (
+        <div className="overflow-x-auto border-t border-border">
+          <table className="w-full min-w-[680px] text-xs sm:text-sm">
+            <thead className="bg-muted/40 text-left text-foreground">
+              <tr className="border-b">
+                <th className="px-4 py-3 font-semibold">Cube Age</th>
+                <th className="px-4 py-3 font-semibold">Minimum Average Strength</th>
+                <th className="px-4 py-3 font-semibold">When Met</th>
+                <th className="px-4 py-3 font-semibold">When Below Minimum</th>
+              </tr>
+            </thead>
+            <tbody>
+              {PRECAST_AGE_STRENGTH_CRITERIA.map((criterion) => (
+                <tr key={criterion.age} className="border-b last:border-b-0">
+                  <td className="px-4 py-3">{criterion.age} day{criterion.age === 1 ? "" : "s"}</td>
+                  <td className="px-4 py-3 font-semibold">
+                    ≥ {criterion.minimumStrength} N/mm²
+                  </td>
+                  <td className="px-4 py-3">{criterion.passOutcome}</td>
+                  <td className="px-4 py-3">{criterion.failOutcome}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </Card>
@@ -1598,7 +1665,7 @@ export default function Standards() {
   );
   const [expandedStrengthFolders, setExpandedStrengthFolders] = useState<
     Record<StrengthFolderKey, boolean>
-  >({ readyMix: false, blocks: false, paving: false });
+  >({ readyMix: false, blocks: false, paving: false, precast: true });
   const [shapeFactorsExpanded, setShapeFactorsExpanded] = useState(true);
 
   const materialItems = useMemo(
@@ -2324,6 +2391,15 @@ export default function Standards() {
                 onDelete={canEditStandards ? handleDelete : () => undefined}
               />
             ))}
+            <PrecastStrengthStandardsFolder
+              expanded={expandedStrengthFolders.precast}
+              onToggle={() =>
+                setExpandedStrengthFolders((current) => ({
+                  ...current,
+                  precast: !current.precast,
+                }))
+              }
+            />
           </>
         )}
       </div>

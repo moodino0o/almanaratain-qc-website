@@ -59,8 +59,23 @@ export function isDammamLocation(value: unknown) {
   return normalizedText(value) === "dammam";
 }
 
-const AUTOMATED_TEST_TYPES = new Set(["Ready Mix", "Blocks", "Paving Blocks"]);
+const AUTOMATED_TEST_TYPES = new Set([
+  "Ready Mix",
+  "Blocks",
+  "Paving Blocks",
+  "Precast",
+]);
 const DEFAULT_STRENGTH_UNIT = "N/mm²";
+const PRECAST_AGE_STRENGTH_CRITERIA = [
+  {
+    age: 1,
+    minimumStrength: 30,
+    passOutcome: "Approved for demolding",
+    failOutcome: "Not approved for demolding",
+  },
+  { age: 7, minimumStrength: 52, passOutcome: "Pass", failOutcome: "Fail" },
+  { age: 28, minimumStrength: 65, passOutcome: "Pass", failOutcome: "Fail" },
+] as const;
 
 function numericValue(value: unknown): number | null {
   if (typeof value === "number") {
@@ -344,6 +359,7 @@ function calculateRow(
   correctionFactorValue?: unknown,
   isPaving = false,
   isDammam = false,
+  isPrecast = false,
 ) {
   if (typeof row !== "object" || row === null) {
     return { row, calculatedStrength: null, loadedFaceArea: null, complete: false };
@@ -407,17 +423,20 @@ function calculateRow(
       : null;
   const dryWeight = numericValue(values.dryWeight);
   const wetWeight = numericValue(values.wetWeight);
+  const densityWeight = isPrecast
+    ? numericValue(values.weight ?? values.wetWeight)
+    : wetWeight;
   const density =
-    wetWeight !== null &&
+    densityWeight !== null &&
     length !== null &&
     width !== null &&
     numericValue(values.height) !== null &&
-    wetWeight >= 0 &&
+    densityWeight >= 0 &&
     length > 0 &&
     width > 0 &&
     numericValue(values.height)! > 0
       ? rounded(
-          (wetWeight * 1_000_000_000) /
+          (densityWeight * 1_000_000_000) /
           (length * width * numericValue(values.height)!),
         )
       : null;
@@ -460,7 +479,9 @@ function calculateRow(
             strength: correctedStrength.toFixed(2),
           }
         : {}),
-      ...(density !== null ? { density: density.toFixed(2) } : {}),
+      ...(density !== null || isPrecast
+        ? { density: density === null ? "" : density.toFixed(2) }
+        : {}),
     },
     calculatedStrength,
     loadedFaceArea,
@@ -477,6 +498,94 @@ function calculateRow(
   };
 }
 
+function evaluatePrecastStrengthRecord(record: RecordForStrength) {
+  const sourceRows = Array.isArray(record.details.testRows)
+    ? record.details.testRows
+    : [];
+  const calculatedRows = sourceRows.map((row) =>
+    calculateRow(row, undefined, undefined, false, false, true),
+  );
+  const ageEvaluations = PRECAST_AGE_STRENGTH_CRITERIA.map((criterion) => {
+    const ageRows = calculatedRows.filter((row) => {
+      const values = typeof row.row === "object" && row.row !== null
+        ? row.row as Record<string, unknown>
+        : {};
+      return dayAge(
+        values.testAge ?? values.sampleAge ?? values.cubeAge ?? values.age,
+      ) === criterion.age;
+    });
+    const measuredStrengths = ageRows
+      .map((row) => row.calculatedStrength)
+      .filter((strength): strength is number => strength !== null);
+    const averageStrength = measuredStrengths.length
+      ? rounded(
+          measuredStrengths.reduce((sum, strength) => sum + strength, 0) /
+            measuredStrengths.length,
+        )
+      : null;
+    const complete =
+      ageRows.length > 0 && ageRows.every((row) => row.complete);
+    const outcome =
+      !complete || averageStrength === null
+        ? "Pending"
+        : averageStrength >= criterion.minimumStrength
+          ? criterion.passOutcome
+          : criterion.failOutcome;
+    return {
+      age: criterion.age,
+      minimumStrength: criterion.minimumStrength,
+      averageStrength,
+      outcome,
+    };
+  });
+  const finalAgeEvaluation = ageEvaluations.find((evaluation) => evaluation.age === 28);
+  const finalAgeRows = calculatedRows.filter((row) => {
+    const values = typeof row.row === "object" && row.row !== null
+      ? row.row as Record<string, unknown>
+      : {};
+    return dayAge(
+      values.testAge ?? values.sampleAge ?? values.cubeAge ?? values.age,
+    ) === 28;
+  });
+  const finalAgeStrengths = finalAgeRows
+    .map((row) => row.calculatedStrength)
+    .filter((strength): strength is number => strength !== null);
+  const status: StrengthEvaluationStatus =
+    finalAgeEvaluation?.outcome === "Pass"
+      ? "Passed"
+      : finalAgeEvaluation?.outcome === "Fail"
+        ? "Failed"
+        : "Review";
+  const reason =
+    status === "Review"
+      ? "Complete 28-day Precast cube results are required for final approval."
+      : status === "Failed"
+        ? "The average 28-day Precast strength is below 65 N/mm²."
+        : null;
+  const strengthEvaluation: StrengthEvaluation = {
+    status,
+    bsStandard: "Al Manaratain Precast age-based strength criteria",
+    requiredStrength: 65,
+    averageStrength: finalAgeEvaluation?.averageStrength ?? null,
+    minimumStrength: finalAgeStrengths.length
+      ? Math.min(...finalAgeStrengths)
+      : null,
+    maximumStrength: finalAgeStrengths.length
+      ? Math.max(...finalAgeStrengths)
+      : null,
+    strengthUnit: DEFAULT_STRENGTH_UNIT,
+    reason,
+  };
+  const details = {
+    ...record.details,
+    testRows: calculatedRows.map((item) => item.row),
+    precastAgeEvaluations: ageEvaluations,
+    strengthEvaluation,
+  };
+
+  return { details, status, evaluation: strengthEvaluation };
+}
+
 export function evaluateStrengthRecord(
   record: RecordForStrength,
   standards: QcStrengthStandardRow[],
@@ -488,6 +597,10 @@ export function evaluateStrengthRecord(
       status: undefined,
       evaluation: null,
     };
+  }
+
+  if (record.testType === "Precast") {
+    return evaluatePrecastStrengthRecord(record);
   }
 
   const normalizedDetails: Record<string, unknown> =
@@ -512,6 +625,7 @@ export function evaluateStrengthRecord(
         : undefined,
       record.testType === "Paving Blocks",
       record.testType === "Blocks" && isDammamLocation(record.location),
+      record.testType === "Precast",
     )
   );
   const evaluatedRows =

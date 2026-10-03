@@ -79,10 +79,14 @@ export const PRECAST_AGE_STRENGTH_CRITERIA = [
   { age: 28, minimumStrength: 65, passOutcome: "Pass", failOutcome: "Fail" },
 ] as const;
 
-export const precastStrengthOutcome = (age: number, averageStrength: number | null) => {
+export const precastStrengthOutcome = (
+  age: number,
+  averageStrength: number | null,
+  complete = true,
+) => {
   const criterion = PRECAST_AGE_STRENGTH_CRITERIA.find((item) => item.age === age);
   if (!criterion) return "—";
-  if (averageStrength === null) return "Pending";
+  if (!complete || averageStrength === null) return "Pending";
   return averageStrength >= criterion.minimumStrength
     ? criterion.passOutcome
     : criterion.failOutcome;
@@ -207,6 +211,29 @@ export const averageCubeStrengthAtAge = (rows: unknown[], age: number) => {
   return strengths.length
     ? strengths.reduce((sum, strength) => sum + strength, 0) / strengths.length
     : null;
+};
+
+export const precastAgeStrengthSummary = (rows: unknown[], age: number) => {
+  const ageRows = rows.filter((row) => {
+    if (typeof row !== "object" || row === null) return false;
+    const values = row as Record<string, unknown>;
+    const ageText = numericInputValue(
+      values.testAge ?? values.sampleAge ?? values.cubeAge ?? values.age,
+    );
+    return ageText !== "" && Number(ageText) === age;
+  });
+  const strengths = ageRows.map(cubeRowStrength);
+  const measuredStrengths = strengths.filter(
+    (strength): strength is number => strength !== null,
+  );
+  return {
+    averageStrength: measuredStrengths.length
+      ? measuredStrengths.reduce((sum, strength) => sum + strength, 0) /
+        measuredStrengths.length
+      : null,
+    complete:
+      ageRows.length > 0 && measuredStrengths.length === ageRows.length,
+  };
 };
 
 export const getReadyMixReferenceNumberError = (value: string): string | null => {

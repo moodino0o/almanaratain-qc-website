@@ -53,6 +53,17 @@ const blockRecord = (
   },
 });
 
+const precastRecord = (
+  rows: Record<string, unknown>[],
+): Parameters<typeof evaluateStrengthRecord>[0] => ({
+  testType: "Precast",
+  material: "150 mm slab",
+  details: {
+    cubeSize: "100*100*100",
+    testRows: rows,
+  },
+});
+
 const standard = (
   overrides: Partial<SieveStandardForEvaluation> = {},
 ): SieveStandardForEvaluation => ({
@@ -125,6 +136,63 @@ test("maps paving sizes ending in 60 and 80 to correction factors", () => {
   assert.equal(pavingCorrectionFactorFromSize("200*200*60"), 0.87);
   assert.equal(pavingCorrectionFactorFromSize("200 x 200 x 80 mm"), 1);
   assert.equal(pavingCorrectionFactorFromSize("200 x 200 x 50"), null);
+});
+
+test("evaluates Precast age thresholds and calculates cube density from weight", () => {
+  const result = evaluateStrengthRecord(
+    precastRecord([
+      { rowNo: 1, testAge: 1, length: 100, width: 100, height: 100, load: 300, weight: 2.4 },
+      { rowNo: 2, testAge: 7, length: 100, width: 100, height: 100, load: 520, weight: 2.4 },
+      { rowNo: 3, testAge: 7, length: 100, width: 100, height: 100, load: 520, weight: 2.4 },
+      { rowNo: 4, testAge: 28, length: 100, width: 100, height: 100, load: 650, weight: 2.4 },
+      { rowNo: 5, testAge: 28, length: 100, width: 100, height: 100, load: 650, weight: 2.4 },
+    ]),
+    [],
+  );
+  const details = result.details as Record<string, unknown>;
+  const evaluations = details.precastAgeEvaluations as Array<Record<string, unknown>>;
+  const rows = details.testRows as Array<Record<string, unknown>>;
+
+  assert.equal(result.status, "Passed");
+  assert.deepEqual(
+    evaluations.map(({ age, minimumStrength, averageStrength, outcome }) => ({
+      age,
+      minimumStrength,
+      averageStrength,
+      outcome,
+    })),
+    [
+      { age: 1, minimumStrength: 30, averageStrength: 30, outcome: "Approved for demolding" },
+      { age: 7, minimumStrength: 52, averageStrength: 52, outcome: "Pass" },
+      { age: 28, minimumStrength: 65, averageStrength: 65, outcome: "Pass" },
+    ],
+  );
+  assert.equal(rows[0].density, "2400.00");
+});
+
+test("marks Precast age criteria below threshold and leaves incomplete ages pending", () => {
+  const result = evaluateStrengthRecord(
+    precastRecord([
+      { rowNo: 1, testAge: 1, length: 100, width: 100, height: 100, load: 290 },
+      { rowNo: 2, testAge: 7, length: 100, width: 100, height: 100, load: 510 },
+      { rowNo: 3, testAge: 7, length: 100, width: 100, height: 100, load: "" },
+      { rowNo: 4, testAge: 28, length: 100, width: 100, height: 100, load: 640 },
+      { rowNo: 5, testAge: 28, length: 100, width: 100, height: 100, load: 640 },
+    ]),
+    [],
+  );
+  const details = result.details as Record<string, unknown>;
+  const evaluations = details.precastAgeEvaluations as Array<Record<string, unknown>>;
+
+  assert.equal(result.status, "Failed");
+  assert.deepEqual(
+    evaluations.map(({ age, outcome }) => ({ age, outcome })),
+    [
+      { age: 1, outcome: "Not approved for demolding" },
+      { age: 7, outcome: "Pending" },
+      { age: 28, outcome: "Fail" },
+    ],
+  );
 });
 
 test("calculates Paving tensile strength and evaluates the average against its standard", () => {

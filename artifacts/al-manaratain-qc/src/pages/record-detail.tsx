@@ -16,7 +16,7 @@ import {
   AGGREGATE_CHEMISTRY_FIELDS,
   AGGREGATE_SULPHATE_LIMIT_PERCENT,
   blockAirDryRowStrength,
-  averageCubeStrengthAtAge,
+  calculateCubeDensity,
   calculateRetainedPercentage,
   calculateSieveSampleWeight,
   calculateChlorideContent,
@@ -26,6 +26,9 @@ import {
   evaluateContentAgainstLimit,
   evaluateSiltContent,
   findSieveEvaluationCriterion,
+  PRECAST_AGE_STRENGTH_CRITERIA,
+  precastAgeStrengthSummary,
+  precastStrengthOutcome,
   SIEVE_SILT_LIMIT_PERCENT,
   sortSieveRowsByPoreSize,
   cubeRowStrength as getCubeRowStrength,
@@ -932,21 +935,49 @@ export default function RecordDetail() {
                   </table>
                 </div>
                 <div className="grid gap-3 border-t bg-muted/10 p-4 sm:grid-cols-3">
-                  {[
-                    [1, "averageStrength1Day"],
-                    [7, "averageStrength7Days"],
-                    [28, "averageStrength28Days"],
-                  ].map(([age, legacyKey]) => {
-                    const average = averageCubeStrengthAtAge(specimenRows, Number(age));
-                    const legacyAverage = recordDetails[String(legacyKey)];
-                    const averageToDisplay = average ?? legacyAverage;
+                  {PRECAST_AGE_STRENGTH_CRITERIA.map((criterion) => {
+                    const summary = precastAgeStrengthSummary(
+                      specimenRows,
+                      criterion.age,
+                    );
+                    const legacyKey =
+                      criterion.age === 1
+                        ? "averageStrength1Day"
+                        : criterion.age === 7
+                          ? "averageStrength7Days"
+                          : "averageStrength28Days";
+                    const legacyAverage = Number(recordDetails[legacyKey]);
+                    const averageToDisplay =
+                      summary.averageStrength ??
+                      (Number.isFinite(legacyAverage) ? legacyAverage : null);
+                    const complete =
+                      specimenRows.length > 0
+                        ? summary.complete
+                        : averageToDisplay !== null;
+                    const outcome = precastStrengthOutcome(
+                      criterion.age,
+                      averageToDisplay,
+                      complete,
+                    );
                     return (
-                      <div key={age} className="rounded-md border bg-background p-3 text-center">
-                        <div className="text-xs text-muted-foreground">{age}-day average strength</div>
+                      <div key={criterion.age} className="rounded-md border bg-background p-3 text-center">
+                        <div className="text-xs text-muted-foreground">{criterion.age}-day average strength</div>
                         <div className="mt-1 font-semibold">
-                          {averageToDisplay === undefined || averageToDisplay === null || averageToDisplay === ""
+                          {averageToDisplay === null
                             ? "—"
                             : `${formatStrengthMetric(averageToDisplay)} N/mm²`}
+                        </div>
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          Minimum: {criterion.minimumStrength} N/mm²
+                        </div>
+                        <div className={`mt-2 text-sm font-semibold ${
+                          outcome === "Pass" || outcome === "Approved for demolding"
+                            ? "text-emerald-700"
+                            : outcome === "Pending"
+                              ? "text-muted-foreground"
+                              : "text-destructive"
+                        }`}>
+                          {outcome}
                         </div>
                       </div>
                     );
@@ -959,6 +990,64 @@ export default function RecordDetail() {
                 {detailText(recordDetails, "averageStrength1Day")}; 7 days{" "}
                 {detailText(recordDetails, "averageStrength7Days")}; 28 days{" "}
                 {detailText(recordDetails, "averageStrength28Days")}.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {record.testType === "Precast" && (
+        <Card>
+          <CardHeader className="bg-muted/30 border-b">
+            <CardTitle>Precast Cube Weight &amp; Density</CardTitle>
+            <CardDescription>
+              Density is calculated from each cube’s entered weight and recorded cube size.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            {specimenRows.length ? (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[560px] text-sm">
+                  <thead className="bg-muted/50">
+                    <tr className="border-b">
+                      {["No.", "Cube Age (days)", "Weight (kg)", "Density (kg/m³)"].map((label) => (
+                        <th key={label} className="px-3 py-3 text-left font-semibold">{label}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortCubeRowsByAge(specimenRows).map((row, index) => {
+                      const values = typeof row === "object" && row !== null
+                        ? row as Record<string, unknown>
+                        : {};
+                      const weight = values.weight ?? values.wetWeight;
+                      const calculatedDensity = calculateCubeDensity(
+                        detailText(recordDetails, "cubeSize", "100*100*100"),
+                        weight,
+                      );
+                      const density = displayValue(
+                        values.density || calculatedDensity,
+                        "—",
+                      );
+                      return (
+                        <tr key={index} className="border-b last:border-b-0">
+                          <td className="px-3 py-2">{index + 1}</td>
+                          <td className="px-3 py-2">
+                            {displayValue(values.testAge ?? values.sampleAge ?? values.cubeAge ?? values.age)}
+                          </td>
+                          <td className="px-3 py-2">{displayValue(weight)}</td>
+                          <td className="px-3 py-2 font-semibold">
+                            {density === "—" ? density : `${density} kg/m³`}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="p-6 text-center text-muted-foreground">
+                No cube weights have been recorded.
               </p>
             )}
           </CardContent>
