@@ -1056,6 +1056,45 @@
   font-weight: 400;
 }
 
+.precast-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(55mm, 0.85fr);
+  gap: 10mm;
+  align-items: start;
+}
+
+.precast-overview > section {
+  min-width: 0;
+}
+
+.precast-average-block {
+  width: 100%;
+  margin: 2.2mm 0 0;
+}
+
+.precast-average-block .report-centered-title {
+  margin: 0 0 1.2mm;
+  font-size: 10px;
+}
+
+.precast-average-table {
+  table-layout: auto;
+}
+
+.precast-average-table th,
+.precast-average-table td {
+  padding: 1.2mm 1mm;
+  font-size: 8px;
+}
+
+.precast-average-table th {
+  font-size: 7.8px;
+}
+
+.precast-average-table td {
+  font-weight: 400;
+}
+
 .ready-mix-compliance-block {
   margin-top: 0;
   border-top: 0;
@@ -1150,6 +1189,54 @@
   font-size: 7.8px;
 }
 
+.report-standard-block.precast-standard-block {
+  width: 95mm;
+  margin: 14mm auto 0;
+}
+
+.precast-standard-block .report-centered-title {
+  width: max-content;
+  max-width: 100%;
+  margin: 0 auto 1mm;
+  padding: 0.7mm 2mm;
+  background: #ffe14a;
+  color: #111;
+  font-size: 8px;
+  letter-spacing: normal;
+  text-align: center;
+  text-transform: none;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+.precast-standard-block .report-strength-table {
+  table-layout: fixed;
+}
+
+.precast-standard-block .report-strength-table th,
+.precast-standard-block .report-strength-table td {
+  border: 1px solid #111;
+  background: transparent;
+  color: #111;
+  padding: 1.1mm 1mm;
+  font-size: 8px;
+}
+
+.precast-standard-block .report-strength-table th {
+  font-size: 7.8px;
+}
+
+.precast-standard-block .report-strength-table td:last-child {
+  color: #223e63;
+  font-weight: 700;
+}
+
+.report-precast-empty {
+  margin: 3mm 0;
+  text-align: center;
+  font-size: 9px;
+}
+
 .ready-mix-paper .report-signatures {
   margin-top: 14mm;
 }
@@ -1160,12 +1247,17 @@
 
 @media (max-width: 760px) {
   .ready-mix-overview,
-  .ready-mix-test-summary {
+  .ready-mix-test-summary,
+  .precast-overview {
     grid-template-columns: 1fr;
     gap: 2mm;
   }
 
   .report-standard-block.ready-mix-standard-block {
+    width: 100%;
+  }
+
+  .report-standard-block.precast-standard-block {
     width: 100%;
   }
 }
@@ -1367,6 +1459,17 @@
 .report-paper .ready-mix-report .report-results-table th,
 .report-paper .ready-mix-standard-block .report-centered-title,
 .report-paper .ready-mix-standard-block .report-strength-table th {
+  font-size: 10px;
+}
+
+.report-paper .precast-average-table td,
+.report-paper .precast-standard-block .report-strength-table td {
+  font-size: 11px;
+}
+
+.report-paper .precast-average-table th,
+.report-paper .precast-standard-block .report-centered-title,
+.report-paper .precast-standard-block .report-strength-table th {
   font-size: 10px;
 }
 
