@@ -2128,60 +2128,15 @@ export default function RecordForm() {
                         </div>
                       </section>
 
-                      <section className="space-y-3 rounded-md border p-4">
-                        <div>
-                          <h3 className="font-semibold">Cube Weight &amp; Density</h3>
-                          <p className="text-sm text-muted-foreground">
-                            Enter each cube’s weight in grams. Density is calculated from the cube size in kg/m³.
-                          </p>
-                        </div>
-                        <div className="overflow-x-auto rounded-md border">
-                          <table className="w-full min-w-[460px] text-sm">
-                            <thead className="bg-muted/50">
-                              <tr className="border-b text-left">
-                                <th className="px-3 py-2 font-semibold">Cube Age (days)</th>
-                                <th className="px-3 py-2 font-semibold">Weight (g)</th>
-                                <th className="px-3 py-2 font-semibold">Density (kg/m³)</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {testRows.map((row, rowIndex) => {
-                                const density = calculateCubeDensity(
-                                  details.cubeSize || DEFAULT_PRECAST_CUBE_SIZE,
-                                  row.weight,
-                                );
-                                return (
-                                  <tr key={row.id} className="border-b last:border-b-0">
-                                    <td className="px-3 py-2">{row.testAge || "—"}</td>
-                                    <td className="px-2 py-2">
-                                      <Input
-                                        type="text"
-                                        inputMode="decimal"
-                                        value={row.weight}
-                                        onChange={(event) =>
-                                          updateTestRow(rowIndex, "weight", event.target.value)
-                                        }
-                                        placeholder="g"
-                                        aria-label={`Cube weight in grams for specimen ${rowIndex + 1}`}
-                                      />
-                                    </td>
-                                    <td className="px-3 py-2 font-semibold">
-                                      {density ? `${density} kg/m³` : "Enter weight and a valid cube size"}
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      </section>
                     </>
                   )}
                    {usesSieveRows && !sieveEntryItems.length ? null : <div className={`${isCompactBlockTable ? "overflow-hidden" : "overflow-x-auto"} rounded-md border`}>
-                       <table className={`w-full ${usesSieveRows ? "min-w-[1240px] text-sm" : isCompactBlockTable ? "table-fixed text-[11px]" : testType === TestType.Paving_Blocks ? "min-w-[1440px] text-sm" : testType === TestType.Precast ? "min-w-[760px] text-sm" : "min-w-[1080px] text-sm"}`}>
+                        <table className={`w-full ${usesSieveRows ? "min-w-[1240px] text-sm" : isCompactBlockTable ? "table-fixed text-[11px]" : testType === TestType.Paving_Blocks ? "min-w-[1440px] text-sm" : testType === TestType.Precast ? "min-w-[980px] text-sm" : "min-w-[1080px] text-sm"}`}>
                       <thead className="bg-muted/50">
                         <tr className="border-b">
-                           <th className={`${isCompactBlockTable ? "w-[4%] px-1 py-2 text-[10px]" : "w-12 px-3 py-3"} text-left font-semibold`}>No.</th>
+                            {testType !== TestType.Precast && (
+                              <th className={`${isCompactBlockTable ? "w-[4%] px-1 py-2 text-[10px]" : "w-12 px-3 py-3"} text-left font-semibold`}>No.</th>
+                            )}
                           {usesSieveRows ? (
                             <th className="px-3 py-3 text-left font-semibold">Sieve / Pore Size</th>
                           ) : testType === TestType.Ready_Mix || testType === TestType.Precast ? (
@@ -2201,7 +2156,11 @@ export default function RecordForm() {
                               <th className="px-3 py-3 text-left font-semibold">Remarks</th>
                             </>
                           ) : testType === TestType.Precast ? (
-                            <th className="px-3 py-3 text-left font-semibold">Cube Size (mm)</th>
+                            <>
+                              <th className="px-3 py-3 text-left font-semibold">Cube Size (mm)</th>
+                              <th className="px-3 py-3 text-left font-semibold">Weight (g)</th>
+                              <th className="px-3 py-3 text-left font-semibold">Density (kg/m³)</th>
+                            </>
                           ) : (
                             <>
                                <th className={`${isCompactBlockTable ? "w-[12%] px-1 py-2 text-[10px]" : "px-3 py-3"} text-left font-semibold`}>Length (mm)</th>
@@ -2266,7 +2225,9 @@ export default function RecordForm() {
                       <tbody>
                         {displayedTestRows.map(({ row, rowIndex }, displayIndex) => (
                           <tr key={row.id} className="border-b last:border-b-0">
-                            <td className={isCompactBlockTable ? "px-1 py-1.5 text-center text-[10px] font-semibold text-muted-foreground" : "px-3 py-2 font-semibold text-muted-foreground"}>{usesSieveRows ? displayIndex + 1 : rowIndex + 1}</td>
+                             {testType !== TestType.Precast && (
+                               <td className={isCompactBlockTable ? "px-1 py-1.5 text-center text-[10px] font-semibold text-muted-foreground" : "px-3 py-2 font-semibold text-muted-foreground"}>{usesSieveRows ? displayIndex + 1 : rowIndex + 1}</td>
+                             )}
                             {usesSieveRows ? (
                               <>
                                 <td className="px-3 py-2 font-medium">
@@ -2429,6 +2390,33 @@ export default function RecordForm() {
                               <td className="px-2 py-2 font-medium tabular-nums">
                                 {String(details.cubeSize ?? DEFAULT_PRECAST_CUBE_SIZE).replace(/\*/g, " × ")}
                               </td>
+                            )}
+                            {testType === TestType.Precast && (
+                              <>
+                                <td className="px-2 py-2">
+                                  <Input
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={row.weight}
+                                    onChange={(event) =>
+                                      updateTestRow(rowIndex, "weight", event.target.value)
+                                    }
+                                    placeholder="g"
+                                    aria-label={`Cube weight in grams for specimen ${rowIndex + 1}`}
+                                  />
+                                </td>
+                                <td className="px-3 py-2 font-semibold">
+                                  {calculateCubeDensity(
+                                    details.cubeSize || DEFAULT_PRECAST_CUBE_SIZE,
+                                    row.weight,
+                                  )
+                                    ? `${calculateCubeDensity(
+                                        details.cubeSize || DEFAULT_PRECAST_CUBE_SIZE,
+                                        row.weight,
+                                      )} kg/m³`
+                                    : "Enter weight and a valid cube size"}
+                                </td>
+                              </>
                             )}
                             {measurementKeys.map(key => (
                               <td key={key} className={compactBlockCellClass}>

@@ -897,17 +897,17 @@ export default function RecordDetail() {
           <CardHeader className="bg-muted/30 border-b">
             <CardTitle>Precast Cube Measurements</CardTitle>
             <CardDescription>
-              Compression readings and calculated strength by cube age.
+              Compression, weight, density, and strength for each cube.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             {specimenRows.length ? (
               <>
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[680px] text-sm">
+                  <table className="w-full min-w-[980px] text-sm">
                     <thead className="bg-muted/50">
                       <tr className="border-b">
-                        {["No.", "Cube Age (days)", "Cube Size (mm)", "Load (kN)", "Compressive Strength (N/mm²)"].map((label) => (
+                        {["Cube Age (days)", "Cube Size (mm)", "Weight (g)", "Density (kg/m³)", "Load (kN)", "Compressive Strength (N/mm²)"].map((label) => (
                           <th key={label} className="px-3 py-3 text-left font-semibold">{label}</th>
                         ))}
                       </tr>
@@ -920,11 +920,33 @@ export default function RecordDetail() {
                         const age = values.testAge ?? values.sampleAge ?? values.cubeAge ?? values.age;
                         const size = detailText(recordDetails, "cubeSize", "100*100*100").replace(/\*/g, " × ");
                         const strength = getCubeRowStrength(row);
+                        const hasSavedWeight =
+                          values.weight !== undefined &&
+                          values.weight !== null &&
+                          values.weight !== "";
+                        const weight = hasSavedWeight ? values.weight : values.wetWeight;
+                        const weightUnit =
+                          hasSavedWeight && recordDetails.cubeWeightUnit === "g"
+                            ? "g"
+                            : "kg";
+                        const displayedWeight = cubeWeightInGrams(weight, weightUnit);
+                        const calculatedDensity = calculateCubeDensity(
+                          detailText(recordDetails, "cubeSize", "100*100*100"),
+                          weight,
+                          weightUnit,
+                        );
+                        const density = displayValue(
+                          values.density || calculatedDensity,
+                          "—",
+                        );
                         return (
                           <tr key={index} className="border-b last:border-b-0">
-                            <td className="px-3 py-2">{index + 1}</td>
                             <td className="px-3 py-2">{displayValue(age)}</td>
                             <td className="px-3 py-2">{size}</td>
+                            <td className="px-3 py-2">{displayValue(displayedWeight)}</td>
+                            <td className="px-3 py-2 font-semibold">
+                              {density === "—" ? density : `${density} kg/m³`}
+                            </td>
                             <td className="px-3 py-2">{displayValue(values.load)}</td>
                             <td className="px-3 py-2 font-semibold">
                               {strength === null ? "—" : formatStrengthMetric(strength)}
@@ -991,73 +1013,6 @@ export default function RecordDetail() {
                 {detailText(recordDetails, "averageStrength1Day")}; 7 days{" "}
                 {detailText(recordDetails, "averageStrength7Days")}; 28 days{" "}
                 {detailText(recordDetails, "averageStrength28Days")}.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {record.testType === "Precast" && (
-        <Card>
-          <CardHeader className="bg-muted/30 border-b">
-            <CardTitle>Precast Cube Weight &amp; Density</CardTitle>
-            <CardDescription>
-              Density is calculated from each cube’s entered weight and recorded cube size.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            {specimenRows.length ? (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[460px] text-sm">
-                  <thead className="bg-muted/50">
-                    <tr className="border-b">
-                      {["Cube Age (days)", "Weight (g)", "Density (kg/m³)"].map((label) => (
-                        <th key={label} className="px-3 py-3 text-left font-semibold">{label}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortCubeRowsByAge(specimenRows).map((row, index) => {
-                      const values = typeof row === "object" && row !== null
-                        ? row as Record<string, unknown>
-                        : {};
-                      const hasSavedWeight =
-                        values.weight !== undefined &&
-                        values.weight !== null &&
-                        values.weight !== "";
-                      const weight = hasSavedWeight ? values.weight : values.wetWeight;
-                      const weightUnit =
-                        hasSavedWeight && recordDetails.cubeWeightUnit === "g"
-                          ? "g"
-                          : "kg";
-                      const displayedWeight = cubeWeightInGrams(weight, weightUnit);
-                      const calculatedDensity = calculateCubeDensity(
-                        detailText(recordDetails, "cubeSize", "100*100*100"),
-                        weight,
-                        weightUnit,
-                      );
-                      const density = displayValue(
-                        values.density || calculatedDensity,
-                        "—",
-                      );
-                      return (
-                        <tr key={index} className="border-b last:border-b-0">
-                          <td className="px-3 py-2">
-                            {displayValue(values.testAge ?? values.sampleAge ?? values.cubeAge ?? values.age)}
-                          </td>
-                          <td className="px-3 py-2">{displayValue(displayedWeight)}</td>
-                          <td className="px-3 py-2 font-semibold">
-                            {density === "—" ? density : `${density} kg/m³`}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="p-6 text-center text-muted-foreground">
-                No cube weights have been recorded.
               </p>
             )}
           </CardContent>

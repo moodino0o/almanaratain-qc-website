@@ -9,8 +9,8 @@ The specified Precast entry fields are product type (`150 mm slab`, `200`, `250`
 
 Precast age criteria are based on each age group's average strength: at 1 day, ≥30 N/mm² is “Approved for demolding”; at 7 days, ≥52 N/mm² is “Pass”; at 28 days, ≥65 N/mm² is “Pass”. Keep an age result Pending until every entered specimen in that age group has a calculated strength. The overall QC status follows the 28-day result only.
 
-Precast Sample No. and Precast Mould No. are whole-number identifiers. The cube weight table has no No. column and accepts weight in grams; density remains in kg/m³. Previously saved kilogram weights must remain readable without being mistaken for grams.
+Precast Sample No. and Precast Mould No. are whole-number identifiers. Keep cube age, size, gram weight, density, load, and strength together in one specimen table without a No. column; do not add a separate weight/density table. Density remains in kg/m³. Previously saved kilogram weights must remain readable without being mistaken for grams.
 
-**Why:** The user supplied the acceptance thresholds, identifier format, and weight unit. The form already groups cubes by age, and converting legacy weights prevents unit changes from altering existing density results.
+**Why:** The user supplied the acceptance thresholds, identifier format, weight unit, and one-table requirement. The form already groups cubes by age, and converting legacy weights prevents unit changes from altering existing density results.
 
-**How to apply:** Preserve the product labels, defaults, identifiers, age-specific results, and thresholds in Precast forms, details, and print reports. Store the selected weight unit, convert legacy kilograms for display/editing, and keep Ready Mix behavior and reports unchanged.
+**How to apply:** Preserve the product labels, defaults, identifiers, age-specific results, and thresholds in Precast forms, details, and print reports. Keep specimen measurements in a single table, store the selected weight unit, convert legacy kilograms for display/editing, and keep Ready Mix behavior and reports unchanged.
