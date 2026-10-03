@@ -30,7 +30,7 @@ export const REPORT_LAYOUT_FIELD_GROUPS: Record<string, Record<string, ReportLay
     blockCompression: fields([
       ["no", "No.", 7], ["length", "Length (mm)", 10], ["width", "Width (mm)", 10], ["height", "Height (mm)", 10],
       ["load", "Load (kN)", 10], ["water", "Water (N/mm2)", 12], ["airDry", "Air Dry (N/mm2)", 12],
-      ["normalized", "Normalized (N/mm2)", 13], ["density", "Density (kg/m3)", 13], ["wetWeight", "Wet Weight (kg)", 13],
+      ["normalized", "Normalized (N/mm2)", 13], ["density", "Density (kg/m3)", 13],
     ]),
   },
   "Paving Blocks": {

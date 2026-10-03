@@ -15,6 +15,12 @@ The Block report’s legacy table shape is the baseline: keep its fixed headers,
 
 **How to apply:** Put shared approval metadata outside report-type-specific forms, but do not replace the Block renderer with the generic table renderer just to support other report types.
 
+Block Wet Weight remains an input to density calculations but is not report output; Block dimensions are displayed as whole millimetres without changing stored values or calculations.
+
+**Why:** The Block report should show dimensions without decimals and omit Wet Weight while retaining calculation accuracy.
+
+**How to apply:** Keep these as Block-report presentation rules across fixed and saved custom layouts; do not apply them to Paving or other report types.
+
 The visual designer must use the shared report renderer as its only source of content. Editor overlays are transparent interaction and selection targets, not duplicate text, table, image, or field previews. New section containers default to transparent; retain explicit legacy section fills when initializing them.
 
 **Why:** Duplicate mock layers can cover real saved values and tables, while implicit accent fills can hide report content. Keeping one renderer also keeps the designer aligned with browser printing.

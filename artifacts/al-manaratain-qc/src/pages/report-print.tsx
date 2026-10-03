@@ -20,7 +20,12 @@ import { REPORT_LAYOUT_FIELD_GROUPS } from "./report-layout-fields";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer } from "lucide-react";
 import { useAppBack } from "@/hooks/use-app-back";
-import { filterRowsWithLoad, formatShapeFactor } from "./report-print-utils";
+import {
+  blockReportColumnsWithoutWetWeight,
+  filterRowsWithLoad,
+  formatShapeFactor,
+  formatWholeNumber,
+} from "./report-print-utils";
 import {
   AGGREGATE_CHLORIDE_LIMIT_PERCENT,
   AGGREGATE_SULPHATE_LIMIT_PERCENT,
@@ -633,7 +638,12 @@ const REPORT_TEMPLATE_TABLE_FIELD_ALIASES: Record<string, string[]> = {
   testingDate: ["date", "testDate"],
 };
 
-function reportTemplateTableCell(row: ValueMap, columnKey: string, rowIndex: number): string {
+function reportTemplateTableCell(
+  row: ValueMap,
+  columnKey: string,
+  rowIndex: number,
+  isBlockCompression: boolean,
+): string {
   if (columnKey === "no" && !Object.hasOwn(row, "no") &&
     !Object.hasOwn(row, "rowNo") && !Object.hasOwn(row, "rowNumber")) {
     return String(rowIndex + 1);
@@ -641,6 +651,9 @@ function reportTemplateTableCell(row: ValueMap, columnKey: string, rowIndex: num
   const keys = [columnKey, ...(REPORT_TEMPLATE_TABLE_FIELD_ALIASES[columnKey] ?? [])];
   const wanted = new Set(keys.map((key) => key.toLocaleLowerCase()));
   const value = Object.entries(row).find(([key]) => wanted.has(key.toLocaleLowerCase()))?.[1];
+  if (isBlockCompression && ["length", "width", "height"].includes(columnKey)) {
+    return formatWholeNumber(value, "");
+  }
   return value === undefined || value === null ? "" : textValue(value, "");
 }
 
@@ -656,7 +669,11 @@ function ReportTemplateDataTable({
   const tableKey = object.tableKey ?? "";
   const fallback = (REPORT_LAYOUT_FIELD_GROUPS[record.testType]?.[tableKey] ?? [])
     .map((field, order) => ({ ...field, visible: true, order }));
-  const columns = (design.layout.columns[tableKey] ?? fallback)
+  const configuredColumns = design.layout.columns[tableKey] ?? fallback;
+  const blockCompression = record.testType === "Blocks" && tableKey === "blockCompression";
+  const columns = (blockCompression
+    ? blockReportColumnsWithoutWetWeight(configuredColumns)
+    : configuredColumns)
     .filter((column) => column.visible)
     .sort((left, right) => left.order - right.order);
   const rows = reportTemplateTableRows(record, tableKey);
@@ -696,7 +713,7 @@ function ReportTemplateDataTable({
               padding: "2px 3px",
               verticalAlign: "top",
               overflowWrap: "anywhere",
-            }}>{reportTemplateTableCell(row, column.key, rowIndex)}</td>
+            }}>{reportTemplateTableCell(row, column.key, rowIndex, blockCompression)}</td>
           ))}</tr>
         )) : (
           <tr><td colSpan={columns.length} style={{ border: `1px solid ${borderColor}`, padding: 4 }}>No saved row data.</td></tr>
@@ -912,32 +929,32 @@ function BlockCompressionRowsTable({
     airDry: rowValues.map((values) => blockAirDryStrength(values, hideWaterStrength)),
     normalized: rowValues.map((values) => numericValue(values.normalizedStrength)),
     density: rowValues.map(blockDensity),
-    wetWeight: rowValues.map((values) => numericValue(values.wetWeight)),
   };
   const averages = {
     water: numericSummary(columns.water).average,
     airDry: numericSummary(columns.airDry).average,
     normalized: numericSummary(columns.normalized).average,
     density: numericSummary(columns.density).average,
-    wetWeight: numericSummary(columns.wetWeight).average,
   };
   const strengthSummary = numericSummary(columns.airDry);
   const strengthLabel = "Air Dry Strength";
   const displayNumber = (value: number | null) =>
     value === null ? "-" : formatNumber(value);
-  const fixedKeys = ["no", "length", "width", "height", "load", "water", "airDry", "normalized", "density", "wetWeight"];
+  const fixedKeys = ["no", "length", "width", "height", "load", "water", "airDry", "normalized", "density"];
+  const fixedLabels = ["No.", "Length (mm)", "Width (mm)", "Height (mm)", "Load (kN)", "Water (N/mm2)", "Air Dry (N/mm2)", "Normalized (N/mm2)", "Density (kg/m3)"];
   const saved = layout?.config.columns.blockCompression;
-  const custom = Boolean(saved?.length && (saved.length !== fixedKeys.length ||
-    saved.some((column, index) => column.key !== fixedKeys[index] || !column.visible ||
-      column.label !== ["No.", "Length (mm)", "Width (mm)", "Height (mm)", "Load (kN)", "Water (N/mm2)", "Air Dry (N/mm2)", "Normalized (N/mm2)", "Density (kg/m3)", "Wet Weight (kg)"][index])));
+  const savedColumns = saved ? blockReportColumnsWithoutWetWeight(saved) : undefined;
+  const custom = Boolean(savedColumns?.length && (savedColumns.length !== fixedKeys.length ||
+    savedColumns.some((column, index) => column.key !== fixedKeys[index] || !column.visible ||
+      column.label !== fixedLabels[index])));
   if (custom) {
-    const columns = saved!.filter((column) => column.visible).sort((a, b) => a.order - b.order);
+    const columns = savedColumns!.filter((column) => column.visible).sort((a, b) => a.order - b.order);
     const valueFor = (values: ValueMap, key: string, index: number) => key === "no" ? rawTextValue(values.rowNo, String(index + 1))
+      : ["length", "width", "height"].includes(key) ? formatWholeNumber(values[key])
       : key === "water" ? displayNumber(blockWaterStrength(values))
       : key === "airDry" ? displayNumber(blockAirDryStrength(values, hideWaterStrength))
       : key === "normalized" ? displayNumber(numericValue(values.normalizedStrength))
       : key === "density" ? displayNumber(blockDensity(values))
-      : key === "wetWeight" ? displayNumber(numericValue(values.wetWeight))
       : textValue(values[key]);
     return <><div className="block-report-section-heading"><div><span>Specimen results</span></div></div>
       <div className="block-report-table-wrap"><table className="report-table block-report-table"><thead><tr>{columns.map((c) => <th key={c.key} style={{ width: `${c.width}%` }}>{c.label}</th>)}</tr></thead><tbody>
@@ -966,31 +983,28 @@ function BlockCompressionRowsTable({
               <th>Air Dry<br />(N/mm2)</th>
               <th>Normalized<br />(N/mm2)</th>
               <th>Density<br />(kg/m3)</th>
-              <th>Wet Weight<br />(kg)</th>
             </tr>
           </thead>
           <tbody>
             {rowValues.map((values, index) => (
               <tr key={index}>
                 <td>{rawTextValue(values.rowNo, String(index + 1))}</td>
-                <td>{textValue(values.length)}</td>
-                <td>{textValue(values.width)}</td>
-                <td>{textValue(values.height)}</td>
+                <td>{formatWholeNumber(values.length)}</td>
+                <td>{formatWholeNumber(values.width)}</td>
+                <td>{formatWholeNumber(values.height)}</td>
                 <td>{textValue(values.load)}</td>
                 {!hideWaterStrength && <td>{displayNumber(columns.water[index])}</td>}
                 <td>{displayNumber(columns.airDry[index])}</td>
                 <td>{displayNumber(columns.normalized[index])}</td>
                 <td>{displayNumber(columns.density[index])}</td>
-                <td>{displayNumber(columns.wetWeight[index])}</td>
               </tr>
             ))}
             <tr className="block-report-average-row">
-              <td colSpan={hideWaterStrength ? 4 : 5}>AVERAGE:</td>
+              <td colSpan={5}>AVERAGE:</td>
               {!hideWaterStrength && <td>{displayNumber(averages.water)}</td>}
               <td>{displayNumber(averages.airDry)}</td>
               <td>{displayNumber(averages.normalized)}</td>
               <td>{displayNumber(averages.density)}</td>
-              <td>{displayNumber(averages.wetWeight)}</td>
             </tr>
           </tbody>
         </table>
