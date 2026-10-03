@@ -566,6 +566,7 @@ function reportTemplateTableRows(record: QcRecord, tableKey: string): ValueMap[]
   const details = record.details;
   const sourceKeys: Record<string, string[]> = {
     readyMixResults: ["testRows", "cubeRows", "rows"],
+    precastResults: ["testRows", "cubeRows", "specimens", "rows"],
     blockCompression: ["testRows", "blockRows", "compressionRows", "rows"],
     pavingResults: ["testRows", "pavingRows", "blockRows", "rows"],
     sieveResults: ["sieveRows"],
@@ -573,7 +574,12 @@ function reportTemplateTableRows(record: QcRecord, tableKey: string): ValueMap[]
   for (const key of sourceKeys[tableKey] ?? []) {
     const rows = details[key];
     if (Array.isArray(rows)) {
-      return rows.map(objectValue).filter((row): row is ValueMap => Boolean(row));
+      return rows
+        .map(objectValue)
+        .filter((row): row is ValueMap => Boolean(row))
+        .map((row) => tableKey === "precastResults"
+          ? { ...row, cubeSize: details.cubeSize ?? "100*100*100" }
+          : row);
     }
   }
   if (tableKey === "genericContext") {
@@ -2146,7 +2152,22 @@ function PavingBlocksReport({ record, standards, layout }: {
 function ConfiguredDetailsReport({ record, tableKey, layout }: { record: QcRecord; tableKey: string; layout?: ReportLayout }) {
   const defaults = REPORT_LAYOUT_FIELD_GROUPS[record.testType]?.[tableKey] ?? [];
   const configured = layout?.config.columns[tableKey];
-  const columns = (configured === undefined ? defaults.map((field, order) => ({ ...field, visible: true, order })) : configured)
+  const configuredWithNewPrecastFields =
+    record.testType === "Precast" && configured
+      ? [
+          ...configured,
+          ...defaults
+            .filter((field) => !configured.some((column) => column.key === field.key))
+            .map((field, index) => ({
+              ...field,
+              visible: true,
+              order: Math.max(-1, ...configured.map((column) => column.order)) + index + 1,
+            })),
+        ]
+      : configured;
+  const columns = (configuredWithNewPrecastFields === undefined
+    ? defaults.map((field, order) => ({ ...field, visible: true, order }))
+    : configuredWithNewPrecastFields)
     .filter((field) => field.visible)
     .filter((field) => defaults.some((candidate) => candidate.key === field.key))
     .sort((a, b) => a.order - b.order);
@@ -2159,6 +2180,123 @@ function ConfiguredDetailsReport({ record, tableKey, layout }: { record: QcRecor
       detailValue(record.details, [field.key])
     } />)}
   </div></section>;
+}
+
+function PrecastReport({ record, layout }: { record: QcRecord; layout?: ReportLayout }) {
+  const details = record.details;
+  const rows = sortCubeRowsByAge(
+    Array.isArray(details.testRows) ? details.testRows : [],
+  );
+  const columns = layoutColumns(layout, "precastResults", [
+    { key: "no", label: "No.", visible: true, order: 0, width: 10 },
+    { key: "age", label: "Cube Age (days)", visible: true, order: 1, width: 18 },
+    { key: "cubeSize", label: "Cube Size (mm)", visible: true, order: 2, width: 24 },
+    { key: "load", label: "Load (kN)", visible: true, order: 3, width: 20 },
+    { key: "strength", label: "Compressive Strength (N/mm²)", visible: true, order: 4, width: 28 },
+  ]);
+  const cubeSize = detailValue(
+    details,
+    ["cubeSize"],
+    "100*100*100",
+  ).replace(/\*/g, " × ");
+  const legacyAverageKeys: Record<number, string[]> = {
+    1: ["averageStrength1Day", "avgStrength1Day", "day1AverageStrength"],
+    7: ["averageStrength7Days", "avgStrength7Days", "day7AverageStrength"],
+    28: ["averageStrength28Days", "avgStrength28Days", "day28AverageStrength"],
+  };
+  return (
+    <>
+      <ConfiguredDetailsReport
+        record={record}
+        layout={layout}
+        tableKey="precastDetails"
+      />
+      <section>
+        <SectionHeading>Precast Compression Results</SectionHeading>
+        {rows.length ? (
+          <>
+            <table className="report-table">
+              <thead>
+                <tr>
+                  {columns.map((column) => (
+                    <th key={column.key} style={{ width: `${column.width}%` }}>
+                      {column.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, index) => {
+                  const values = objectValue(row) ?? {};
+                  const rowAge =
+                    values.testAge ?? values.sampleAge ?? values.cubeAge ?? values.age;
+                  const strength = cubeRowStrength(row);
+                  const cells: Record<string, string> = {
+                    no: String(index + 1),
+                    age: rowAge == null || rowAge === "" ? "-" : String(rowAge),
+                    cubeSize,
+                    load: values.load == null || values.load === "" ? "-" : String(values.load),
+                    strength: strength === null ? "-" : formatNumber(strength),
+                  };
+                  return (
+                    <tr key={index}>
+                      {columns.map((column) => (
+                        <td key={column.key}>{cells[column.key] ?? "-"}</td>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <div className="report-average-block">
+              <p className="report-centered-title">Average Strength by Cube Age</p>
+              <table className="report-table report-average-table">
+                <thead>
+                  <tr>
+                    <th>Cube Age</th>
+                    <th>Average Strength (N/mm²)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[1, 7, 28].map((age) => {
+                    const average = averageStrengthForAgeRange(rows, age, age);
+                    const legacyAverage = detailValue(details, legacyAverageKeys[age]);
+                    return (
+                      <tr key={age}>
+                        <td>{age} day{age === 1 ? "" : "s"}</td>
+                        <td>
+                          {average === null
+                            ? legacyAverage
+                            : formatNumber(average)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : (
+          <table className="report-table">
+            <thead>
+              <tr>
+                <th>Cube Age</th>
+                <th>Average Strength (N/mm²)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[1, 7, 28].map((age) => (
+                <tr key={age}>
+                  <td>{age} day{age === 1 ? "" : "s"}</td>
+                  <td>{detailValue(details, legacyAverageKeys[age])}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+    </>
+  );
 }
 
 function WaterReport({ record, layout }: { record: QcRecord; layout?: ReportLayout }) {
@@ -2275,10 +2413,11 @@ export function ReportDocument({ report, strengthStandards = [], sieveStandards 
         <LayoutElements layout={layout} sectionKey="results" placement="before" />
         <div className="report-layout-section" style={layoutSectionStyle(layout, "results")}>
           {record.testType === "Ready Mix" ? <ReadyMixReport record={record} standards={strengthStandards} selectedStandard={selectedStrengthStandard} layout={layout} /> :
+            record.testType === "Precast" ? <PrecastReport record={record} layout={layout} /> :
             record.testType === "Water" ? <WaterReport record={record} layout={layout} /> :
             record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve" ? <SieveReport record={record} layout={layout} /> :
             record.testType === "Paving Blocks" ? <PavingBlocksReport record={record} standards={strengthStandards} layout={layout} /> :
-            <ConfiguredDetailsReport record={record} layout={layout} tableKey={record.testType === "Precast" ? "precastDetails" : record.testType === "Kerb Stone" ? "kerbStoneDetails" : record.testType === "RMX Trial" ? "rmxTrialDetails" : "flakinessDetails"} />}
+             <ConfiguredDetailsReport record={record} layout={layout} tableKey={record.testType === "Kerb Stone" ? "kerbStoneDetails" : record.testType === "RMX Trial" ? "rmxTrialDetails" : "flakinessDetails"} />}
         </div>
         <LayoutElements layout={layout} sectionKey="results" placement="after" />
       </>

@@ -14,6 +14,7 @@ import {
   calculateReadyMixAgeBandAverages,
   type ReadyMixAgeBandAverages,
 } from "./records-utils";
+import { averageCubeStrengthAtAge } from "./record-form-utils";
 import {
   summarizeRecordStrengths,
   type RecordStrengthSummary,
@@ -31,6 +32,15 @@ function detailValue(record: QcRecord, keys: string[], fallback = "—") {
     .map((key) => normalized.get(key.toLowerCase().replace(/[^a-z0-9]/g, "")))
     .find((candidate) => candidate !== undefined && candidate !== null && String(candidate).trim());
   return value === undefined ? fallback : String(value);
+}
+
+function precastAverageStrength(record: QcRecord, age: number, legacyKeys: string[]) {
+  const details = record.details as Record<string, unknown>;
+  const rows = Array.isArray(details.testRows) ? details.testRows : [];
+  const average = averageCubeStrengthAtAge(rows, age);
+  return average === null
+    ? detailValue(record, legacyKeys)
+    : average.toFixed(2);
 }
 
 function derivedAge(record: QcRecord) {
@@ -334,26 +344,27 @@ export default function Records() {
               <Table className="qc-register-table w-full table-fixed text-[10px]">
                 <TableHeader className="sticky top-0 z-10 bg-card shadow-sm">
                   <TableRow>
-                    {["Record No.", "Customer Name", "Material", "Casting Date", "Remarks", "Avg. Strength (1 day)", "Avg. Strength (7 days)", "Avg. Strength (28 days)", "Actions"].map((label) => (
+                    {["Record No.", "Sample No.", "Customer Name", "Product Type", "Cube Size", "Casting Date", "Avg. Strength (1 day)", "Avg. Strength (7 days)", "Avg. Strength (28 days)", "Actions"].map((label) => (
                       <TableHead key={label} className="whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">{label}</TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
-                    <TableRow><TableCell colSpan={9} className="h-32 text-center text-muted-foreground">Loading register...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={10} className="h-32 text-center text-muted-foreground">Loading register...</TableCell></TableRow>
                   ) : sectionRecords.length === 0 ? (
-                    <TableRow><TableCell colSpan={9} className="h-32 text-center text-muted-foreground">No Precast records found.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={10} className="h-32 text-center text-muted-foreground">No Precast records found.</TableCell></TableRow>
                   ) : sectionRecords.map((record) => (
                     <TableRow key={record.id}>
                       <TableCell className="break-words px-2 py-2 font-semibold text-primary">{record.recordNo}</TableCell>
+                      <TableCell className="break-words px-2 py-2">{detailValue(record, ["sampleNo"])}</TableCell>
                       <TableCell className="break-words px-2 py-2">{detailValue(record, ["customerName", "customer"])}</TableCell>
                       <TableCell className="break-words px-2 py-2">{record.material}</TableCell>
+                      <TableCell className="break-words px-2 py-2">{detailValue(record, ["cubeSize"], "100*100*100")}</TableCell>
                       <TableCell className="break-words px-2 py-2 tabular-nums">{formatRegisterDate(record.sampleDate)}</TableCell>
-                      <TableCell className="break-words px-2 py-2">{record.remarks?.trim() || "—"}</TableCell>
-                      <TableCell className="px-2 py-2 text-right tabular-nums">{detailValue(record, ["averageStrength1Day", "avgStrength1Day", "day1AverageStrength"])}</TableCell>
-                      <TableCell className="px-2 py-2 text-right tabular-nums">{detailValue(record, ["averageStrength7Days", "avgStrength7Days", "day7AverageStrength"])}</TableCell>
-                      <TableCell className="px-2 py-2 text-right tabular-nums">{detailValue(record, ["averageStrength28Days", "avgStrength28Days", "day28AverageStrength"])}</TableCell>
+                      <TableCell className="px-2 py-2 text-right tabular-nums">{precastAverageStrength(record, 1, ["averageStrength1Day", "avgStrength1Day", "day1AverageStrength"])}</TableCell>
+                      <TableCell className="px-2 py-2 text-right tabular-nums">{precastAverageStrength(record, 7, ["averageStrength7Days", "avgStrength7Days", "day7AverageStrength"])}</TableCell>
+                      <TableCell className="px-2 py-2 text-right tabular-nums">{precastAverageStrength(record, 28, ["averageStrength28Days", "avgStrength28Days", "day28AverageStrength"])}</TableCell>
                       <TableCell className="px-2 py-2 text-right">
                         <div className="flex justify-end gap-1">
                           <Link href={`/records/${record.id}`} className="rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground">View</Link>

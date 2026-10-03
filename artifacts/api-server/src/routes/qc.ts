@@ -570,10 +570,23 @@ const REPORT_LAYOUT_DEFAULTS: Record<string, Record<string, unknown>> = {
     ],
     columns: {
       precastDetails: [
-        { key: "customerName", label: "Customer Name", visible: true, order: 0, width: 25 },
-        { key: "averageStrength1Day", label: "Avg. Strength (1 day)", visible: true, order: 1, width: 25 },
-        { key: "averageStrength7Days", label: "Avg. Strength (7 days)", visible: true, order: 2, width: 25 },
-        { key: "averageStrength28Days", label: "Avg. Strength (28 days)", visible: true, order: 3, width: 25 },
+        { key: "sampleDate", label: "Casting Date", visible: true, order: 0, width: 14 },
+        { key: "sampleNo", label: "Sample No.", visible: true, order: 1, width: 14 },
+        { key: "precastMouldNo", label: "Precast Mould No.", visible: true, order: 2, width: 14 },
+        { key: "jobNo", label: "Job No.", visible: true, order: 3, width: 12 },
+        { key: "customerName", label: "Customer Name", visible: true, order: 4, width: 18 },
+        { key: "material", label: "Product Type", visible: true, order: 5, width: 12 },
+        { key: "cubeSize", label: "Cube Size (mm)", visible: true, order: 6, width: 14 },
+        { key: "location", label: "Testing Location", visible: true, order: 7, width: 16 },
+        { key: "compactionType", label: "Compaction", visible: true, order: 8, width: 16 },
+        { key: "testedBy", label: "Tested By", visible: true, order: 9, width: 14 },
+      ],
+      precastResults: [
+        { key: "no", label: "No.", visible: true, order: 0, width: 10 },
+        { key: "age", label: "Cube Age (days)", visible: true, order: 1, width: 18 },
+        { key: "cubeSize", label: "Cube Size (mm)", visible: true, order: 2, width: 24 },
+        { key: "load", label: "Load (kN)", visible: true, order: 3, width: 20 },
+        { key: "strength", label: "Compressive Strength (N/mm²)", visible: true, order: 4, width: 28 },
       ],
     },
   },
@@ -761,8 +774,12 @@ async function ensureReportLayouts() {
         columnsChanged = true;
         continue;
       }
+      const supportsColumnAdditions =
+        key === "sieveResults" ||
+        (testType === "Precast" &&
+          (key === "precastDetails" || key === "precastResults"));
       if (
-        key !== "sieveResults" ||
+        !supportsColumnAdditions ||
         !Array.isArray(currentValue) ||
         !Array.isArray(defaultValue)
       ) {
@@ -787,9 +804,8 @@ async function ensureReportLayouts() {
       const additions = defaultSieveColumns
         .filter(
           (column) =>
-            ["retained", "passing", "lower", "upper", "remarks"].includes(
-              String(column.key),
-            ) &&
+            (key !== "sieveResults" ||
+              ["retained", "passing", "lower", "upper", "remarks"].includes(String(column.key))) &&
             !currentKeys.has(column.key),
         )
         .map((column, index) => ({
@@ -838,7 +854,8 @@ const REPORT_TEMPLATE_FIELD_KEYS = new Set([
     "secondChlorideTitrationPoint", "crucibleWeight", "crucibleAshWeight",
     "source", "ph", "tds", "chloride", "sulphate", "sampleDate", "location",
     "material", "testedBy", "observation1", "observation2",
-    "averageStrength1Day", "averageStrength7Days", "averageStrength28Days",
+    "sampleNo", "precastMouldNo", "jobNo", "cubeSize", "averageStrength1Day",
+    "averageStrength7Days", "averageStrength28Days",
     "kerbType", "averageStrength", "minimumStrength", "maximumStrength",
   ].map((key) => `details.${key}`),
 ]);
@@ -847,7 +864,7 @@ const REPORT_TEMPLATE_TABLE_KEYS = new Set([
   "readyMixDetails", "readyMixResults", "blockDetails", "blockCompression",
   "pavingDetails", "pavingResults", "sieveSampleDetails", "sieveResults",
   "sieveChemicalDetails", "waterDetails", "genericContext",
-  "flakinessDetails", "rmxTrialDetails", "precastDetails", "kerbStoneDetails",
+    "flakinessDetails", "rmxTrialDetails", "precastDetails", "precastResults", "kerbStoneDetails",
 ]);
 const REPORT_TEMPLATE_COLUMN_KEYS = new Set(
   [...REPORT_TEMPLATE_FIELD_KEYS]

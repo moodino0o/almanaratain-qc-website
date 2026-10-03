@@ -42,7 +42,20 @@ export const REPORT_LAYOUT_FIELD_GROUPS: Record<string, Record<string, ReportLay
   Water: { waterDetails: fields([["source", "Source", 20], ["ph", "pH", 20], ["tds", "TDS", 20], ["chloride", "Chloride", 20], ["sulphate", "Sulphate", 20]]), genericContext: fields([["sampleDate", "Sample Date", 25], ["location", "Location", 25], ["material", "Material", 25], ["testedBy", "Tested By", 25]]) },
   "Flakiness & Elongation": { flakinessDetails: fields([["observation1", "Observation 1", 50], ["observation2", "Observation 2", 50]]) },
   "RMX Trial": { rmxTrialDetails: fields([["observation1", "Observation 1", 50], ["observation2", "Observation 2", 50]]) },
-  Precast: { precastDetails: fields([["customerName", "Customer Name", 25], ["averageStrength1Day", "Avg. Strength (1 day)", 25], ["averageStrength7Days", "Avg. Strength (7 days)", 25], ["averageStrength28Days", "Avg. Strength (28 days)", 25]]) },
+  Precast: {
+    precastDetails: fields([
+      ["sampleDate", "Casting Date", 14], ["sampleNo", "Sample No.", 14],
+      ["precastMouldNo", "Precast Mould No.", 14], ["jobNo", "Job No.", 12],
+      ["customerName", "Customer Name", 18], ["material", "Product Type", 12],
+      ["cubeSize", "Cube Size (mm)", 14], ["location", "Testing Location", 16],
+      ["compactionType", "Compaction", 16], ["testedBy", "Tested By", 14],
+    ]),
+    precastResults: fields([
+      ["no", "No.", 10], ["age", "Cube Age (days)", 18],
+      ["cubeSize", "Cube Size (mm)", 24], ["load", "Load (kN)", 20],
+      ["strength", "Compressive Strength (N/mm²)", 28],
+    ]),
+  },
   "Kerb Stone": { kerbStoneDetails: fields([["testingDate", "Testing Date", 20], ["age", "Age (days)", 16], ["kerbType", "Kerb Type", 20], ["averageStrength", "Avg. Strength", 16], ["minimumStrength", "Min. Strength", 14], ["maximumStrength", "Max. Strength", 14]]) },
 };
 

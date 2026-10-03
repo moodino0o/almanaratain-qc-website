@@ -65,6 +65,10 @@ export type BlockDimensions = {
   height: string;
 };
 
+export const PRECAST_CUBE_AGES = ["1", "7", "7", "28", "28"] as const;
+export const DEFAULT_PRECAST_CUBE_SIZE = "100*100*100";
+export const DEFAULT_PRECAST_COMPACTION = "Mechanical compaction";
+
 const NUMERIC_DETAIL_KEYS = [
   "slump",
   "temperature",
@@ -116,13 +120,74 @@ export const createDefaultTestRows = (
   const readyMixAges = testType === TestType.Ready_Mix
     ? ["7", "7", "28", "28"]
     : null;
-  const rowCount = readyMixAges?.length ??
+  const precastAges = testType === TestType.Precast ? PRECAST_CUBE_AGES : null;
+  const rowCount = readyMixAges?.length ?? precastAges?.length ??
     (testType === TestType.Blocks || testType === TestType.Paving_Blocks ? 5 : 1);
 
   return Array.from({ length: rowCount }, (_, index) => ({
     ...createEmptyRow(firstId + index),
     ...(readyMixAges ? { testAge: readyMixAges[index] } : {}),
+    ...(precastAges ? { testAge: precastAges[index] } : {}),
   }));
+};
+
+export const calculateCubeCompressiveStrength = (
+  row: Pick<TestRow, "length" | "width" | "load">,
+) => {
+  const lengthText = numericInputValue(row.length);
+  const widthText = numericInputValue(row.width);
+  const loadText = numericInputValue(row.load);
+  const length = Number(lengthText);
+  const width = Number(widthText);
+  const load = Number(loadText);
+  if (
+    !lengthText ||
+    !widthText ||
+    !loadText ||
+    ![length, width, load].every(Number.isFinite) ||
+    length <= 0 ||
+    width <= 0 ||
+    load < 0
+  ) {
+    return "";
+  }
+  return ((load * 1000) / (length * width)).toFixed(2);
+};
+
+export const cubeRowStrength = (row: unknown): number | null => {
+  const values = typeof row === "object" && row !== null
+    ? row as Record<string, unknown>
+    : {};
+  const storedStrength = numericInputValue(
+    values.calculatedStrength ?? values.strength ?? values.compressiveStrength,
+  );
+  if (storedStrength) {
+    const parsed = Number(storedStrength);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  const calculatedStrength = calculateCubeCompressiveStrength({
+    length: numericInputValue(values.length),
+    width: numericInputValue(values.width),
+    load: numericInputValue(values.load),
+  });
+  return calculatedStrength ? Number(calculatedStrength) : null;
+};
+
+export const averageCubeStrengthAtAge = (rows: unknown[], age: number) => {
+  const strengths = rows
+    .filter((row) => {
+      if (typeof row !== "object" || row === null) return false;
+      const values = row as Record<string, unknown>;
+      const ageText = numericInputValue(
+        values.testAge ?? values.sampleAge ?? values.cubeAge ?? values.age,
+      );
+      return ageText !== "" && Number(ageText) === age;
+    })
+    .map(cubeRowStrength)
+    .filter((strength): strength is number => strength !== null);
+  return strengths.length
+    ? strengths.reduce((sum, strength) => sum + strength, 0) / strengths.length
+    : null;
 };
 
 export const getReadyMixReferenceNumberError = (value: string): string | null => {

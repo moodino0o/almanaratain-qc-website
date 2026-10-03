@@ -16,6 +16,7 @@ import {
   AGGREGATE_CHEMISTRY_FIELDS,
   AGGREGATE_SULPHATE_LIMIT_PERCENT,
   blockAirDryRowStrength,
+  averageCubeStrengthAtAge,
   calculateRetainedPercentage,
   calculateSieveSampleWeight,
   calculateChlorideContent,
@@ -27,6 +28,7 @@ import {
   findSieveEvaluationCriterion,
   SIEVE_SILT_LIMIT_PERCENT,
   sortSieveRowsByPoreSize,
+  cubeRowStrength as getCubeRowStrength,
 } from "./record-form-utils";
 
 function calculatedWaterAbsorption(values: Record<string, unknown>) {
@@ -594,9 +596,22 @@ export default function RecordDetail() {
   const summaryEntries: Array<readonly [string, unknown]> = [
     ["Record No.", record.recordNo],
     ["Test Type", record.testType],
-    [isSieveRecord ? "Sampling Date" : "Sample Date", formatDate(record.sampleDate)],
-    [isSieveRecord ? "Factory" : "Location", record.location],
-    [isSieveRecord ? "Material Type" : "Material / Product", record.material],
+    [
+      isSieveRecord
+        ? "Sampling Date"
+        : record.testType === "Precast" || record.testType === "Blocks" || record.testType === "Paving Blocks"
+          ? "Casting Date"
+          : "Sample Date",
+      formatDate(record.sampleDate),
+    ],
+    [
+      isSieveRecord ? "Factory" : record.testType === "Precast" ? "Testing Location" : "Location",
+      record.location,
+    ],
+    [
+      isSieveRecord ? "Material Type" : record.testType === "Precast" ? "Product Type" : "Material / Product",
+      record.material,
+    ],
     [isSieveRecord ? "Sampled-Tested By" : "Tested By", record.testedBy],
     ["Approved By", record.reviewedBy || "ADEL ABBAS EBRAHIM"],
   ];
@@ -607,6 +622,16 @@ export default function RecordDetail() {
       ["Truck Number", detailText(recordDetails, "truckNumber")],
       ["Customer Name", detailText(recordDetails, "customerName", record.location)],
       ["Customer Location", detailText(recordDetails, "customerLocation", record.location)],
+    );
+  }
+  if (record.testType === "Precast") {
+    summaryEntries.push(
+      ["Sample No.", detailText(recordDetails, "sampleNo")],
+      ["Precast Mould No.", detailText(recordDetails, "precastMouldNo")],
+      ["Job No.", detailText(recordDetails, "jobNo")],
+      ["Customer Name", detailText(recordDetails, "customerName")],
+      ["Cube Size", detailText(recordDetails, "cubeSize", "100*100*100")],
+      ["Compaction", detailText(recordDetails, "compactionType", "Mechanical compaction")],
     );
   }
   if (record.testType === "Blocks" || record.testType === "Paving Blocks") {
@@ -863,6 +888,83 @@ export default function RecordDetail() {
         </>
       )}
 
+      {record.testType === "Precast" && (
+        <Card>
+          <CardHeader className="bg-muted/30 border-b">
+            <CardTitle>Precast Cube Measurements</CardTitle>
+            <CardDescription>
+              Compression readings and calculated strength by cube age.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            {specimenRows.length ? (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[680px] text-sm">
+                    <thead className="bg-muted/50">
+                      <tr className="border-b">
+                        {["No.", "Cube Age (days)", "Cube Size (mm)", "Load (kN)", "Compressive Strength (N/mm²)"].map((label) => (
+                          <th key={label} className="px-3 py-3 text-left font-semibold">{label}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortCubeRowsByAge(specimenRows).map((row, index) => {
+                        const values = typeof row === "object" && row !== null
+                          ? row as Record<string, unknown>
+                          : {};
+                        const age = values.testAge ?? values.sampleAge ?? values.cubeAge ?? values.age;
+                        const size = detailText(recordDetails, "cubeSize", "100*100*100").replace(/\*/g, " × ");
+                        const strength = getCubeRowStrength(row);
+                        return (
+                          <tr key={index} className="border-b last:border-b-0">
+                            <td className="px-3 py-2">{index + 1}</td>
+                            <td className="px-3 py-2">{displayValue(age)}</td>
+                            <td className="px-3 py-2">{size}</td>
+                            <td className="px-3 py-2">{displayValue(values.load)}</td>
+                            <td className="px-3 py-2 font-semibold">
+                              {strength === null ? "—" : formatStrengthMetric(strength)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="grid gap-3 border-t bg-muted/10 p-4 sm:grid-cols-3">
+                  {[
+                    [1, "averageStrength1Day"],
+                    [7, "averageStrength7Days"],
+                    [28, "averageStrength28Days"],
+                  ].map(([age, legacyKey]) => {
+                    const average = averageCubeStrengthAtAge(specimenRows, Number(age));
+                    const legacyAverage = recordDetails[String(legacyKey)];
+                    const averageToDisplay = average ?? legacyAverage;
+                    return (
+                      <div key={age} className="rounded-md border bg-background p-3 text-center">
+                        <div className="text-xs text-muted-foreground">{age}-day average strength</div>
+                        <div className="mt-1 font-semibold">
+                          {averageToDisplay === undefined || averageToDisplay === null || averageToDisplay === ""
+                            ? "—"
+                            : `${formatStrengthMetric(averageToDisplay)} N/mm²`}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <p className="p-6 text-center text-muted-foreground">
+                No cube measurements recorded. Legacy average strength fields: 1 day{" "}
+                {detailText(recordDetails, "averageStrength1Day")}; 7 days{" "}
+                {detailText(recordDetails, "averageStrength7Days")}; 28 days{" "}
+                {detailText(recordDetails, "averageStrength28Days")}.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {record.testType === "Blocks" && (
         <>
           <Card>
@@ -988,6 +1090,7 @@ export default function RecordDetail() {
       )}
 
       {(record.testType !== "Ready Mix" &&
+        record.testType !== "Precast" &&
         record.testType !== "Blocks" &&
         record.testType !== "Sand Sieve" &&
         record.testType !== "Aggregate Sieve" &&

@@ -10,6 +10,8 @@ import {
   blockTypeMatches,
   calculateBlockDensity,
   calculateBlockStrengths,
+  calculateCubeCompressiveStrength,
+  averageCubeStrengthAtAge,
   calculateChlorideContent,
   calculateMoistureContent,
   calculateRetainedPercentage,
@@ -36,9 +38,38 @@ test("defaults Ready Mix and Masonry entry rows to the requested ages and counts
 
   assert.equal(createDefaultTestRows(TestType.Blocks).length, 5);
   assert.equal(createDefaultTestRows(TestType.Paving_Blocks).length, 5);
+  const precastRows = createDefaultTestRows(TestType.Precast);
+  assert.equal(precastRows.length, 5);
+  assert.deepEqual(precastRows.map((row) => row.testAge), ["1", "7", "7", "28", "28"]);
   assert.deepEqual(
     createDefaultTestRows(TestType.Ready_Mix, 10).map((row) => row.id),
     [10, 11, 12, 13],
+  );
+});
+
+test("calculates Precast cube compressive strength and averages specimens by age", () => {
+  assert.equal(
+    calculateCubeCompressiveStrength({
+      length: "100",
+      width: "100",
+      load: "250",
+    }),
+    "25.00",
+  );
+  assert.equal(
+    calculateCubeCompressiveStrength({ length: "", width: "100", load: "250" }),
+    "",
+  );
+  assert.equal(
+    averageCubeStrengthAtAge(
+      [
+        { testAge: "7", length: "100", width: "100", load: "250" },
+        { testAge: "7", calculatedStrength: "30" },
+        { testAge: "28", calculatedStrength: "40" },
+      ],
+      7,
+    ),
+    27.5,
   );
 });
 

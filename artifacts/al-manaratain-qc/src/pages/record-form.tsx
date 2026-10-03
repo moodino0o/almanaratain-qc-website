@@ -23,6 +23,7 @@ import {
   calculateRetainedPercentage,
   calculateSiltContent,
   calculateWaterAbsorption,
+  calculateCubeCompressiveStrength,
   calculateSulphateContent,
   calculateBlockDensity,
   calculateBlockStrengths,
@@ -32,6 +33,9 @@ import {
   blockTypeMatches,
   createEmptyRow,
   createDefaultTestRows,
+  DEFAULT_PRECAST_COMPACTION,
+  DEFAULT_PRECAST_CUBE_SIZE,
+  PRECAST_CUBE_AGES,
   evaluateContentAgainstLimit,
   evaluateSieveValue,
   evaluateSiltContent,
@@ -140,7 +144,14 @@ export default function RecordForm() {
   const [selectedStrengthStandardId, setSelectedStrengthStandardId] = useState("");
   const [strengthStandardMode, setStrengthStandardMode] = useState<"automatic" | "manual">("automatic");
   
-  const [details, setDetails] = useState<Record<string, unknown>>({});
+  const [details, setDetails] = useState<Record<string, unknown>>(() =>
+    testType === TestType.Precast
+      ? {
+          cubeSize: DEFAULT_PRECAST_CUBE_SIZE,
+          compactionType: DEFAULT_PRECAST_COMPACTION,
+        }
+      : {},
+  );
   const [testRows, setTestRows] = useState<TestRow[]>(() =>
     createDefaultTestRows(testType),
   );
@@ -261,7 +272,15 @@ export default function RecordForm() {
         ? "manual"
         : "automatic",
     );
-    setDetails(savedDetails);
+    setDetails(
+      existingRecord.testType === TestType.Precast
+        ? {
+            cubeSize: DEFAULT_PRECAST_CUBE_SIZE,
+            compactionType: DEFAULT_PRECAST_COMPACTION,
+            ...savedDetails,
+          }
+        : savedDetails,
+    );
     const loadedSourceRows =
       savedRows.length
         ? savedRows
@@ -269,7 +288,19 @@ export default function RecordForm() {
           ? [savedDetails]
           : [];
     const loadedRows = loadedSourceRows.length
-      ? loadedSourceRows.map((row, index) => toFormRow(row, index + 1))
+      ? loadedSourceRows.map((row, index) => {
+          const formRow = toFormRow(row, index + 1);
+          return existingRecord.testType === TestType.Precast
+            ? {
+                ...formRow,
+                testAge:
+                  formRow.testAge ||
+                  formRow.sampleAge ||
+                  PRECAST_CUBE_AGES[index] ||
+                  "",
+              }
+            : formRow;
+        })
       : createDefaultTestRows(existingRecord.testType);
     const calculatedRows = existingRecord.testType === TestType.Sand_Sieve ||
       existingRecord.testType === TestType.Aggregate_Sieve
@@ -287,7 +318,8 @@ export default function RecordForm() {
   const usesTestRows =
     testType === TestType.Ready_Mix ||
     testType === TestType.Blocks ||
-    testType === TestType.Paving_Blocks;
+    testType === TestType.Paving_Blocks ||
+    testType === TestType.Precast;
   const usesSieveRows = testType === TestType.Sand_Sieve || testType === TestType.Aggregate_Sieve;
 
   const handleDetailChange = (key: string, value: string) => {
@@ -513,12 +545,7 @@ export default function RecordForm() {
       case TestType.Aggregate_Sieve:
         return [];
       case TestType.Precast:
-        return [
-          { key: "customerName", label: "Customer Name", type: "text" },
-          { key: "averageStrength1Day", label: "Avg. Strength (1 day)", type: "number" },
-          { key: "averageStrength7Days", label: "Avg. Strength (7 days)", type: "number" },
-          { key: "averageStrength28Days", label: "Avg. Strength (28 days)", type: "number" }
-        ];
+        return [];
       case TestType.Kerb_Stone:
         return [
           { key: "testingDate", label: "Testing Date", type: "date" },
@@ -729,6 +756,12 @@ export default function RecordForm() {
 
   const calculateStrength = (row: Pick<TestRow, "length" | "width" | "load">) =>
     calculateBlockStrengths(row, details.shapeFactor, locationValue);
+  const calculatePrecastStrength = (row: Pick<TestRow, "load">) => {
+    const dimensions = blockDimensionsFromSize(details.cubeSize);
+    return dimensions
+      ? calculateCubeCompressiveStrength({ ...dimensions, load: row.load })
+      : "";
+  };
   const calculatePavingStrength = (
     row: Pick<
       TestRow,
@@ -739,6 +772,8 @@ export default function RecordForm() {
   const measurementKeys: Array<keyof Omit<TestRow, "id">> =
     testType === TestType.Ready_Mix
       ? ["length", "width", "height", "dryWeight", "wetWeight"]
+      : testType === TestType.Precast
+        ? []
       : testType === TestType.Blocks
         ? ["length", "width", "height"]
         : testType === TestType.Paving_Blocks
@@ -920,16 +955,34 @@ export default function RecordForm() {
     if (testType === TestType.Blocks) {
       payloadDetails.machine = machine;
     }
+    if (testType === TestType.Precast) {
+      payloadDetails.cubeSize = String(
+        details.cubeSize || DEFAULT_PRECAST_CUBE_SIZE,
+      ).trim();
+      payloadDetails.compactionType = String(
+        details.compactionType || DEFAULT_PRECAST_COMPACTION,
+      ).trim();
+      payloadDetails.sampleNo = String(details.sampleNo ?? "").trim();
+      payloadDetails.precastMouldNo = String(details.precastMouldNo ?? "").trim();
+      payloadDetails.jobNo = String(details.jobNo ?? "").trim();
+      payloadDetails.customerName = String(details.customerName ?? "").trim();
+    }
 
     if (usesTestRows) {
       payloadDetails.testRows = testRows.map(({ id: _id, ...row }, index) => ({
         rowNo: index + 1,
-        ...(testType === TestType.Ready_Mix
+        ...(testType === TestType.Ready_Mix || testType === TestType.Precast
           ? { testAge: row.testAge }
           : {}),
-        length: row.length || (testType === TestType.Blocks ? blockDimensions?.length : ""),
-        width: row.width || (testType === TestType.Blocks ? blockDimensions?.width : ""),
-        height: row.height || (testType === TestType.Blocks ? blockDimensions?.height : ""),
+        length: row.length ||
+          (testType === TestType.Blocks ? blockDimensions?.length :
+            testType === TestType.Precast ? blockDimensionsFromSize(payloadDetails.cubeSize)?.length : ""),
+        width: row.width ||
+          (testType === TestType.Blocks ? blockDimensions?.width :
+            testType === TestType.Precast ? blockDimensionsFromSize(payloadDetails.cubeSize)?.width : ""),
+        height: row.height ||
+          (testType === TestType.Blocks ? blockDimensions?.height :
+            testType === TestType.Precast ? blockDimensionsFromSize(payloadDetails.cubeSize)?.height : ""),
         dryWeight: row.dryWeight,
         wetWeight: row.wetWeight,
         ...(testType === TestType.Ready_Mix
@@ -937,6 +990,13 @@ export default function RecordForm() {
               load: row.load,
               waterAbsorption: calculateWaterAbsorption(row.dryWeight, row.wetWeight),
             }
+          : testType === TestType.Precast
+            ? {
+                load: row.load,
+                calculatedStrength: calculatePrecastStrength(row) || row.strength,
+                strength: calculatePrecastStrength(row) || row.strength,
+                compressiveStrength: calculatePrecastStrength(row) || row.compressiveStrength,
+              }
           : testType === TestType.Blocks
             ? {
               load: row.load,
@@ -1136,9 +1196,23 @@ export default function RecordForm() {
                   <Label>Test Type <span className="text-destructive">*</span></Label>
                 <Select value={testType} onValueChange={(val: TestType) => {
                   setTestType(val);
-                  if (val === TestType.Blocks || testType === TestType.Blocks) setMaterial("");
+                  if (
+                    val === TestType.Blocks ||
+                    testType === TestType.Blocks ||
+                    val === TestType.Precast ||
+                    testType === TestType.Precast
+                  ) {
+                    setMaterial("");
+                  }
                   setReferenceNumberTouched(false);
-                  setDetails({});
+                  setDetails(
+                    val === TestType.Precast
+                      ? {
+                          cubeSize: DEFAULT_PRECAST_CUBE_SIZE,
+                          compactionType: DEFAULT_PRECAST_COMPACTION,
+                        }
+                      : {},
+                  );
                   setSelectedStrengthStandardId("");
                   setStrengthStandardMode("automatic");
                   const defaultRows = createDefaultTestRows(val);
@@ -1163,7 +1237,7 @@ export default function RecordForm() {
                 <Label>
                   {usesSieveRows
                     ? "Sampling Date"
-                    : testType === TestType.Blocks || testType === TestType.Paving_Blocks
+                    : testType === TestType.Precast || testType === TestType.Blocks || testType === TestType.Paving_Blocks
                     ? "Casting Date"
                     : "Sample Date"}{" "}
                   <span className="text-destructive">*</span>
@@ -1178,7 +1252,9 @@ export default function RecordForm() {
 
               <div className="space-y-2">
                 <Label>
-                    {usesSieveRows || testType === TestType.Kerb_Stone
+                    {testType === TestType.Precast
+                      ? "Testing Location"
+                      : usesSieveRows || testType === TestType.Kerb_Stone
                       ? "Factory"
                       : "Plant / Production Location"}{" "}
                   <span className="text-destructive">*</span>
@@ -1197,18 +1273,35 @@ export default function RecordForm() {
                   <Label>
                     {usesSieveRows
                       ? "Material Type"
+                      : testType === TestType.Precast
+                        ? "Product Type"
                       : testType === TestType.Kerb_Stone
                         ? "Kerb Type"
                         : "Material / Product"}{" "}
                     <span className="text-destructive">*</span>
                   </Label>
-                  <TypeaheadInput
-                    value={material}
-                    onChange={setMaterial}
-                    options={getMaterialSuggestions()}
-                    placeholder="Select or type material..."
-                    onCreateOption={createReferenceOption(getMaterialReferenceCategory())}
-                  />
+                  {testType === TestType.Precast ? (
+                    <Select value={material} onValueChange={setMaterial}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select product type..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {["150 mm slab", "200", "250", "260"].map((productType) => (
+                          <SelectItem key={productType} value={productType}>
+                            {productType}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <TypeaheadInput
+                      value={material}
+                      onChange={setMaterial}
+                      options={getMaterialSuggestions()}
+                      placeholder="Select or type material..."
+                      onCreateOption={createReferenceOption(getMaterialReferenceCategory())}
+                    />
+                  )}
                 </div>
               )}
 
@@ -1491,6 +1584,51 @@ export default function RecordForm() {
                       options={lookups?.customerLocations || []}
                       placeholder="Select or type location..."
                       onCreateOption={createReferenceOption("customerLocations")}
+                    />
+                  </div>
+                </>
+              )}
+
+              {testType === TestType.Precast && (
+                <>
+                  {[
+                    ["sampleNo", "Sample No."],
+                    ["precastMouldNo", "Precast Mould No."],
+                    ["jobNo", "Job No."],
+                  ].map(([key, label]) => (
+                    <div key={key} className="space-y-2">
+                      <Label>{label}</Label>
+                      <Input
+                        value={String(details[key] ?? "")}
+                        onChange={(event) => handleDetailChange(key, event.target.value)}
+                        placeholder={`Enter ${label.toLowerCase()}`}
+                      />
+                    </div>
+                  ))}
+                  <div className="space-y-2">
+                    <Label>Customer Name</Label>
+                    <TypeaheadInput
+                      value={String(details.customerName ?? "")}
+                      onChange={(value) => handleDetailChange("customerName", value)}
+                      options={lookups?.customers || []}
+                      placeholder="Select or type customer..."
+                      onCreateOption={createReferenceOption("customers")}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Cube Size</Label>
+                    <Input
+                      value={String(details.cubeSize ?? DEFAULT_PRECAST_CUBE_SIZE)}
+                      onChange={(event) => handleDetailChange("cubeSize", event.target.value)}
+                      placeholder="100*100*100"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Compaction</Label>
+                    <Input
+                      value={String(details.compactionType ?? DEFAULT_PRECAST_COMPACTION)}
+                      onChange={(event) => handleDetailChange("compactionType", event.target.value)}
+                      placeholder={DEFAULT_PRECAST_COMPACTION}
                     />
                   </div>
                 </>
@@ -1908,14 +2046,16 @@ export default function RecordForm() {
                     </div>
                   )}
                    {usesSieveRows && !sieveEntryItems.length ? null : <div className={`${isCompactBlockTable ? "overflow-hidden" : "overflow-x-auto"} rounded-md border`}>
-                      <table className={`w-full ${usesSieveRows ? "min-w-[1240px] text-sm" : isCompactBlockTable ? "table-fixed text-[11px]" : testType === TestType.Paving_Blocks ? "min-w-[1440px] text-sm" : "min-w-[1080px] text-sm"}`}>
+                       <table className={`w-full ${usesSieveRows ? "min-w-[1240px] text-sm" : isCompactBlockTable ? "table-fixed text-[11px]" : testType === TestType.Paving_Blocks ? "min-w-[1440px] text-sm" : testType === TestType.Precast ? "min-w-[760px] text-sm" : "min-w-[1080px] text-sm"}`}>
                       <thead className="bg-muted/50">
                         <tr className="border-b">
                            <th className={`${isCompactBlockTable ? "w-[4%] px-1 py-2 text-[10px]" : "w-12 px-3 py-3"} text-left font-semibold`}>No.</th>
                           {usesSieveRows ? (
                             <th className="px-3 py-3 text-left font-semibold">Sieve / Pore Size</th>
-                          ) : testType === TestType.Ready_Mix ? (
-                            <th className="px-3 py-3 text-left font-semibold">Test Age</th>
+                          ) : testType === TestType.Ready_Mix || testType === TestType.Precast ? (
+                            <th className="px-3 py-3 text-left font-semibold">
+                              {testType === TestType.Precast ? "Cube Age (days)" : "Test Age"}
+                            </th>
                           ) : null}
                           {usesSieveRows ? (
                             <>
@@ -1928,6 +2068,8 @@ export default function RecordForm() {
                               <th className="px-3 py-3 text-left font-semibold">Upper Limit</th>
                               <th className="px-3 py-3 text-left font-semibold">Remarks</th>
                             </>
+                          ) : testType === TestType.Precast ? (
+                            <th className="px-3 py-3 text-left font-semibold">Cube Size (mm)</th>
                           ) : (
                             <>
                                <th className={`${isCompactBlockTable ? "w-[12%] px-1 py-2 text-[10px]" : "px-3 py-3"} text-left font-semibold`}>Length (mm)</th>
@@ -1953,15 +2095,18 @@ export default function RecordForm() {
                           )}
                             {(testType === TestType.Ready_Mix ||
                               testType === TestType.Blocks ||
-                              testType === TestType.Paving_Blocks) && (
+                              testType === TestType.Paving_Blocks ||
+                              testType === TestType.Precast) && (
                              <>
                                <th className={`${isCompactBlockTable ? "w-[10%] px-1 py-2 text-[10px]" : "px-3 py-3"} text-left font-semibold`}>Load (kN)</th>
                                {testType === TestType.Blocks ? (
                                  <th className="w-[12%] px-1 py-2 text-left text-[10px] font-semibold">Wet Weight (kg)</th>
                                ) : (
                                   <th className="px-3 py-3 text-left font-semibold">
-                                    {testType === TestType.Paving_Blocks
+                                     {testType === TestType.Paving_Blocks
                                       ? "Tensile Strength (N/mm²)"
+                                       : testType === TestType.Precast
+                                         ? "Compressive Strength (N/mm²)"
                                       : "Calculated Strength"}
                                   </th>
                                )}
@@ -2133,7 +2278,7 @@ export default function RecordForm() {
                               </>
                             ) : (
                             <>
-                            {testType === TestType.Ready_Mix && (
+                            {(testType === TestType.Ready_Mix || testType === TestType.Precast) && (
                               <td className="px-2 py-2">
                               <Input
                                 ref={element => {
@@ -2141,12 +2286,17 @@ export default function RecordForm() {
                                 }}
                                 type="text"
                                 inputMode="numeric"
-                                value={testType === TestType.Ready_Mix ? row.testAge : row.sampleAge}
-                                onChange={event => updateTestRow(rowIndex, testType === TestType.Ready_Mix ? "testAge" : "sampleAge", event.target.value)}
+                                value={row.testAge}
+                                onChange={event => updateTestRow(rowIndex, "testAge", event.target.value)}
                                 placeholder="Days"
-                                aria-label={`${testType === TestType.Ready_Mix ? "Test" : "Sample"} age for row ${rowIndex + 1}`}
+                                aria-label={`${testType === TestType.Precast ? "Cube" : "Test"} age for row ${rowIndex + 1}`}
                               />
                             </td>
+                            )}
+                            {testType === TestType.Precast && (
+                              <td className="px-2 py-2 font-medium tabular-nums">
+                                {String(details.cubeSize ?? DEFAULT_PRECAST_CUBE_SIZE).replace(/\*/g, " × ")}
+                              </td>
                             )}
                             {measurementKeys.map(key => (
                               <td key={key} className={compactBlockCellClass}>
@@ -2183,7 +2333,8 @@ export default function RecordForm() {
                             )}
                               {(testType === TestType.Ready_Mix ||
                                 testType === TestType.Blocks ||
-                                testType === TestType.Paving_Blocks) && (
+                                testType === TestType.Paving_Blocks ||
+                                testType === TestType.Precast) && (
                               <>
                                 <td className={compactBlockCellClass}>
                                   <Input
@@ -2215,7 +2366,11 @@ export default function RecordForm() {
                                      className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground"
                                      aria-label={`Calculated strength for row ${rowIndex + 1}`}
                                    >
-                                     {testType === TestType.Paving_Blocks
+                                      {testType === TestType.Precast
+                                        ? calculatePrecastStrength(row)
+                                          ? `${calculatePrecastStrength(row)} N/mm²`
+                                          : "Enter a valid cube size and load"
+                                        : testType === TestType.Paving_Blocks
                                         ? calculatePavingStrength(row).tensileStrength
                                           ? `${calculatePavingStrength(row).tensileStrength} N/mm²`
                                           : "Enter load, dimensions, and correction factor"
