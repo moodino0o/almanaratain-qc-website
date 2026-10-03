@@ -253,6 +253,11 @@ const REFERENCE_SEED = [
     ],
   },
   {
+    key: "compactionTypes",
+    label: "Compaction Types",
+    values: ["Mechanical compaction"],
+  },
+  {
     key: "sieveSizes",
     label: "Sieve / Pore Sizes",
     values: [

@@ -154,7 +154,7 @@ export default function RecordForm() {
     testType === TestType.Precast
       ? {
           cubeSize: DEFAULT_PRECAST_CUBE_SIZE,
-          compactionType: DEFAULT_PRECAST_COMPACTION,
+          compactionType: "",
         }
       : {},
   );
@@ -282,7 +282,7 @@ export default function RecordForm() {
       existingRecord.testType === TestType.Precast
         ? {
             cubeSize: DEFAULT_PRECAST_CUBE_SIZE,
-            compactionType: DEFAULT_PRECAST_COMPACTION,
+            compactionType: "",
             ...savedDetails,
           }
         : savedDetails,
@@ -475,6 +475,26 @@ export default function RecordForm() {
     () => referenceData?.categories.find((category) => category.key === "preparationMethods")?.items.map((item) => item.value) ?? [],
     [referenceData],
   );
+  const compactionTypeOptions = useMemo(
+    () => referenceData?.categories.find((category) => category.key === "compactionTypes")?.items.map((item) => item.value) ?? [],
+    [referenceData],
+  );
+  const defaultCompactionType =
+    compactionTypeOptions[0] ?? DEFAULT_PRECAST_COMPACTION;
+
+  useEffect(() => {
+    if (
+      testType !== TestType.Ready_Mix &&
+      testType !== TestType.Precast
+    ) return;
+    if (String(details.compactionType ?? "").trim()) return;
+    if (!defaultCompactionType) return;
+    setDetails((current) =>
+      String(current.compactionType ?? "").trim()
+        ? current
+        : { ...current, compactionType: defaultCompactionType },
+    );
+  }, [defaultCompactionType, details.compactionType, testType]);
 
   useEffect(() => {
     if (testType !== TestType.Blocks) return;
@@ -931,6 +951,14 @@ export default function RecordForm() {
       });
     }
 
+    if (
+      testType === TestType.Ready_Mix ||
+      testType === TestType.Precast
+    ) {
+      payloadDetails.compactionType = String(
+        details.compactionType || defaultCompactionType,
+      ).trim();
+    }
     if (testType === TestType.Ready_Mix) {
       delete payloadDetails.airContent;
       payloadDetails.customerName = customerName;
@@ -964,9 +992,6 @@ export default function RecordForm() {
     if (testType === TestType.Precast) {
       payloadDetails.cubeSize = String(
         details.cubeSize || DEFAULT_PRECAST_CUBE_SIZE,
-      ).trim();
-      payloadDetails.compactionType = String(
-        details.compactionType || DEFAULT_PRECAST_COMPACTION,
       ).trim();
       payloadDetails.cubeWeightUnit = "g";
       payloadDetails.sampleNo = integerIdentifierValue(details.sampleNo);
@@ -1222,8 +1247,10 @@ export default function RecordForm() {
                     val === TestType.Precast
                       ? {
                           cubeSize: DEFAULT_PRECAST_CUBE_SIZE,
-                          compactionType: DEFAULT_PRECAST_COMPACTION,
+                          compactionType: compactionTypeOptions[0] ?? "",
                         }
+                      : val === TestType.Ready_Mix
+                        ? { compactionType: compactionTypeOptions[0] ?? "" }
                       : {},
                   );
                   setSelectedStrengthStandardId("");
@@ -1535,6 +1562,19 @@ export default function RecordForm() {
                 </div>
               )}
 
+              {(testType === TestType.Ready_Mix || testType === TestType.Precast) && (
+                <div className="space-y-2">
+                  <Label>Compaction Type</Label>
+                  <TypeaheadInput
+                    value={String(details.compactionType ?? "")}
+                    onChange={(value) => handleDetailChange("compactionType", value)}
+                    options={compactionTypeOptions}
+                    placeholder="Select or type compaction type..."
+                    onCreateOption={createReferenceOption("compactionTypes")}
+                  />
+                </div>
+              )}
+
               {testType === TestType.Ready_Mix && (
                 <>
                   <div className="space-y-2">
@@ -1645,14 +1685,6 @@ export default function RecordForm() {
                       value={String(details.cubeSize ?? DEFAULT_PRECAST_CUBE_SIZE)}
                       onChange={(event) => handleDetailChange("cubeSize", event.target.value)}
                       placeholder="100*100*100"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Compaction</Label>
-                    <Input
-                      value={String(details.compactionType ?? DEFAULT_PRECAST_COMPACTION)}
-                      onChange={(event) => handleDetailChange("compactionType", event.target.value)}
-                      placeholder={DEFAULT_PRECAST_COMPACTION}
                     />
                   </div>
                 </>
@@ -2073,8 +2105,8 @@ export default function RecordForm() {
                     <>
                       <section className="space-y-3 rounded-md border border-primary/20 bg-primary/[0.02] p-4">
                         <div>
-                          <h3 className="font-semibold">Precast Strength Criteria</h3>
-                          <p className="text-sm text-muted-foreground">
+                          <h3 className="font-semibold text-white">Precast Strength Criteria</h3>
+                          <p className="text-sm text-white/90">
                             Decisions use the average strength of all entered specimens at each age.
                           </p>
                         </div>
