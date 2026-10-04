@@ -756,7 +756,7 @@ function templateCellValue(
   });
 }
 
-function ReportTemplateDataTable({
+export function ReportTemplateDataTable({
   design,
   record,
   object,
