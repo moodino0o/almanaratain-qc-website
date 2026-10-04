@@ -78,11 +78,12 @@ export function blockReportColumnsWithFaceArea<T extends ConfiguredBlockColumn>(
     (total, column) => total + (column.visible ? column.width : 0),
     0,
   );
-  return visibleWidth > 100
+  const adjustedColumns = visibleWidth > 100
     ? withFaceArea.map((column) => column.visible
       ? { ...column, width: column.width * 100 / visibleWidth }
       : column)
     : withFaceArea;
+  return adjustedColumns.sort((left, right) => left.order - right.order);
 }
 
 export function filterRowsWithLoad<T>(rows: T[]): T[] {

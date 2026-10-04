@@ -166,10 +166,14 @@ function structuredDesign(): ReportTemplateDesign {
   } as ReportTemplateDesign;
 }
 
-function renderTable(design: ReportTemplateDesign, object: ReportTemplateObject) {
+function renderTable(
+  design: ReportTemplateDesign,
+  object: ReportTemplateObject,
+  record = reportFixture(),
+) {
   return renderToStaticMarkup(createElement(ReportTemplateDataTable, {
     design,
-    record: reportFixture(),
+    record,
     object,
     fieldValues: {},
   }));
@@ -217,4 +221,86 @@ test("keeps legacy configured-column tables rendering their headers and data", (
   assert.match(markup, /<td[^>]*>25\.0<\/td>/);
   assert.match(markup, /<td[^>]*>Cube B<\/td>/);
   assert.match(markup, /<td[^>]*>30\.0<\/td>/);
+});
+
+test("adds calculated Face Area to legacy configured-column Blocks tables", () => {
+  const object = templateObject({
+    id: "table",
+    tableKey: "blockCompression",
+    name: "Block compression results",
+  });
+  const legacyColumns = [
+    { key: "no", label: "No.", width: 20, visible: true, order: 0 },
+    { key: "length", label: "Length (mm)", width: 20, visible: true, order: 1 },
+    { key: "width", label: "Width (mm)", width: 20, visible: true, order: 2 },
+    { key: "height", label: "Height (mm)", width: 20, visible: true, order: 3 },
+    { key: "load", label: "Load (kN)", width: 20, visible: true, order: 4 },
+  ];
+  const design = {
+    layout: { title: "Legacy Blocks", columns: { blockCompression: legacyColumns } },
+    objects: [object],
+  } as ReportTemplateDesign;
+  const record = {
+    ...reportFixture(),
+    testType: "Blocks",
+    details: {
+      testRows: [{ rowNo: 1, length: 400, width: 200, height: 200, load: 500 }],
+    },
+  } as QcRecord;
+
+  const markup = renderTable(design, object, record);
+  assert.match(markup, /<th[^>]*>Face Area \(mm²\)<\/th>/);
+  assert.match(markup, /<td[^>]*>80000<\/td>/);
+});
+
+test("adds calculated Face Area to saved structured Block tables without that cell", () => {
+  const object = templateObject({
+    id: "table",
+    tableKey: "blockCompression",
+    name: "Block compression results",
+  });
+  const headerCells = [
+    cell("head-no", "block-header", 0, { content: "No.", width: 36 }),
+    cell("head-length", "block-header", 1, { content: "Length (mm)", width: 36 }),
+    cell("head-width", "block-header", 2, { content: "Width (mm)", width: 36 }),
+    cell("head-height", "block-header", 3, { content: "Height (mm)", width: 36 }),
+    cell("head-load", "block-header", 4, { content: "Load (kN)", width: 36 }),
+  ];
+  const bodyCells = [
+    cell("body-no", "block-body", 0, { fieldKey: "details.no", width: 36 }),
+    cell("body-length", "block-body", 1, { fieldKey: "details.length", width: 36 }),
+    cell("body-width", "block-body", 2, { fieldKey: "details.width", width: 36 }),
+    cell("body-height", "block-body", 3, { fieldKey: "details.height", width: 36 }),
+    cell("body-load", "block-body", 4, { fieldKey: "details.load", width: 36 }),
+  ];
+  const design = {
+    layout: {
+      title: "Saved Blocks",
+      columns: {
+        blockCompression: [
+          { key: "no", label: "No.", width: 20, visible: true, order: 0 },
+          { key: "length", label: "Length (mm)", width: 20, visible: true, order: 1 },
+          { key: "width", label: "Width (mm)", width: 20, visible: true, order: 2 },
+          { key: "height", label: "Height (mm)", width: 20, visible: true, order: 3 },
+          { key: "load", label: "Load (kN)", width: 20, visible: true, order: 4 },
+        ],
+      },
+    },
+    objects: [
+      object,
+      ...row("block-header", "header", 0, headerCells),
+      ...row("block-body", "dynamic", 8, bodyCells),
+    ],
+  } as ReportTemplateDesign;
+  const record = {
+    ...reportFixture(),
+    testType: "Blocks",
+    details: {
+      testRows: [{ rowNo: 1, length: 400, width: 200, height: 200, load: 500 }],
+    },
+  } as QcRecord;
+
+  const markup = renderTable(design, object, record);
+  assert.match(markup, /Face Area \(mm²\)/);
+  assert.match(markup, /data-report-cell="block-body-face-area">80000<\/td>/);
 });

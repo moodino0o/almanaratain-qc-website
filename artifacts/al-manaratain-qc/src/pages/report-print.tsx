@@ -23,8 +23,9 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer } from "lucide-react";
 import { useAppBack } from "@/hooks/use-app-back";
 import {
-  blockReportColumnsWithoutWetWeight,
+  blockReportColumnsWithFaceArea,
   filterRowsWithLoad,
+  formatBlockFaceArea,
   formatShapeFactor,
   formatWholeNumber,
 } from "./report-print-utils";
@@ -379,7 +380,12 @@ function layoutColumns(
   const configured = layout?.config.columns[tableKey];
   const selectedColumns = configured === undefined ? fallback : configured;
   const compatibleColumns =
-    tableKey === "sieveResults" && configured?.length
+    tableKey === "blockCompression" && configured?.length
+      ? blockReportColumnsWithFaceArea(
+          configured,
+          fallback.find((column) => column.key === "faceArea"),
+        )
+      : tableKey === "sieveResults" && configured?.length
       ? (() => {
           const existingKeys = new Set(configured.map((column) => column.key));
           const lastOrder = Math.max(-1, ...configured.map((column) => column.order));
@@ -692,6 +698,9 @@ function reportTemplateTableCell(
     !Object.hasOwn(row, "rowNo") && !Object.hasOwn(row, "rowNumber")) {
     return String(rowIndex + 1);
   }
+  if (isBlockCompression && columnKey === "faceArea") {
+    return formatBlockFaceArea(row.length, row.height);
+  }
   const keys = [columnKey, ...(REPORT_TEMPLATE_TABLE_FIELD_ALIASES[columnKey] ?? [])];
   const wanted = new Set(keys.map((key) => key.toLocaleLowerCase()));
   const value = Object.entries(row).find(([key]) => wanted.has(key.toLocaleLowerCase()))?.[1];
@@ -772,11 +781,17 @@ export function ReportTemplateDataTable({
   const tableKey = object.tableKey ?? "";
   const fallback = (REPORT_LAYOUT_FIELD_GROUPS[record.testType]?.[tableKey] ?? [])
     .map((field, order) => ({ ...field, visible: true, order }));
-  const configuredColumns = design.layout.columns[tableKey] ?? fallback;
   const blockCompression = record.testType === "Blocks" && tableKey === "blockCompression";
-  const columns = (blockCompression
-    ? blockReportColumnsWithoutWetWeight(configuredColumns)
-    : configuredColumns)
+  const configuredColumns = design.layout.columns[tableKey] ?? fallback;
+  const compatibleColumns = blockCompression
+    ? blockReportColumnsWithFaceArea(
+        configuredColumns,
+        fallback.find((column) => column.key === "faceArea"),
+      )
+    : configuredColumns;
+  const faceAreaVisible = blockCompression &&
+    compatibleColumns.some((column) => column.key === "faceArea" && column.visible);
+  const columns = compatibleColumns
     .filter((column) => column.visible)
     .sort((left, right) => left.order - right.order);
   const rows = reportTemplateTableRows(record, tableKey);
@@ -788,12 +803,35 @@ export function ReportTemplateDataTable({
   if (structuredRows.length) {
     const headerRows = structuredRows.filter((row) => row.rowType === "header");
     const bodyRows = structuredRows.filter((row) => row.rowType !== "header");
+    const isFaceAreaCell = (cell: ReportTemplateObject) => {
+      const fieldKey = cell.fieldKey?.toLocaleLowerCase();
+      const label = `${cell.name} ${cell.content ?? ""}`.toLocaleLowerCase();
+      return fieldKey === "details.facearea" || fieldKey === "facearea" ||
+        label.includes("face area");
+    };
     const cellObjects = (row: ReportTemplateObject) => directChildren(design.objects, row.id)
-      .filter((cell) => cell.type === "tableCell" && cell.visible)
+      .filter((cell) =>
+        cell.type === "tableCell" &&
+        cell.visible &&
+        (faceAreaVisible || !isFaceAreaCell(cell)),
+      )
       .sort((left, right) => (left.columnIndex ?? left.x) - (right.columnIndex ?? right.x));
-    const columnCount = Math.max(1, ...structuredRows.map((row) => cellObjects(row).length));
+    const needsFaceAreaCell = (row: ReportTemplateObject) =>
+      faceAreaVisible && !cellObjects(row).some(isFaceAreaCell);
+    const columnCount = Math.max(
+      1,
+      ...structuredRows.map((row) =>
+        cellObjects(row).length + (needsFaceAreaCell(row) ? 1 : 0),
+      ),
+    );
     const renderRow = (templateRow: ReportTemplateObject, dataRow?: ValueMap, rowIndex = 0) => {
       const cells = cellObjects(templateRow);
+      const appendFaceArea = needsFaceAreaCell(templateRow);
+      const existingWidth = cells.reduce((total, cell) => total + cell.width, 0);
+      const faceAreaWidth = object.width / columnCount;
+      const existingWidthScale = appendFaceArea && existingWidth > 0
+        ? Math.max(0, object.width - faceAreaWidth) / existingWidth
+        : 1;
       return <tr
         key={`${templateRow.id}-${dataRow ? rowIndex : "static"}`}
         style={{
@@ -809,7 +847,7 @@ export function ReportTemplateDataTable({
         {cells.map((cell) => <td
           key={cell.id}
           style={{
-            width: `${cell.width}mm`,
+            width: `${cell.width * existingWidthScale}mm`,
             height: `${cell.height}mm`,
             border: `${cell.borderWidth ?? templateRow.borderWidth ?? 0.5}px ${cell.lineStyle ?? templateRow.lineStyle ?? "solid"} ${cell.borderColor ?? templateRow.borderColor ?? borderColor}`,
             padding: `${cell.padding ?? templateRow.padding ?? 1}px`,
@@ -826,6 +864,31 @@ export function ReportTemplateDataTable({
           }}
           data-report-cell={cell.id}
         >{templateCellValue(cell, record, fieldValues, dataRow, rowIndex, blockCompression, formulaPreview)}</td>)}
+        {appendFaceArea && <td
+          key={`${templateRow.id}-face-area`}
+          style={{
+            width: `${faceAreaWidth}mm`,
+            height: `${templateRow.height}mm`,
+            border: `${templateRow.borderWidth ?? 0.5}px ${templateRow.lineStyle ?? "solid"} ${templateRow.borderColor ?? borderColor}`,
+            padding: `${templateRow.padding ?? 1}px`,
+            backgroundColor: templateRow.backgroundColor,
+            color: templateRow.textColor ?? object.textColor ?? "#20252b",
+            fontFamily: templateRow.fontFamily ?? object.fontFamily ?? "Arial",
+            fontSize: `${templateRow.fontSize ?? object.fontSize ?? 10}px`,
+            fontWeight: templateRow.bold ? 700 : undefined,
+            textAlign: templateRow.textAlign ?? "left",
+            verticalAlign: "middle",
+            overflowWrap: "anywhere",
+            boxSizing: "border-box",
+          }}
+          data-report-cell={`${templateRow.id}-face-area`}
+        >
+          {templateRow.rowType === "header"
+            ? "Face Area (mm²)"
+            : templateRow.rowType === "dynamic" && dataRow
+              ? reportTemplateTableCell(dataRow, "faceArea", rowIndex, true)
+              : ""}
+        </td>}
       </tr>;
     };
     return (
@@ -1111,10 +1174,17 @@ function BlockCompressionRowsTable({
   const strengthLabel = "Air Dry Strength";
   const displayNumber = (value: number | null) =>
     value === null ? "-" : formatNumber(value);
-  const fixedKeys = ["no", "length", "width", "height", "load", "water", "airDry", "normalized", "density"];
-  const fixedLabels = ["No.", "Length (mm)", "Width (mm)", "Height (mm)", "Load (kN)", "Water (N/mm2)", "Air Dry (N/mm2)", "Normalized (N/mm2)", "Density (kg/m3)"];
+  const fixedKeys = ["no", "length", "width", "height", "faceArea", "load", "water", "airDry", "normalized", "density"];
+  const fixedLabels = ["No.", "Length (mm)", "Width (mm)", "Height (mm)", "Face Area (mm²)", "Load (kN)", "Water (N/mm2)", "Air Dry (N/mm2)", "Normalized (N/mm2)", "Density (kg/m3)"];
   const saved = layout?.config.columns.blockCompression;
-  const savedColumns = saved ? blockReportColumnsWithoutWetWeight(saved) : undefined;
+  const defaultColumns = (REPORT_LAYOUT_FIELD_GROUPS.Blocks.blockCompression ?? [])
+    .map((column, order) => ({ ...column, visible: true, order }));
+  const savedColumns = saved
+    ? blockReportColumnsWithFaceArea(
+        saved,
+        defaultColumns.find((column) => column.key === "faceArea"),
+      )
+    : undefined;
   const custom = Boolean(savedColumns?.length && (savedColumns.length !== fixedKeys.length ||
     savedColumns.some((column, index) => column.key !== fixedKeys[index] || !column.visible ||
       column.label !== fixedLabels[index])));
@@ -1122,6 +1192,7 @@ function BlockCompressionRowsTable({
     const columns = savedColumns!.filter((column) => column.visible).sort((a, b) => a.order - b.order);
     const valueFor = (values: ValueMap, key: string, index: number) => key === "no" ? rawTextValue(values.rowNo, String(index + 1))
       : ["length", "width", "height"].includes(key) ? formatWholeNumber(values[key])
+      : key === "faceArea" ? formatBlockFaceArea(values.length, values.height)
       : key === "water" ? displayNumber(blockWaterStrength(values))
       : key === "airDry" ? displayNumber(blockAirDryStrength(values, hideWaterStrength))
       : key === "normalized" ? displayNumber(numericValue(values.normalizedStrength))
@@ -1149,6 +1220,7 @@ function BlockCompressionRowsTable({
               <th>Length<br />(mm)</th>
               <th>Width<br />(mm)</th>
               <th>Height<br />(mm)</th>
+              <th>Face Area<br />(mm²)</th>
               <th>Load<br />(kN)</th>
               {!hideWaterStrength && <th>Water<br />(N/mm2)</th>}
               <th>Air Dry<br />(N/mm2)</th>
@@ -1163,6 +1235,7 @@ function BlockCompressionRowsTable({
                 <td>{formatWholeNumber(values.length)}</td>
                 <td>{formatWholeNumber(values.width)}</td>
                 <td>{formatWholeNumber(values.height)}</td>
+                <td>{formatBlockFaceArea(values.length, values.height)}</td>
                 <td>{textValue(values.load)}</td>
                 {!hideWaterStrength && <td>{displayNumber(columns.water[index])}</td>}
                 <td>{displayNumber(columns.airDry[index])}</td>
@@ -1171,7 +1244,7 @@ function BlockCompressionRowsTable({
               </tr>
             ))}
             <tr className="block-report-average-row">
-              <td colSpan={5}>AVERAGE:</td>
+              <td colSpan={6}>AVERAGE:</td>
               {!hideWaterStrength && <td>{displayNumber(averages.water)}</td>}
               <td>{displayNumber(averages.airDry)}</td>
               <td>{displayNumber(averages.normalized)}</td>
