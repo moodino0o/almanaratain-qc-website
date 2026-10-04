@@ -10,6 +10,7 @@ import type {
   ReportTemplateDesign,
   ReportTemplateObject,
 } from "@workspace/api-client-react";
+import type { ReportDocumentProps } from "./report-print";
 
 type DataTableProps = {
   design: ReportTemplateDesign;
@@ -21,6 +22,7 @@ type DataTableProps = {
 
 let viteServer: ViteDevServer;
 let ReportTemplateDataTable: ComponentType<DataTableProps>;
+let ReportDocument: ComponentType<ReportDocumentProps>;
 
 before(async () => {
   const artifactRoot = path.resolve(import.meta.dirname, "../..");
@@ -39,6 +41,7 @@ before(async () => {
   });
   const reportPrint = await viteServer.ssrLoadModule("/src/pages/report-print.tsx");
   ReportTemplateDataTable = reportPrint.ReportTemplateDataTable;
+  ReportDocument = reportPrint.ReportDocument;
 });
 
 after(async () => {
@@ -303,4 +306,32 @@ test("adds calculated Face Area to saved structured Block tables without that ce
   const markup = renderTable(design, object, record);
   assert.match(markup, /Face Area \(mm²\)/);
   assert.match(markup, /data-report-cell="block-body-face-area">80000<\/td>/);
+});
+
+test("renders Blocks remarks between Test Details and SPECIMEN RESULTS", () => {
+  const record = {
+    ...reportFixture(),
+    recordNo: "BLK-101",
+    testType: "Blocks",
+    remarks: "Check the face for visible damage.",
+    details: {
+      blockSize: "200 mm",
+      machine: "Compression Machine",
+      testRows: [{ rowNo: 1, length: 400, width: 200, height: 200, load: 500 }],
+    },
+  } as QcRecord;
+  const markup = renderToStaticMarkup(createElement(ReportDocument, {
+    report: {
+      record,
+      companyName: "Al Manaratain",
+      companySubtitle: "Quality Control",
+    },
+  }));
+
+  const testDetailsIndex = markup.indexOf("Test details");
+  const remarksIndex = markup.indexOf("Remarks:");
+  const resultsIndex = markup.indexOf("Specimen results");
+  assert.ok(testDetailsIndex >= 0, "Test Details should appear in the Blocks report");
+  assert.ok(remarksIndex > testDetailsIndex, "Remarks should follow Test Details");
+  assert.ok(resultsIndex > remarksIndex, "SPECIMEN RESULTS should follow Remarks");
 });

@@ -3,7 +3,7 @@ import test from "node:test";
 import { createEmptyDesign } from "./report-designer-types";
 import { positionRemarksAboveResults } from "./report-template-layout";
 
-test("places remarks above results in default Ready Mix and Blocks templates without mutating saved designs", () => {
+test("places Blocks remarks after Test Details and before results without mutating saved designs", () => {
   for (const testType of ["Ready Mix", "Blocks"] as const) {
     const source = createEmptyDesign(testType);
     const sourceResultsY = source.objects.find((object) => object.sectionKey === "results")!.y;
@@ -12,8 +12,17 @@ test("places remarks above results in default Ready Mix and Blocks templates wit
     const remarks = positioned.objects.find((object) => object.sectionKey === "remarks")!;
     const results = positioned.objects.find((object) => object.sectionKey === "results")!;
     const signatures = positioned.objects.find((object) => object.sectionKey === "signatures")!;
+    const testDetails = testType === "Blocks"
+      ? positioned.objects.find((object) => object.sectionKey === "context")
+      : undefined;
 
     assert.ok(remarks.y + remarks.height <= results.y, `${testType} remarks should precede results`);
+    if (testDetails) {
+      assert.ok(
+        testDetails.y + testDetails.height <= remarks.y,
+        "Blocks remarks should follow Test Details",
+      );
+    }
     assert.ok(results.y >= sourceResultsY, `${testType} results should not move upward`);
     assert.ok(signatures.y >= sourceSignaturesY, `${testType} signatures should not move upward`);
     assert.equal(
