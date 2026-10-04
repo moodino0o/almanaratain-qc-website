@@ -364,6 +364,10 @@
   min-height: 100%;
 }
 
+.report-layout-content-flow {
+  display: block;
+}
+
 .report-template-object {
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;

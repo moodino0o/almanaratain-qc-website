@@ -1,17 +1,20 @@
-import type { ReportTemplateDesign } from "@workspace/api-client-react";
+import type { ReportTemplateDesign, TestType } from "@workspace/api-client-react";
 import { absolutePosition, visibleWithParents } from "./report-designer-model";
 
 export function positionRemarksAboveResults(
   design: ReportTemplateDesign,
   remarksText?: string | null,
+  testType?: TestType,
 ): ReportTemplateDesign {
-  if (!remarksText?.trim()) return design;
+  if (testType !== "Blocks" || !remarksText?.trim()) return design;
   const sections = design.objects.filter((object) => object.type === "section");
   const remarks = sections.find((object) => object.sectionKey === "remarks");
   const results = sections.find((object) => object.sectionKey === "results");
+  const context = sections.find((object) => object.sectionKey === "context");
   if (
     !remarks ||
     !results ||
+    !context ||
     !visibleWithParents(remarks, design.objects) ||
     !visibleWithParents(results, design.objects)
   ) {
@@ -35,7 +38,10 @@ export function positionRemarksAboveResults(
     0,
     ...precedingSections.map((section) => {
       const position = absolutePosition(section, design.objects);
-      return position.y + section.height;
+      const renderedHeight = section.sectionKey === "context"
+        ? Math.max(section.height, 70)
+        : section.height;
+      return position.y + renderedHeight;
     }),
   );
 
@@ -76,6 +82,9 @@ export function positionRemarksAboveResults(
     objects: design.objects.map((object) => {
       if (object.id === remarks.id) {
         return { ...object, y: object.y + remarksDelta };
+      }
+      if (object.id === context.id) {
+        return { ...object, height: Math.max(object.height, 70) };
       }
       if (
         resultsDelta > 0 &&

@@ -32,3 +32,9 @@ Visual templates position report sections absolutely, so changing JSX or flex or
 **Why:** Explicit section coordinates take precedence over document flow and can otherwise leave a reordered block visually in its old location.
 
 **How to apply:** Enforce report-order rules on a render-only design copy, move section backgrounds and dependent content together, keep the designer preview aligned, and never mutate saved template coordinates implicitly.
+
+Remarks must appear after test details and before specimen/results in every report type; saved template fields must not create a second copy.
+
+**Why:** The user explicitly requested the same Remarks placement across all reports after the previous JSX-order change failed in a saved report.
+
+**How to apply:** Place Remarks at each renderer's real details/results boundary. For Blocks, use render-time positioning only when context, remarks, and results sections are all positioned; otherwise fall back to canonical document flow rather than partial coordinates or saved flex order. For other reports, keep Remarks in the shared results flow and keep print and designer preview behavior aligned.

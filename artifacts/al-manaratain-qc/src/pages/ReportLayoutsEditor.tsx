@@ -845,9 +845,9 @@ export function ReportLayoutsEditor() {
   const report = reportQuery.data;
   const previewDesign = useMemo(
     () => draft?.design
-      ? positionRemarksAboveResults(draft.design, report?.record?.remarks)
+      ? positionRemarksAboveResults(draft.design, report?.record?.remarks, testType)
       : undefined,
-    [draft?.design, report?.record?.remarks],
+    [draft?.design, report?.record?.remarks, testType],
   );
   const reportPreview = reportQuery.isLoading
     ? <div className="min-h-[760px] space-y-4 bg-card p-10" data-testid="status-report-preview-loading"><div className="h-8 w-2/3 animate-pulse rounded bg-muted" /><div className="h-4 w-1/2 animate-pulse rounded bg-muted" /><div className="mt-12 h-64 animate-pulse rounded bg-muted" /></div>

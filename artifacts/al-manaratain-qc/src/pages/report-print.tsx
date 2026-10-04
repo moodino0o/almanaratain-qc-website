@@ -106,21 +106,26 @@ function layoutSectionVisible(layout: ReportLayout | undefined, key: string) {
 
 function layoutSectionOrder(layout: ReportLayout | undefined, key: string) {
   const section = layout?.config.sections.find((item) => item.key === key);
-  if (key === "remarks") {
-    const resultsOrder = layout?.config.sections.find((item) => item.key === "results")?.order ?? 0;
-    return resultsOrder - 0.5;
-  }
   return section?.order ?? 0;
 }
 
-function layoutSectionStyle(layout: ReportLayout | undefined, key: string): CSSProperties {
+function hasPositionedSection(layout: ReportLayout | undefined, key: string) {
+  return layout ? positionedSectionObjects.get(layout)?.has(key) ?? false : false;
+}
+
+function layoutSectionStyle(
+  layout: ReportLayout | undefined,
+  key: string,
+  options: { inFlow?: boolean } = {},
+): CSSProperties {
   const section = layout?.config.sections.find((item) => item.key === key);
   const positioned = layout ? positionedSectionObjects.get(layout)?.get(key) : undefined;
+  const inFlow = options.inFlow ?? false;
   const sectionBackground = positioned
     ? positioned.backgroundColor ?? "transparent"
     : section?.backgroundColor;
   return {
-    order: layoutSectionOrder(layout, key),
+    ...(inFlow ? {} : { order: layoutSectionOrder(layout, key) }),
     ...(section?.fontFamily ? { fontFamily: section.fontFamily } : {}),
     ...(section?.fontSize ? { fontSize: `${section.fontSize}px` } : {}),
     ...(section?.textColor ? { color: section.textColor } : {}),
@@ -129,8 +134,8 @@ function layoutSectionStyle(layout: ReportLayout | undefined, key: string): CSSP
     ...(section?.borderStyle && section.borderStyle !== "none"
       ? { border: `${section.borderWidth ?? 1}px ${section.borderStyle} ${section.borderColor ?? "#d1d5db"}` }
       : {}),
-    ...(positioned && key === "remarks" ? { marginTop: 0 } : {}),
-    ...(positioned ? {
+    ...(positioned && key === "remarks" && !inFlow ? { marginTop: 0 } : {}),
+    ...(positioned && !inFlow ? {
       position: "absolute",
       left: `${positioned.x}mm`,
       top: `${positioned.y}mm`,
@@ -144,29 +149,50 @@ function layoutSectionStyle(layout: ReportLayout | undefined, key: string): CSSP
 }
 
 function LayoutElements({ layout, sectionKey, placement }: {
-  layout?: ReportLayout; sectionKey: string; placement: "before" | "after";
+  layout?: ReportLayout;
+  sectionKey: string;
+  placement: "before" | "after";
 }) {
   const elements = (layout?.config.elements ?? [])
     .filter((element) => element.sectionKey === sectionKey && element.placement === placement)
     .sort((a, b) => a.order - b.order);
   const sectionOrder = layoutSectionOrder(layout, sectionKey);
+  const itemOrder = sectionKey === "remarks" ? undefined : sectionOrder;
   return <>{elements.map((element) => {
     const width = `${Math.min(100, Math.max(10, element.width ?? 100))}%`;
     return element.type === "divider"
-      ? <div key={element.key} className="report-layout-divider" style={{ width, order: sectionOrder, borderTop: `1px ${element.lineStyle ?? "solid"} ${element.color ?? "#d1d5db"}`, margin: "8px 0" }} />
-      : <div key={element.key} className="report-layout-text" style={{ width, order: sectionOrder, fontFamily: element.fontFamily, fontSize: element.fontSize ? `${element.fontSize}px` : undefined, color: element.color, fontWeight: element.bold ? 700 : undefined }}>{element.content ?? ""}</div>;
+      ? <div key={element.key} className="report-layout-divider" style={{ width, ...(itemOrder === undefined ? {} : { order: itemOrder }), borderTop: `1px ${element.lineStyle ?? "solid"} ${element.color ?? "#d1d5db"}`, margin: "8px 0" }} />
+      : <div key={element.key} className="report-layout-text" style={{ width, ...(itemOrder === undefined ? {} : { order: itemOrder }), fontFamily: element.fontFamily, fontSize: element.fontSize ? `${element.fontSize}px` : undefined, color: element.color, fontWeight: element.bold ? 700 : undefined }}>{element.content ?? ""}</div>;
   })}</>;
 }
 
-function ReportRemarks({ record, layout }: { record: QcRecord; layout?: ReportLayout }) {
+function ReportRemarks({
+  record,
+  layout,
+  inFlow = false,
+}: {
+  record: QcRecord;
+  layout?: ReportLayout;
+  inFlow?: boolean;
+}) {
   if (!layoutSectionVisible(layout, "remarks") || !record.remarks) return null;
   return <>
     <LayoutElements layout={layout} sectionKey="remarks" placement="before" />
-    <div className="report-remarks report-layout-section" style={layoutSectionStyle(layout, "remarks")}>
+    <div className="report-remarks report-layout-section" style={layoutSectionStyle(layout, "remarks", { inFlow })}>
       <span>Remarks:</span> {record.remarks}
     </div>
     <LayoutElements layout={layout} sectionKey="remarks" placement="after" />
   </>;
+}
+
+function isCanonicalRemarksTemplateObject(object: ReportTemplateObject) {
+  const fieldKey = object.fieldKey?.trim().toLocaleLowerCase();
+  if (["remarks", "record.remarks", "details.remarks"].includes(fieldKey ?? "")) {
+    return true;
+  }
+  return /\{\{\s*(?:remarks|record\.remarks|details\.remarks)\s*\}\}/i.test(
+    object.content ?? "",
+  );
 }
 
 function reportTemplateFieldValues(record: QcRecord, companyName: string, reportTitle: string): Record<string, string> {
@@ -225,16 +251,23 @@ function ReportTemplateObjects({
   companyName,
   reportTitle,
   formulaPreview = false,
+  skipSectionObjects = false,
 }: {
   design: ReportTemplateDesign;
   record: QcRecord;
   companyName: string;
   reportTitle: string;
   formulaPreview?: boolean;
+  skipSectionObjects?: boolean;
 }) {
   const fieldValues = reportTemplateFieldValues(record, companyName, reportTitle);
   const objects = design.objects
     .filter((object) => {
+      if (skipSectionObjects && object.type === "section") return false;
+      if (
+        (object.type === "section" && object.sectionKey === "remarks") ||
+        isCanonicalRemarksTemplateObject(object)
+      ) return false;
       if (["group", "tableRow", "tableCell"].includes(object.type) ||
         !visibleWithParents(object, design.objects)) return false;
       const section = sectionForObject(object, design.objects);
@@ -2018,6 +2051,8 @@ function ReadyMixReport({
         </div>
       </section>
 
+      <ReportRemarks record={record} layout={layout} inFlow />
+
       <section className="report-ready-mix-results">
         <table className="report-table report-results-table">
           <thead>
@@ -2123,12 +2158,18 @@ function BlocksReport({
     : compliance === "Failed"
       ? "NOT PASS"
       : "REVIEW";
+  const canPositionRemarks =
+    hasPositionedSection(layout, "context") &&
+    hasPositionedSection(layout, "results") &&
+    hasPositionedSection(layout, "remarks");
   return (
     <>
       {layoutSectionVisible(layout, "context") && (
         <>
           <LayoutElements layout={layout} sectionKey="context" placement="before" />
-          <section className="block-compression-report report-layout-section" style={layoutSectionStyle(layout, "context")}>
+          <section className="block-compression-report report-layout-section" style={layoutSectionStyle(layout, "context", {
+            inFlow: !canPositionRemarks,
+          })}>
             <div className="block-report-section-heading">
               <div><span>Test details</span></div>
               <strong className="block-report-air-dry-note">
@@ -2164,11 +2205,17 @@ function BlocksReport({
           <LayoutElements layout={layout} sectionKey="context" placement="after" />
         </>
       )}
-      <ReportRemarks record={record} layout={layout} />
+      <ReportRemarks
+        record={record}
+        layout={layout}
+        inFlow={!canPositionRemarks}
+      />
       {layoutSectionVisible(layout, "results") && (
         <>
           <LayoutElements layout={layout} sectionKey="results" placement="before" />
-          <section className="block-compression-report report-layout-section" style={layoutSectionStyle(layout, "results")}>
+          <section className="block-compression-report report-layout-section" style={layoutSectionStyle(layout, "results", {
+            inFlow: !canPositionRemarks,
+          })}>
             {testRows.length > 0 && (
               <BlockCompressionRowsTable rows={testRows} hideWaterStrength={useDammamBasis} layout={layout} />
             )}
@@ -2287,6 +2334,7 @@ function SieveReport({
           <ReportFields entries={measurementEntries} />
         </section>
       </div>
+      <ReportRemarks record={record} layout={layout} inFlow />
       <SieveRowsTable
         rows={sieveRows}
         layout={layout}
@@ -2414,6 +2462,7 @@ function PavingBlocksReport({ record, standards, layout }: {
           ]}
         />
       </div>
+      <ReportRemarks record={record} layout={layout} inFlow />
       {rows.length > 0 && (
         <>
           <SpecimenRowsTable
@@ -2428,7 +2477,17 @@ function PavingBlocksReport({ record, standards, layout }: {
   );
 }
 
-function ConfiguredDetailsReport({ record, tableKey, layout }: { record: QcRecord; tableKey: string; layout?: ReportLayout }) {
+function ConfiguredDetailsReport({
+  record,
+  tableKey,
+  layout,
+  includeRemarks = true,
+}: {
+  record: QcRecord;
+  tableKey: string;
+  layout?: ReportLayout;
+  includeRemarks?: boolean;
+}) {
   const defaults = REPORT_LAYOUT_FIELD_GROUPS[record.testType]?.[tableKey] ?? [];
   const configured = layout?.config.columns[tableKey];
   const configuredWithNewPrecastFields =
@@ -2450,15 +2509,18 @@ function ConfiguredDetailsReport({ record, tableKey, layout }: { record: QcRecor
     .filter((field) => field.visible)
     .filter((field) => defaults.some((candidate) => candidate.key === field.key))
     .sort((a, b) => a.order - b.order);
-  return <section><SectionHeading>{record.testType} Details</SectionHeading><div className="report-fields">
-    {columns.map((field) => <ReportField key={field.key} label={field.label} value={
-      field.key === "sampleDate" ? formatReportDate(record.sampleDate) :
-      field.key === "location" ? record.location :
-      field.key === "material" ? record.material :
-      field.key === "testedBy" ? record.testedBy :
-      detailValue(record.details, [field.key])
-    } />)}
-  </div></section>;
+  return <>
+    <section><SectionHeading>{record.testType} Details</SectionHeading><div className="report-fields">
+      {columns.map((field) => <ReportField key={field.key} label={field.label} value={
+        field.key === "sampleDate" ? formatReportDate(record.sampleDate) :
+        field.key === "location" ? record.location :
+        field.key === "material" ? record.material :
+        field.key === "testedBy" ? record.testedBy :
+        detailValue(record.details, [field.key])
+      } />)}
+    </div></section>
+    {includeRemarks && <ReportRemarks record={record} layout={layout} inFlow />}
+  </>;
 }
 
 function PrecastReport({ record, layout }: { record: QcRecord; layout?: ReportLayout }) {
@@ -2504,6 +2566,7 @@ function PrecastReport({ record, layout }: { record: QcRecord; layout?: ReportLa
           record={record}
           layout={layout}
           tableKey="precastDetails"
+          includeRemarks={false}
         />
         <div className="report-average-block precast-average-block">
           <p className="report-centered-title">Average Strength</p>
@@ -2525,6 +2588,7 @@ function PrecastReport({ record, layout }: { record: QcRecord; layout?: ReportLa
           </table>
         </div>
       </div>
+      <ReportRemarks record={record} layout={layout} inFlow />
       <section>
         <SectionHeading>Precast Compression Results</SectionHeading>
         {rows.length ? (
@@ -2612,10 +2676,13 @@ function WaterReport({ record, layout }: { record: QcRecord; layout?: ReportLayo
   const waterFields = (configured === undefined ? REPORT_LAYOUT_FIELD_GROUPS.Water.waterDetails.map((field, order) => ({ ...field, visible: true, order })) : configured)
     .filter((field) => field.visible).sort((a, b) => a.order - b.order);
   return (
-    <section>
-      <SectionHeading>Water Quality Details</SectionHeading>
-      <div className="report-fields">{waterFields.map((field) => <ReportField key={field.key} label={field.label} value={detailValue(details, [field.key, field.key === "sulphate" ? "sulfate" : field.key])} />)}</div>
-    </section>
+    <>
+      <section>
+        <SectionHeading>Water Quality Details</SectionHeading>
+        <div className="report-fields">{waterFields.map((field) => <ReportField key={field.key} label={field.label} value={detailValue(details, [field.key, field.key === "sulphate" ? "sulfate" : field.key])} />)}</div>
+      </section>
+      <ReportRemarks record={record} layout={layout} inFlow />
+    </>
   );
 }
 
@@ -2625,11 +2692,14 @@ function FallbackReport({ record }: { record: QcRecord }) {
     { key: "observation2", label: "Observation 2", width: 50 },
   ];
   return (
-    <section>
-      <SectionHeading>{record.testType} Details</SectionHeading>
-      <RecordContextFields record={record} />
-      <div className="report-fields">{observations.map((field) => <ReportField key={field.key} label={field.label} value={detailValue(record.details, [field.key])} />)}</div>
-    </section>
+    <>
+      <section>
+        <SectionHeading>{record.testType} Details</SectionHeading>
+        <RecordContextFields record={record} />
+        <div className="report-fields">{observations.map((field) => <ReportField key={field.key} label={field.label} value={detailValue(record.details, [field.key])} />)}</div>
+      </section>
+      <ReportRemarks record={record} inFlow />
+    </>
   );
 }
 
@@ -2653,13 +2723,19 @@ function defaultReportTitle(testType: QcRecord["testType"]) {
 export function ReportDocument({ report, strengthStandards = [], sieveStandards = [], selectedStrengthStandardId, accordingTo: configuredAccordingTo, reportReferenceNumber: configuredReference, defaultTitle: configuredTitle, templateDesign, formulaPreview = false }: ReportDocumentProps) {
   const { record, companyName, companySubtitle } = report;
   const positionedTemplateDesign = templateDesign
-    ? positionRemarksAboveResults(templateDesign, record.remarks)
+    ? positionRemarksAboveResults(templateDesign, record.remarks, record.testType)
     : undefined;
   const layout = positionedTemplateDesign
     ? layoutWithTemplateDesign(report.layout, record, positionedTemplateDesign)
     : report.layout;
-  const hasPositionedSections =
-    positionedTemplateDesign?.objects.some((object) => object.type === "section") ?? false;
+  const hasCompleteBlocksSections = ["context", "results", "remarks"].every((key) =>
+    positionedTemplateDesign?.objects.some(
+      (object) => object.type === "section" && object.sectionKey === key,
+    ),
+  );
+  const blockFlowMode = record.testType === "Blocks" && !hasCompleteBlocksSections;
+  const hasPositionedSections = !blockFlowMode &&
+    (positionedTemplateDesign?.objects.some((object) => object.type === "section") ?? false);
   const page = positionedTemplateDesign?.page;
   const pageWidthMm = page
     ? page.orientation === "landscape" ? page.heightMm : page.widthMm
@@ -2712,12 +2788,11 @@ export function ReportDocument({ report, strengthStandards = [], sieveStandards 
           : `${layout.config.paperPadding}mm`,
         "--report-accent-color": layout.config.accentColor,
       } as CSSProperties : undefined}
-    ><div className={`report-layout-content ${positionedTemplateDesign ? "report-layout-content-template" : ""} ${hasPositionedSections ? "report-layout-content-positioned" : ""}`}>
-    {layoutSectionVisible(layout, "header") && <><LayoutElements layout={layout} sectionKey="header" placement="before" /><header className="report-header report-layout-section" style={layoutSectionStyle(layout, "header")}>
+    ><div className={`report-layout-content ${positionedTemplateDesign ? "report-layout-content-template" : ""} ${hasPositionedSections ? "report-layout-content-positioned" : ""} ${blockFlowMode ? "report-layout-content-flow" : ""}`}>
+    {layoutSectionVisible(layout, "header") && <><LayoutElements layout={layout} sectionKey="header" placement="before" /><header className="report-header report-layout-section" style={layoutSectionStyle(layout, "header", { inFlow: blockFlowMode })}>
       <div className="report-company">{companySubtitle}</div><img src="/al-manaratain-logo.webp" alt="Al Manaratain Logo" className="report-logo" /><div className="report-title"><strong>{reportTitle}</strong><span>Ref: {reportReferenceNumber}</span></div>
     </header><LayoutElements layout={layout} sectionKey="header" placement="after" /></>}
-    {layoutSectionVisible(layout, "standard") && <><LayoutElements layout={layout} sectionKey="standard" placement="before" /><p className="report-standard report-layout-section" style={layoutSectionStyle(layout, "standard")}>{accordingTo ? `ACCORDING TO ${accordingTo}` : "QUALITY CONTROL TEST REPORT"}</p><LayoutElements layout={layout} sectionKey="standard" placement="after" /></>}
-    {record.testType !== "Blocks" && <ReportRemarks record={record} layout={layout} />}
+    {layoutSectionVisible(layout, "standard") && <><LayoutElements layout={layout} sectionKey="standard" placement="before" /><p className="report-standard report-layout-section" style={layoutSectionStyle(layout, "standard", { inFlow: blockFlowMode })}>{accordingTo ? `ACCORDING TO ${accordingTo}` : "QUALITY CONTROL TEST REPORT"}</p><LayoutElements layout={layout} sectionKey="standard" placement="after" /></>}
     {record.testType === "Blocks" ? (
       <BlocksReport record={record} standards={strengthStandards} layout={layout} />
     ) : layoutSectionVisible(layout, "results") && (
@@ -2734,9 +2809,9 @@ export function ReportDocument({ report, strengthStandards = [], sieveStandards 
         <LayoutElements layout={layout} sectionKey="results" placement="after" />
       </>
     )}
-    {layoutSectionVisible(layout, "signatures") && <><LayoutElements layout={layout} sectionKey="signatures" placement="before" /><footer className="report-signatures report-layout-section" style={layoutSectionStyle(layout, "signatures")}><div><span>Tested by:</span><strong>{record.testedBy}</strong></div><div><span>Approved by:</span><strong>{record.reviewedBy || "ADEL ABBAS EBRAHIM"}</strong></div><small>{companyName} · {companySubtitle}</small></footer><LayoutElements layout={layout} sectionKey="signatures" placement="after" /></>}
+    {layoutSectionVisible(layout, "signatures") && <><LayoutElements layout={layout} sectionKey="signatures" placement="before" /><footer className="report-signatures report-layout-section" style={layoutSectionStyle(layout, "signatures", { inFlow: blockFlowMode })}><div><span>Tested by:</span><strong>{record.testedBy}</strong></div><div><span>Approved by:</span><strong>{record.reviewedBy || "ADEL ABBAS EBRAHIM"}</strong></div><small>{companyName} · {companySubtitle}</small></footer><LayoutElements layout={layout} sectionKey="signatures" placement="after" /></>}
   </div>
-  {positionedTemplateDesign && <ReportTemplateObjects design={positionedTemplateDesign} record={record} companyName={companyName} reportTitle={reportTitle} formulaPreview={formulaPreview} />}
+  {positionedTemplateDesign && <ReportTemplateObjects design={positionedTemplateDesign} record={record} companyName={companyName} reportTitle={reportTitle} formulaPreview={formulaPreview} skipSectionObjects={blockFlowMode} />}
   </main>
   </>;
 }

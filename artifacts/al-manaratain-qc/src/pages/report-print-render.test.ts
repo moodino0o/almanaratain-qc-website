@@ -11,6 +11,7 @@ import type {
   ReportTemplateObject,
 } from "@workspace/api-client-react";
 import type { ReportDocumentProps } from "./report-print";
+import { createEmptyDesign } from "./report-designer-types";
 
 type DataTableProps = {
   design: ReportTemplateDesign;
@@ -182,6 +183,23 @@ function renderTable(
   }));
 }
 
+function renderDocument(
+  record: QcRecord,
+  templateDesign?: ReportTemplateDesign,
+  layout?: ReportDocumentProps["report"]["layout"],
+) {
+  const props: ReportDocumentProps = {
+    report: {
+      record,
+      companyName: "Al Manaratain",
+      companySubtitle: "Quality Control",
+      ...(layout ? { layout } : {}),
+    },
+    ...(templateDesign ? { templateDesign } : {}),
+  };
+  return renderToStaticMarkup(createElement(ReportDocument, props));
+}
+
 test("prints structured table headings, every data row, formulas, and visibility rules", () => {
   const design = structuredDesign();
   const markup = renderTable(design, design.objects[0]);
@@ -320,13 +338,7 @@ test("renders Blocks remarks between Test Details and SPECIMEN RESULTS", () => {
       testRows: [{ rowNo: 1, length: 400, width: 200, height: 200, load: 500 }],
     },
   } as QcRecord;
-  const markup = renderToStaticMarkup(createElement(ReportDocument, {
-    report: {
-      record,
-      companyName: "Al Manaratain",
-      companySubtitle: "Quality Control",
-    },
-  }));
+  const markup = renderDocument(record);
 
   const testDetailsIndex = markup.indexOf("Test details");
   const remarksIndex = markup.indexOf("Remarks:");
@@ -334,4 +346,180 @@ test("renders Blocks remarks between Test Details and SPECIMEN RESULTS", () => {
   assert.ok(testDetailsIndex >= 0, "Test Details should appear in the Blocks report");
   assert.ok(remarksIndex > testDetailsIndex, "Remarks should follow Test Details");
   assert.ok(resultsIndex > remarksIndex, "SPECIMEN RESULTS should follow Remarks");
+});
+
+test("keeps legacy Blocks remarks below Test Details even when saved section order puts results first", () => {
+  const record = {
+    ...reportFixture(),
+    testType: "Blocks",
+    remarks: "Sample",
+    details: {
+      blockSize: "200 mm",
+      machine: "Compression Machine",
+      testRows: [{ rowNo: 1, length: 400, width: 200, height: 200, load: 500 }],
+    },
+  } as QcRecord;
+  const layout = {
+    id: 1,
+    testType: "Blocks",
+    name: "Legacy Blocks layout",
+    config: {
+      title: "Block Compression Test",
+      fontFamily: "Arial",
+      fontSize: 13,
+      textColor: "#20252b",
+      accentColor: "#9b1739",
+      paperPadding: 13,
+      sections: [
+        { key: "header", visible: true, order: 0 },
+        { key: "standard", visible: true, order: 1 },
+        { key: "results", visible: true, order: 0 },
+        { key: "remarks", visible: true, order: 8 },
+        { key: "signatures", visible: true, order: 5 },
+      ],
+      columns: {},
+      elements: [],
+    },
+  } as NonNullable<ReportDocumentProps["report"]["layout"]>;
+  const markup = renderDocument(record, undefined, layout);
+  const standardIndex = markup.indexOf("ACCORDING TO");
+  const contextIndex = markup.indexOf("Test details");
+  const remarksIndex = markup.indexOf("Remarks:");
+  const resultsIndex = markup.indexOf("Specimen results");
+
+  assert.match(markup, /class="report-layout-content[^"]*report-layout-content-flow"/);
+  assert.ok(standardIndex >= 0 && standardIndex < contextIndex, "Test Details should follow the report standard");
+  assert.ok(contextIndex < remarksIndex, "Remarks should follow Test Details");
+  assert.ok(remarksIndex < resultsIndex, "SPECIMEN RESULTS should follow Remarks");
+});
+
+test("keeps saved Blocks template remarks after details, above results, and renders only one remarks field", () => {
+  const record = {
+    ...reportFixture(),
+    recordNo: "BLK-102",
+    testType: "Blocks",
+    remarks: "Sample",
+    details: {
+      blockSize: "200 mm",
+      machine: "Compression Machine",
+      testRows: [{ rowNo: 1, length: 400, width: 200, height: 200, load: 500 }],
+    },
+  } as QcRecord;
+  const sourceDesign = createEmptyDesign("Blocks");
+  const design: ReportTemplateDesign = {
+    ...sourceDesign,
+    objects: [
+      ...sourceDesign.objects,
+      templateObject({
+        id: "remarks-copy",
+        type: "dynamicField",
+        name: "Remarks",
+        fieldKey: "REMARKS",
+        x: 13,
+        y: 30,
+        width: 80,
+        height: 8,
+        zIndex: 20,
+      }),
+    ],
+  };
+
+  const markup = renderDocument(record, design);
+  const testDetailsIndex = markup.indexOf("Test details");
+  const remarksIndex = markup.indexOf("Remarks:");
+  const resultsIndex = markup.indexOf("Specimen results");
+  const contextStyle = markup.match(/data-report-object="section-context"[^>]*style="([^"]*)"/)?.[1] ?? "";
+  const resultsStyle = markup.match(/data-report-object="section-results"[^>]*style="([^"]*)"/)?.[1] ?? "";
+  const remarksStyle = markup.match(/class="report-remarks report-layout-section"[^>]*style="([^"]*)"/)?.[1] ?? "";
+  const contextTop = Number(contextStyle.match(/top:([\d.]+)mm/)?.[1]);
+  const contextHeight = Number(contextStyle.match(/height:([\d.]+)mm/)?.[1]);
+  const resultsTop = Number(resultsStyle.match(/top:([\d.]+)mm/)?.[1]);
+  const remarksTop = Number(remarksStyle.match(/top:([\d.]+)mm/)?.[1]);
+  const remarksHeight = Number(remarksStyle.match(/min-height:([\d.]+)mm/)?.[1]);
+
+  assert.ok(testDetailsIndex >= 0);
+  assert.ok(remarksIndex > testDetailsIndex);
+  assert.ok(resultsIndex > remarksIndex);
+  assert.ok(contextTop + contextHeight < remarksTop, "Remarks should start below the full details section");
+  assert.ok(remarksTop + remarksHeight <= resultsTop, "results should start below Remarks");
+  assert.equal(sourceDesign.objects.find((object) => object.sectionKey === "context")?.height, 39);
+  assert.doesNotMatch(markup, /data-report-object="section-remarks"/);
+  assert.doesNotMatch(markup, /data-report-object="remarks-copy"/);
+  assert.equal((markup.match(/Remarks:/g) ?? []).length, 1);
+});
+
+test("places remarks after report details and before specimen results across every report renderer", () => {
+  const cases: Array<{
+    testType: QcRecord["testType"];
+    detailsMarker: string;
+    resultsMarker?: string;
+  }> = [
+    {
+      testType: "Ready Mix",
+      detailsMarker: "Test Details",
+      resultsMarker: 'class="report-ready-mix-results"',
+    },
+    {
+      testType: "Paving Blocks",
+      detailsMarker: "Customer and Mix Details",
+      resultsMarker: "report-specimen-table",
+    },
+    {
+      testType: "Sand Sieve",
+      detailsMarker: "Sample Details",
+      resultsMarker: "Sieve Measurements:",
+    },
+    {
+      testType: "Aggregate Sieve",
+      detailsMarker: "Sample Details",
+      resultsMarker: "Sieve Measurements:",
+    },
+    {
+      testType: "Precast",
+      detailsMarker: "Precast Details",
+      resultsMarker: "Precast Compression Results",
+    },
+    { testType: "Water", detailsMarker: "Water Quality Details" },
+    { testType: "Flakiness & Elongation", detailsMarker: "Elongation Details" },
+    { testType: "RMX Trial", detailsMarker: "RMX Trial Details" },
+    { testType: "Kerb Stone", detailsMarker: "Kerb Stone Details" },
+  ];
+
+  for (const scenario of cases) {
+    const record = {
+      ...reportFixture(),
+      testType: scenario.testType,
+      remarks: "Same placement",
+      details: {
+        testRows: [
+          { rowNo: 1, age: 28, length: 400, width: 200, height: 200, load: 500 },
+        ],
+        sieveRows: [
+          { sieveSize: "4.75 mm", amountReturned: 100, amountPassing: 900, passingPercentage: 90 },
+        ],
+        sampleAge: 7,
+        testingDate: "2026-09-27",
+      },
+    } as QcRecord;
+    const markup = renderDocument(record);
+    const detailsIndex = markup.indexOf(scenario.detailsMarker);
+    const remarksIndex = markup.indexOf("Remarks:");
+    const resultsIndex = scenario.resultsMarker
+      ? markup.indexOf(scenario.resultsMarker)
+      : -1;
+
+    assert.ok(detailsIndex >= 0, `${scenario.testType}: details should render`);
+    assert.ok(remarksIndex > detailsIndex, `${scenario.testType}: Remarks should follow details`);
+    if (scenario.resultsMarker) {
+      assert.ok(
+        resultsIndex > remarksIndex,
+        `${scenario.testType}: specimen results should follow Remarks`,
+      );
+    }
+    assert.equal(
+      (markup.match(/class="report-remarks report-layout-section"/g) ?? []).length,
+      1,
+      `${scenario.testType}: Remarks should render once`,
+    );
+  }
 });
