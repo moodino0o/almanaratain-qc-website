@@ -16,11 +16,13 @@ import {
   Minimize2,
   ZoomIn,
   ZoomOut,
+  Calculator,
+  PenLine,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-export type DesignerTool = "select" | "text" | "dynamicField" | "line" | "shape" | "image" | "table";
+export type DesignerTool = "select" | "text" | "dynamicField" | "line" | "shape" | "image" | "table" | "signature" | "formula";
 
 type ToolbarProps = {
   tool: DesignerTool;
@@ -46,6 +48,10 @@ type ToolbarProps = {
   hasSelection: boolean;
   isDirty: boolean;
   isSaving: boolean;
+  canGroup: boolean;
+  canUngroup: boolean;
+  onGroup: () => void;
+  onUngroup: () => void;
 };
 
 const zoomPresets = [0.5, 0.75, 1, 1.25, 1.5, 2];
@@ -58,6 +64,8 @@ const tools: Array<{ id: DesignerTool; label: string; icon: typeof Plus }> = [
   { id: "shape", label: "Shape", icon: Plus },
   { id: "image", label: "Image", icon: Plus },
   { id: "table", label: "Table", icon: Plus },
+  { id: "signature", label: "Signature", icon: PenLine },
+  { id: "formula", label: "Formula", icon: Calculator },
 ];
 
 export function ReportDesignerToolbar(props: ToolbarProps) {
@@ -95,6 +103,10 @@ export function ReportDesignerToolbar(props: ToolbarProps) {
           <input type="checkbox" checked={props.snap} onChange={(event) => props.onSnapChange(event.target.checked)} data-testid="checkbox-snap-grid" />
           Snap
         </label>
+      </div>
+      <div className="flex items-center gap-1 border-r border-border/70 pr-2">
+        <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-[11px]" disabled={!props.canGroup} onClick={props.onGroup} data-testid="button-group-selection">Group</Button>
+        <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-[11px]" disabled={!props.canUngroup} onClick={props.onUngroup} data-testid="button-ungroup-selection">Ungroup</Button>
       </div>
       <div className="flex items-center gap-1 border-r border-border/70 pr-2">
         <Button type="button" variant="ghost" size="icon" className="h-8 w-8" disabled={!props.hasSelection} onClick={() => props.onAlign("left")} data-testid="button-align-left" aria-label="Align left"><AlignStartHorizontal className="h-4 w-4" /></Button>

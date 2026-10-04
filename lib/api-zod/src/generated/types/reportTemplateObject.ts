@@ -8,6 +8,7 @@
 import type { ReportTemplateObjectFontFamily } from './reportTemplateObjectFontFamily';
 import type { ReportTemplateObjectLineOrientation } from './reportTemplateObjectLineOrientation';
 import type { ReportTemplateObjectLineStyle } from './reportTemplateObjectLineStyle';
+import type { ReportTemplateObjectRowType } from './reportTemplateObjectRowType';
 import type { ReportTemplateObjectShapeType } from './reportTemplateObjectShapeType';
 import type { ReportTemplateObjectTextAlign } from './reportTemplateObjectTextAlign';
 import type { ReportTemplateObjectType } from './reportTemplateObjectType';
@@ -24,6 +25,11 @@ export interface ReportTemplateObject {
      * @maxLength 120
      */
   name: string;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  parentId?: string;
   /**
      * @minimum -1000
      * @maximum 5000
@@ -62,6 +68,14 @@ export interface ReportTemplateObject {
   content?: string;
   /** @maxLength 80 */
   fieldKey?: string;
+  /** @maxLength 1000 */
+  formula?: string;
+  rowType?: ReportTemplateObjectRowType;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  columnIndex?: number;
   /** @pattern ^/objects/uploads/[A-Za-z0-9._/-]+$ */
   objectPath?: string;
   fontFamily?: ReportTemplateObjectFontFamily;

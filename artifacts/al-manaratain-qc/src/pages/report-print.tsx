@@ -17,6 +17,8 @@ import type {
   StrengthStandard,
 } from "@workspace/api-client-react";
 import { REPORT_LAYOUT_FIELD_GROUPS } from "./report-layout-fields";
+import { absolutePosition, directChildren, parentIdFor, sectionForObject, visibleWithParents } from "./report-designer-model";
+import { evaluateReportFormula } from "./report-template-formulas";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer } from "lucide-react";
 import { useAppBack } from "@/hooks/use-app-back";
@@ -62,6 +64,7 @@ export type ReportDocumentProps = {
   reportReferenceNumber?: string;
   defaultTitle?: string;
   templateDesign?: ReportTemplateDesign;
+  formulaPreview?: boolean;
 };
 
 const positionedSectionObjects = new WeakMap<ReportLayout, Map<string, ReportTemplateObject>>();
@@ -101,6 +104,10 @@ function layoutSectionVisible(layout: ReportLayout | undefined, key: string) {
 
 function layoutSectionOrder(layout: ReportLayout | undefined, key: string) {
   const section = layout?.config.sections.find((item) => item.key === key);
+  if (key === "remarks") {
+    const resultsOrder = layout?.config.sections.find((item) => item.key === "results")?.order ?? 0;
+    return resultsOrder - 0.5;
+  }
   return section?.order ?? 0;
 }
 
@@ -111,7 +118,7 @@ function layoutSectionStyle(layout: ReportLayout | undefined, key: string): CSSP
     ? positioned.backgroundColor ?? "transparent"
     : section?.backgroundColor;
   return {
-    order: section?.order ?? 0,
+    order: layoutSectionOrder(layout, key),
     ...(section?.fontFamily ? { fontFamily: section.fontFamily } : {}),
     ...(section?.fontSize ? { fontSize: `${section.fontSize}px` } : {}),
     ...(section?.textColor ? { color: section.textColor } : {}),
@@ -139,13 +146,24 @@ function LayoutElements({ layout, sectionKey, placement }: {
   const elements = (layout?.config.elements ?? [])
     .filter((element) => element.sectionKey === sectionKey && element.placement === placement)
     .sort((a, b) => a.order - b.order);
-  const sectionOrder = layout?.config.sections.find((section) => section.key === sectionKey)?.order ?? 0;
+  const sectionOrder = layoutSectionOrder(layout, sectionKey);
   return <>{elements.map((element) => {
     const width = `${Math.min(100, Math.max(10, element.width ?? 100))}%`;
     return element.type === "divider"
       ? <div key={element.key} className="report-layout-divider" style={{ width, order: sectionOrder, borderTop: `1px ${element.lineStyle ?? "solid"} ${element.color ?? "#d1d5db"}`, margin: "8px 0" }} />
       : <div key={element.key} className="report-layout-text" style={{ width, order: sectionOrder, fontFamily: element.fontFamily, fontSize: element.fontSize ? `${element.fontSize}px` : undefined, color: element.color, fontWeight: element.bold ? 700 : undefined }}>{element.content ?? ""}</div>;
   })}</>;
+}
+
+function ReportRemarks({ record, layout }: { record: QcRecord; layout?: ReportLayout }) {
+  if (!layoutSectionVisible(layout, "remarks") || !record.remarks) return null;
+  return <>
+    <LayoutElements layout={layout} sectionKey="remarks" placement="before" />
+    <div className="report-remarks report-layout-section" style={layoutSectionStyle(layout, "remarks")}>
+      <span>Remarks:</span> {record.remarks}
+    </div>
+    <LayoutElements layout={layout} sectionKey="remarks" placement="after" />
+  </>;
 }
 
 function reportTemplateFieldValues(record: QcRecord, companyName: string, reportTitle: string): Record<string, string> {
@@ -188,9 +206,13 @@ function reportTemplateFieldValues(record: QcRecord, companyName: string, report
   };
 }
 
-function resolveReportTemplateText(value: string, fieldValues: Record<string, string>) {
-  return value.replace(/\{\{([A-Z_]+)\}\}/g, (token, key: string) =>
-    Object.hasOwn(fieldValues, key) ? fieldValues[key] : token,
+function resolveReportTemplateText(
+  value: string,
+  fieldValues: Record<string, string>,
+  resolveField?: (key: string) => string | undefined,
+) {
+  return value.replace(/\{\{([A-Za-z_][A-Za-z0-9_.]*)\}\}/g, (token, key: string) =>
+    resolveField?.(key) ?? (Object.hasOwn(fieldValues, key) ? fieldValues[key] : token),
   );
 }
 
@@ -199,43 +221,40 @@ function ReportTemplateObjects({
   record,
   companyName,
   reportTitle,
+  formulaPreview = false,
 }: {
   design: ReportTemplateDesign;
   record: QcRecord;
   companyName: string;
   reportTitle: string;
+  formulaPreview?: boolean;
 }) {
   const fieldValues = reportTemplateFieldValues(record, companyName, reportTitle);
-  const sections = new Map(
-    design.objects
-      .filter((object) => object.type === "section" && object.sectionKey)
-      .map((object) => [object.sectionKey!, object]),
-  );
   const objects = design.objects
     .filter((object) => {
-      if (object.type === "section" || !object.visible) return false;
-      if (!object.sectionKey) return true;
-      const section = sections.get(object.sectionKey);
-      if (section?.visible === false) return false;
-      if (object.sectionKey === "header" && !design.page.showHeader) return false;
-      if (object.sectionKey === "signatures" && !design.page.showFooter) return false;
+      if (["group", "tableRow", "tableCell"].includes(object.type) ||
+        !visibleWithParents(object, design.objects)) return false;
+      const section = sectionForObject(object, design.objects);
+      if (section?.sectionKey === "header" && !design.page.showHeader) return false;
+      if (section?.sectionKey === "signatures" && !design.page.showFooter) return false;
       return true;
     })
     .sort((left, right) => left.zIndex - right.zIndex);
 
   return <>{objects.map((object) => {
-    const parent = object.sectionKey ? sections.get(object.sectionKey) : undefined;
-    const objectX = object.x + (parent?.x ?? 0);
-    const objectY = object.y + (parent?.y ?? 0);
+    const { x: objectX, y: objectY } = absolutePosition(object, design.objects);
+    const hasStructuredRows = object.type === "table" &&
+      directChildren(design.objects, object.id).some((child) => child.type === "tableRow");
     const commonStyle: CSSProperties = {
       position: "absolute",
       left: `${objectX}mm`,
       top: `${objectY}mm`,
       width: `${object.width}mm`,
-      height: `${object.height}mm`,
+      height: hasStructuredRows ? "auto" : `${object.height}mm`,
+      minHeight: hasStructuredRows ? `${object.height}mm` : undefined,
       zIndex: object.zIndex,
       boxSizing: "border-box",
-      overflow: "hidden",
+      overflow: object.type === "table" ? "visible" : "hidden",
       transform: object.rotation ? `rotate(${object.rotation}deg)` : undefined,
       opacity: object.opacity ?? 1,
       fontFamily: object.fontFamily,
@@ -259,6 +278,16 @@ function ReportTemplateObjects({
       : object.fieldKey
         ? resolveReportTemplateDynamicField(record, object.fieldKey, fieldValues)
         : "";
+
+    if (object.type === "section") {
+      return <div
+        key={object.id}
+        className="report-template-object report-template-section"
+        data-report-object={object.id}
+        aria-hidden="true"
+        style={{ ...commonStyle, backgroundColor: object.backgroundColor ?? "transparent" }}
+      />;
+    }
 
     if (object.type === "image") {
       return <img
@@ -314,7 +343,20 @@ function ReportTemplateObjects({
         data-report-object={object.id}
         style={commonStyle}
       >
-        <ReportTemplateDataTable design={design} record={record} object={object} />
+        <ReportTemplateDataTable design={design} record={record} object={object} fieldValues={fieldValues} formulaPreview={formulaPreview} />
+      </div>;
+    }
+
+    if (object.type === "formula") {
+      const value = formulaPreview
+        ? `[Formula: ${object.name}]`
+        : evaluateFormulaForRecord(object.formula ?? "", record, fieldValues);
+      return <div key={object.id} className="report-template-object report-template-formula" data-report-object={object.id} style={{ ...commonStyle, whiteSpace: "pre-wrap" }}>{value}</div>;
+    }
+
+    if (object.type === "signature") {
+      return <div key={object.id} className="report-template-object report-template-signature" data-report-object={object.id} style={{ ...commonStyle, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+        <span>{object.name}</span><span style={{ flex: 1, borderBottom: `1px solid ${object.borderColor ?? "#20252b"}`, marginTop: 3 }} /><small>{object.content ?? "Signature"}</small>
       </div>;
     }
 
@@ -657,14 +699,73 @@ function reportTemplateTableCell(
   return value === undefined || value === null ? "" : textValue(value, "");
 }
 
+function reportTemplateCellField(
+  key: string,
+  fieldValues: Record<string, string>,
+  record: QcRecord,
+  row: ValueMap | undefined,
+  rowIndex: number,
+  isBlockCompression: boolean,
+): string {
+  if (row && key.startsWith("details.")) {
+    return reportTemplateTableCell(row, key.slice("details.".length), rowIndex, isBlockCompression);
+  }
+  if (Object.hasOwn(fieldValues, key)) return fieldValues[key];
+  return resolveReportTemplateDynamicField(record, key, fieldValues);
+}
+
+function evaluateFormulaForRecord(
+  formula: string,
+  record: QcRecord,
+  fieldValues: Record<string, string>,
+  row?: ValueMap,
+  rowIndex = 0,
+  isBlockCompression = false,
+): string {
+  try {
+    const value = evaluateReportFormula(formula, (key) =>
+      reportTemplateCellField(key, fieldValues, record, row, rowIndex, isBlockCompression),
+    );
+    return Number(value.toPrecision(12)).toString();
+  } catch {
+    return "#ERROR";
+  }
+}
+
+function templateCellValue(
+  cell: ReportTemplateObject,
+  record: QcRecord,
+  fieldValues: Record<string, string>,
+  row: ValueMap | undefined,
+  rowIndex: number,
+  isBlockCompression: boolean,
+  formulaPreview: boolean,
+) {
+  if (cell.formula !== undefined) {
+    if (formulaPreview) return `[Formula: ${cell.name}]`;
+    return evaluateFormulaForRecord(cell.formula, record, fieldValues, row, rowIndex, isBlockCompression);
+  }
+  if (cell.fieldKey) {
+    return reportTemplateCellField(cell.fieldKey, fieldValues, record, row, rowIndex, isBlockCompression);
+  }
+  return resolveReportTemplateText(cell.content ?? "", fieldValues, (key) => {
+    const value = reportTemplateCellField(key, fieldValues, record, row, rowIndex, isBlockCompression);
+    return value === "" ? undefined : value;
+  });
+}
+
 function ReportTemplateDataTable({
   design,
   record,
   object,
+  fieldValues,
+  formulaPreview = false,
 }: {
   design: ReportTemplateDesign;
   record: QcRecord;
   object: ReportTemplateObject;
+  fieldValues: Record<string, string>;
+  formulaPreview?: boolean;
 }) {
   const tableKey = object.tableKey ?? "";
   const fallback = (REPORT_LAYOUT_FIELD_GROUPS[record.testType]?.[tableKey] ?? [])
@@ -677,7 +778,75 @@ function ReportTemplateDataTable({
     .filter((column) => column.visible)
     .sort((left, right) => left.order - right.order);
   const rows = reportTemplateTableRows(record, tableKey);
+  const structuredRows = directChildren(design.objects, object.id)
+    .filter((child) => child.type === "tableRow" && child.visible)
+    .sort((left, right) => left.y - right.y || left.zIndex - right.zIndex);
   const borderColor = object.borderColor ?? "#9aa6b2";
+
+  if (structuredRows.length) {
+    const headerRows = structuredRows.filter((row) => row.rowType === "header");
+    const bodyRows = structuredRows.filter((row) => row.rowType !== "header");
+    const cellObjects = (row: ReportTemplateObject) => directChildren(design.objects, row.id)
+      .filter((cell) => cell.type === "tableCell" && cell.visible)
+      .sort((left, right) => (left.columnIndex ?? left.x) - (right.columnIndex ?? right.x));
+    const columnCount = Math.max(1, ...structuredRows.map((row) => cellObjects(row).length));
+    const renderRow = (templateRow: ReportTemplateObject, dataRow?: ValueMap, rowIndex = 0) => {
+      const cells = cellObjects(templateRow);
+      return <tr
+        key={`${templateRow.id}-${dataRow ? rowIndex : "static"}`}
+        style={{
+          height: `${templateRow.height}mm`,
+          backgroundColor: templateRow.backgroundColor,
+          fontFamily: templateRow.fontFamily ?? object.fontFamily ?? "Arial",
+          fontSize: `${templateRow.fontSize ?? object.fontSize ?? 10}px`,
+          color: templateRow.textColor ?? object.textColor ?? "#20252b",
+          fontWeight: templateRow.bold ? 700 : undefined,
+          textAlign: templateRow.textAlign ?? "left",
+        }}
+      >
+        {cells.map((cell) => <td
+          key={cell.id}
+          style={{
+            width: `${cell.width}mm`,
+            height: `${cell.height}mm`,
+            border: `${cell.borderWidth ?? templateRow.borderWidth ?? 0.5}px ${cell.lineStyle ?? templateRow.lineStyle ?? "solid"} ${cell.borderColor ?? templateRow.borderColor ?? borderColor}`,
+            padding: `${cell.padding ?? templateRow.padding ?? 1}px`,
+            backgroundColor: cell.backgroundColor ?? templateRow.backgroundColor,
+            color: cell.textColor ?? templateRow.textColor ?? object.textColor ?? "#20252b",
+            fontFamily: cell.fontFamily ?? templateRow.fontFamily ?? object.fontFamily ?? "Arial",
+            fontSize: `${cell.fontSize ?? templateRow.fontSize ?? object.fontSize ?? 10}px`,
+            fontWeight: cell.bold ?? templateRow.bold ? 700 : undefined,
+            fontStyle: cell.italic ? "italic" : undefined,
+            textAlign: cell.textAlign ?? templateRow.textAlign ?? "left",
+            verticalAlign: "middle",
+            overflowWrap: "anywhere",
+            boxSizing: "border-box",
+          }}
+          data-report-cell={cell.id}
+        >{templateCellValue(cell, record, fieldValues, dataRow, rowIndex, blockCompression, formulaPreview)}</td>)}
+      </tr>;
+    };
+    return (
+      <table className="report-template-data-table" aria-label={object.name} data-report-table={object.id} style={{
+        width: "100%",
+        minHeight: "100%",
+        tableLayout: "fixed",
+        borderCollapse: "collapse",
+        fontFamily: object.fontFamily ?? "Arial",
+        fontSize: `${object.fontSize ?? 10}px`,
+        color: object.textColor ?? "#20252b",
+      }}>
+        {headerRows.length > 0 && <thead>{headerRows.map((row) => renderRow(row))}</thead>}
+        <tbody>
+          {bodyRows.flatMap((templateRow) => templateRow.rowType === "dynamic"
+            ? rows.length ? rows.map((dataRow, rowIndex) => renderRow(templateRow, dataRow, rowIndex)) : []
+            : [renderRow(templateRow)])}
+          {bodyRows.some((row) => row.rowType === "dynamic") && rows.length === 0 &&
+            <tr><td colSpan={columnCount} style={{ border: `1px solid ${borderColor}`, padding: 4 }}>No saved row data.</td></tr>}
+        </tbody>
+      </table>
+    );
+  }
   return (
     <table
       className="report-template-data-table"
@@ -1920,6 +2089,7 @@ function BlocksReport({
           <LayoutElements layout={layout} sectionKey="context" placement="after" />
         </>
       )}
+      <ReportRemarks record={record} layout={layout} />
       {layoutSectionVisible(layout, "results") && (
         <>
           <LayoutElements layout={layout} sectionKey="results" placement="before" />
@@ -2405,7 +2575,7 @@ function defaultReportTitle(testType: QcRecord["testType"]) {
  * Print-only document surface.  Keeping the document separate from the
  * route/toolbar also lets the layout editor mount the same data renderer.
  */
-export function ReportDocument({ report, strengthStandards = [], sieveStandards = [], selectedStrengthStandardId, accordingTo: configuredAccordingTo, reportReferenceNumber: configuredReference, defaultTitle: configuredTitle, templateDesign }: ReportDocumentProps) {
+export function ReportDocument({ report, strengthStandards = [], sieveStandards = [], selectedStrengthStandardId, accordingTo: configuredAccordingTo, reportReferenceNumber: configuredReference, defaultTitle: configuredTitle, templateDesign, formulaPreview = false }: ReportDocumentProps) {
   const { record, companyName, companySubtitle } = report;
   const layout = templateDesign
     ? layoutWithTemplateDesign(report.layout, record, templateDesign)
@@ -2468,6 +2638,7 @@ export function ReportDocument({ report, strengthStandards = [], sieveStandards 
       <div className="report-company">{companySubtitle}</div><img src="/al-manaratain-logo.webp" alt="Al Manaratain Logo" className="report-logo" /><div className="report-title"><strong>{reportTitle}</strong><span>Ref: {reportReferenceNumber}</span></div>
     </header><LayoutElements layout={layout} sectionKey="header" placement="after" /></>}
     {layoutSectionVisible(layout, "standard") && <><LayoutElements layout={layout} sectionKey="standard" placement="before" /><p className="report-standard report-layout-section" style={layoutSectionStyle(layout, "standard")}>{accordingTo ? `ACCORDING TO ${accordingTo}` : "QUALITY CONTROL TEST REPORT"}</p><LayoutElements layout={layout} sectionKey="standard" placement="after" /></>}
+    {record.testType !== "Blocks" && <ReportRemarks record={record} layout={layout} />}
     {record.testType === "Blocks" ? (
       <BlocksReport record={record} standards={strengthStandards} layout={layout} />
     ) : layoutSectionVisible(layout, "results") && (
@@ -2484,10 +2655,9 @@ export function ReportDocument({ report, strengthStandards = [], sieveStandards 
         <LayoutElements layout={layout} sectionKey="results" placement="after" />
       </>
     )}
-    {layoutSectionVisible(layout, "remarks") && record.remarks && <><LayoutElements layout={layout} sectionKey="remarks" placement="before" /><div className="report-remarks report-layout-section" style={layoutSectionStyle(layout, "remarks")}><span>Remarks:</span> {record.remarks}</div><LayoutElements layout={layout} sectionKey="remarks" placement="after" /></>}
     {layoutSectionVisible(layout, "signatures") && <><LayoutElements layout={layout} sectionKey="signatures" placement="before" /><footer className="report-signatures report-layout-section" style={layoutSectionStyle(layout, "signatures")}><div><span>Tested by:</span><strong>{record.testedBy}</strong></div><div><span>Approved by:</span><strong>{record.reviewedBy || "ADEL ABBAS EBRAHIM"}</strong></div><small>{companyName} · {companySubtitle}</small></footer><LayoutElements layout={layout} sectionKey="signatures" placement="after" /></>}
   </div>
-  {templateDesign && <ReportTemplateObjects design={templateDesign} record={record} companyName={companyName} reportTitle={reportTitle} />}
+  {templateDesign && <ReportTemplateObjects design={templateDesign} record={record} companyName={companyName} reportTitle={reportTitle} formulaPreview={formulaPreview} />}
   </main>
   </>;
 }

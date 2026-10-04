@@ -99,6 +99,7 @@ export * from './reportTemplateObject';
 export * from './reportTemplateObjectFontFamily';
 export * from './reportTemplateObjectLineOrientation';
 export * from './reportTemplateObjectLineStyle';
+export * from './reportTemplateObjectRowType';
 export * from './reportTemplateObjectShapeType';
 export * from './reportTemplateObjectTextAlign';
 export * from './reportTemplateObjectType';

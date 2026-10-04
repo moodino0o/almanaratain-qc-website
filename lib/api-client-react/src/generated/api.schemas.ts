@@ -969,12 +969,26 @@ export type ReportTemplateObjectType = typeof ReportTemplateObjectType[keyof typ
 
 export const ReportTemplateObjectType = {
   section: 'section',
+  group: 'group',
   text: 'text',
   dynamicField: 'dynamicField',
   line: 'line',
   shape: 'shape',
   image: 'image',
   table: 'table',
+  tableRow: 'tableRow',
+  tableCell: 'tableCell',
+  signature: 'signature',
+  formula: 'formula',
+} as const;
+
+export type ReportTemplateObjectRowType = typeof ReportTemplateObjectRowType[keyof typeof ReportTemplateObjectRowType];
+
+
+export const ReportTemplateObjectRowType = {
+  header: 'header',
+  static: 'static',
+  dynamic: 'dynamic',
 } as const;
 
 export type ReportTemplateObjectFontFamily = typeof ReportTemplateObjectFontFamily[keyof typeof ReportTemplateObjectFontFamily];
@@ -1037,6 +1051,11 @@ export interface ReportTemplateObject {
      */
   name: string;
   /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  parentId?: string;
+  /**
      * @minimum -1000
      * @maximum 5000
      */
@@ -1074,6 +1093,14 @@ export interface ReportTemplateObject {
   content?: string;
   /** @maxLength 80 */
   fieldKey?: string;
+  /** @maxLength 1000 */
+  formula?: string;
+  rowType?: ReportTemplateObjectRowType;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  columnIndex?: number;
   /** @pattern ^/objects/uploads/[A-Za-z0-9._/-]+$ */
   objectPath?: string;
   fontFamily?: ReportTemplateObjectFontFamily;
@@ -1136,6 +1163,7 @@ export type ReportTemplateDesignSchemaVersion = typeof ReportTemplateDesignSchem
 
 export const ReportTemplateDesignSchemaVersion = {
   NUMBER_1: 1,
+  NUMBER_2: 2,
 } as const;
 
 export interface ReportTemplateDesign {

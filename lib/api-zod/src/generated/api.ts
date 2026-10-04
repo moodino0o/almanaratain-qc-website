@@ -1890,6 +1890,8 @@ export const listReportTemplatesResponseDesignObjectsItemIdMax = 80;
 
 export const listReportTemplatesResponseDesignObjectsItemNameMax = 120;
 
+export const listReportTemplatesResponseDesignObjectsItemParentIdMax = 80;
+
 export const listReportTemplatesResponseDesignObjectsItemXMin = -1000;
 export const listReportTemplatesResponseDesignObjectsItemXMax = 5000;
 
@@ -1911,6 +1913,11 @@ export const listReportTemplatesResponseDesignObjectsItemSectionKeyMax = 80;
 export const listReportTemplatesResponseDesignObjectsItemContentMax = 5000;
 
 export const listReportTemplatesResponseDesignObjectsItemFieldKeyMax = 80;
+
+export const listReportTemplatesResponseDesignObjectsItemFormulaMax = 1000;
+
+export const listReportTemplatesResponseDesignObjectsItemColumnIndexMin = 0;
+export const listReportTemplatesResponseDesignObjectsItemColumnIndexMax = 100;
 
 export const listReportTemplatesResponseDesignObjectsItemObjectPathRegExp = new RegExp('^/objects/uploads/[A-Za-z0-9._/-]+$');
 export const listReportTemplatesResponseDesignObjectsItemFontSizeMin = 6;
@@ -1952,7 +1959,7 @@ export const ListReportTemplatesResponseItem = zod.object({
   "isDefault": zod.boolean(),
   "version": zod.number().min(1),
   "design": zod.object({
-  "schemaVersion": zod.literal(1),
+  "schemaVersion": zod.union([zod.literal(1),zod.literal(2)]),
   "layout": zod.object({
   "title": zod.string().min(1),
   "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']),
@@ -2012,8 +2019,9 @@ export const ListReportTemplatesResponseItem = zod.object({
 }),
   "objects": zod.array(zod.object({
   "id": zod.string().min(1).max(listReportTemplatesResponseDesignObjectsItemIdMax),
-  "type": zod.enum(['section', 'text', 'dynamicField', 'line', 'shape', 'image', 'table']),
+  "type": zod.enum(['section', 'group', 'text', 'dynamicField', 'line', 'shape', 'image', 'table', 'tableRow', 'tableCell', 'signature', 'formula']),
   "name": zod.string().min(1).max(listReportTemplatesResponseDesignObjectsItemNameMax),
+  "parentId": zod.string().min(1).max(listReportTemplatesResponseDesignObjectsItemParentIdMax).optional(),
   "x": zod.number().min(listReportTemplatesResponseDesignObjectsItemXMin).max(listReportTemplatesResponseDesignObjectsItemXMax),
   "y": zod.number().min(listReportTemplatesResponseDesignObjectsItemYMin).max(listReportTemplatesResponseDesignObjectsItemYMax),
   "width": zod.number().min(1).max(listReportTemplatesResponseDesignObjectsItemWidthMax),
@@ -2025,6 +2033,9 @@ export const ListReportTemplatesResponseItem = zod.object({
   "sectionKey": zod.string().max(listReportTemplatesResponseDesignObjectsItemSectionKeyMax).optional(),
   "content": zod.string().max(listReportTemplatesResponseDesignObjectsItemContentMax).optional(),
   "fieldKey": zod.string().max(listReportTemplatesResponseDesignObjectsItemFieldKeyMax).optional(),
+  "formula": zod.string().max(listReportTemplatesResponseDesignObjectsItemFormulaMax).optional(),
+  "rowType": zod.enum(['header', 'static', 'dynamic']).optional(),
+  "columnIndex": zod.number().min(listReportTemplatesResponseDesignObjectsItemColumnIndexMin).max(listReportTemplatesResponseDesignObjectsItemColumnIndexMax).optional(),
   "objectPath": zod.string().regex(listReportTemplatesResponseDesignObjectsItemObjectPathRegExp).optional(),
   "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
   "fontSize": zod.number().min(listReportTemplatesResponseDesignObjectsItemFontSizeMin).max(listReportTemplatesResponseDesignObjectsItemFontSizeMax).optional(),
@@ -2134,6 +2145,8 @@ export const createReportTemplateBodyDesignObjectsItemIdMax = 80;
 
 export const createReportTemplateBodyDesignObjectsItemNameMax = 120;
 
+export const createReportTemplateBodyDesignObjectsItemParentIdMax = 80;
+
 export const createReportTemplateBodyDesignObjectsItemXMin = -1000;
 export const createReportTemplateBodyDesignObjectsItemXMax = 5000;
 
@@ -2155,6 +2168,11 @@ export const createReportTemplateBodyDesignObjectsItemSectionKeyMax = 80;
 export const createReportTemplateBodyDesignObjectsItemContentMax = 5000;
 
 export const createReportTemplateBodyDesignObjectsItemFieldKeyMax = 80;
+
+export const createReportTemplateBodyDesignObjectsItemFormulaMax = 1000;
+
+export const createReportTemplateBodyDesignObjectsItemColumnIndexMin = 0;
+export const createReportTemplateBodyDesignObjectsItemColumnIndexMax = 100;
 
 export const createReportTemplateBodyDesignObjectsItemObjectPathRegExp = new RegExp('^/objects/uploads/[A-Za-z0-9._/-]+$');
 export const createReportTemplateBodyDesignObjectsItemFontSizeMin = 6;
@@ -2194,7 +2212,7 @@ export const CreateReportTemplateBody = zod.object({
   "description": zod.string().max(createReportTemplateBodyDescriptionMax).nullish(),
   "isDefault": zod.boolean().optional(),
   "design": zod.object({
-  "schemaVersion": zod.literal(1),
+  "schemaVersion": zod.union([zod.literal(1),zod.literal(2)]),
   "layout": zod.object({
   "title": zod.string().min(1),
   "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']),
@@ -2254,8 +2272,9 @@ export const CreateReportTemplateBody = zod.object({
 }),
   "objects": zod.array(zod.object({
   "id": zod.string().min(1).max(createReportTemplateBodyDesignObjectsItemIdMax),
-  "type": zod.enum(['section', 'text', 'dynamicField', 'line', 'shape', 'image', 'table']),
+  "type": zod.enum(['section', 'group', 'text', 'dynamicField', 'line', 'shape', 'image', 'table', 'tableRow', 'tableCell', 'signature', 'formula']),
   "name": zod.string().min(1).max(createReportTemplateBodyDesignObjectsItemNameMax),
+  "parentId": zod.string().min(1).max(createReportTemplateBodyDesignObjectsItemParentIdMax).optional(),
   "x": zod.number().min(createReportTemplateBodyDesignObjectsItemXMin).max(createReportTemplateBodyDesignObjectsItemXMax),
   "y": zod.number().min(createReportTemplateBodyDesignObjectsItemYMin).max(createReportTemplateBodyDesignObjectsItemYMax),
   "width": zod.number().min(1).max(createReportTemplateBodyDesignObjectsItemWidthMax),
@@ -2267,6 +2286,9 @@ export const CreateReportTemplateBody = zod.object({
   "sectionKey": zod.string().max(createReportTemplateBodyDesignObjectsItemSectionKeyMax).optional(),
   "content": zod.string().max(createReportTemplateBodyDesignObjectsItemContentMax).optional(),
   "fieldKey": zod.string().max(createReportTemplateBodyDesignObjectsItemFieldKeyMax).optional(),
+  "formula": zod.string().max(createReportTemplateBodyDesignObjectsItemFormulaMax).optional(),
+  "rowType": zod.enum(['header', 'static', 'dynamic']).optional(),
+  "columnIndex": zod.number().min(createReportTemplateBodyDesignObjectsItemColumnIndexMin).max(createReportTemplateBodyDesignObjectsItemColumnIndexMax).optional(),
   "objectPath": zod.string().regex(createReportTemplateBodyDesignObjectsItemObjectPathRegExp).optional(),
   "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
   "fontSize": zod.number().min(createReportTemplateBodyDesignObjectsItemFontSizeMin).max(createReportTemplateBodyDesignObjectsItemFontSizeMax).optional(),
@@ -2366,6 +2388,8 @@ export const createReportTemplateResponseDesignObjectsItemIdMax = 80;
 
 export const createReportTemplateResponseDesignObjectsItemNameMax = 120;
 
+export const createReportTemplateResponseDesignObjectsItemParentIdMax = 80;
+
 export const createReportTemplateResponseDesignObjectsItemXMin = -1000;
 export const createReportTemplateResponseDesignObjectsItemXMax = 5000;
 
@@ -2387,6 +2411,11 @@ export const createReportTemplateResponseDesignObjectsItemSectionKeyMax = 80;
 export const createReportTemplateResponseDesignObjectsItemContentMax = 5000;
 
 export const createReportTemplateResponseDesignObjectsItemFieldKeyMax = 80;
+
+export const createReportTemplateResponseDesignObjectsItemFormulaMax = 1000;
+
+export const createReportTemplateResponseDesignObjectsItemColumnIndexMin = 0;
+export const createReportTemplateResponseDesignObjectsItemColumnIndexMax = 100;
 
 export const createReportTemplateResponseDesignObjectsItemObjectPathRegExp = new RegExp('^/objects/uploads/[A-Za-z0-9._/-]+$');
 export const createReportTemplateResponseDesignObjectsItemFontSizeMin = 6;
@@ -2428,7 +2457,7 @@ export const CreateReportTemplateResponse = zod.object({
   "isDefault": zod.boolean(),
   "version": zod.number().min(1),
   "design": zod.object({
-  "schemaVersion": zod.literal(1),
+  "schemaVersion": zod.union([zod.literal(1),zod.literal(2)]),
   "layout": zod.object({
   "title": zod.string().min(1),
   "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']),
@@ -2488,8 +2517,9 @@ export const CreateReportTemplateResponse = zod.object({
 }),
   "objects": zod.array(zod.object({
   "id": zod.string().min(1).max(createReportTemplateResponseDesignObjectsItemIdMax),
-  "type": zod.enum(['section', 'text', 'dynamicField', 'line', 'shape', 'image', 'table']),
+  "type": zod.enum(['section', 'group', 'text', 'dynamicField', 'line', 'shape', 'image', 'table', 'tableRow', 'tableCell', 'signature', 'formula']),
   "name": zod.string().min(1).max(createReportTemplateResponseDesignObjectsItemNameMax),
+  "parentId": zod.string().min(1).max(createReportTemplateResponseDesignObjectsItemParentIdMax).optional(),
   "x": zod.number().min(createReportTemplateResponseDesignObjectsItemXMin).max(createReportTemplateResponseDesignObjectsItemXMax),
   "y": zod.number().min(createReportTemplateResponseDesignObjectsItemYMin).max(createReportTemplateResponseDesignObjectsItemYMax),
   "width": zod.number().min(1).max(createReportTemplateResponseDesignObjectsItemWidthMax),
@@ -2501,6 +2531,9 @@ export const CreateReportTemplateResponse = zod.object({
   "sectionKey": zod.string().max(createReportTemplateResponseDesignObjectsItemSectionKeyMax).optional(),
   "content": zod.string().max(createReportTemplateResponseDesignObjectsItemContentMax).optional(),
   "fieldKey": zod.string().max(createReportTemplateResponseDesignObjectsItemFieldKeyMax).optional(),
+  "formula": zod.string().max(createReportTemplateResponseDesignObjectsItemFormulaMax).optional(),
+  "rowType": zod.enum(['header', 'static', 'dynamic']).optional(),
+  "columnIndex": zod.number().min(createReportTemplateResponseDesignObjectsItemColumnIndexMin).max(createReportTemplateResponseDesignObjectsItemColumnIndexMax).optional(),
   "objectPath": zod.string().regex(createReportTemplateResponseDesignObjectsItemObjectPathRegExp).optional(),
   "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
   "fontSize": zod.number().min(createReportTemplateResponseDesignObjectsItemFontSizeMin).max(createReportTemplateResponseDesignObjectsItemFontSizeMax).optional(),
@@ -2613,6 +2646,8 @@ export const updateReportTemplateBodyDesignObjectsItemIdMax = 80;
 
 export const updateReportTemplateBodyDesignObjectsItemNameMax = 120;
 
+export const updateReportTemplateBodyDesignObjectsItemParentIdMax = 80;
+
 export const updateReportTemplateBodyDesignObjectsItemXMin = -1000;
 export const updateReportTemplateBodyDesignObjectsItemXMax = 5000;
 
@@ -2634,6 +2669,11 @@ export const updateReportTemplateBodyDesignObjectsItemSectionKeyMax = 80;
 export const updateReportTemplateBodyDesignObjectsItemContentMax = 5000;
 
 export const updateReportTemplateBodyDesignObjectsItemFieldKeyMax = 80;
+
+export const updateReportTemplateBodyDesignObjectsItemFormulaMax = 1000;
+
+export const updateReportTemplateBodyDesignObjectsItemColumnIndexMin = 0;
+export const updateReportTemplateBodyDesignObjectsItemColumnIndexMax = 100;
 
 export const updateReportTemplateBodyDesignObjectsItemObjectPathRegExp = new RegExp('^/objects/uploads/[A-Za-z0-9._/-]+$');
 export const updateReportTemplateBodyDesignObjectsItemFontSizeMin = 6;
@@ -2671,7 +2711,7 @@ export const UpdateReportTemplateBody = zod.object({
   "name": zod.string().min(1).max(updateReportTemplateBodyNameMax).optional(),
   "description": zod.string().max(updateReportTemplateBodyDescriptionMax).nullish(),
   "design": zod.object({
-  "schemaVersion": zod.literal(1),
+  "schemaVersion": zod.union([zod.literal(1),zod.literal(2)]),
   "layout": zod.object({
   "title": zod.string().min(1),
   "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']),
@@ -2731,8 +2771,9 @@ export const UpdateReportTemplateBody = zod.object({
 }),
   "objects": zod.array(zod.object({
   "id": zod.string().min(1).max(updateReportTemplateBodyDesignObjectsItemIdMax),
-  "type": zod.enum(['section', 'text', 'dynamicField', 'line', 'shape', 'image', 'table']),
+  "type": zod.enum(['section', 'group', 'text', 'dynamicField', 'line', 'shape', 'image', 'table', 'tableRow', 'tableCell', 'signature', 'formula']),
   "name": zod.string().min(1).max(updateReportTemplateBodyDesignObjectsItemNameMax),
+  "parentId": zod.string().min(1).max(updateReportTemplateBodyDesignObjectsItemParentIdMax).optional(),
   "x": zod.number().min(updateReportTemplateBodyDesignObjectsItemXMin).max(updateReportTemplateBodyDesignObjectsItemXMax),
   "y": zod.number().min(updateReportTemplateBodyDesignObjectsItemYMin).max(updateReportTemplateBodyDesignObjectsItemYMax),
   "width": zod.number().min(1).max(updateReportTemplateBodyDesignObjectsItemWidthMax),
@@ -2744,6 +2785,9 @@ export const UpdateReportTemplateBody = zod.object({
   "sectionKey": zod.string().max(updateReportTemplateBodyDesignObjectsItemSectionKeyMax).optional(),
   "content": zod.string().max(updateReportTemplateBodyDesignObjectsItemContentMax).optional(),
   "fieldKey": zod.string().max(updateReportTemplateBodyDesignObjectsItemFieldKeyMax).optional(),
+  "formula": zod.string().max(updateReportTemplateBodyDesignObjectsItemFormulaMax).optional(),
+  "rowType": zod.enum(['header', 'static', 'dynamic']).optional(),
+  "columnIndex": zod.number().min(updateReportTemplateBodyDesignObjectsItemColumnIndexMin).max(updateReportTemplateBodyDesignObjectsItemColumnIndexMax).optional(),
   "objectPath": zod.string().regex(updateReportTemplateBodyDesignObjectsItemObjectPathRegExp).optional(),
   "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
   "fontSize": zod.number().min(updateReportTemplateBodyDesignObjectsItemFontSizeMin).max(updateReportTemplateBodyDesignObjectsItemFontSizeMax).optional(),
@@ -2843,6 +2887,8 @@ export const updateReportTemplateResponseDesignObjectsItemIdMax = 80;
 
 export const updateReportTemplateResponseDesignObjectsItemNameMax = 120;
 
+export const updateReportTemplateResponseDesignObjectsItemParentIdMax = 80;
+
 export const updateReportTemplateResponseDesignObjectsItemXMin = -1000;
 export const updateReportTemplateResponseDesignObjectsItemXMax = 5000;
 
@@ -2864,6 +2910,11 @@ export const updateReportTemplateResponseDesignObjectsItemSectionKeyMax = 80;
 export const updateReportTemplateResponseDesignObjectsItemContentMax = 5000;
 
 export const updateReportTemplateResponseDesignObjectsItemFieldKeyMax = 80;
+
+export const updateReportTemplateResponseDesignObjectsItemFormulaMax = 1000;
+
+export const updateReportTemplateResponseDesignObjectsItemColumnIndexMin = 0;
+export const updateReportTemplateResponseDesignObjectsItemColumnIndexMax = 100;
 
 export const updateReportTemplateResponseDesignObjectsItemObjectPathRegExp = new RegExp('^/objects/uploads/[A-Za-z0-9._/-]+$');
 export const updateReportTemplateResponseDesignObjectsItemFontSizeMin = 6;
@@ -2905,7 +2956,7 @@ export const UpdateReportTemplateResponse = zod.object({
   "isDefault": zod.boolean(),
   "version": zod.number().min(1),
   "design": zod.object({
-  "schemaVersion": zod.literal(1),
+  "schemaVersion": zod.union([zod.literal(1),zod.literal(2)]),
   "layout": zod.object({
   "title": zod.string().min(1),
   "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']),
@@ -2965,8 +3016,9 @@ export const UpdateReportTemplateResponse = zod.object({
 }),
   "objects": zod.array(zod.object({
   "id": zod.string().min(1).max(updateReportTemplateResponseDesignObjectsItemIdMax),
-  "type": zod.enum(['section', 'text', 'dynamicField', 'line', 'shape', 'image', 'table']),
+  "type": zod.enum(['section', 'group', 'text', 'dynamicField', 'line', 'shape', 'image', 'table', 'tableRow', 'tableCell', 'signature', 'formula']),
   "name": zod.string().min(1).max(updateReportTemplateResponseDesignObjectsItemNameMax),
+  "parentId": zod.string().min(1).max(updateReportTemplateResponseDesignObjectsItemParentIdMax).optional(),
   "x": zod.number().min(updateReportTemplateResponseDesignObjectsItemXMin).max(updateReportTemplateResponseDesignObjectsItemXMax),
   "y": zod.number().min(updateReportTemplateResponseDesignObjectsItemYMin).max(updateReportTemplateResponseDesignObjectsItemYMax),
   "width": zod.number().min(1).max(updateReportTemplateResponseDesignObjectsItemWidthMax),
@@ -2978,6 +3030,9 @@ export const UpdateReportTemplateResponse = zod.object({
   "sectionKey": zod.string().max(updateReportTemplateResponseDesignObjectsItemSectionKeyMax).optional(),
   "content": zod.string().max(updateReportTemplateResponseDesignObjectsItemContentMax).optional(),
   "fieldKey": zod.string().max(updateReportTemplateResponseDesignObjectsItemFieldKeyMax).optional(),
+  "formula": zod.string().max(updateReportTemplateResponseDesignObjectsItemFormulaMax).optional(),
+  "rowType": zod.enum(['header', 'static', 'dynamic']).optional(),
+  "columnIndex": zod.number().min(updateReportTemplateResponseDesignObjectsItemColumnIndexMin).max(updateReportTemplateResponseDesignObjectsItemColumnIndexMax).optional(),
   "objectPath": zod.string().regex(updateReportTemplateResponseDesignObjectsItemObjectPathRegExp).optional(),
   "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
   "fontSize": zod.number().min(updateReportTemplateResponseDesignObjectsItemFontSizeMin).max(updateReportTemplateResponseDesignObjectsItemFontSizeMax).optional(),
@@ -3100,6 +3155,8 @@ export const duplicateReportTemplateBodyDesignObjectsItemIdMax = 80;
 
 export const duplicateReportTemplateBodyDesignObjectsItemNameMax = 120;
 
+export const duplicateReportTemplateBodyDesignObjectsItemParentIdMax = 80;
+
 export const duplicateReportTemplateBodyDesignObjectsItemXMin = -1000;
 export const duplicateReportTemplateBodyDesignObjectsItemXMax = 5000;
 
@@ -3121,6 +3178,11 @@ export const duplicateReportTemplateBodyDesignObjectsItemSectionKeyMax = 80;
 export const duplicateReportTemplateBodyDesignObjectsItemContentMax = 5000;
 
 export const duplicateReportTemplateBodyDesignObjectsItemFieldKeyMax = 80;
+
+export const duplicateReportTemplateBodyDesignObjectsItemFormulaMax = 1000;
+
+export const duplicateReportTemplateBodyDesignObjectsItemColumnIndexMin = 0;
+export const duplicateReportTemplateBodyDesignObjectsItemColumnIndexMax = 100;
 
 export const duplicateReportTemplateBodyDesignObjectsItemObjectPathRegExp = new RegExp('^/objects/uploads/[A-Za-z0-9._/-]+$');
 export const duplicateReportTemplateBodyDesignObjectsItemFontSizeMin = 6;
@@ -3158,7 +3220,7 @@ export const DuplicateReportTemplateBody = zod.object({
   "name": zod.string().min(1).max(duplicateReportTemplateBodyNameMax).optional(),
   "description": zod.string().max(duplicateReportTemplateBodyDescriptionMax).nullish(),
   "design": zod.object({
-  "schemaVersion": zod.literal(1),
+  "schemaVersion": zod.union([zod.literal(1),zod.literal(2)]),
   "layout": zod.object({
   "title": zod.string().min(1),
   "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']),
@@ -3218,8 +3280,9 @@ export const DuplicateReportTemplateBody = zod.object({
 }),
   "objects": zod.array(zod.object({
   "id": zod.string().min(1).max(duplicateReportTemplateBodyDesignObjectsItemIdMax),
-  "type": zod.enum(['section', 'text', 'dynamicField', 'line', 'shape', 'image', 'table']),
+  "type": zod.enum(['section', 'group', 'text', 'dynamicField', 'line', 'shape', 'image', 'table', 'tableRow', 'tableCell', 'signature', 'formula']),
   "name": zod.string().min(1).max(duplicateReportTemplateBodyDesignObjectsItemNameMax),
+  "parentId": zod.string().min(1).max(duplicateReportTemplateBodyDesignObjectsItemParentIdMax).optional(),
   "x": zod.number().min(duplicateReportTemplateBodyDesignObjectsItemXMin).max(duplicateReportTemplateBodyDesignObjectsItemXMax),
   "y": zod.number().min(duplicateReportTemplateBodyDesignObjectsItemYMin).max(duplicateReportTemplateBodyDesignObjectsItemYMax),
   "width": zod.number().min(1).max(duplicateReportTemplateBodyDesignObjectsItemWidthMax),
@@ -3231,6 +3294,9 @@ export const DuplicateReportTemplateBody = zod.object({
   "sectionKey": zod.string().max(duplicateReportTemplateBodyDesignObjectsItemSectionKeyMax).optional(),
   "content": zod.string().max(duplicateReportTemplateBodyDesignObjectsItemContentMax).optional(),
   "fieldKey": zod.string().max(duplicateReportTemplateBodyDesignObjectsItemFieldKeyMax).optional(),
+  "formula": zod.string().max(duplicateReportTemplateBodyDesignObjectsItemFormulaMax).optional(),
+  "rowType": zod.enum(['header', 'static', 'dynamic']).optional(),
+  "columnIndex": zod.number().min(duplicateReportTemplateBodyDesignObjectsItemColumnIndexMin).max(duplicateReportTemplateBodyDesignObjectsItemColumnIndexMax).optional(),
   "objectPath": zod.string().regex(duplicateReportTemplateBodyDesignObjectsItemObjectPathRegExp).optional(),
   "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
   "fontSize": zod.number().min(duplicateReportTemplateBodyDesignObjectsItemFontSizeMin).max(duplicateReportTemplateBodyDesignObjectsItemFontSizeMax).optional(),
@@ -3330,6 +3396,8 @@ export const duplicateReportTemplateResponseDesignObjectsItemIdMax = 80;
 
 export const duplicateReportTemplateResponseDesignObjectsItemNameMax = 120;
 
+export const duplicateReportTemplateResponseDesignObjectsItemParentIdMax = 80;
+
 export const duplicateReportTemplateResponseDesignObjectsItemXMin = -1000;
 export const duplicateReportTemplateResponseDesignObjectsItemXMax = 5000;
 
@@ -3351,6 +3419,11 @@ export const duplicateReportTemplateResponseDesignObjectsItemSectionKeyMax = 80;
 export const duplicateReportTemplateResponseDesignObjectsItemContentMax = 5000;
 
 export const duplicateReportTemplateResponseDesignObjectsItemFieldKeyMax = 80;
+
+export const duplicateReportTemplateResponseDesignObjectsItemFormulaMax = 1000;
+
+export const duplicateReportTemplateResponseDesignObjectsItemColumnIndexMin = 0;
+export const duplicateReportTemplateResponseDesignObjectsItemColumnIndexMax = 100;
 
 export const duplicateReportTemplateResponseDesignObjectsItemObjectPathRegExp = new RegExp('^/objects/uploads/[A-Za-z0-9._/-]+$');
 export const duplicateReportTemplateResponseDesignObjectsItemFontSizeMin = 6;
@@ -3392,7 +3465,7 @@ export const DuplicateReportTemplateResponse = zod.object({
   "isDefault": zod.boolean(),
   "version": zod.number().min(1),
   "design": zod.object({
-  "schemaVersion": zod.literal(1),
+  "schemaVersion": zod.union([zod.literal(1),zod.literal(2)]),
   "layout": zod.object({
   "title": zod.string().min(1),
   "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']),
@@ -3452,8 +3525,9 @@ export const DuplicateReportTemplateResponse = zod.object({
 }),
   "objects": zod.array(zod.object({
   "id": zod.string().min(1).max(duplicateReportTemplateResponseDesignObjectsItemIdMax),
-  "type": zod.enum(['section', 'text', 'dynamicField', 'line', 'shape', 'image', 'table']),
+  "type": zod.enum(['section', 'group', 'text', 'dynamicField', 'line', 'shape', 'image', 'table', 'tableRow', 'tableCell', 'signature', 'formula']),
   "name": zod.string().min(1).max(duplicateReportTemplateResponseDesignObjectsItemNameMax),
+  "parentId": zod.string().min(1).max(duplicateReportTemplateResponseDesignObjectsItemParentIdMax).optional(),
   "x": zod.number().min(duplicateReportTemplateResponseDesignObjectsItemXMin).max(duplicateReportTemplateResponseDesignObjectsItemXMax),
   "y": zod.number().min(duplicateReportTemplateResponseDesignObjectsItemYMin).max(duplicateReportTemplateResponseDesignObjectsItemYMax),
   "width": zod.number().min(1).max(duplicateReportTemplateResponseDesignObjectsItemWidthMax),
@@ -3465,6 +3539,9 @@ export const DuplicateReportTemplateResponse = zod.object({
   "sectionKey": zod.string().max(duplicateReportTemplateResponseDesignObjectsItemSectionKeyMax).optional(),
   "content": zod.string().max(duplicateReportTemplateResponseDesignObjectsItemContentMax).optional(),
   "fieldKey": zod.string().max(duplicateReportTemplateResponseDesignObjectsItemFieldKeyMax).optional(),
+  "formula": zod.string().max(duplicateReportTemplateResponseDesignObjectsItemFormulaMax).optional(),
+  "rowType": zod.enum(['header', 'static', 'dynamic']).optional(),
+  "columnIndex": zod.number().min(duplicateReportTemplateResponseDesignObjectsItemColumnIndexMin).max(duplicateReportTemplateResponseDesignObjectsItemColumnIndexMax).optional(),
   "objectPath": zod.string().regex(duplicateReportTemplateResponseDesignObjectsItemObjectPathRegExp).optional(),
   "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
   "fontSize": zod.number().min(duplicateReportTemplateResponseDesignObjectsItemFontSizeMin).max(duplicateReportTemplateResponseDesignObjectsItemFontSizeMax).optional(),
@@ -3574,6 +3651,8 @@ export const setReportTemplateDefaultResponseDesignObjectsItemIdMax = 80;
 
 export const setReportTemplateDefaultResponseDesignObjectsItemNameMax = 120;
 
+export const setReportTemplateDefaultResponseDesignObjectsItemParentIdMax = 80;
+
 export const setReportTemplateDefaultResponseDesignObjectsItemXMin = -1000;
 export const setReportTemplateDefaultResponseDesignObjectsItemXMax = 5000;
 
@@ -3595,6 +3674,11 @@ export const setReportTemplateDefaultResponseDesignObjectsItemSectionKeyMax = 80
 export const setReportTemplateDefaultResponseDesignObjectsItemContentMax = 5000;
 
 export const setReportTemplateDefaultResponseDesignObjectsItemFieldKeyMax = 80;
+
+export const setReportTemplateDefaultResponseDesignObjectsItemFormulaMax = 1000;
+
+export const setReportTemplateDefaultResponseDesignObjectsItemColumnIndexMin = 0;
+export const setReportTemplateDefaultResponseDesignObjectsItemColumnIndexMax = 100;
 
 export const setReportTemplateDefaultResponseDesignObjectsItemObjectPathRegExp = new RegExp('^/objects/uploads/[A-Za-z0-9._/-]+$');
 export const setReportTemplateDefaultResponseDesignObjectsItemFontSizeMin = 6;
@@ -3636,7 +3720,7 @@ export const SetReportTemplateDefaultResponse = zod.object({
   "isDefault": zod.boolean(),
   "version": zod.number().min(1),
   "design": zod.object({
-  "schemaVersion": zod.literal(1),
+  "schemaVersion": zod.union([zod.literal(1),zod.literal(2)]),
   "layout": zod.object({
   "title": zod.string().min(1),
   "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']),
@@ -3696,8 +3780,9 @@ export const SetReportTemplateDefaultResponse = zod.object({
 }),
   "objects": zod.array(zod.object({
   "id": zod.string().min(1).max(setReportTemplateDefaultResponseDesignObjectsItemIdMax),
-  "type": zod.enum(['section', 'text', 'dynamicField', 'line', 'shape', 'image', 'table']),
+  "type": zod.enum(['section', 'group', 'text', 'dynamicField', 'line', 'shape', 'image', 'table', 'tableRow', 'tableCell', 'signature', 'formula']),
   "name": zod.string().min(1).max(setReportTemplateDefaultResponseDesignObjectsItemNameMax),
+  "parentId": zod.string().min(1).max(setReportTemplateDefaultResponseDesignObjectsItemParentIdMax).optional(),
   "x": zod.number().min(setReportTemplateDefaultResponseDesignObjectsItemXMin).max(setReportTemplateDefaultResponseDesignObjectsItemXMax),
   "y": zod.number().min(setReportTemplateDefaultResponseDesignObjectsItemYMin).max(setReportTemplateDefaultResponseDesignObjectsItemYMax),
   "width": zod.number().min(1).max(setReportTemplateDefaultResponseDesignObjectsItemWidthMax),
@@ -3709,6 +3794,9 @@ export const SetReportTemplateDefaultResponse = zod.object({
   "sectionKey": zod.string().max(setReportTemplateDefaultResponseDesignObjectsItemSectionKeyMax).optional(),
   "content": zod.string().max(setReportTemplateDefaultResponseDesignObjectsItemContentMax).optional(),
   "fieldKey": zod.string().max(setReportTemplateDefaultResponseDesignObjectsItemFieldKeyMax).optional(),
+  "formula": zod.string().max(setReportTemplateDefaultResponseDesignObjectsItemFormulaMax).optional(),
+  "rowType": zod.enum(['header', 'static', 'dynamic']).optional(),
+  "columnIndex": zod.number().min(setReportTemplateDefaultResponseDesignObjectsItemColumnIndexMin).max(setReportTemplateDefaultResponseDesignObjectsItemColumnIndexMax).optional(),
   "objectPath": zod.string().regex(setReportTemplateDefaultResponseDesignObjectsItemObjectPathRegExp).optional(),
   "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
   "fontSize": zod.number().min(setReportTemplateDefaultResponseDesignObjectsItemFontSizeMin).max(setReportTemplateDefaultResponseDesignObjectsItemFontSizeMax).optional(),
@@ -3839,6 +3927,8 @@ export const restoreReportTemplateVersionResponseDesignObjectsItemIdMax = 80;
 
 export const restoreReportTemplateVersionResponseDesignObjectsItemNameMax = 120;
 
+export const restoreReportTemplateVersionResponseDesignObjectsItemParentIdMax = 80;
+
 export const restoreReportTemplateVersionResponseDesignObjectsItemXMin = -1000;
 export const restoreReportTemplateVersionResponseDesignObjectsItemXMax = 5000;
 
@@ -3860,6 +3950,11 @@ export const restoreReportTemplateVersionResponseDesignObjectsItemSectionKeyMax 
 export const restoreReportTemplateVersionResponseDesignObjectsItemContentMax = 5000;
 
 export const restoreReportTemplateVersionResponseDesignObjectsItemFieldKeyMax = 80;
+
+export const restoreReportTemplateVersionResponseDesignObjectsItemFormulaMax = 1000;
+
+export const restoreReportTemplateVersionResponseDesignObjectsItemColumnIndexMin = 0;
+export const restoreReportTemplateVersionResponseDesignObjectsItemColumnIndexMax = 100;
 
 export const restoreReportTemplateVersionResponseDesignObjectsItemObjectPathRegExp = new RegExp('^/objects/uploads/[A-Za-z0-9._/-]+$');
 export const restoreReportTemplateVersionResponseDesignObjectsItemFontSizeMin = 6;
@@ -3901,7 +3996,7 @@ export const RestoreReportTemplateVersionResponse = zod.object({
   "isDefault": zod.boolean(),
   "version": zod.number().min(1),
   "design": zod.object({
-  "schemaVersion": zod.literal(1),
+  "schemaVersion": zod.union([zod.literal(1),zod.literal(2)]),
   "layout": zod.object({
   "title": zod.string().min(1),
   "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']),
@@ -3961,8 +4056,9 @@ export const RestoreReportTemplateVersionResponse = zod.object({
 }),
   "objects": zod.array(zod.object({
   "id": zod.string().min(1).max(restoreReportTemplateVersionResponseDesignObjectsItemIdMax),
-  "type": zod.enum(['section', 'text', 'dynamicField', 'line', 'shape', 'image', 'table']),
+  "type": zod.enum(['section', 'group', 'text', 'dynamicField', 'line', 'shape', 'image', 'table', 'tableRow', 'tableCell', 'signature', 'formula']),
   "name": zod.string().min(1).max(restoreReportTemplateVersionResponseDesignObjectsItemNameMax),
+  "parentId": zod.string().min(1).max(restoreReportTemplateVersionResponseDesignObjectsItemParentIdMax).optional(),
   "x": zod.number().min(restoreReportTemplateVersionResponseDesignObjectsItemXMin).max(restoreReportTemplateVersionResponseDesignObjectsItemXMax),
   "y": zod.number().min(restoreReportTemplateVersionResponseDesignObjectsItemYMin).max(restoreReportTemplateVersionResponseDesignObjectsItemYMax),
   "width": zod.number().min(1).max(restoreReportTemplateVersionResponseDesignObjectsItemWidthMax),
@@ -3974,6 +4070,9 @@ export const RestoreReportTemplateVersionResponse = zod.object({
   "sectionKey": zod.string().max(restoreReportTemplateVersionResponseDesignObjectsItemSectionKeyMax).optional(),
   "content": zod.string().max(restoreReportTemplateVersionResponseDesignObjectsItemContentMax).optional(),
   "fieldKey": zod.string().max(restoreReportTemplateVersionResponseDesignObjectsItemFieldKeyMax).optional(),
+  "formula": zod.string().max(restoreReportTemplateVersionResponseDesignObjectsItemFormulaMax).optional(),
+  "rowType": zod.enum(['header', 'static', 'dynamic']).optional(),
+  "columnIndex": zod.number().min(restoreReportTemplateVersionResponseDesignObjectsItemColumnIndexMin).max(restoreReportTemplateVersionResponseDesignObjectsItemColumnIndexMax).optional(),
   "objectPath": zod.string().regex(restoreReportTemplateVersionResponseDesignObjectsItemObjectPathRegExp).optional(),
   "fontFamily": zod.enum(['Arial', 'Calibri', 'Times New Roman', 'Helvetica']).optional(),
   "fontSize": zod.number().min(restoreReportTemplateVersionResponseDesignObjectsItemFontSizeMin).max(restoreReportTemplateVersionResponseDesignObjectsItemFontSizeMax).optional(),

@@ -11,4 +11,5 @@ export type ReportTemplateDesignSchemaVersion = typeof ReportTemplateDesignSchem
 
 export const ReportTemplateDesignSchemaVersion = {
   NUMBER_1: 1,
+  NUMBER_2: 2,
 } as const;

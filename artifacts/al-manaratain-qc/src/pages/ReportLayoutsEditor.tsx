@@ -35,7 +35,10 @@ import { ReportDesignerCanvas } from "./report-designer-canvas";
 import { ReportDesignerLayers } from "./report-designer-layers";
 import { ReportDesignerProperties } from "./report-designer-properties";
 import { ReportDesignerToolbar, type DesignerTool } from "./report-designer-toolbar";
+import { absolutePosition, createDesignerId, createTableStructure, descendantsOf, directChildren, parentIdFor, sectionForObject } from "./report-designer-model";
+import type { TableInspectorAction } from "./report-designer-table-inspector";
 import { REPORT_TEST_TYPES, addDefaultSectionObjects, cloneDesign, createEmptyDesign } from "./report-designer-types";
+import { evaluateReportFormula } from "./report-template-formulas";
 import "./report-designer.css";
 
 type ReportDocumentWithTemplate = (props: ComponentProps<typeof ReportDocument> & { templateDesign?: ReportTemplateDesign }) => ReactElement;
@@ -43,6 +46,20 @@ const TemplateReportDocument = ReportDocument as unknown as ReportDocumentWithTe
 const INSPECTOR_PREFERENCE_KEY = "al-manaratain-qc:report-designer:inspector-open";
 const DESIGNER_ZOOM_PRESETS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 const DESIGNER_PX_PER_MM = 3.7795;
+
+function validateDesignerFormulas(design: ReportTemplateDesign) {
+  for (const object of design.objects) {
+    if (object.type !== "formula" && !(object.type === "tableCell" && object.formula !== undefined)) continue;
+    const formula = object.formula ?? "";
+    try {
+      evaluateReportFormula(formula, () => 1);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "Invalid formula.";
+      return `Formula in “${object.name}” is invalid: ${detail}`;
+    }
+  }
+  return undefined;
+}
 
 function initialObject(type: ReportTemplateObject["type"], index: number, testType: string, parentSection?: ReportTemplateObject): ReportTemplateObject {
   const tableKey = ({
@@ -55,12 +72,15 @@ function initialObject(type: ReportTemplateObject["type"], index: number, testTy
   const inSection = Boolean(parentSection);
   const sectionWidth = parentSection?.width ?? 0;
   const sectionHeight = parentSection?.height ?? 0;
-  const base = { id: `object-${Date.now()}-${index}`, name: type === "dynamicField" ? "Approved field" : type === "line" ? "Divider line" : type === "shape" ? "Rectangle" : type === "image" ? "Image" : type === "table" ? "QC data table" : "Text box", x: inSection ? 3 : type === "table" ? 13 : 24 + (index % 4) * 10, y: inSection ? 3 : type === "table" ? 205 : 68 + index * 12, width: type === "line" ? (inSection ? Math.max(1, sectionWidth - 6) : 160) : type === "table" ? (inSection ? Math.max(1, sectionWidth - 6) : 184) : 70, height: type === "line" ? 1 : type === "text" ? (inSection ? Math.max(1, Math.min(16, sectionHeight - 6)) : 16) : type === "table" ? (inSection ? Math.max(1, Math.min(35, sectionHeight - 6)) : 35) : 28, zIndex: index + 10, rotation: 0, locked: false, visible: true, ...(parentSection?.sectionKey ? { sectionKey: parentSection.sectionKey } : {}) } satisfies Partial<ReportTemplateObject>;
+  const base = { id: createDesignerId(), name: type === "dynamicField" ? "Approved field" : type === "line" ? "Divider line" : type === "shape" ? "Rectangle" : type === "image" ? "Image" : type === "table" ? "QC data table" : type === "signature" ? "Signature" : type === "formula" ? "Calculated field" : type === "group" ? "Group" : "Text box", x: inSection ? 3 : type === "table" ? 13 : 24 + (index % 4) * 10, y: inSection ? 3 : type === "table" ? 205 : 68 + index * 12, width: type === "line" ? (inSection ? Math.max(1, sectionWidth - 6) : 160) : type === "table" ? (inSection ? Math.max(1, sectionWidth - 6) : 184) : 70, height: type === "line" ? 1 : type === "text" ? (inSection ? Math.max(1, Math.min(16, sectionHeight - 6)) : 16) : type === "table" ? (inSection ? Math.max(1, Math.min(35, sectionHeight - 6)) : 35) : 28, zIndex: index + 10, rotation: 0, locked: false, visible: true, ...(parentSection?.sectionKey ? { sectionKey: parentSection.sectionKey } : {}) } satisfies Partial<ReportTemplateObject>;
   if (type === "text") return { ...base, type, content: "Additional note", fontFamily: "Arial", fontSize: 12, textColor: "#20252b" } as ReportTemplateObject;
   if (type === "dynamicField") return { ...base, type, fieldKey: "REPORT_NUMBER", fontFamily: "Arial", fontSize: 12, textColor: "#20252b" } as ReportTemplateObject;
   if (type === "line") return { ...base, type, lineOrientation: "horizontal", lineStyle: "solid", borderColor: "#9b1739" } as ReportTemplateObject;
   if (type === "image") return { ...base, type, objectPath: undefined, width: 50, height: 28 } as ReportTemplateObject;
   if (type === "table") return { ...base, type, tableKey } as ReportTemplateObject;
+  if (type === "signature") return { ...base, type, name: "Prepared by", content: "Signature", width: 45, height: 18, borderColor: "#9aa6b2", borderWidth: 0.4 } as ReportTemplateObject;
+  if (type === "formula") return { ...base, type, name: "Calculated field", formula: "=0", fontFamily: "Arial", fontSize: 12, textColor: "#20252b" } as ReportTemplateObject;
+  if (type === "group") return { ...base, type, name: "Group" } as ReportTemplateObject;
   return { ...base, type, shapeType: "rectangle", fillColor: "#e7edf2", borderColor: "#9aa6b2", borderWidth: 1 } as ReportTemplateObject;
 }
 
@@ -75,7 +95,7 @@ export function ReportLayoutsEditor() {
   const [draft, setDraft] = useState<ReportTemplate>();
   const [history, setHistory] = useState<ReportTemplateDesign[]>([]);
   const [future, setFuture] = useState<ReportTemplateDesign[]>([]);
-  const [selectedObjectId, setSelectedObjectId] = useState<string>();
+  const [selectedObjectIds, setSelectedObjectIds] = useState<string[]>([]);
   const [tool, setTool] = useState<DesignerTool>("select");
   const [grid, setGrid] = useState(true);
   const [snap, setSnap] = useState(true);
@@ -106,6 +126,12 @@ export function ReportLayoutsEditor() {
   const editorRootRef = useRef<HTMLDivElement>(null);
   const canvasViewportRef = useRef<HTMLDivElement>(null);
   const inspectorResizeStart = useRef<{ clientX: number; width: number } | undefined>(undefined);
+  const clipboard = useRef<ReportTemplateObject[]>([]);
+  const selectedObjectId = selectedObjectIds.at(-1);
+  const setSelectedObjectId = (id?: string) => setSelectedObjectIds(id ? [id] : []);
+  const selectObject = (id: string, extend = false) => setSelectedObjectIds((current) =>
+    extend ? current.includes(id) ? current.filter((item) => item !== id) : [...current, id] : [id],
+  );
   const isFullscreen = nativeFullscreen || fullscreenFallback;
 
   const templatesQuery = useListReportTemplates({ testType }, { query: { queryKey: getListReportTemplatesQueryKey({ testType }) } });
@@ -203,6 +229,11 @@ export function ReportLayoutsEditor() {
   }, [applyFit, fitMode, inspectorOpen, inspectorWidth, layersCollapsed, isFullscreen]);
 
   const selectedObject = draft?.design.objects.find((object) => object.id === selectedObjectId);
+  const selectedObjects = draft?.design.objects.filter((object) => selectedObjectIds.includes(object.id)) ?? [];
+  const canGroup = selectedObjects.length > 1 &&
+    selectedObjects.every((object) => !["section", "table", "tableRow", "tableCell"].includes(object.type)) &&
+    new Set(selectedObjects.map((object) => parentIdFor(object, draft?.design.objects ?? []))).size === 1;
+  const canUngroup = selectedObject?.type === "group";
   const isDirty = Boolean(draft && originalDesign.current && (
     JSON.stringify(draft.design) !== JSON.stringify(originalDesign.current) ||
     draft.name !== originalMetadata.current.name ||
@@ -217,29 +248,83 @@ export function ReportLayoutsEditor() {
   const patchDesign = (patch: (design: ReportTemplateDesign) => ReportTemplateDesign) => { if (draft) addHistory(patch(cloneDesign(draft.design))); };
   const patchObject = (id: string, patch: Partial<ReportTemplateObject>) => patchDesign((design) => {
     const target = design.objects.find((object) => object.id === id);
+    if (target?.locked && Object.keys(patch).some((key) => key !== "locked" && key !== "visible")) {
+      return design;
+    }
     let adjustedPatch = patch;
     if (target && target.type !== "section" && Object.hasOwn(patch, "sectionKey")) {
-      const oldParent = design.objects.find((object) =>
-        object.type === "section" && object.sectionKey === target.sectionKey,
-      );
+      const oldPosition = absolutePosition(target, design.objects);
       const newParent = design.objects.find((object) =>
         object.type === "section" && object.sectionKey === patch.sectionKey,
       );
-      const absoluteX = target.x + (oldParent?.x ?? 0);
-      const absoluteY = target.y + (oldParent?.y ?? 0);
+      const newParentPosition = newParent ? absolutePosition(newParent, design.objects) : { x: 0, y: 0 };
       adjustedPatch = {
         ...patch,
-        x: absoluteX - (newParent?.x ?? 0),
-        y: absoluteY - (newParent?.y ?? 0),
+        parentId: newParent?.id,
+        x: oldPosition.x - newParentPosition.x,
+        y: oldPosition.y - newParentPosition.y,
       };
     }
-    const objects = design.objects.map((object) => object.id === id ? { ...object, ...adjustedPatch } : object);
+    let objects = design.objects.map((object) => object.id === id ? { ...object, ...adjustedPatch } : object);
+    if (target?.type === "table" && patch.tableKey !== undefined && patch.tableKey !== target.tableKey) {
+      const oldDescendants = descendantsOf(design.objects, target.id);
+      const removedIds = new Set(oldDescendants.map((object) => object.id));
+      const updatedTable = objects.find((object) => object.id === target.id)!;
+      const remaining = objects.filter((object) => !removedIds.has(object.id));
+      const newChildren = createTableStructure(updatedTable, remaining, testType);
+      if (remaining.length + newChildren.length > 200) {
+        toast.error("Changing this table group would exceed the 200-object template limit.");
+        return design;
+      }
+      objects = [...remaining, ...newChildren];
+    } else if (target?.type === "table" && patch.width !== undefined && target.width > 0) {
+      const ratio = patch.width / target.width;
+      const rowIds = new Set(directChildren(design.objects, target.id)
+        .filter((object) => object.type === "tableRow")
+        .map((object) => object.id));
+      objects = objects.map((object) => object.type === "tableRow" && object.parentId === target.id
+        ? { ...object, width: patch.width! }
+        : object.type === "tableCell" && object.parentId && rowIds.has(object.parentId)
+          ? { ...object, x: object.x * ratio, width: object.width * ratio }
+          : object);
+    } else if (target?.type === "tableRow" && patch.width !== undefined && target.width > 0) {
+      const ratio = patch.width / target.width;
+      objects = objects.map((object) => object.type === "tableCell" && object.parentId === target.id
+        ? { ...object, x: object.x * ratio, width: object.width * ratio }
+        : object);
+    } else if (target?.type === "tableCell" &&
+      (patch.x !== undefined || patch.width !== undefined || patch.y !== undefined)) {
+      const parentRow = design.objects.find((object) => object.id === target.parentId);
+      if (parentRow) {
+        const cells = directChildren(design.objects, parentRow.id)
+          .filter((object) => object.type === "tableCell")
+          .map((object) => object.id === target.id
+            ? { ...object, x: patch.x === undefined ? object.x : Math.max(0, patch.x), width: patch.width ?? object.width }
+            : object)
+          .sort((left, right) => left.x - right.x || (left.columnIndex ?? 0) - (right.columnIndex ?? 0));
+        let nextX = 0;
+        const positions = new Map(cells.map((cell, columnIndex) => {
+          const position = { id: cell.id, x: nextX, y: 0, columnIndex };
+          nextX += cell.width;
+          return [cell.id, position] as const;
+        }));
+        objects = objects.map((object) => {
+          const position = positions.get(object.id);
+          return position ? { ...object, ...position } : object;
+        });
+      }
+    }
     const page = { ...design.page };
     if (target?.type === "section" && patch.height !== undefined) {
       if (target.sectionKey === "header") page.headerHeightMm = patch.height;
       if (target.sectionKey === "signatures") page.footerHeightMm = patch.height;
     }
-    return { ...design, page, objects };
+    return {
+      ...design,
+      schemaVersion: objects.some((object) => object.parentId || object.type === "tableRow" || object.type === "tableCell" || object.type === "group") ? 2 : design.schemaVersion,
+      page,
+      objects,
+    };
   });
   const patchPage = (patch: Partial<ReportTemplateDesign["page"]>) => patchDesign((design) => ({
     ...design,
@@ -257,6 +342,12 @@ export function ReportLayoutsEditor() {
   };
   const save = () => {
     if (!draft) return;
+    const formulaError = validateDesignerFormulas(draft.design);
+    if (formulaError) {
+      setErrorMessage(formulaError);
+      toast.error("Fix the invalid formula before saving.");
+      return;
+    }
     setErrorMessage("");
     update.mutate({ id: draft.id, data: { name: draft.name, description: draft.description, design: draft.design } }, {
       onSuccess: (result) => { setDraft(cloneDesign(result) as ReportTemplate); originalDesign.current = cloneDesign(result.design); originalMetadata.current = { name: result.name, description: result.description }; setHistory([]); setFuture([]); invalidate(); toast.success("Template saved"); },
@@ -272,6 +363,12 @@ export function ReportLayoutsEditor() {
   };
   const saveAs = () => {
     if (!draft || !createName.trim()) return;
+    const formulaError = validateDesignerFormulas(draft.design);
+    if (formulaError) {
+      setErrorMessage(formulaError);
+      toast.error("Fix the invalid formula before saving a copy.");
+      return;
+    }
     duplicate.mutate({ id: draft.id, data: { name: createName.trim(), description: createDescription.trim() || null, design: draft.design } }, {
       onSuccess: (result) => { setSaveAsOpen(false); setSelectedTemplateId(result.id); initializedId.current = result.id; setDraft(cloneDesign(result) as ReportTemplate); originalDesign.current = cloneDesign(result.design); originalMetadata.current = { name: result.name, description: result.description }; setSelectedObjectId(result.design.objects[0]?.id); setCreateName(""); setCreateDescription(""); invalidate(); toast.success("Template duplicated"); },
       onError: () => setErrorMessage("Unable to duplicate template."),
@@ -308,35 +405,230 @@ export function ReportLayoutsEditor() {
   const addObject = (type: ReportTemplateObject["type"]) => {
     if (!draft || draft.design.objects.length >= 200) return;
     const selected = draft.design.objects.find((object) => object.id === selectedObjectId);
-    const parentSection = selected?.type === "section"
-      ? selected
-      : selected?.sectionKey
-        ? draft.design.objects.find((object) => object.type === "section" && object.sectionKey === selected.sectionKey)
-        : undefined;
-    const object = initialObject(type, draft.design.objects.length, testType, parentSection);
-    patchDesign((design) => ({ ...design, objects: [...design.objects, object] }));
+    const parentSection = selected
+      ? selected.type === "section" || selected.type === "group" ? selected : sectionForObject(selected, draft.design.objects)
+      : undefined;
+    const initial = initialObject(type, draft.design.objects.length, testType, parentSection);
+    const object = {
+      ...initial,
+      ...(parentSection ? { parentId: parentSection.id, sectionKey: parentSection.sectionKey } : {}),
+    };
+    const tableChildren = type === "table"
+      ? createTableStructure(object, draft.design.objects, testType)
+      : [];
+    if (draft.design.objects.length + 1 + tableChildren.length > 200) {
+      toast.error("This table would exceed the 200-object template limit.");
+      return;
+    }
+    patchDesign((design) => ({
+      ...design,
+      schemaVersion: 2,
+      objects: [...design.objects, object, ...tableChildren],
+    }));
     setSelectedObjectId(object.id);
     setTool("select");
   };
   const duplicateObject = (id: string) => {
     const object = draft?.design.objects.find((item) => item.id === id);
-    if (!object || object.type === "section" || !draft) return;
-    const copy = { ...cloneDesign(object), id: `object-${Date.now()}`, name: `${object.name} copy`, x: object.x + 4, y: object.y + 4, zIndex: Math.max(...draft.design.objects.map((item) => item.zIndex), 0) + 1 };
-    patchDesign((design) => ({ ...design, objects: [...design.objects, copy] })); setSelectedObjectId(copy.id);
+    if (!object || !draft) return;
+    const descendants = descendantsOf(draft.design.objects, object.id);
+    const subtree = [object, ...descendants];
+    if (draft.design.objects.length + subtree.length > 200) {
+      toast.error("Duplicating this object would exceed the 200-object template limit.");
+      return;
+    }
+    const idMap = new Map(subtree.map((item) => [item.id, createDesignerId(item.type)]));
+    const duplicatedSectionKey = object.type === "section" ? `custom-${createDesignerId("section")}` : undefined;
+    const copies = subtree.map((item, index) => {
+      const parentId = parentIdFor(item, draft.design.objects);
+      const isRoot = item.id === object.id;
+      const parentWasCopied = Boolean(parentId && idMap.has(parentId));
+      const legacySectionChild = object.type === "section" && !item.parentId && item.sectionKey === object.sectionKey;
+      return {
+        ...cloneDesign(item),
+        id: idMap.get(item.id)!,
+        ...(parentWasCopied ? { parentId: idMap.get(parentId!) } : isRoot ? { parentId } : legacySectionChild ? { parentId: idMap.get(object.id) } : {}),
+        ...(duplicatedSectionKey && item.sectionKey === object.sectionKey ? { sectionKey: duplicatedSectionKey } : {}),
+        name: isRoot ? `${item.name} copy` : item.name,
+        x: item.x + (isRoot ? 4 : 0),
+        y: item.y + (isRoot ? 4 : 0),
+        zIndex: Math.max(...draft.design.objects.map((candidate) => candidate.zIndex), 0) + index + 1,
+      } as ReportTemplateObject;
+    });
+    patchDesign((design) => ({ ...design, schemaVersion: 2, objects: [...design.objects, ...copies] }));
+    setSelectedObjectId(idMap.get(object.id));
   };
   const deleteObject = (id: string) => {
     const section = draft?.design.objects.find((object) => object.id === id && object.type === "section");
+    const removeIds = new Set([id, ...descendantsOf(draft?.design.objects ?? [], id).map((object) => object.id)]);
     patchDesign((design) => ({
       ...design,
       objects: design.objects
-        .filter((object) => object.id !== id)
+        .filter((object) => section ? object.id !== id : !removeIds.has(object.id))
         .map((object) => {
-          if (!section?.sectionKey || object.type === "section" || object.sectionKey !== section.sectionKey) return object;
-          const { sectionKey: _sectionKey, ...pageLevelObject } = object;
-          return { ...pageLevelObject, x: object.x + section.x, y: object.y + section.y };
+          if (!section || parentIdFor(object, design.objects) !== section.id) return object;
+          const { sectionKey: _sectionKey, parentId: _parentId, ...pageLevelObject } = object;
+          const sectionPosition = absolutePosition(section, design.objects);
+          return { ...pageLevelObject, x: object.x + sectionPosition.x, y: object.y + sectionPosition.y };
         }),
     }));
-    if (selectedObjectId === id) setSelectedObjectId(undefined);
+    if (selectedObjectIds.includes(id) || selectedObjectIds.some((selectedId) => removeIds.has(selectedId))) setSelectedObjectId(undefined);
+  };
+  const tableAction = (action: TableInspectorAction, objectId: string) => {
+    if (!draft) return;
+    const clicked = draft.design.objects.find((object) => object.id === objectId);
+    if (!clicked) return;
+    const selectedRow = clicked.type === "tableRow"
+      ? clicked
+      : clicked.type === "tableCell" && clicked.parentId
+        ? draft.design.objects.find((object) => object.id === clicked.parentId)
+        : undefined;
+    const table = clicked.type === "table"
+      ? clicked
+      : selectedRow?.parentId
+        ? draft.design.objects.find((object) => object.id === selectedRow.parentId)
+        : undefined;
+    if (!table || table.type !== "table") return;
+    const rows = directChildren(draft.design.objects, table.id)
+      .filter((object) => object.type === "tableRow")
+      .sort((left, right) => left.y - right.y);
+    const cellsByRow = new Map(rows.map((row) => [
+      row.id,
+      directChildren(draft.design.objects, row.id)
+        .filter((object) => object.type === "tableCell")
+        .sort((left, right) => (left.columnIndex ?? left.x) - (right.columnIndex ?? right.x)),
+    ]));
+    let nextSelection: string | undefined;
+    patchDesign((design) => {
+      let nextObjects = [...design.objects];
+      const removeSubtree = (id: string) => {
+        const ids = new Set([id, ...descendantsOf(nextObjects, id).map((item) => item.id)]);
+        nextObjects = nextObjects.filter((item) => !ids.has(item.id));
+      };
+      const selectedColumn = clicked.type === "tableCell" ? clicked.columnIndex ?? 0 : undefined;
+      const targetRow = selectedRow ?? rows.at(-1);
+      if (action === "addRow" || action === "duplicateRow") {
+        const sourceRow = action === "duplicateRow" ? targetRow : rows.at(-1);
+        if (!sourceRow) return design;
+        const rowId = createDesignerId("row");
+        const nextY = rows.reduce((bottom, row) => Math.max(bottom, row.y + row.height), 0);
+        const row = {
+          ...cloneDesign(sourceRow),
+          id: rowId,
+          parentId: table.id,
+          name: action === "duplicateRow" ? `${sourceRow.name} copy` : "New row",
+          x: 0,
+          y: nextY,
+          width: table.width,
+          zIndex: Math.max(0, ...design.objects.map((item) => item.zIndex)) + 1,
+          ...(action === "addRow" ? { rowType: "static" as const } : {}),
+        };
+        const sourceCells = cellsByRow.get(sourceRow.id) ?? [];
+        const cellCopies = sourceCells.map((cell, index) => ({
+          ...cloneDesign(cell),
+          id: createDesignerId("cell"),
+          parentId: rowId,
+          name: action === "duplicateRow" ? cell.name : `${cell.name} value`,
+          y: 0,
+          zIndex: row.zIndex + index + 1,
+          ...(action === "addRow" ? { content: "", fieldKey: undefined, formula: undefined } : {}),
+        }));
+        nextObjects = [...nextObjects, row, ...cellCopies];
+        nextSelection = rowId;
+      } else if (action === "deleteRow") {
+        if (!targetRow) return design;
+        removeSubtree(targetRow.id);
+        nextSelection = table.id;
+      } else if (action === "addColumn" || action === "duplicateColumn" || action === "deleteColumn") {
+        const targetIndex = selectedColumn ?? Math.max(0, ...[...cellsByRow.values()].map((cells) => cells.length - 1));
+        const newCells: ReportTemplateObject[] = [];
+        let selectedDuplicateCellId: string | undefined;
+        for (const rowItem of rows) {
+          const rowCells = cellsByRow.get(rowItem.id) ?? [];
+          if (action === "deleteColumn") {
+            const victim = rowCells.find((cell, index) => (cell.columnIndex ?? index) === targetIndex);
+            if (victim) removeSubtree(victim.id);
+            const remaining = rowCells.filter((cell) => cell.id !== victim?.id);
+            const width = remaining.length ? table.width / remaining.length : table.width;
+            remaining.forEach((cell, index) => {
+              nextObjects = nextObjects.map((item) => item.id === cell.id
+                ? { ...item, columnIndex: index, x: index * width, width }
+                : item);
+            });
+            continue;
+          }
+          const insertionIndex = action === "addColumn" ? rowCells.length : Math.min(targetIndex + 1, rowCells.length);
+          const sourceCell = action === "addColumn"
+            ? rowCells.at(-1)
+            : rowCells.find((cell, index) => (cell.columnIndex ?? index) === targetIndex) ?? rowCells.at(-1);
+          const cells = [...rowCells];
+          const newCell: ReportTemplateObject = sourceCell
+            ? {
+              ...cloneDesign(sourceCell),
+              id: createDesignerId("cell"),
+              parentId: rowItem.id,
+              name: action === "duplicateColumn" ? `${sourceCell.name} copy` : "New column",
+              ...(action === "addColumn" ? { content: "", fieldKey: undefined, formula: undefined } : {}),
+            }
+            : {
+              id: createDesignerId("cell"),
+              parentId: rowItem.id,
+              type: "tableCell",
+              name: "New column",
+              x: 0,
+              y: 0,
+              width: table.width,
+              height: rowItem.height,
+              zIndex: rowItem.zIndex + 1,
+              rotation: 0,
+              locked: false,
+              visible: true,
+              content: "",
+            };
+          if (action === "duplicateColumn" && clicked.type === "tableCell" && clicked.parentId === rowItem.id) {
+            selectedDuplicateCellId = newCell.id;
+          }
+          cells.splice(insertionIndex, 0, newCell);
+          const width = table.width / cells.length;
+          cells.forEach((cell, index) => {
+            newCells.push({ ...cell, columnIndex: index, x: index * width, width, y: 0 });
+          });
+          const priorIds = new Set(rowCells.map((cell) => cell.id));
+          nextObjects = nextObjects.filter((item) => !priorIds.has(item.id));
+        }
+        nextObjects = [...nextObjects, ...newCells];
+        nextSelection = action === "duplicateColumn" ? selectedDuplicateCellId ?? table.id : table.id;
+      } else if (action === "duplicateCell" || action === "deleteCell") {
+        if (clicked.type !== "tableCell" || !selectedRow) return design;
+        const rowCells = cellsByRow.get(selectedRow.id) ?? [];
+        const index = rowCells.findIndex((cell) => cell.id === clicked.id);
+        if (action === "deleteCell") {
+          removeSubtree(clicked.id);
+          const remaining = rowCells.filter((cell) => cell.id !== clicked.id);
+          const width = remaining.length ? table.width / remaining.length : table.width;
+          remaining.forEach((cell, cellIndex) => {
+            nextObjects = nextObjects.map((item) => item.id === cell.id
+              ? { ...item, columnIndex: cellIndex, x: cellIndex * width, width }
+              : item);
+          });
+          nextSelection = selectedRow.id;
+        } else {
+          const copy = { ...cloneDesign(clicked), id: createDesignerId("cell"), name: `${clicked.name} copy` };
+          const cells = [...rowCells];
+          cells.splice(index + 1, 0, copy);
+          const width = table.width / cells.length;
+          cells.forEach((cell, cellIndex) => {
+            nextObjects = nextObjects.map((item) => item.id === cell.id
+              ? { ...item, columnIndex: cellIndex, x: cellIndex * width, width }
+              : item);
+          });
+          nextObjects.push({ ...copy, columnIndex: index + 1, x: (index + 1) * width, width });
+          nextSelection = copy.id;
+        }
+      }
+      return { ...design, schemaVersion: 2, objects: nextObjects };
+    });
+    if (nextSelection) setSelectedObjectId(nextSelection);
   };
   const moveLayer = (id: string, direction: "up" | "down") => {
     const object = draft?.design.objects.find((item) => item.id === id);
@@ -347,15 +639,162 @@ export function ReportLayoutsEditor() {
     const page = draft.design.page;
     const pageWidth = page.orientation === "landscape" ? page.heightMm : page.widthMm;
     const pageHeight = page.orientation === "landscape" ? page.widthMm : page.heightMm;
-    const parentSection = selectedObject.type !== "section" && selectedObject.sectionKey
-      ? draft.design.objects.find((object) => object.type === "section" && object.sectionKey === selectedObject.sectionKey)
-      : undefined;
-    const bounds = parentSection
-      ? { width: parentSection.width, height: parentSection.height, left: 0, right: 0, top: 0, bottom: 0 }
+    const parentId = selectedObject.type === "section" ? undefined : parentIdFor(selectedObject, draft.design.objects);
+    const parent = parentId ? draft.design.objects.find((object) => object.id === parentId) : undefined;
+    const bounds = parent
+      ? { width: parent.width, height: parent.height, left: 0, right: 0, top: 0, bottom: 0 }
       : { width: pageWidth, height: pageHeight, left: page.marginLeftMm, right: page.marginRightMm, top: page.marginTopMm, bottom: page.marginBottomMm };
     const patch: Partial<ReportTemplateObject> = alignment === "left" ? { x: bounds.left } : alignment === "right" ? { x: bounds.width - bounds.right - selectedObject.width } : alignment === "center" ? { x: (bounds.width - selectedObject.width) / 2 } : alignment === "top" ? { y: bounds.top } : alignment === "bottom" ? { y: bounds.height - bounds.bottom - selectedObject.height } : { y: (bounds.height - selectedObject.height) / 2 };
     patchObject(selectedObject.id, patch);
   };
+  const groupSelection = () => {
+    if (!draft || selectedObjectIds.length < 2) return;
+    const selectedObjects = draft.design.objects.filter((object) => selectedObjectIds.includes(object.id));
+    if (selectedObjects.length < 2 || selectedObjects.some((object) => ["section", "table", "tableRow", "tableCell"].includes(object.type))) return;
+    const parentId = parentIdFor(selectedObjects[0], draft.design.objects);
+    if (selectedObjects.some((object) => parentIdFor(object, draft.design.objects) !== parentId)) return;
+    const left = Math.min(...selectedObjects.map((object) => object.x));
+    const top = Math.min(...selectedObjects.map((object) => object.y));
+    const right = Math.max(...selectedObjects.map((object) => object.x + object.width));
+    const bottom = Math.max(...selectedObjects.map((object) => object.y + object.height));
+    const groupId = createDesignerId("group");
+    const sectionKey = selectedObjects[0].sectionKey;
+    const group: ReportTemplateObject = {
+      id: groupId,
+      ...(parentId ? { parentId } : {}),
+      type: "group",
+      name: "Group",
+      x: left,
+      y: top,
+      width: right - left,
+      height: bottom - top,
+      zIndex: Math.max(0, ...selectedObjects.map((object) => object.zIndex)) + 1,
+      rotation: 0,
+      locked: false,
+      visible: true,
+      ...(sectionKey ? { sectionKey } : {}),
+    };
+    patchDesign((design) => ({
+      ...design,
+      schemaVersion: 2,
+      objects: [
+        ...design.objects.map((object) => selectedObjectIds.includes(object.id)
+          ? { ...object, parentId: groupId, x: object.x - left, y: object.y - top }
+          : object),
+        group,
+      ],
+    }));
+    setSelectedObjectId(groupId);
+  };
+  const ungroupSelection = () => {
+    if (!draft || selectedObject?.type !== "group") return;
+    const group = selectedObject;
+    const children = directChildren(draft.design.objects, group.id);
+    patchDesign((design) => ({
+      ...design,
+      objects: design.objects
+        .filter((object) => object.id !== group.id)
+        .map((object) => object.parentId === group.id
+          ? {
+            ...object,
+            parentId: group.parentId,
+            x: object.x + group.x,
+            y: object.y + group.y,
+          }
+          : object),
+    }));
+    setSelectedObjectIds(children.map((object) => object.id));
+  };
+  const copySelection = () => {
+    if (!draft || selectedObjectIds.length === 0) return;
+    const roots = draft.design.objects.filter((object) => selectedObjectIds.includes(object.id))
+      .filter((object) => {
+        let parentId = parentIdFor(object, draft.design.objects);
+        while (parentId) {
+          if (selectedObjectIds.includes(parentId)) return false;
+          parentId = parentIdFor(draft.design.objects.find((candidate) => candidate.id === parentId)!, draft.design.objects);
+        }
+        return true;
+      });
+    clipboard.current = roots.flatMap((root) => [root, ...descendantsOf(draft.design.objects, root.id)])
+      .map((object) => ({ ...cloneDesign(object), parentId: parentIdFor(object, draft.design.objects) }));
+  };
+  const pasteSelection = () => {
+    if (!draft || !clipboard.current.length || draft.design.objects.length + clipboard.current.length > 200) return;
+    const source = clipboard.current;
+    const idMap = new Map(source.map((object) => [object.id, createDesignerId(object.type)]));
+    const sourceIds = new Set(source.map((object) => object.id));
+    const sectionKeys = new Map(source
+      .filter((object) => object.type === "section" && object.sectionKey)
+      .map((object) => [object.sectionKey!, `custom-${createDesignerId("section")}`]));
+    const rootIds = source.filter((object) => !object.parentId || !sourceIds.has(object.parentId)).map((object) => object.id);
+    const copies = source.map((object, index) => {
+      const root = rootIds.includes(object.id);
+      return {
+        ...cloneDesign(object),
+        id: idMap.get(object.id)!,
+        ...(object.parentId && sourceIds.has(object.parentId) ? { parentId: idMap.get(object.parentId) } : {}),
+        ...(object.sectionKey && sectionKeys.has(object.sectionKey) ? { sectionKey: sectionKeys.get(object.sectionKey) } : {}),
+        x: object.x + (root ? 4 : 0),
+        y: object.y + (root ? 4 : 0),
+        zIndex: Math.max(0, ...draft.design.objects.map((item) => item.zIndex)) + index + 1,
+      } as ReportTemplateObject;
+    });
+    patchDesign((design) => ({ ...design, schemaVersion: 2, objects: [...design.objects, ...copies] }));
+    setSelectedObjectIds(rootIds.map((id) => idMap.get(id)!));
+  };
+  const deleteSelection = () => {
+    if (!draft || !selectedObjectIds.length) return;
+    const selectedSet = new Set(selectedObjectIds);
+    const roots = draft.design.objects.filter((object) => selectedSet.has(object.id))
+      .filter((object) => {
+        const parentId = parentIdFor(object, draft.design.objects);
+        return !parentId || !selectedSet.has(parentId);
+      });
+    const deletingIds = new Set<string>();
+    for (const root of roots) {
+      if (root.type !== "section") {
+        deletingIds.add(root.id);
+        descendantsOf(draft.design.objects, root.id).forEach((child) => deletingIds.add(child.id));
+      }
+    }
+    patchDesign((design) => ({
+      ...design,
+      objects: design.objects
+        .filter((object) => !deletingIds.has(object.id) && !roots.some((root) => root.type === "section" && root.id === object.id))
+        .map((object) => {
+          const removedSection = roots.find((root) => root.type === "section" && parentIdFor(object, design.objects) === root.id);
+          if (!removedSection) return object;
+          const sectionPosition = absolutePosition(removedSection, design.objects);
+          const { parentId: _parentId, sectionKey: _sectionKey, ...remaining } = object;
+          return { ...remaining, x: object.x + sectionPosition.x, y: object.y + sectionPosition.y };
+        }),
+    }));
+    setSelectedObjectId(undefined);
+  };
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!event.ctrlKey && !event.metaKey) {
+        if ((event.key === "Delete" || event.key === "Backspace") &&
+          !["INPUT", "TEXTAREA", "SELECT"].includes((event.target as HTMLElement)?.tagName)) {
+          event.preventDefault();
+          deleteSelection();
+        }
+        return;
+      }
+      if (["INPUT", "TEXTAREA", "SELECT"].includes((event.target as HTMLElement)?.tagName)) return;
+      const key = event.key.toLowerCase();
+      if (key === "c") { event.preventDefault(); copySelection(); }
+      else if (key === "v") { event.preventDefault(); pasteSelection(); }
+      else if (key === "d" && selectedObjectId) { event.preventDefault(); duplicateObject(selectedObjectId); }
+      else if (key === "g" && event.shiftKey) { event.preventDefault(); ungroupSelection(); }
+      else if (key === "g") { event.preventDefault(); groupSelection(); }
+      else if (key === "z" && event.shiftKey) { event.preventDefault(); redo(); }
+      else if (key === "z") { event.preventDefault(); undo(); }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [draft, selectedObjectIds, selectedObjectId, history, future]);
   const uploadImage = async (file: File) => {
     if (!selectedObject || selectedObject.type !== "image") return;
     try {
@@ -428,7 +867,7 @@ export function ReportLayoutsEditor() {
         <select value={selectedTemplateId ?? ""} onChange={(event) => { initializedId.current = undefined; setSelectedTemplateId(Number(event.target.value)); }} className="h-9 max-w-[230px] rounded-md border border-input bg-background px-3 text-xs" data-testid="select-designer-template">{templates.map((template) => <option key={template.id} value={template.id}>{template.name}{template.isDefault ? " · Default" : ""}</option>)}{templates.length === 0 && <option value="">No templates</option>}</select>
         <Button type="button" size="sm" className="h-9 gap-1.5" onClick={() => { setCreateName(`${testType} certificate`); setCreateOpen(true); }} data-testid="button-create-template"><FilePlus2 className="h-4 w-4" /> New</Button>
       </div>
-      {draft && <ReportDesignerToolbar tool={tool} onToolChange={(next) => { setTool(next); if (next !== "select") addObject(next); }} onUndo={undo} onRedo={redo} canUndo={history.length > 0} canRedo={future.length > 0} onSave={save} onSaveAs={() => { setCreateName(`${draft.name} copy`); setCreateDescription(draft.description ?? ""); setSaveAsOpen(true); }} onZoom={changeZoomStep} onSetZoom={chooseZoom} onFitToScreen={fitToScreen} onFitToWidth={fitToWidth} onToggleFullscreen={() => void toggleFullscreen()} isFullscreen={isFullscreen} zoom={zoom} grid={grid} snap={snap} onGridChange={setGrid} onSnapChange={setSnap} onAlign={align} hasSelection={Boolean(selectedObject)} isDirty={Boolean(isDirty)} isSaving={update.isPending} />}
+       {draft && <ReportDesignerToolbar tool={tool} onToolChange={(next) => { setTool(next); if (next !== "select") addObject(next); }} onUndo={undo} onRedo={redo} canUndo={history.length > 0} canRedo={future.length > 0} onSave={save} onSaveAs={() => { setCreateName(`${draft.name} copy`); setCreateDescription(draft.description ?? ""); setSaveAsOpen(true); }} onZoom={changeZoomStep} onSetZoom={chooseZoom} onFitToScreen={fitToScreen} onFitToWidth={fitToWidth} onToggleFullscreen={() => void toggleFullscreen()} isFullscreen={isFullscreen} zoom={zoom} grid={grid} snap={snap} onGridChange={setGrid} onSnapChange={setSnap} onAlign={align} hasSelection={Boolean(selectedObject)} isDirty={Boolean(isDirty)} isSaving={update.isPending} canGroup={canGroup} canUngroup={canUngroup} onGroup={groupSelection} onUngroup={ungroupSelection} />}
       {errorMessage && <div className="flex items-center gap-2 border-b border-destructive/25 bg-destructive/[.05] px-4 py-2 text-xs text-destructive" role="alert" data-testid="status-designer-error"><AlertTriangle className="h-3.5 w-3.5" /> {errorMessage}</div>}
       {!draft ? <div className="flex min-h-[520px] items-center justify-center bg-muted/30 p-8" data-testid="status-report-templates-empty"><div className="max-w-md text-center"><FileText className="mx-auto h-10 w-10 text-muted-foreground/40" /><h2 className="mt-4 text-lg font-semibold">No {testType} templates yet</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">Create the first standards-aware certificate template. The live preview will use a real saved QC record when one is available.</p><Button className="mt-5 gap-2" onClick={() => { setCreateName(`${testType} certificate`); setCreateOpen(true); }} data-testid="button-create-first-template"><FilePlus2 className="h-4 w-4" /> Create template</Button></div></div> : (
         <>
@@ -443,12 +882,12 @@ export function ReportLayoutsEditor() {
             data-left-collapsed={layersCollapsed}
             style={{ "--designer-inspector-width": `${inspectorWidth}px` } as CSSProperties}
           >
-            <ReportDesignerLayers objects={draft.design.objects} selectedId={selectedObjectId} onSelect={setSelectedObjectId} onPatch={patchObject} onDelete={deleteObject} onDuplicate={duplicateObject} onMove={moveLayer} onAdd={addObject} collapsed={layersCollapsed} onToggleCollapsed={() => setLayersCollapsed((value) => !value)} />
+            <ReportDesignerLayers objects={draft.design.objects} selectedIds={selectedObjectIds} onSelect={selectObject} onPatch={patchObject} onDelete={deleteObject} onDuplicate={duplicateObject} onMove={moveLayer} onAdd={addObject} collapsed={layersCollapsed} onToggleCollapsed={() => setLayersCollapsed((value) => !value)} />
             <main className="relative flex min-h-0 min-w-0 flex-col" data-testid="report-designer-center-panel">
               <div className="flex flex-wrap items-center gap-2 border-b border-border/70 bg-muted/25 px-4 py-2"><span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Live certificate</span><select value={recordId ?? ""} onChange={(event) => setRecordId(event.target.value ? Number(event.target.value) : undefined)} className="h-8 min-w-[230px] rounded-md border border-input bg-background px-2 text-xs" data-testid="select-preview-record"><option value="">Choose saved QC record…</option>{records.map((record) => <option key={record.id} value={record.id}>{record.recordNo} · {record.sampleDate} · {record.material}</option>)}</select>{recordsQuery.isLoading && <span className="text-xs text-muted-foreground" data-testid="status-preview-records-loading">Loading saved records…</span>}{recordsQuery.isError && <span className="text-xs text-destructive" data-testid="status-preview-records-error">Saved records unavailable.</span>}<span className="ml-auto text-[10px] font-mono text-muted-foreground" data-testid="text-preview-record-count">{records.length} saved record{records.length === 1 ? "" : "s"}</span></div>
               <div ref={canvasViewportRef} className="report-designer-canvas-scroll flex-1">
                 <div className="report-designer-canvas-center">
-                  <ReportDesignerCanvas page={draft.design.page} objects={draft.design.objects} selectedId={selectedObjectId} zoom={zoom} grid={grid} snap={snap} onSelect={setSelectedObjectId} onMove={patchObject} preview={<div className="report-designer-preview-layer">{reportPreview}</div>} />
+                   <ReportDesignerCanvas page={draft.design.page} objects={draft.design.objects} selectedId={selectedObjectId} zoom={zoom} grid={grid} snap={snap} onSelect={selectObject} onMove={patchObject} preview={<div className="report-designer-preview-layer">{reportPreview}</div>} />
                 </div>
                 {!inspectorOpen && <Button type="button" variant="outline" size="sm" className="absolute right-3 top-3 z-20 h-9 gap-1.5 bg-card/95 shadow-md" onClick={() => setInspectorOpen(true)} data-testid="button-reopen-inspector"><ChevronRight className="h-4 w-4" /> Inspector</Button>}
               </div>
@@ -486,7 +925,7 @@ export function ReportLayoutsEditor() {
                   <Button type="button" variant="ghost" size="sm" className="h-8 gap-1 px-2 text-xs" onClick={() => setInspectorOpen(false)} data-testid="button-close-inspector"><ChevronLeft className="h-4 w-4" /> Close Inspector</Button>
                 </div>
                 <div className="min-h-0 flex-1">
-                  <ReportDesignerProperties design={draft.design} selected={selectedObject} testType={testType} onPageChange={patchPage} onObjectChange={(patch) => selectedObject && patchObject(selectedObject.id, patch)} onLayoutChange={patchLayout} onUpload={uploadImage} />
+                   <ReportDesignerProperties design={draft.design} objects={draft.design.objects} selected={selectedObject} testType={testType} onPageChange={patchPage} onObjectChange={(patch) => selectedObject && patchObject(selectedObject.id, patch)} onLayoutChange={patchLayout} onUpload={uploadImage} onTableAction={tableAction} />
                 </div>
               </aside>
             )}

@@ -8,15 +8,18 @@ import type {
 } from "@workspace/api-client-react";
 import { Input } from "@/components/ui/input";
 import { REPORT_LAYOUT_FIELD_GROUPS } from "./report-layout-fields";
+import { ReportDesignerFormulaInspector, ReportDesignerTableInspector, type TableInspectorAction } from "./report-designer-table-inspector";
 
 type PropertiesProps = {
   design: ReportTemplateDesign;
+  objects: ReportTemplateObject[];
   selected?: ReportTemplateObject;
   testType: string;
   onPageChange: (patch: Partial<ReportTemplatePage>) => void;
   onObjectChange: (patch: Partial<ReportTemplateObject>) => void;
   onLayoutChange: (patch: Partial<ReportLayoutConfig>) => void;
   onUpload: (file: File) => Promise<void>;
+  onTableAction: (action: TableInspectorAction, objectId: string) => void;
 };
 
 function NumberField({ label, value, min, max, onChange, testId }: { label: string; value: number; min?: number; max?: number; onChange: (value: number) => void; testId: string }) {
@@ -28,7 +31,7 @@ function NumberField({ label, value, min, max, onChange, testId }: { label: stri
   );
 }
 
-export function ReportDesignerProperties({ design, selected, testType, onPageChange, onObjectChange, onLayoutChange, onUpload }: PropertiesProps) {
+export function ReportDesignerProperties({ design, objects, selected, testType, onPageChange, onObjectChange, onLayoutChange, onUpload, onTableAction }: PropertiesProps) {
   const fields = Object.values(REPORT_LAYOUT_FIELD_GROUPS[testType] ?? {}).flat();
   const tableGroups = Object.keys(REPORT_LAYOUT_FIELD_GROUPS[testType] ?? {});
   const sections = design.objects.filter((object) => object.type === "section" && object.sectionKey);
@@ -42,6 +45,7 @@ export function ReportDesignerProperties({ design, selected, testType, onPageCha
       <div className="space-y-5 p-3">
         {selected ? (
           <>
+            <fieldset disabled={selected.locked} className="contents" data-testid="fieldset-selected-object-properties">
             <section className="space-y-3">
               <div className="flex items-center justify-between">
                 <div><p className="text-xs font-semibold">Selected object</p><p className="text-[11px] text-muted-foreground">{selected.type}</p></div>
@@ -97,7 +101,7 @@ export function ReportDesignerProperties({ design, selected, testType, onPageCha
                   </label>
                 )}
               </section>
-            ) : (
+            ) : selected.type !== "tableRow" && selected.type !== "tableCell" ? (
               <section className="space-y-3 border-t border-border/70 pt-4">
                 <p className="text-xs font-semibold">Object hierarchy</p>
                 <label className="space-y-1">
@@ -116,12 +120,12 @@ export function ReportDesignerProperties({ design, selected, testType, onPageCha
                 </label>
                 <p className="text-[10px] leading-4 text-muted-foreground">Section objects are transparent containers. Their content stays visible in the live report preview.</p>
               </section>
-            )}
+            ) : null}
 
-            {(selected.type === "text" || selected.type === "dynamicField") && (
+            {(selected.type === "text" || selected.type === "dynamicField" || selected.type === "signature") && (
               <section className="space-y-3 border-t border-border/70 pt-4">
                 <p className="flex items-center gap-2 text-xs font-semibold"><Type className="h-3.5 w-3.5 text-primary" /> Typography</p>
-                {selected.type === "text" ? (
+                {selected.type === "text" || selected.type === "signature" ? (
                   <label className="space-y-1"><span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Text</span><textarea value={selected.content ?? ""} onChange={(event) => onObjectChange({ content: event.target.value })} className="min-h-20 w-full resize-y rounded-md border border-input bg-background px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-ring" data-testid="textarea-object-content" /></label>
                 ) : (
                   <label className="space-y-1"><span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Approved dynamic field</span><select value={selected.fieldKey ?? ""} onChange={(event) => onObjectChange({ fieldKey: event.target.value })} className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs" data-testid="select-object-field"><option value="">Choose field…</option><option value="REPORT_TITLE">Report title</option><option value="REPORT_NUMBER">Report number</option><option value="REPORT_DATE">Report date</option><option value="SAMPLE_DATE">Sample date</option><option value="SUPPLIER">Supplier</option><option value="SAMPLE_DESCRIPTION">Sample description</option><option value="PROJECT">Project</option><option value="TEST_METHOD">Test method</option><option value="TEST_RESULT">Test result</option><option value="COMPANY_NAME">Company name</option><option value="SAMPLE_NUMBER">Sample number</option><option value="MATERIAL">Material</option><option value="LOCATION">Location</option><option value="TESTED_BY">Tested by</option><option value="REVIEWED_BY">Reviewed by</option><option value="REMARKS">Remarks</option><optgroup label="Approved fields for this report">{fields.map((field) => <option key={field.key} value={`details.${field.key}`}>{field.label}</option>)}</optgroup></select></label>
@@ -142,9 +146,12 @@ export function ReportDesignerProperties({ design, selected, testType, onPageCha
               <section className="space-y-3 border-t border-border/70 pt-4">
                 <p className="flex items-center gap-2 text-xs font-semibold"><Table2 className="h-3.5 w-3.5 text-primary" /> Table data</p>
                 <label className="space-y-1"><span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Approved data group</span><select value={selected.tableKey ?? ""} onChange={(event) => onObjectChange({ tableKey: event.target.value })} className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs" data-testid="select-object-table-group">{tableGroups.map((key) => <option key={key} value={key}>{key}</option>)}</select></label>
-                <p className="text-[10px] leading-4 text-muted-foreground">Edit this group’s visible columns, labels, order, and widths in Legacy report controls below.</p>
+                <p className="text-[10px] leading-4 text-muted-foreground">Edit structured rows and cells below. Legacy report controls apply to older tables without structured rows.</p>
               </section>
             )}
+
+            <ReportDesignerTableInspector objects={objects} selected={selected} testType={testType} onChange={onObjectChange} onAction={onTableAction} />
+            <ReportDesignerFormulaInspector selected={selected} testType={testType} onChange={onObjectChange} />
 
             {selected.type === "line" && (
               <section className="space-y-3 border-t border-border/70 pt-4">
@@ -173,6 +180,7 @@ export function ReportDesignerProperties({ design, selected, testType, onPageCha
                 {selected.objectPath && <p className="truncate font-mono text-[10px] text-muted-foreground" title={selected.objectPath} data-testid="text-image-object-path">{selected.objectPath}</p>}
               </section>
             )}
+            </fieldset>
           </>
         ) : (
           <div className="rounded-md border border-dashed border-border p-4 text-center" data-testid="status-no-object-selected">
@@ -181,7 +189,7 @@ export function ReportDesignerProperties({ design, selected, testType, onPageCha
           </div>
         )}
 
-        <section className="space-y-3 border-t border-border/70 pt-4">
+        {!selected && <section className="space-y-3 border-t border-border/70 pt-4">
           <div><p className="text-xs font-semibold">Page</p><p className="text-[11px] text-muted-foreground">Physical certificate dimensions</p></div>
           <div className="grid grid-cols-2 gap-2">
             <label className="space-y-1"><span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Size</span><select value={design.page.pageSize} onChange={(event) => {
@@ -201,9 +209,9 @@ export function ReportDesignerProperties({ design, selected, testType, onPageCha
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs"><label className="flex items-center gap-2"><input type="checkbox" checked={design.page.showHeader} onChange={(event) => onPageChange({ showHeader: event.target.checked })} data-testid="checkbox-page-header" /> Header</label><label className="flex items-center gap-2"><input type="checkbox" checked={design.page.showFooter} onChange={(event) => onPageChange({ showFooter: event.target.checked })} data-testid="checkbox-page-footer" /> Footer</label></div>
           <div className="grid grid-cols-2 gap-2"><NumberField label="Header height" value={design.page.headerHeightMm} min={1} max={100} onChange={(value) => onPageChange({ headerHeightMm: value })} testId="input-page-header-height" /><NumberField label="Footer height" value={design.page.footerHeightMm} min={1} max={100} onChange={(value) => onPageChange({ footerHeightMm: value })} testId="input-page-footer-height" /></div>
-        </section>
+        </section>}
 
-        <section className="space-y-3 border-t border-border/70 pt-4">
+        {(!selected || selected.type === "table") && <section className="space-y-3 border-t border-border/70 pt-4">
           <div className="flex items-center gap-2"><Table2 className="h-3.5 w-3.5 text-primary" /><p className="text-xs font-semibold">Legacy report controls</p></div>
           <label className="space-y-1"><span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Report title</span><Input value={design.layout.title} onChange={(event) => onLayoutChange({ title: event.target.value })} className="h-8 text-xs" data-testid="input-legacy-report-title" /></label>
           <div className="grid grid-cols-2 gap-2"><label className="space-y-1"><span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Font</span><select value={design.layout.fontFamily} onChange={(event) => onLayoutChange({ fontFamily: event.target.value as ReportLayoutConfig["fontFamily"] })} className="h-8 w-full rounded-md border border-input bg-background px-1 text-xs" data-testid="select-legacy-font"><option>Arial</option><option>Calibri</option><option>Times New Roman</option><option>Helvetica</option></select></label><NumberField label="Size" value={design.layout.fontSize} min={8} max={24} onChange={(value) => onLayoutChange({ fontSize: value })} testId="input-legacy-font-size" /></div>
@@ -233,7 +241,7 @@ export function ReportDesignerProperties({ design, selected, testType, onPageCha
               );
             })}
           </div>
-        </section>
+        </section>}
       </div>
     </aside>
   );

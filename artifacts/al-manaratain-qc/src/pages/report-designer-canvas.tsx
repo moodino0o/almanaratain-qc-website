@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { ReportTemplateObject, ReportTemplatePage } from "@workspace/api-client-react";
+import { absolutePosition, parentIdFor, sectionForObject, visibleWithParents } from "./report-designer-model";
 import { snapValue } from "./report-designer-types";
 
 const PX_PER_MM = 3.7795;
@@ -11,7 +12,7 @@ type CanvasProps = {
   zoom: number;
   grid: boolean;
   snap: boolean;
-  onSelect: (id: string) => void;
+  onSelect: (id: string, extend?: boolean) => void;
   onMove: (id: string, patch: Partial<ReportTemplateObject>) => void;
   preview?: ReactNode;
 };
@@ -32,7 +33,7 @@ function objectStyle(object: ReportTemplateObject, scale: number) {
 }
 
 function objectHandle(object: ReportTemplateObject) {
-  if (object.type === "section") {
+  if (object.type === "section" || object.type === "group") {
     return <div
       className="h-full w-full border border-dashed border-slate-400/50 bg-transparent"
       aria-hidden="true"
@@ -46,24 +47,26 @@ function canvasObjectPosition(
   objects: ReportTemplateObject[],
   page: ReportTemplatePage,
 ) {
+  const position = absolutePosition(object, objects);
+  const section = sectionForObject(object, objects);
   if (object.type === "section") {
     const pageVisibility = object.sectionKey === "header"
       ? page.showHeader
       : object.sectionKey === "signatures"
         ? page.showFooter
         : true;
-    return { ...object, visible: object.visible && pageVisibility };
+    return { ...object, ...position, visible: visibleWithParents(object, objects) && pageVisibility };
   }
-  if (!object.sectionKey) return object;
-  const parent = objects.find((candidate) =>
-    candidate.type === "section" && candidate.sectionKey === object.sectionKey,
-  );
-  const parentVisible = parent?.visible !== false &&
-    !(object.sectionKey === "header" && !page.showHeader) &&
-    !(object.sectionKey === "signatures" && !page.showFooter);
-  return parent
-    ? { ...object, x: parent.x + object.x, y: parent.y + object.y, visible: object.visible && parentVisible }
-    : object;
+  const pageVisible = section?.sectionKey === "header"
+    ? page.showHeader
+    : section?.sectionKey === "signatures"
+      ? page.showFooter
+      : true;
+  return {
+    ...object,
+    ...position,
+    visible: visibleWithParents(object, objects) && pageVisible,
+  };
 }
 
 export function ReportDesignerCanvas({ page, objects, selectedId, zoom, grid, snap, onSelect, onMove, preview }: CanvasProps) {
@@ -111,13 +114,32 @@ export function ReportDesignerCanvas({ page, objects, selectedId, zoom, grid, sn
       </div>
       {grid && <div className="pointer-events-none absolute inset-0 opacity-60" style={{ backgroundImage: "linear-gradient(to right, rgba(79,101,117,.16) 1px, transparent 1px), linear-gradient(to bottom, rgba(79,101,117,.16) 1px, transparent 1px)", backgroundSize: `${2 * PX_PER_MM * scale}px ${2 * PX_PER_MM * scale}px` }} data-testid="report-designer-grid" />}
       <div className="absolute inset-0">
-        {objects.map((object) => {
+        {[...objects]
+          .sort((left, right) => {
+            const leftDepth = objectDepth(left, objects);
+            const rightDepth = objectDepth(right, objects);
+            return leftDepth - rightDepth || left.zIndex - right.zIndex;
+          })
+          .map((object) => {
           const selected = object.id === selectedId;
-          const previewObject = canvasObjectPosition(
-            dragPreview?.id === object.id ? { ...object, ...dragPreview.patch } : object,
+          let previewObject = canvasObjectPosition(
+            {
+              ...(dragPreview?.id === object.id ? { ...object, ...dragPreview.patch } : object),
+              zIndex: object.zIndex + objectDepth(object, objects) * 1000,
+            },
             objects,
             page,
           );
+          if (dragPreview && dragPreview.id !== object.id && isDescendantOf(object, dragPreview.id, objects)) {
+            const draggedObject = objects.find((candidate) => candidate.id === dragPreview.id);
+            if (draggedObject) {
+              previewObject = {
+                ...previewObject,
+                x: previewObject.x + (dragPreview.patch.x ?? draggedObject.x) - draggedObject.x,
+                y: previewObject.y + (dragPreview.patch.y ?? draggedObject.y) - draggedObject.y,
+              };
+            }
+          }
           return (
             <div
               key={object.id}
@@ -125,7 +147,9 @@ export function ReportDesignerCanvas({ page, objects, selectedId, zoom, grid, sn
               style={objectStyle(previewObject, scale)}
               onPointerDown={(event) => {
                 event.stopPropagation();
-                onSelect(object.id);
+                const extendSelection = event.shiftKey || event.metaKey || event.ctrlKey;
+                onSelect(object.id, extendSelection);
+                if (extendSelection) return;
                 if (object.locked) return;
                 latestPatch.current = undefined;
                 setDragPreview(undefined);
@@ -160,4 +184,34 @@ export function ReportDesignerCanvas({ page, objects, selectedId, zoom, grid, sn
       {dragging && <div className="pointer-events-none absolute left-2 top-2 rounded bg-foreground px-2 py-1 font-mono text-[10px] text-background" data-testid="status-dragging-object">Editing placement</div>}
     </div>
   );
+}
+
+function objectDepth(object: ReportTemplateObject, objects: ReportTemplateObject[]) {
+  let depth = 0;
+  let current = object;
+  const visited = new Set<string>();
+  while (parentIdFor(current, objects) && !visited.has(current.id)) {
+    visited.add(current.id);
+    const parent = objects.find((candidate) => candidate.id === parentIdFor(current, objects));
+    if (!parent) break;
+    current = parent;
+    depth += 1;
+  }
+  return depth;
+}
+
+function isDescendantOf(
+  object: ReportTemplateObject,
+  ancestorId: string,
+  objects: ReportTemplateObject[],
+) {
+  const visited = new Set<string>();
+  let parentId = parentIdFor(object, objects);
+  while (parentId && !visited.has(parentId)) {
+    if (parentId === ancestorId) return true;
+    visited.add(parentId);
+    const parent = objects.find((candidate) => candidate.id === parentId);
+    parentId = parent ? parentIdFor(parent, objects) : undefined;
+  }
+  return false;
 }

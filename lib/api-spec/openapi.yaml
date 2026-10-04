@@ -2582,8 +2582,9 @@ components:
       required: [id, type, name, x, y, width, height, zIndex, rotation, locked, visible]
       properties:
         id: { type: string, minLength: 1, maxLength: 80 }
-        type: { type: string, enum: [section, text, dynamicField, line, shape, image, table] }
+        type: { type: string, enum: [section, group, text, dynamicField, line, shape, image, table, tableRow, tableCell, signature, formula] }
         name: { type: string, minLength: 1, maxLength: 120 }
+        parentId: { type: string, minLength: 1, maxLength: 80 }
         x: { type: number, minimum: -1000, maximum: 5000 }
         y: { type: number, minimum: -1000, maximum: 5000 }
         width: { type: number, minimum: 1, maximum: 5000 }
@@ -2595,6 +2596,9 @@ components:
         sectionKey: { type: string, maxLength: 80 }
         content: { type: string, maxLength: 5000 }
         fieldKey: { type: string, maxLength: 80 }
+        formula: { type: string, maxLength: 1000 }
+        rowType: { type: string, enum: [header, static, dynamic] }
+        columnIndex: { type: number, minimum: 0, maximum: 100 }
         objectPath: { type: string, pattern: "^/objects/uploads/[A-Za-z0-9._/-]+$" }
         fontFamily: { type: string, enum: [Arial, Calibri, "Times New Roman", Helvetica] }
         fontSize: { type: number, minimum: 6, maximum: 96 }
@@ -2620,7 +2624,7 @@ components:
       type: object
       required: [schemaVersion, layout, page, objects]
       properties:
-        schemaVersion: { type: integer, enum: [1] }
+        schemaVersion: { type: integer, enum: [1, 2] }
         layout:
           $ref: "#/components/schemas/ReportLayoutConfig"
         page:

@@ -11,10 +11,15 @@ export type ReportTemplateObjectType = typeof ReportTemplateObjectType[keyof typ
 
 export const ReportTemplateObjectType = {
   section: 'section',
+  group: 'group',
   text: 'text',
   dynamicField: 'dynamicField',
   line: 'line',
   shape: 'shape',
   image: 'image',
   table: 'table',
+  tableRow: 'tableRow',
+  tableCell: 'tableCell',
+  signature: 'signature',
+  formula: 'formula',
 } as const;

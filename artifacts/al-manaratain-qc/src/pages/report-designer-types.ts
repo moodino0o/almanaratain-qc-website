@@ -105,7 +105,7 @@ export function createEmptyDesign(testType: TestType): ReportTemplateDesign {
     section("section-signatures", "signatures", "Signatures", 263, 22, 6),
   ];
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     layout: createLegacyLayout(testType),
     page: {
       pageSize: "A4",

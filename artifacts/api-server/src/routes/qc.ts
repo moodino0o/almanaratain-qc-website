@@ -908,14 +908,21 @@ const REPORT_TEMPLATE_COLUMN_KEYS = new Set(
 function validateReportTemplateDesign(design: unknown): string | null {
   if (typeof design !== "object" || design === null) return "A design is required.";
   const value = design as Record<string, unknown>;
-  if (value.schemaVersion !== 1 || !Array.isArray(value.objects)) {
+  if ((value.schemaVersion !== 1 && value.schemaVersion !== 2) || !Array.isArray(value.objects)) {
     return "Unsupported report template design.";
   }
+  const objectsById = new Map<string, Record<string, unknown>>();
   for (const object of value.objects) {
     if (typeof object !== "object" || object === null) return "Invalid report template object.";
     const item = object as Record<string, unknown>;
-    if (item.type === "dynamicField" &&
-      (typeof item.fieldKey !== "string" || !REPORT_TEMPLATE_FIELD_KEYS.has(item.fieldKey))) {
+    if (typeof item.id !== "string" || !item.id.trim() || objectsById.has(item.id)) {
+      return "Report template object IDs must be unique.";
+    }
+    objectsById.set(item.id, item);
+    if ((item.type === "dynamicField" && typeof item.fieldKey !== "string") ||
+      (item.type === "tableCell" && item.fieldKey !== undefined && typeof item.fieldKey !== "string") ||
+      ((item.type === "dynamicField" || item.type === "tableCell") &&
+        item.fieldKey !== undefined && !REPORT_TEMPLATE_FIELD_KEYS.has(item.fieldKey as string))) {
       return "Dynamic field is not allowed.";
     }
     if (item.type === "table" &&
@@ -930,10 +937,55 @@ function validateReportTemplateDesign(design: unknown): string | null {
       }
     }
     if (typeof item.content === "string") {
-      const tokens = [...item.content.matchAll(/\{\{([A-Z_]+)\}\}/g)];
+      const tokens = [...item.content.matchAll(/\{\{([A-Za-z_][A-Za-z0-9_.]*)\}\}/g)];
       if (tokens.some(([, key]) => !REPORT_TEMPLATE_FIELD_KEYS.has(key))) {
         return "Template text contains an unknown dynamic field.";
       }
+    }
+    if (item.type === "formula" || item.type === "tableCell" && typeof item.formula === "string") {
+      const formula = typeof item.formula === "string" ? item.formula : "";
+      const fields = [...formula.matchAll(/\{\{([A-Za-z_][A-Za-z0-9_.]*)\}\}/g)];
+      if (fields.some(([, key]) => !REPORT_TEMPLATE_FIELD_KEYS.has(key))) {
+        return "Formula contains an unknown dynamic field.";
+      }
+      if (/[^\w\s.,+\-*/%()={}]/.test(formula) ||
+        /\{\{(?![A-Za-z_][A-Za-z0-9_.]*\}\})/.test(formula) ||
+        (formula.match(/\(/g)?.length ?? 0) !== (formula.match(/\)/g)?.length ?? 0) ||
+        [...formula.matchAll(/\b([A-Za-z]+)\s*\(/g)]
+          .some(([, name]) => !["SUM", "AVERAGE", "MIN", "MAX", "ROUND", "ABS"].includes(name.toUpperCase()))) {
+        return "Formula contains unsupported syntax.";
+      }
+    }
+  }
+  for (const item of objectsById.values()) {
+    if (item.parentId === undefined) continue;
+    if (typeof item.parentId !== "string" || !objectsById.has(item.parentId) || item.parentId === item.id) {
+      return "Report template object parent is invalid.";
+    }
+    const parent = objectsById.get(item.parentId)!;
+    const validParent = item.type === "tableRow"
+      ? parent.type === "table"
+      : item.type === "tableCell"
+        ? parent.type === "tableRow"
+        : item.type === "section"
+          ? false
+          : item.type === "table"
+            ? parent.type === "section" || parent.type === "group"
+            : parent.type === "section" || parent.type === "group";
+    if (!validParent) return "Report template object parent type is invalid.";
+    const visited = new Set<string>([item.id as string]);
+    let current: Record<string, unknown> | undefined = parent;
+    while (current) {
+      if (typeof current.id !== "string" || visited.has(current.id)) {
+        return "Report template object hierarchy contains a cycle.";
+      }
+      visited.add(current.id);
+      current = typeof current.parentId === "string" ? objectsById.get(current.parentId) : undefined;
+    }
+    if (item.type === "tableCell" && item.columnIndex !== undefined &&
+      (typeof item.columnIndex !== "number" || !Number.isInteger(item.columnIndex) ||
+        item.columnIndex < 0 || item.columnIndex > 100)) {
+      return "Table cell column index is invalid.";
     }
   }
   const layout = value.layout;
