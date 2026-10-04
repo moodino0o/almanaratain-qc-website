@@ -30,6 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { ReportDocument } from "./report-print";
+import { positionRemarksAboveResults } from "./report-template-layout";
 import { REPORT_LAYOUT_FIELD_GROUPS } from "./report-layout-fields";
 import { ReportDesignerCanvas } from "./report-designer-canvas";
 import { ReportDesignerLayers } from "./report-designer-layers";
@@ -842,12 +843,18 @@ export function ReportLayoutsEditor() {
   };
 
   const report = reportQuery.data;
+  const previewDesign = useMemo(
+    () => draft?.design
+      ? positionRemarksAboveResults(draft.design, report?.record?.remarks)
+      : undefined,
+    [draft?.design, report?.record?.remarks],
+  );
   const reportPreview = reportQuery.isLoading
     ? <div className="min-h-[760px] space-y-4 bg-card p-10" data-testid="status-report-preview-loading"><div className="h-8 w-2/3 animate-pulse rounded bg-muted" /><div className="h-4 w-1/2 animate-pulse rounded bg-muted" /><div className="mt-12 h-64 animate-pulse rounded bg-muted" /></div>
     : reportQuery.isError
       ? <EmptyReportPreview message="This saved QC report could not be loaded. Choose another saved record and try again." />
       : report?.record
-        ? <TemplateReportDocument report={report} strengthStandards={strengthStandards} sieveStandards={sieveStandards} templateDesign={draft?.design} />
+        ? <TemplateReportDocument report={report} strengthStandards={strengthStandards} sieveStandards={sieveStandards} templateDesign={previewDesign} />
         : <EmptyReportPreview message={records.length ? "Choose a saved QC record above to preview the certificate with real results." : `No saved ${testType} records are available. Create a QC record to preview this template.`} />;
   const legacyGroups = useMemo(() => Object.entries(REPORT_LAYOUT_FIELD_GROUPS[testType] ?? {}), [testType]);
 
@@ -887,7 +894,7 @@ export function ReportLayoutsEditor() {
               <div className="flex flex-wrap items-center gap-2 border-b border-border/70 bg-muted/25 px-4 py-2"><span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Live certificate</span><select value={recordId ?? ""} onChange={(event) => setRecordId(event.target.value ? Number(event.target.value) : undefined)} className="h-8 min-w-[230px] rounded-md border border-input bg-background px-2 text-xs" data-testid="select-preview-record"><option value="">Choose saved QC record…</option>{records.map((record) => <option key={record.id} value={record.id}>{record.recordNo} · {record.sampleDate} · {record.material}</option>)}</select>{recordsQuery.isLoading && <span className="text-xs text-muted-foreground" data-testid="status-preview-records-loading">Loading saved records…</span>}{recordsQuery.isError && <span className="text-xs text-destructive" data-testid="status-preview-records-error">Saved records unavailable.</span>}<span className="ml-auto text-[10px] font-mono text-muted-foreground" data-testid="text-preview-record-count">{records.length} saved record{records.length === 1 ? "" : "s"}</span></div>
               <div ref={canvasViewportRef} className="report-designer-canvas-scroll flex-1">
                 <div className="report-designer-canvas-center">
-                   <ReportDesignerCanvas page={draft.design.page} objects={draft.design.objects} selectedId={selectedObjectId} zoom={zoom} grid={grid} snap={snap} onSelect={selectObject} onMove={patchObject} preview={<div className="report-designer-preview-layer">{reportPreview}</div>} />
+                    <ReportDesignerCanvas page={previewDesign?.page ?? draft.design.page} objects={previewDesign?.objects ?? draft.design.objects} selectedId={selectedObjectId} zoom={zoom} grid={grid} snap={snap} onSelect={selectObject} onMove={patchObject} preview={<div className="report-designer-preview-layer">{reportPreview}</div>} />
                 </div>
                 {!inspectorOpen && <Button type="button" variant="outline" size="sm" className="absolute right-3 top-3 z-20 h-9 gap-1.5 bg-card/95 shadow-md" onClick={() => setInspectorOpen(true)} data-testid="button-reopen-inspector"><ChevronRight className="h-4 w-4" /> Inspector</Button>}
               </div>

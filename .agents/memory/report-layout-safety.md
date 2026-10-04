@@ -26,3 +26,9 @@ The visual designer must use the shared report renderer as its only source of co
 **Why:** Duplicate mock layers can cover real saved values and tables, while implicit accent fills can hide report content. Keeping one renderer also keeps the designer aligned with browser printing.
 
 **How to apply:** Add report content and data bindings to the shared renderer; keep canvas overlays limited to hit targets and selection outlines. Only apply a section fill when an administrator explicitly sets one, while preserving any previously saved fill.
+
+Visual templates position report sections absolutely, so changing JSX or flex order alone does not change their printed order.
+
+**Why:** Explicit section coordinates take precedence over document flow and can otherwise leave a reordered block visually in its old location.
+
+**How to apply:** Enforce report-order rules on a render-only design copy, move section backgrounds and dependent content together, keep the designer preview aligned, and never mutate saved template coordinates implicitly.

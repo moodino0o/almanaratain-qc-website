@@ -28,6 +28,7 @@ import {
   formatShapeFactor,
   formatWholeNumber,
 } from "./report-print-utils";
+import { positionRemarksAboveResults } from "./report-template-layout";
 import {
   AGGREGATE_CHLORIDE_LIMIT_PERCENT,
   AGGREGATE_SULPHATE_LIMIT_PERCENT,
@@ -127,6 +128,7 @@ function layoutSectionStyle(layout: ReportLayout | undefined, key: string): CSSP
     ...(section?.borderStyle && section.borderStyle !== "none"
       ? { border: `${section.borderWidth ?? 1}px ${section.borderStyle} ${section.borderColor ?? "#d1d5db"}` }
       : {}),
+    ...(positioned && key === "remarks" ? { marginTop: 0 } : {}),
     ...(positioned ? {
       position: "absolute",
       left: `${positioned.x}mm`,
@@ -2577,11 +2579,15 @@ function defaultReportTitle(testType: QcRecord["testType"]) {
  */
 export function ReportDocument({ report, strengthStandards = [], sieveStandards = [], selectedStrengthStandardId, accordingTo: configuredAccordingTo, reportReferenceNumber: configuredReference, defaultTitle: configuredTitle, templateDesign, formulaPreview = false }: ReportDocumentProps) {
   const { record, companyName, companySubtitle } = report;
-  const layout = templateDesign
-    ? layoutWithTemplateDesign(report.layout, record, templateDesign)
+  const positionedTemplateDesign = templateDesign
+    ? positionRemarksAboveResults(templateDesign, record.remarks)
+    : undefined;
+  const layout = positionedTemplateDesign
+    ? layoutWithTemplateDesign(report.layout, record, positionedTemplateDesign)
     : report.layout;
-  const hasPositionedSections = templateDesign?.objects.some((object) => object.type === "section") ?? false;
-  const page = templateDesign?.page;
+  const hasPositionedSections =
+    positionedTemplateDesign?.objects.some((object) => object.type === "section") ?? false;
+  const page = positionedTemplateDesign?.page;
   const pageWidthMm = page
     ? page.orientation === "landscape" ? page.heightMm : page.widthMm
     : 210;
@@ -2619,9 +2625,9 @@ export function ReportDocument({ report, strengthStandards = [], sieveStandards 
         : configuredStandard || (record.testType === "Ready Mix" ? "BS EN 12390-3:2009" : null);
   const accordingTo = configuredAccordingTo === undefined ? automaticAccordingTo : configuredAccordingTo;
   return <>
-    {templateDesign && <style data-testid="style-report-template-page">{`@page { size: ${pageWidthMm}mm ${pageHeightMm}mm; margin: 0; }`}</style>}
+    {positionedTemplateDesign && <style data-testid="style-report-template-page">{`@page { size: ${pageWidthMm}mm ${pageHeightMm}mm; margin: 0; }`}</style>}
     <main
-      className={`report-paper ${record.testType === "Ready Mix" ? "ready-mix-paper" : ""} ${templateDesign ? "report-template-paper" : ""} ${hasPositionedSections ? "report-template-positioned" : ""}`}
+      className={`report-paper ${record.testType === "Ready Mix" ? "ready-mix-paper" : ""} ${positionedTemplateDesign ? "report-template-paper" : ""} ${hasPositionedSections ? "report-template-positioned" : ""}`}
       style={layout ? {
         fontFamily: layout.config.fontFamily,
         fontSize: `${Math.max(layout.config.fontSize, 13)}px`,
@@ -2633,7 +2639,7 @@ export function ReportDocument({ report, strengthStandards = [], sieveStandards 
           : `${layout.config.paperPadding}mm`,
         "--report-accent-color": layout.config.accentColor,
       } as CSSProperties : undefined}
-    ><div className={`report-layout-content ${templateDesign ? "report-layout-content-template" : ""} ${hasPositionedSections ? "report-layout-content-positioned" : ""}`}>
+    ><div className={`report-layout-content ${positionedTemplateDesign ? "report-layout-content-template" : ""} ${hasPositionedSections ? "report-layout-content-positioned" : ""}`}>
     {layoutSectionVisible(layout, "header") && <><LayoutElements layout={layout} sectionKey="header" placement="before" /><header className="report-header report-layout-section" style={layoutSectionStyle(layout, "header")}>
       <div className="report-company">{companySubtitle}</div><img src="/al-manaratain-logo.webp" alt="Al Manaratain Logo" className="report-logo" /><div className="report-title"><strong>{reportTitle}</strong><span>Ref: {reportReferenceNumber}</span></div>
     </header><LayoutElements layout={layout} sectionKey="header" placement="after" /></>}
@@ -2657,7 +2663,7 @@ export function ReportDocument({ report, strengthStandards = [], sieveStandards 
     )}
     {layoutSectionVisible(layout, "signatures") && <><LayoutElements layout={layout} sectionKey="signatures" placement="before" /><footer className="report-signatures report-layout-section" style={layoutSectionStyle(layout, "signatures")}><div><span>Tested by:</span><strong>{record.testedBy}</strong></div><div><span>Approved by:</span><strong>{record.reviewedBy || "ADEL ABBAS EBRAHIM"}</strong></div><small>{companyName} · {companySubtitle}</small></footer><LayoutElements layout={layout} sectionKey="signatures" placement="after" /></>}
   </div>
-  {templateDesign && <ReportTemplateObjects design={templateDesign} record={record} companyName={companyName} reportTitle={reportTitle} formulaPreview={formulaPreview} />}
+  {positionedTemplateDesign && <ReportTemplateObjects design={positionedTemplateDesign} record={record} companyName={companyName} reportTitle={reportTitle} formulaPreview={formulaPreview} />}
   </main>
   </>;
 }
