@@ -267,6 +267,7 @@ function TestRowsTable({
   includeAge = true,
   sortByAge = false,
   strengthLabel = "Calculated Strength (N/mm²)",
+  areaLabel = "Loaded Face Area (mm²)",
   strengthValueForRow,
 }: {
   rows: unknown[];
@@ -274,6 +275,7 @@ function TestRowsTable({
   includeAge?: boolean;
   sortByAge?: boolean;
   strengthLabel?: string;
+  areaLabel?: string;
   strengthValueForRow?: (row: Record<string, unknown>) => unknown;
 }) {
   const displayRows = sortByAge ? sortCubeRowsByAge(rows) : rows;
@@ -291,7 +293,7 @@ function TestRowsTable({
             <th className="p-2 text-left">Wet Weight</th>
             {includeAbsorption && <th className="p-2 text-left">Water Absorption (%)</th>}
             <th className="p-2 text-left">Load (kN)</th>
-            <th className="p-2 text-left">Loaded Face Area (mm²)</th>
+            <th className="p-2 text-left">{areaLabel}</th>
             <th className="p-2 text-left">{strengthLabel}</th>
           </tr>
         </thead>
@@ -1034,6 +1036,7 @@ export default function RecordDetail() {
                     includeAbsorption={false}
                     includeAge={false}
                     strengthLabel="Air-dry Strength (N/mm²)"
+                    areaLabel="Net Area (mm²)"
                     strengthValueForRow={(row) =>
                       blockAirDryRowStrength(row, record.location)}
                   />

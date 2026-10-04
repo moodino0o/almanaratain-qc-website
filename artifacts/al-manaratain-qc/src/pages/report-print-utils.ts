@@ -25,27 +25,28 @@ export function blockReportColumnsWithoutWetWeight<T extends { key: string }>(co
   return columns.filter((column) => column.key !== "wetWeight");
 }
 
-export function calculateBlockFaceArea(length: unknown, height: unknown) {
+export function calculateBlockNetArea(width: unknown, length: unknown) {
   const parseDimension = (value: unknown) => {
     if (typeof value === "number") return Number.isFinite(value) && value > 0 ? value : null;
     if (typeof value !== "string" || !value.trim()) return null;
     const parsed = Number(value.trim());
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   };
+  const parsedWidth = parseDimension(width);
   const parsedLength = parseDimension(length);
-  const parsedHeight = parseDimension(height);
-  if (parsedLength === null || parsedHeight === null) return null;
-  const area = parsedLength * parsedHeight;
+  if (parsedWidth === null || parsedLength === null) return null;
+  const area = parsedWidth * parsedLength;
   return Number.isFinite(area) ? area : null;
 }
 
-export function formatBlockFaceArea(length: unknown, height: unknown) {
-  const area = calculateBlockFaceArea(length, height);
+export function formatBlockNetArea(width: unknown, length: unknown) {
+  const area = calculateBlockNetArea(width, length);
   return area === null ? "-" : String(Math.round(area));
 }
 
 type ConfiguredBlockColumn = {
   key: string;
+  label: string;
   visible: boolean;
   order: number;
   width: number;
@@ -55,7 +56,9 @@ export function blockReportColumnsWithFaceArea<T extends ConfiguredBlockColumn>(
   columns: T[],
   faceAreaColumn?: T,
 ) {
-  const compatibleColumns = blockReportColumnsWithoutWetWeight(columns);
+  const compatibleColumns = blockReportColumnsWithoutWetWeight(columns).map((column) =>
+    column.key === "faceArea" ? { ...column, label: "Net Area (mm²)" } : column,
+  );
   if (
     !compatibleColumns.length ||
     compatibleColumns.some((column) => column.key === "faceArea") ||

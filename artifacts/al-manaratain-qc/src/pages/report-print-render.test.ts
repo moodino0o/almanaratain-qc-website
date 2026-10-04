@@ -244,7 +244,7 @@ test("keeps legacy configured-column tables rendering their headers and data", (
   assert.match(markup, /<td[^>]*>30\.0<\/td>/);
 });
 
-test("adds calculated Face Area to legacy configured-column Blocks tables", () => {
+test("adds calculated Net Area to legacy configured-column Blocks tables", () => {
   const object = templateObject({
     id: "table",
     tableKey: "blockCompression",
@@ -265,16 +265,16 @@ test("adds calculated Face Area to legacy configured-column Blocks tables", () =
     ...reportFixture(),
     testType: "Blocks",
     details: {
-      testRows: [{ rowNo: 1, length: 400, width: 200, height: 200, load: 500 }],
+      testRows: [{ rowNo: 1, length: 400, width: 250, height: 180, load: 500 }],
     },
   } as QcRecord;
 
   const markup = renderTable(design, object, record);
-  assert.match(markup, /<th[^>]*>Face Area \(mm²\)<\/th>/);
-  assert.match(markup, /<td[^>]*>80000<\/td>/);
+  assert.match(markup, /<th[^>]*>Net Area \(mm²\)<\/th>/);
+  assert.match(markup, /<td[^>]*>100000<\/td>/);
 });
 
-test("adds calculated Face Area to saved structured Block tables without that cell", () => {
+test("adds calculated Net Area to saved structured Block tables without that cell", () => {
   const object = templateObject({
     id: "table",
     tableKey: "blockCompression",
@@ -317,13 +317,57 @@ test("adds calculated Face Area to saved structured Block tables without that ce
     ...reportFixture(),
     testType: "Blocks",
     details: {
-      testRows: [{ rowNo: 1, length: 400, width: 200, height: 200, load: 500 }],
+      testRows: [{ rowNo: 1, length: 400, width: 250, height: 180, load: 500 }],
     },
   } as QcRecord;
 
   const markup = renderTable(design, object, record);
-  assert.match(markup, /Face Area \(mm²\)/);
-  assert.match(markup, /data-report-cell="block-body-face-area">80000<\/td>/);
+  assert.match(markup, /Net Area \(mm²\)/);
+  assert.match(markup, /data-report-cell="block-body-face-area">100000<\/td>/);
+});
+
+test("updates legacy structured Face Area cells to Net Area and recalculates width times length", () => {
+  const object = templateObject({
+    id: "table",
+    tableKey: "blockCompression",
+    name: "Block compression results",
+  });
+  const headerCells = [
+    cell("head-face-area", "block-header", 0, { content: "Face Area (mm²)" }),
+  ];
+  const bodyCells = [
+    cell("body-face-area", "block-body", 0, {
+      name: "Face Area",
+      formula: "={{details.length}} * {{details.height}}",
+    }),
+  ];
+  const design = {
+    layout: {
+      title: "Saved Blocks",
+      columns: {
+        blockCompression: [
+          { key: "faceArea", label: "Face Area (mm²)", width: 100, visible: true, order: 0 },
+        ],
+      },
+    },
+    objects: [
+      object,
+      ...row("block-header", "header", 0, headerCells),
+      ...row("block-body", "dynamic", 8, bodyCells),
+    ],
+  } as ReportTemplateDesign;
+  const record = {
+    ...reportFixture(),
+    testType: "Blocks",
+    details: {
+      testRows: [{ rowNo: 1, length: 400, width: 250, height: 180, load: 500 }],
+    },
+  } as QcRecord;
+
+  const markup = renderTable(design, object, record);
+  assert.match(markup, /Net Area \(mm²\)/);
+  assert.doesNotMatch(markup, /Face Area/);
+  assert.match(markup, /data-report-cell="body-face-area">100000<\/td>/);
 });
 
 test("renders Blocks remarks between Test Details and SPECIMEN RESULTS", () => {

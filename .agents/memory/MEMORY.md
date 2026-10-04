@@ -10,6 +10,7 @@
 - [Complaint completion workflow](complaint-completion-workflow.md) — complaint completion is an explicit Open/Complete status, independent of whether solution notes are filled.
 - [Complaint material categories](complaint-material-categories.md) — derive complaint categories from material labels using OPC/SRC, inch sizes, and 60/80mm rules.
 - [Block derived strengths](block-derived-strengths.md) — calculate air-dry and normalized Block strengths from wet strength and shape factor, rounded to one decimal.
+- [Block net area](block-net-area.md) — label Block area as Net Area and calculate width × length; keep Paving Blocks' tensile area separate.
 - [Shape factor defaults](shape-factor-defaults.md) — seed one editable row per Block size, but keep the numeric value empty until an approved standard is provided.
 - [Report layout safety](report-layout-safety.md) — preserve saved layouts and account for absolute section positions when enforcing report order.
 - [Precast workflow and criteria](precast-workflow-differences.md) — preserve integer identifiers, gram weights, age thresholds, and distinct reporting.

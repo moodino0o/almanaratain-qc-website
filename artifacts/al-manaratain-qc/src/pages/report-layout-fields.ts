@@ -29,7 +29,7 @@ export const REPORT_LAYOUT_FIELD_GROUPS: Record<string, Record<string, ReportLay
     ]),
     blockCompression: fields([
       ["no", "No.", 7], ["length", "Length (mm)", 9], ["width", "Width (mm)", 9], ["height", "Height (mm)", 9],
-      ["faceArea", "Face Area (mm²)", 12], ["load", "Load (kN)", 9], ["water", "Water (N/mm2)", 10],
+      ["faceArea", "Net Area (mm²)", 12], ["load", "Load (kN)", 9], ["water", "Water (N/mm2)", 10],
       ["airDry", "Air Dry (N/mm2)", 10], ["normalized", "Normalized (N/mm2)", 12], ["density", "Density (kg/m3)", 13],
     ]),
   },

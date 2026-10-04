@@ -3,8 +3,8 @@ import test from "node:test";
 import {
   blockReportColumnsWithFaceArea,
   blockReportColumnsWithoutWetWeight,
-  calculateBlockFaceArea,
-  formatBlockFaceArea,
+  calculateBlockNetArea,
+  formatBlockNetArea,
   filterRowsWithLoad,
   formatShapeFactor,
   formatWholeNumber,
@@ -40,15 +40,15 @@ test("Block compression layouts cannot expose Wet Weight", () => {
   );
 });
 
-test("calculates Block face area from length and height and handles missing dimensions", () => {
-  assert.equal(calculateBlockFaceArea("400", "200"), 80_000);
-  assert.equal(formatBlockFaceArea(400, 200), "80000");
-  assert.equal(formatBlockFaceArea("400.5", "200"), "80100");
-  assert.equal(calculateBlockFaceArea("", 200), null);
-  assert.equal(calculateBlockFaceArea(400, "not entered"), null);
+test("calculates Block net area from width and length and handles missing dimensions", () => {
+  assert.equal(calculateBlockNetArea("250", "400"), 100_000);
+  assert.equal(formatBlockNetArea(250, 400), "100000");
+  assert.equal(formatBlockNetArea("250.5", "400"), "100200");
+  assert.equal(calculateBlockNetArea("", 400), null);
+  assert.equal(calculateBlockNetArea(250, "not entered"), null);
 });
 
-test("adds Face Area after Height to older Block compression column layouts", () => {
+test("adds Net Area after Height to older Block compression column layouts", () => {
   const fallback = fieldsForReport("Blocks", "blockCompression")
     .map((field, order) => ({ ...field, order, visible: true }));
   const saved = fallback
@@ -63,6 +63,7 @@ test("adds Face Area after Height to older Block compression column layouts", ()
     compatible.map((column) => column.key),
     ["no", "length", "width", "height", "faceArea", "load", "water", "airDry", "normalized", "density"],
   );
+  assert.equal(compatible.find((column) => column.key === "faceArea")?.label, "Net Area (mm²)");
   assert.ok(compatible.reduce((sum, column) => sum + column.width, 0) <= 100.001);
 });
 

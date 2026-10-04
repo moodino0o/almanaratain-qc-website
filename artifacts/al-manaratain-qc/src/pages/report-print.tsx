@@ -25,7 +25,7 @@ import { useAppBack } from "@/hooks/use-app-back";
 import {
   blockReportColumnsWithFaceArea,
   filterRowsWithLoad,
-  formatBlockFaceArea,
+  formatBlockNetArea,
   formatShapeFactor,
   formatWholeNumber,
 } from "./report-print-utils";
@@ -732,7 +732,7 @@ function reportTemplateTableCell(
     return String(rowIndex + 1);
   }
   if (isBlockCompression && columnKey === "faceArea") {
-    return formatBlockFaceArea(row.length, row.height);
+    return formatBlockNetArea(row.width, row.length);
   }
   const keys = [columnKey, ...(REPORT_TEMPLATE_TABLE_FIELD_ALIASES[columnKey] ?? [])];
   const wanted = new Set(keys.map((key) => key.toLocaleLowerCase()));
@@ -836,21 +836,22 @@ export function ReportTemplateDataTable({
   if (structuredRows.length) {
     const headerRows = structuredRows.filter((row) => row.rowType === "header");
     const bodyRows = structuredRows.filter((row) => row.rowType !== "header");
-    const isFaceAreaCell = (cell: ReportTemplateObject) => {
+    const isNetAreaCell = (cell: ReportTemplateObject) => {
       const fieldKey = cell.fieldKey?.toLocaleLowerCase();
       const label = `${cell.name} ${cell.content ?? ""}`.toLocaleLowerCase();
       return fieldKey === "details.facearea" || fieldKey === "facearea" ||
-        label.includes("face area");
+        fieldKey === "details.netarea" || fieldKey === "netarea" ||
+        label.includes("face area") || label.includes("net area");
     };
     const cellObjects = (row: ReportTemplateObject) => directChildren(design.objects, row.id)
       .filter((cell) =>
         cell.type === "tableCell" &&
         cell.visible &&
-        (faceAreaVisible || !isFaceAreaCell(cell)),
+        (faceAreaVisible || !isNetAreaCell(cell)),
       )
       .sort((left, right) => (left.columnIndex ?? left.x) - (right.columnIndex ?? right.x));
     const needsFaceAreaCell = (row: ReportTemplateObject) =>
-      faceAreaVisible && !cellObjects(row).some(isFaceAreaCell);
+      faceAreaVisible && !cellObjects(row).some(isNetAreaCell);
     const columnCount = Math.max(
       1,
       ...structuredRows.map((row) =>
@@ -896,7 +897,11 @@ export function ReportTemplateDataTable({
             boxSizing: "border-box",
           }}
           data-report-cell={cell.id}
-        >{templateCellValue(cell, record, fieldValues, dataRow, rowIndex, blockCompression, formulaPreview)}</td>)}
+        >{blockCompression && isNetAreaCell(cell) && templateRow.rowType === "header"
+          ? "Net Area (mm²)"
+          : blockCompression && isNetAreaCell(cell) && templateRow.rowType === "dynamic" && dataRow
+            ? reportTemplateTableCell(dataRow, "faceArea", rowIndex, true)
+            : templateCellValue(cell, record, fieldValues, dataRow, rowIndex, blockCompression, formulaPreview)}</td>)}
         {appendFaceArea && <td
           key={`${templateRow.id}-face-area`}
           style={{
@@ -917,7 +922,7 @@ export function ReportTemplateDataTable({
           data-report-cell={`${templateRow.id}-face-area`}
         >
           {templateRow.rowType === "header"
-            ? "Face Area (mm²)"
+            ? "Net Area (mm²)"
             : templateRow.rowType === "dynamic" && dataRow
               ? reportTemplateTableCell(dataRow, "faceArea", rowIndex, true)
               : ""}
@@ -968,7 +973,7 @@ export function ReportTemplateDataTable({
           padding: "2px 3px",
           textAlign: object.textAlign ?? "left",
           overflowWrap: "anywhere",
-        }}>{column.label}</th>
+        }}>{blockCompression && column.key === "faceArea" ? "Net Area (mm²)" : column.label}</th>
       ))}</tr></thead>
       <tbody>
         {!columns.length ? (
@@ -1208,7 +1213,7 @@ function BlockCompressionRowsTable({
   const displayNumber = (value: number | null) =>
     value === null ? "-" : formatNumber(value);
   const fixedKeys = ["no", "length", "width", "height", "faceArea", "load", "water", "airDry", "normalized", "density"];
-  const fixedLabels = ["No.", "Length (mm)", "Width (mm)", "Height (mm)", "Face Area (mm²)", "Load (kN)", "Water (N/mm2)", "Air Dry (N/mm2)", "Normalized (N/mm2)", "Density (kg/m3)"];
+  const fixedLabels = ["No.", "Length (mm)", "Width (mm)", "Height (mm)", "Net Area (mm²)", "Load (kN)", "Water (N/mm2)", "Air Dry (N/mm2)", "Normalized (N/mm2)", "Density (kg/m3)"];
   const saved = layout?.config.columns.blockCompression;
   const defaultColumns = (REPORT_LAYOUT_FIELD_GROUPS.Blocks.blockCompression ?? [])
     .map((column, order) => ({ ...column, visible: true, order }));
@@ -1225,7 +1230,7 @@ function BlockCompressionRowsTable({
     const columns = savedColumns!.filter((column) => column.visible).sort((a, b) => a.order - b.order);
     const valueFor = (values: ValueMap, key: string, index: number) => key === "no" ? rawTextValue(values.rowNo, String(index + 1))
       : ["length", "width", "height"].includes(key) ? formatWholeNumber(values[key])
-      : key === "faceArea" ? formatBlockFaceArea(values.length, values.height)
+      : key === "faceArea" ? formatBlockNetArea(values.width, values.length)
       : key === "water" ? displayNumber(blockWaterStrength(values))
       : key === "airDry" ? displayNumber(blockAirDryStrength(values, hideWaterStrength))
       : key === "normalized" ? displayNumber(numericValue(values.normalizedStrength))
@@ -1253,7 +1258,7 @@ function BlockCompressionRowsTable({
               <th>Length<br />(mm)</th>
               <th>Width<br />(mm)</th>
               <th>Height<br />(mm)</th>
-              <th>Face Area<br />(mm²)</th>
+              <th>Net Area<br />(mm²)</th>
               <th>Load<br />(kN)</th>
               {!hideWaterStrength && <th>Water<br />(N/mm2)</th>}
               <th>Air Dry<br />(N/mm2)</th>
@@ -1268,7 +1273,7 @@ function BlockCompressionRowsTable({
                 <td>{formatWholeNumber(values.length)}</td>
                 <td>{formatWholeNumber(values.width)}</td>
                 <td>{formatWholeNumber(values.height)}</td>
-                <td>{formatBlockFaceArea(values.length, values.height)}</td>
+                <td>{formatBlockNetArea(values.width, values.length)}</td>
                 <td>{textValue(values.load)}</td>
                 {!hideWaterStrength && <td>{displayNumber(columns.water[index])}</td>}
                 <td>{displayNumber(columns.airDry[index])}</td>
