@@ -28,9 +28,9 @@ export const REPORT_LAYOUT_FIELD_GROUPS: Record<string, Record<string, ReportLay
       ["preparationMethod", "Preparation", 25], ["shapeFactor", "Shape Factor", 25], ["blockType", "Block Type", 25],
     ]),
     blockCompression: fields([
-      ["no", "No.", 7], ["length", "Length (mm)", 10], ["width", "Width (mm)", 10], ["height", "Height (mm)", 10],
-      ["load", "Load (kN)", 10], ["water", "Water (N/mm2)", 12], ["airDry", "Air Dry (N/mm2)", 12],
-      ["normalized", "Normalized (N/mm2)", 13], ["density", "Density (kg/m3)", 13],
+      ["no", "No.", 7], ["length", "Length (mm)", 9], ["width", "Width (mm)", 9], ["height", "Height (mm)", 9],
+      ["faceArea", "Face Area (mm²)", 12], ["load", "Load (kN)", 9], ["water", "Water (N/mm2)", 10],
+      ["airDry", "Air Dry (N/mm2)", 10], ["normalized", "Normalized (N/mm2)", 12], ["density", "Density (kg/m3)", 13],
     ]),
   },
   "Paving Blocks": {

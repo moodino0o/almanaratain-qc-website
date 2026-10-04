@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  blockReportColumnsWithFaceArea,
   blockReportColumnsWithoutWetWeight,
+  calculateBlockFaceArea,
+  formatBlockFaceArea,
   filterRowsWithLoad,
   formatShapeFactor,
   formatWholeNumber,
@@ -35,6 +38,32 @@ test("Block compression layouts cannot expose Wet Weight", () => {
     fieldsForReport("Blocks", "blockCompression").some((field) => field.key === "wetWeight"),
     false,
   );
+});
+
+test("calculates Block face area from length and height and handles missing dimensions", () => {
+  assert.equal(calculateBlockFaceArea("400", "200"), 80_000);
+  assert.equal(formatBlockFaceArea(400, 200), "80000");
+  assert.equal(formatBlockFaceArea("400.5", "200"), "80100");
+  assert.equal(calculateBlockFaceArea("", 200), null);
+  assert.equal(calculateBlockFaceArea(400, "not entered"), null);
+});
+
+test("adds Face Area after Height to older Block compression column layouts", () => {
+  const fallback = fieldsForReport("Blocks", "blockCompression")
+    .map((field, order) => ({ ...field, order, visible: true }));
+  const saved = fallback
+    .filter((column) => column.key !== "faceArea")
+    .map((column, order) => ({ ...column, order }));
+  const compatible = blockReportColumnsWithFaceArea(
+    saved,
+    fallback.find((column) => column.key === "faceArea"),
+  );
+
+  assert.deepEqual(
+    compatible.map((column) => column.key),
+    ["no", "length", "width", "height", "faceArea", "load", "water", "airDry", "normalized", "density"],
+  );
+  assert.ok(compatible.reduce((sum, column) => sum + column.width, 0) <= 100.001);
 });
 
 test("report rows require an entered load, while preserving an explicit zero", () => {
