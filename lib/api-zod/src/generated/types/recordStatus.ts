@@ -13,4 +13,5 @@ export const RecordStatus = {
   Passed: 'Passed',
   Review: 'Review',
   Failed: 'Failed',
+  Waiting_for_results: 'Waiting for results',
 } as const;

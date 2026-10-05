@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Link } from "wouter";
-import { CheckCircle2, AlertTriangle, XCircle, Search, Plus, Printer, TableProperties } from "lucide-react";
+import { CheckCircle2, AlertTriangle, XCircle, Search, Plus, Printer, TableProperties, Clock3 } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 import { useAuth } from "@workspace/replit-auth-web";
 import { useLocation } from "wouter";
@@ -279,6 +279,7 @@ export default function Records() {
       case RecordStatus.Passed: return <Badge variant="success" className="whitespace-normal px-1.5 py-0.5 text-[10px] leading-tight"><CheckCircle2 className="mr-1 h-3 w-3 shrink-0" /> Passed</Badge>;
       case RecordStatus.Review: return <Badge variant="warning" className="whitespace-normal px-1.5 py-0.5 text-[10px] leading-tight"><AlertTriangle className="mr-1 h-3 w-3 shrink-0" /> Review</Badge>;
       case RecordStatus.Failed: return <Badge variant="destructive" className="whitespace-normal px-1.5 py-0.5 text-[10px] leading-tight"><XCircle className="mr-1 h-3 w-3 shrink-0" /> Failed</Badge>;
+      case "Waiting for results": return <Badge variant="outline" className="whitespace-normal border-lime-300 bg-lime-100 px-1.5 py-0.5 text-[10px] leading-tight text-lime-800 dark:border-lime-700 dark:bg-lime-950 dark:text-lime-200"><Clock3 className="mr-1 h-3 w-3 shrink-0" /> Waiting for results</Badge>;
       default: return <Badge variant="secondary" className="whitespace-normal px-1.5 py-0.5 text-[10px] leading-tight">{status}</Badge>;
     }
   };

@@ -1298,6 +1298,7 @@ components:
         - Passed
         - Review
         - Failed
+        - Waiting for results
     QcRecord:
       type: object
       required:

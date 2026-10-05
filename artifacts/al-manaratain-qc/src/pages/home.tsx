@@ -107,6 +107,15 @@ function StatusBadge({ status }: { status: string }) {
           <AlertTriangle className="mr-1 h-3 w-3" /> Review
         </Badge>
       );
+    case "Waiting for results":
+      return (
+        <Badge
+          variant="outline"
+          className="border-lime-300 bg-lime-100 text-lime-800 dark:border-lime-700 dark:bg-lime-950 dark:text-lime-200"
+        >
+          <Clock3 className="mr-1 h-3 w-3" /> Waiting for results
+        </Badge>
+      );
     case "Failed":
       return (
         <Badge variant="destructive">

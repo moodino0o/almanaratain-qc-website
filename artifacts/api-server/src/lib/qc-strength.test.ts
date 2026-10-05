@@ -87,6 +87,31 @@ const precastRecord = (
   },
 });
 
+const readyMixStandard = (
+  overrides: Partial<QcStrengthStandardRow> = {},
+): QcStrengthStandardRow => ({
+  id: 3,
+  testType: "Ready Mix",
+  material: "Concrete",
+  blockType: null,
+  blockSize: null,
+  cubeAge: null,
+  bsStandard: "Ready Mix strength",
+  requiredStrength: "7",
+  strengthUnit: "N/mm²",
+  createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+  ...overrides,
+});
+
+const readyMixRecord = (
+  rows: Record<string, unknown>[],
+): Parameters<typeof evaluateStrengthRecord>[0] => ({
+  testType: "Ready Mix",
+  material: "Concrete",
+  details: { testRows: rows },
+});
+
 const standard = (
   overrides: Partial<SieveStandardForEvaluation> = {},
 ): SieveStandardForEvaluation => ({
@@ -132,6 +157,46 @@ const record = (
     ],
     ...details,
   },
+});
+
+test("Ready Mix waits for blank 28-day results and reviews incomplete required entries", () => {
+  const standards = [readyMixStandard()];
+  const waiting = evaluateStrengthRecord(
+    readyMixRecord([
+      { id: 1, testAge: "7", length: 400, width: 200, load: 100 },
+      { id: 2, testAge: "28", length: "", width: "", load: "" },
+      { id: 3, testAge: "28", length: "", width: "", load: "" },
+    ]),
+    standards,
+  );
+  assert.equal(waiting.status, "Waiting for results");
+  assert.equal(waiting.evaluation?.status, "Waiting for results");
+
+  const incompleteResult = evaluateStrengthRecord(
+    readyMixRecord([
+      { id: 1, testAge: "28", length: 400, width: 200, load: "" },
+    ]),
+    standards,
+  );
+  assert.equal(incompleteResult.status, "Review");
+  assert.equal(
+    incompleteResult.evaluation?.reason,
+    "Complete each 28-day cube's dimensions and load.",
+  );
+
+  const missingAge = evaluateStrengthRecord(
+    readyMixRecord([{ id: 1, length: "", width: "", load: "" }]),
+    standards,
+  );
+  assert.equal(missingAge.status, "Review");
+
+  const completedResult = evaluateStrengthRecord(
+    readyMixRecord([
+      { id: 1, testAge: "28", length: 400, width: 200, load: 600 },
+    ]),
+    standards,
+  );
+  assert.equal(completedResult.status, "Passed");
 });
 
 const criterion = (result: ReturnType<typeof evaluateSieveRecord>) =>

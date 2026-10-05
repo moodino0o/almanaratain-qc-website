@@ -4,7 +4,11 @@ import type {
   QcStrengthStandardRow,
 } from "@workspace/db";
 
-export type StrengthEvaluationStatus = "Passed" | "Review" | "Failed";
+export type StrengthEvaluationStatus =
+  | "Passed"
+  | "Review"
+  | "Failed"
+  | "Waiting for results";
 
 export type StrengthEvaluation = {
   status: StrengthEvaluationStatus;
@@ -353,6 +357,24 @@ function dayAge(value: unknown) {
   return match ? Number(match[0]) : null;
 }
 
+function hasReadyMixResultInput(row: unknown) {
+  if (typeof row !== "object" || row === null) return false;
+  const values = row as Record<string, unknown>;
+  return [
+    "length",
+    "width",
+    "height",
+    "load",
+    "calculatedStrength",
+    "strength",
+    "compressiveStrength",
+    "waterStrength",
+  ].some((key) => {
+    const value = values[key];
+    return value !== undefined && value !== null && String(value).trim() !== "";
+  });
+}
+
 function calculateRow(
   row: unknown,
   shapeFactorValue?: unknown,
@@ -666,6 +688,23 @@ export function evaluateStrengthRecord(
           (row.row as Record<string, unknown>).age
         : null) === 28)
       : calculatedRows;
+  const readyMixHasMissingAge =
+    record.testType === "Ready Mix" &&
+    calculatedRows.some((item) => {
+      const values = typeof item.row === "object" && item.row !== null
+        ? item.row as Record<string, unknown>
+        : {};
+      return dayAge(
+        values.testAge ?? values.cubeAge ?? values.age ?? values.sampleAge,
+      ) === null;
+    });
+  const readyMixHasResultInput =
+    record.testType === "Ready Mix" &&
+    evaluatedRows.some((item) => hasReadyMixResultInput(item.row));
+  const readyMixWaitingForResults =
+    record.testType === "Ready Mix" &&
+    !readyMixHasMissingAge &&
+    !readyMixHasResultInput;
   const measuredStrengths = evaluatedRows
     .map((row) => {
       const values = typeof row.row === "object" && row.row !== null
@@ -720,6 +759,13 @@ export function evaluateStrengthRecord(
             : "No matching standard was configured for this material.";
   } else if (requiredStrength === null) {
     reason = "The configured minimum strength is invalid.";
+  } else if (readyMixHasMissingAge) {
+    reason = "Enter an age for every Ready Mix specimen.";
+  } else if (readyMixWaitingForResults) {
+    status = "Waiting for results";
+    reason = "Waiting for 28-day cube results.";
+  } else if (record.testType === "Ready Mix" && hasIncompleteMeasurements) {
+    reason = "Complete each 28-day cube's dimensions and load.";
   } else if (averageBelowRequired) {
     status = "Failed";
     reason =

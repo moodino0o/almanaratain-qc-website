@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatDateTime } from "@/lib/utils";
-import { CheckCircle2, AlertTriangle, XCircle, ArrowLeft, Printer, Trash2, Edit2, Check, X } from "lucide-react";
+import { CheckCircle2, AlertTriangle, XCircle, ArrowLeft, Printer, Trash2, Edit2, Check, X, Clock3 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@workspace/replit-auth-web";
 import { useQueryClient } from "@tanstack/react-query";
@@ -464,6 +464,8 @@ function StrengthEvaluation({
       ? "text-success"
       : status === RecordStatus.Failed
         ? "text-destructive"
+        : status === "Waiting for results"
+          ? "text-lime-700 dark:text-lime-300"
         : "text-warning";
   return (
     <div className="space-y-1">
@@ -693,6 +695,7 @@ export default function RecordDetail() {
       case RecordStatus.Passed: return <Badge variant="success" className="text-sm px-3 py-1"><CheckCircle2 className="w-4 h-4 mr-1.5" /> Passed</Badge>;
       case RecordStatus.Review: return <Badge variant="warning" className="text-sm px-3 py-1"><AlertTriangle className="w-4 h-4 mr-1.5" /> Review Required</Badge>;
       case RecordStatus.Failed: return <Badge variant="destructive" className="text-sm px-3 py-1"><XCircle className="w-4 h-4 mr-1.5" /> Failed</Badge>;
+      case "Waiting for results": return <Badge variant="outline" className="border-lime-300 bg-lime-100 px-3 py-1 text-sm text-lime-800 dark:border-lime-700 dark:bg-lime-950 dark:text-lime-200"><Clock3 className="mr-1.5 h-4 w-4" /> Waiting for results</Badge>;
       default: return <Badge variant="secondary" className="text-sm px-3 py-1">{status}</Badge>;
     }
   };
