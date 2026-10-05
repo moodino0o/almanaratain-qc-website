@@ -323,6 +323,14 @@
   text-align: center;
 }
 
+.qc-table-readable thead th.masonry-strength-header {
+  font-size: 10px;
+}
+
+.qc-table-readable tbody td.masonry-strength-value {
+  font-size: 12px;
+}
+
 .dark .qc-table-readable thead th,
 .dark .qc-table-readable tbody td,
 .dark .qc-table-readable tbody td .text-muted-foreground {

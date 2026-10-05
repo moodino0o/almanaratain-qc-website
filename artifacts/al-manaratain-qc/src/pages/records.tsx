@@ -533,9 +533,9 @@ export default function Records() {
                 <TableHead className={`${columnWidths.status} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>Status</TableHead>
                 {isMasonrySection && (
                   <>
-                    <TableHead className="w-[5%] whitespace-normal break-words px-1 py-1.5 text-right sm:text-[10px] text-[10px]">Avg. (N/mm²)</TableHead>
-                    <TableHead className="w-[5%] whitespace-normal break-words px-1 py-1.5 text-right sm:text-[10px] text-[10px]">Min. (N/mm²)</TableHead>
-                    <TableHead className="w-[5%] whitespace-normal break-words px-1 py-1.5 text-right sm:text-[10px] text-[10px]">Max. (N/mm²)</TableHead>
+                    <TableHead className="masonry-strength-header w-[5%] whitespace-normal break-words px-1 py-1.5 text-right sm:text-[10px] text-[10px]">Avg. (N/mm²)</TableHead>
+                    <TableHead className="masonry-strength-header w-[5%] whitespace-normal break-words px-1 py-1.5 text-right sm:text-[10px] text-[10px]">Min. (N/mm²)</TableHead>
+                    <TableHead className="masonry-strength-header w-[5%] whitespace-normal break-words px-1 py-1.5 text-right sm:text-[10px] text-[10px]">Max. (N/mm²)</TableHead>
                   </>
                 )}
                 {isReadyMixSection && (
@@ -664,13 +664,13 @@ export default function Records() {
                     )}
                     {isMasonrySection && (
                       <>
-                        <TableCell className="px-1 py-1 text-right tabular-nums text-[12px]">
+                        <TableCell className="masonry-strength-value px-1 py-1 text-right tabular-nums text-[12px]">
                           {masonryStrengthSummaries.get(record.id)?.averageStrength.toFixed(2) ?? "—"}
                         </TableCell>
-                        <TableCell className="px-1 py-1 text-right tabular-nums text-[12px]">
+                        <TableCell className="masonry-strength-value px-1 py-1 text-right tabular-nums text-[12px]">
                           {masonryStrengthSummaries.get(record.id)?.minimumStrength.toFixed(2) ?? "—"}
                         </TableCell>
-                        <TableCell className="px-1 py-1 text-right tabular-nums text-[12px]">
+                        <TableCell className="masonry-strength-value px-1 py-1 text-right tabular-nums text-[12px]">
                           {masonryStrengthSummaries.get(record.id)?.maximumStrength.toFixed(2) ?? "—"}
                         </TableCell>
                       </>
