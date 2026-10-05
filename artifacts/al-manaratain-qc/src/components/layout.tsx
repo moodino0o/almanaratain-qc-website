@@ -38,7 +38,7 @@ export function Layout({ children }: LayoutProps) {
   ];
 
   return (
-    <div className="flex h-screen min-w-0 overflow-hidden bg-background">
+    <div className="flex min-h-screen min-w-0 overflow-x-hidden bg-background md:h-screen md:overflow-hidden">
       {/* Sidebar */}
       <aside className="hidden w-64 flex-shrink-0 flex-col border-r border-border bg-card print-hide md:flex">
         <div className="h-16 flex items-center px-6 border-b border-border">
@@ -105,7 +105,7 @@ export function Layout({ children }: LayoutProps) {
       </aside>
 
       {/* Main Content */}
-      <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+      <main className="relative flex min-w-0 flex-1 flex-col overflow-visible md:overflow-hidden">
         <div className="flex min-h-16 shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-4 py-3 sm:px-8 print-hide">
           <div className="flex min-w-0 items-center gap-2 text-sm font-medium text-muted-foreground">
             <Beaker className="w-4 h-4" />
@@ -146,7 +146,7 @@ export function Layout({ children }: LayoutProps) {
         </nav>
 
         <div className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 print-container">
-          <div className="mx-auto h-full w-full max-w-6xl min-w-0 print-container">
+          <div className="mx-auto min-h-full w-full max-w-6xl min-w-0 print-container md:h-full">
             {children}
           </div>
         </div>

@@ -276,21 +276,21 @@ export default function Records() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case RecordStatus.Passed: return <Badge variant="success" className="whitespace-normal px-1.5 py-0.5 text-[10px] leading-tight"><CheckCircle2 className="mr-1 h-3 w-3 shrink-0" /> Passed</Badge>;
-      case RecordStatus.Review: return <Badge variant="warning" className="whitespace-normal px-1.5 py-0.5 text-[10px] leading-tight"><AlertTriangle className="mr-1 h-3 w-3 shrink-0" /> Review</Badge>;
-      case RecordStatus.Failed: return <Badge variant="destructive" className="whitespace-normal px-1.5 py-0.5 text-[10px] leading-tight"><XCircle className="mr-1 h-3 w-3 shrink-0" /> Failed</Badge>;
-      case "Waiting for results": return <Badge variant="outline" className="whitespace-normal border-lime-300 bg-lime-100 px-1.5 py-0.5 text-[10px] leading-tight text-lime-800 dark:border-lime-700 dark:bg-lime-950 dark:text-lime-200"><Clock3 className="mr-1 h-3 w-3 shrink-0" /> Waiting</Badge>;
-      default: return <Badge variant="secondary" className="whitespace-normal px-1.5 py-0.5 text-[10px] leading-tight">{status}</Badge>;
+      case RecordStatus.Passed: return <Badge variant="success" className="whitespace-normal px-1.5 py-0.5 text-[11px] leading-tight sm:text-xs"><CheckCircle2 className="mr-1 h-3 w-3 shrink-0" /> Passed</Badge>;
+      case RecordStatus.Review: return <Badge variant="warning" className="whitespace-normal px-1.5 py-0.5 text-[11px] leading-tight sm:text-xs"><AlertTriangle className="mr-1 h-3 w-3 shrink-0" /> Review</Badge>;
+      case RecordStatus.Failed: return <Badge variant="destructive" className="whitespace-normal px-1.5 py-0.5 text-[11px] leading-tight sm:text-xs"><XCircle className="mr-1 h-3 w-3 shrink-0" /> Failed</Badge>;
+      case "Waiting for results": return <Badge variant="outline" className="whitespace-normal border-lime-300 bg-lime-100 px-1.5 py-0.5 text-[11px] leading-tight text-lime-800 dark:border-lime-700 dark:bg-lime-950 dark:text-lime-200 sm:text-xs"><Clock3 className="mr-1 h-3 w-3 shrink-0" /> Waiting</Badge>;
+      default: return <Badge variant="secondary" className="whitespace-normal px-1.5 py-0.5 text-[11px] leading-tight sm:text-xs">{status}</Badge>;
     }
   };
   const getWaterResultBadge = (status: string) => {
     switch (status) {
       case RecordStatus.Passed:
-        return <Badge variant="success" className="whitespace-nowrap px-1.5 py-0.5 text-[10px] leading-tight">Pass</Badge>;
+        return <Badge variant="success" className="whitespace-nowrap px-1.5 py-0.5 text-[11px] leading-tight sm:text-xs">Pass</Badge>;
       case RecordStatus.Failed:
-        return <Badge variant="destructive" className="whitespace-nowrap px-1.5 py-0.5 text-[10px] leading-tight">Fail</Badge>;
+        return <Badge variant="destructive" className="whitespace-nowrap px-1.5 py-0.5 text-[11px] leading-tight sm:text-xs">Fail</Badge>;
       case RecordStatus.Review:
-        return <Badge variant="warning" className="whitespace-nowrap px-1.5 py-0.5 text-[10px] leading-tight">Review</Badge>;
+        return <Badge variant="warning" className="whitespace-nowrap px-1.5 py-0.5 text-[11px] leading-tight sm:text-xs">Review</Badge>;
       default:
         return getStatusBadge(status);
     }
@@ -303,7 +303,7 @@ export default function Records() {
   ) => detailValue({ details } as QcRecord, keys, fallback);
 
   return (
-    <div className="space-y-6 flex flex-col h-full">
+    <div className="space-y-6 flex flex-col md:h-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">QC Register</h1>
@@ -311,19 +311,19 @@ export default function Records() {
         </div>
          {canEditQc && (
            <div className="flex flex-wrap gap-2">
-                 <Link data-testid="link-edit-all-records" href={`/records/edit-all?section=${section}`} className={`inline-flex items-center justify-center whitespace-nowrap rounded-md border border-input bg-background font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground ${isReadyMixSection ? "h-8 px-2.5 text-xs sm:h-9 sm:px-4 sm:text-sm" : "h-10 px-5 text-sm"}`}>
-                <TableProperties className={isReadyMixSection ? "mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" : "mr-2 h-4 w-4"} />
+                 <Link data-testid="link-edit-all-records" href={`/records/edit-all?section=${section}`} className="inline-flex h-7 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-2 text-[10px] font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground sm:h-8 sm:px-3 sm:text-xs md:h-10 md:px-5 md:text-sm">
+                <TableProperties className="mr-1 h-3 w-3 sm:mr-1.5 sm:h-3.5 sm:w-3.5 md:mr-2 md:h-4 md:w-4" />
                Edit All Records
              </Link>
-               <Link data-testid="link-new-record" href={`/records/new?section=${section}`} className={`inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary text-primary-foreground shadow hover:bg-primary/90 ${isReadyMixSection ? "h-8 px-2.5 text-xs sm:h-9 sm:px-4 sm:text-sm" : "h-10 px-6 text-sm"}`}>
-                <Plus className={isReadyMixSection ? "mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" : "mr-2 h-4 w-4"} />
+               <Link data-testid="link-new-record" href={`/records/new?section=${section}`} className="inline-flex h-7 items-center justify-center whitespace-nowrap rounded-md bg-primary px-2 text-[10px] font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring sm:h-8 sm:px-3 sm:text-xs md:h-10 md:px-6 md:text-sm">
+                <Plus className="mr-1 h-3 w-3 sm:mr-1.5 sm:h-3.5 sm:w-3.5 md:mr-2 md:h-4 md:w-4" />
                New Record
              </Link>
            </div>
          )}
       </div>
 
-      <Card className="flex-1 flex flex-col min-h-0 border-t-4 border-t-primary">
+      <Card className="flex flex-col border-t-4 border-t-primary md:min-h-0 md:flex-1">
         <CardHeader className="pb-4 shrink-0">
           <div className="flex flex-col gap-4">
             <div className="relative w-full max-w-sm">
@@ -342,11 +342,7 @@ export default function Records() {
                   href={item.href}
                   data-testid={`register-section-${item.id}`}
                   aria-current={section === item.id ? "page" : undefined}
-                  className={`inline-flex items-center justify-center rounded-md border font-medium transition-colors ${
-                    isReadyMixSection
-                      ? "min-h-8 px-2 py-1 text-xs sm:min-h-10 sm:px-3 sm:py-2 sm:text-sm"
-                      : "min-h-10 px-3 py-2 text-sm"
-                  } ${
+                  className={`inline-flex min-h-7 items-center justify-center rounded-md border px-1.5 py-1 text-[10px] font-medium transition-colors sm:min-h-9 sm:px-2 sm:py-1.5 sm:text-xs md:min-h-10 md:px-3 md:py-2 md:text-sm ${
                     section === item.id
                       ? "border-primary bg-primary text-primary-foreground shadow-sm"
                       : "border-input bg-background hover:bg-accent hover:text-accent-foreground"
@@ -358,10 +354,10 @@ export default function Records() {
             </nav>
           </div>
         </CardHeader>
-        <CardContent className="flex-1 overflow-auto p-0">
+        <CardContent className="p-0 md:flex-1 md:overflow-auto">
           {isWaterSection ? (
             <div className="qc-register-table-container w-full min-w-0">
-              <Table className="qc-register-table min-w-[1220px] w-full table-fixed text-[10px]">
+              <Table className="qc-register-table qc-table-readable min-w-[1220px] w-full table-fixed text-[10px]">
                 <TableHeader className="sticky top-0 z-10 bg-card shadow-sm">
                   <TableRow>
                     <TableHead className="w-[7%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">Serial<br />No.</TableHead>
@@ -398,8 +394,8 @@ export default function Records() {
                       <TableCell className="px-2 py-2">{getWaterResultBadge(record.status)}</TableCell>
                       <TableCell className="px-2 py-2 text-right">
                         <div className="flex justify-end gap-1">
-                          <Link href={`/records/${record.id}`} className="rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground">View</Link>
-                          <Link href={`/reports/${record.id}`} className="rounded-md border px-2 py-1 text-xs font-medium">Print</Link>
+                           <Link href={`/records/${record.id}`} className="inline-flex h-5 items-center rounded-md bg-secondary px-1 text-[9px] font-medium text-secondary-foreground sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs">View</Link>
+                           <Link href={`/reports/${record.id}`} className="inline-flex h-5 items-center rounded-md border px-1 text-[9px] font-medium sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs">Print</Link>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -409,7 +405,7 @@ export default function Records() {
             </div>
           ) : isPrecastSection ? (
             <div className="qc-register-table-container w-full min-w-0">
-              <Table className="qc-register-table w-full table-fixed text-[10px]">
+              <Table className="qc-register-table qc-table-readable w-full table-fixed text-[10px]">
                 <TableHeader className="sticky top-0 z-10 bg-card shadow-sm">
                   <TableRow>
                     {["Record No.", "Sample No.", "Customer Name", "Product Type", "Cube Size", "Casting Date", "Avg. Strength (1 day)", "Avg. Strength (7 days)", "Avg. Strength (28 days)", "Actions"].map((label) => (
@@ -435,8 +431,8 @@ export default function Records() {
                       <TableCell className="px-2 py-2 text-right tabular-nums">{precastAverageStrength(record, 28, ["averageStrength28Days", "avgStrength28Days", "day28AverageStrength"])}</TableCell>
                       <TableCell className="px-2 py-2 text-right">
                         <div className="flex justify-end gap-1">
-                          <Link href={`/records/${record.id}`} className="rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground">View</Link>
-                          <Link href={`/reports/${record.id}`} className="rounded-md border px-2 py-1 text-xs font-medium">Print</Link>
+                           <Link href={`/records/${record.id}`} className="inline-flex h-5 items-center rounded-md bg-secondary px-1 text-[9px] font-medium text-secondary-foreground sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs">View</Link>
+                           <Link href={`/reports/${record.id}`} className="inline-flex h-5 items-center rounded-md border px-1 text-[9px] font-medium sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs">Print</Link>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -446,7 +442,7 @@ export default function Records() {
             </div>
           ) : isKerbStoneSection ? (
             <div className="qc-register-table-container w-full min-w-0">
-              <Table className="qc-register-table w-full table-fixed text-[10px]">
+              <Table className="qc-register-table qc-table-readable w-full table-fixed text-[10px]">
                 <TableHeader className="sticky top-0 z-10 bg-card shadow-sm">
                   <TableRow>
                     {["Record No.", "Casting Date", "Testing Date", "Age", "Kerb Type", "Factory", "Avg. Strength", "Min. Strength", "Max. Strength", "Actions"].map((label) => (
@@ -472,8 +468,8 @@ export default function Records() {
                       <TableCell className="px-2 py-2 text-right tabular-nums">{detailValue(record, ["maximumStrength", "maxStrength"])}</TableCell>
                       <TableCell className="px-2 py-2 text-right">
                         <div className="flex justify-end gap-1">
-                          <Link href={`/records/${record.id}`} className="rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground">View</Link>
-                          <Link href={`/reports/${record.id}`} className="rounded-md border px-2 py-1 text-xs font-medium">Print</Link>
+                           <Link href={`/records/${record.id}`} className="inline-flex h-5 items-center rounded-md bg-secondary px-1 text-[9px] font-medium text-secondary-foreground sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs">View</Link>
+                           <Link href={`/reports/${record.id}`} className="inline-flex h-5 items-center rounded-md border px-1 text-[9px] font-medium sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs">Print</Link>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -483,7 +479,7 @@ export default function Records() {
             </div>
           ) : (
           <div className="qc-register-table-container w-full min-w-0">
-          <Table className={`qc-register-table w-full table-fixed text-[9px] leading-tight sm:text-[10px] ${isReadyMixSection ? "qc-register-table-ready-mix" : ""}`}>
+          <Table className="qc-register-table qc-table-readable w-full table-fixed text-[9px] leading-tight sm:text-[10px]">
             <TableHeader className="sticky top-0 bg-card z-10 shadow-sm">
               <TableRow>
                 <TableHead className={`${columnWidths.record} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>
@@ -579,13 +575,13 @@ export default function Records() {
                           ? getRecordDetail(record.details, ["referenceNumber", "referenceNo", "reference"])
                           : record.recordNo}
                       </div>
-                      <div className={`mt-0.5 break-words font-normal leading-tight ${isReadyMixSection ? "text-[10px] text-black dark:text-white" : "text-[8px] text-muted-foreground"}`}>
+                      <div className="mt-0.5 break-words text-[10px] font-normal leading-tight text-black dark:text-white">
                         Added by {record.createdBy?.trim() || "Not recorded"} ·{" "}
                         {formatDateTime(record.createdAt)}
                       </div>
                     </TableCell>
                     <TableCell className="whitespace-normal break-words px-1 py-1">
-                      <span className={`inline-block max-w-full break-words rounded-sm bg-muted px-1 py-0.5 font-medium leading-tight ${isReadyMixSection ? "text-xs" : "text-[10px]"}`}>
+                      <span className="inline-block max-w-full break-words rounded-sm bg-muted px-1 py-0.5 text-xs font-medium leading-tight">
                         {record.testType}
                       </span>
                     </TableCell>
@@ -684,15 +680,15 @@ export default function Records() {
                       <div className="flex flex-wrap justify-end gap-0.5">
                         <Link
                           href={`/records/${record.id}`}
-                          className={`inline-flex items-center justify-center whitespace-nowrap rounded-md bg-secondary font-medium text-secondary-foreground shadow-sm transition-colors hover:bg-secondary/80 ${isReadyMixSection ? "h-5 px-0.5 text-[8px] sm:h-6 sm:px-1 sm:text-[10px]" : "h-6 px-1 text-[9px] sm:text-[10px]"}`}
+                          className="inline-flex h-5 items-center justify-center whitespace-nowrap rounded-md bg-secondary px-1 text-[9px] font-medium text-secondary-foreground shadow-sm transition-colors hover:bg-secondary/80 sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs"
                         >
                           View
                         </Link>
                         <Link
                           href={`/reports/${record.id}`}
-                          className={`inline-flex items-center justify-center whitespace-nowrap rounded-md border border-input bg-background font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground ${isReadyMixSection ? "h-5 px-0.5 text-[8px] sm:h-6 sm:px-1 sm:text-[10px]" : "h-6 px-1 text-[9px] sm:text-[10px]"}`}
+                          className="inline-flex h-5 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-1 text-[9px] font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs"
                         >
-                          <Printer className={`mr-1 shrink-0 ${isReadyMixSection ? "h-2.5 w-2.5 sm:h-3 sm:w-3" : "h-3 w-3"}`} />
+                          <Printer className="mr-0.5 h-2.5 w-2.5 shrink-0 sm:mr-1 sm:h-3 sm:w-3" />
                           Print
                         </Link>
                       </div>

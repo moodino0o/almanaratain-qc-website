@@ -520,7 +520,7 @@ export default function Home() {
             </CardDescription>
           </CardHeader>
           <CardContent className="overflow-x-auto p-0">
-            <Table className="min-w-[640px]">
+            <Table className="qc-table-readable min-w-[640px]">
               <TableHeader>
                 <TableRow>
                   <TableHead className="pl-5">Reference</TableHead>
@@ -558,10 +558,15 @@ export default function Home() {
                           <StatusBadge status={record.status} />
                         </TableCell>
                         <TableCell className="pr-5 text-right">
-                          <Button asChild variant="ghost" size="sm">
+                          <Button
+                            asChild
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-[10px] sm:h-8 sm:px-3 sm:text-xs md:h-9 md:text-sm"
+                          >
                             <Link href={`/records/${record.id}`}>
                               View{" "}
-                              <ArrowUpRight className="ml-1.5 h-3.5 w-3.5" />
+                              <ArrowUpRight className="ml-1 h-3 w-3 sm:ml-1.5 sm:h-3.5 sm:w-3.5" />
                             </Link>
                           </Button>
                         </TableCell>
