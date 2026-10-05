@@ -22,6 +22,7 @@ export * from "./qc-reference-data";
 export * from "./auth";
 export * from "./archive-documents";
 export * from "./qc-strength-standards";
+export * from "./qc-water-standards";
 export * from "./qc-sieve-standards";
 export * from "./qc-shape-factors";
 export * from "./qc-report-layouts";

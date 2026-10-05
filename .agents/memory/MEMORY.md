@@ -13,7 +13,7 @@
 - [Block net area](block-net-area.md) — label Block area as Net Area and calculate width × length; keep Paving Blocks' tensile area separate.
 - [Shape factor defaults](shape-factor-defaults.md) — seed one editable row per Block size, but keep the numeric value empty until an approved standard is provided.
 - [Report layout safety](report-layout-safety.md) — preserve saved layouts and account for absolute section positions when enforcing report order.
-- [Precast workflow and criteria](precast-workflow-differences.md) — preserve integer identifiers, gram weights, age thresholds, and distinct reporting.
+- [Precast workflow and criteria](precast-workflow-differences.md) — match editable strength limits by Precast type and cube age, with original thresholds as fallback.
 - [Paving correction factors](paving-correction-factors.md) — use the reference tensile formula, apply size factors, and evaluate the average against the matching standard.
 - [Employee activity audit](employee-activity-audit.md) — never expose session bearer IDs; distinguish explicit sign-out from expiry and last confirmed activity.
 - [Dashboard month status](dashboard-month-status.md) — QC Test Status groups records by sample/test date for the selected calendar month.

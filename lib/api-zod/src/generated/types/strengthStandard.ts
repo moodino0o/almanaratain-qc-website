@@ -15,6 +15,8 @@ export interface StrengthStandard {
   blockType: string | null;
   /** @nullable */
   blockSize: string | null;
+  /** @nullable */
+  cubeAge: number | null;
   bsStandard: string;
   requiredStrength: number;
   strengthUnit: string;

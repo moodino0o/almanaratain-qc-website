@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useParams } from "wouter";
-import { getGetDashboardQueryKey, getGetLookupsQueryKey, getGetRecordQueryKey, getGetReferenceDataQueryKey, getGetReportQueryKey, getListRecordsQueryKey, useCreateRecord, useCreateReferenceItem, useGetLookups, useGetReferenceData, useGetRecord, useListSieveStandards, useListShapeFactors, useListStrengthStandards, useUpdateRecord, TestType, RecordStatus, QcRecordInput, QcRecordUpdate } from "@workspace/api-client-react";
+import { getGetDashboardQueryKey, getGetLookupsQueryKey, getGetRecordQueryKey, getGetReferenceDataQueryKey, getGetReportQueryKey, getListRecordsQueryKey, useCreateRecord, useCreateReferenceItem, useGetLookups, useGetReferenceData, useGetRecord, useListSieveStandards, useListShapeFactors, useListStrengthStandards, useListWaterStandards, useUpdateRecord, TestType, RecordStatus, QcRecordInput, QcRecordUpdate } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -122,6 +122,7 @@ export default function RecordForm() {
     },
   });
   const { data: strengthStandards } = useListStrengthStandards();
+  const { data: waterStandards } = useListWaterStandards();
   const { data: shapeFactors } = useListShapeFactors();
   const { data: sieveStandards } = useListSieveStandards();
   const createRecord = useCreateRecord();
@@ -589,6 +590,14 @@ export default function RecordForm() {
         return [];
       case TestType.Precast:
         return [];
+      case TestType.Water:
+        return [
+          { key: "testingDate", label: "Testing Date", type: "date" },
+          { key: "ph", label: "pH", type: "number" },
+          { key: "chloride", label: "Chloride (Cl)", type: "number" },
+          { key: "tds", label: "TDS", type: "number" },
+          { key: "sulphate", label: "SO3", type: "number" },
+        ];
       case TestType.Kerb_Stone:
         return [
           { key: "testingDate", label: "Testing Date", type: "date" },
@@ -637,6 +646,21 @@ export default function RecordForm() {
     strengthStandards,
     testType,
   ]);
+
+  const matchingPrecastStrengthStandards = useMemo(
+    () =>
+      testType === TestType.Precast
+        ? (strengthStandards ?? [])
+            .filter(
+              (standard) =>
+                standard.testType === TestType.Precast &&
+                standard.material.trim().toLocaleLowerCase() ===
+                  material.trim().toLocaleLowerCase(),
+            )
+            .sort((left, right) => (left.cubeAge ?? 0) - (right.cubeAge ?? 0))
+        : [],
+    [material, strengthStandards, testType],
+  );
 
   const applicableStandard =
     matchingStrengthStandards.find((standard) => String(standard.id) === selectedStrengthStandardId) ??
@@ -2138,6 +2162,13 @@ export default function RecordForm() {
                             </thead>
                             <tbody>
                               {PRECAST_AGE_STRENGTH_CRITERIA.map((criterion) => {
+                                const configuredStandard =
+                                  matchingPrecastStrengthStandards.find(
+                                    (standard) => standard.cubeAge === criterion.age,
+                                  );
+                                const minimumStrength =
+                                  configuredStandard?.requiredStrength ??
+                                  criterion.minimumStrength;
                                 const summary = precastAgeStrengthSummary(
                                   testRows.map((row) => ({
                                     ...row,
@@ -2149,11 +2180,14 @@ export default function RecordForm() {
                                   criterion.age,
                                   summary.averageStrength,
                                   summary.complete,
+                                  minimumStrength,
                                 );
                                 return (
                                   <tr key={criterion.age} className="border-b last:border-b-0">
                                     <td className="px-3 py-2">{criterion.age} day{criterion.age === 1 ? "" : "s"}</td>
-                                    <td className="px-3 py-2">≥ {criterion.minimumStrength} N/mm²</td>
+                                    <td className="px-3 py-2">
+                                      ≥ {minimumStrength} {configuredStandard?.strengthUnit ?? "N/mm²"}
+                                    </td>
                                     <td className="px-3 py-2">
                                       {summary.averageStrength === null
                                         ? "—"
@@ -2621,7 +2655,41 @@ export default function RecordForm() {
                   )}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <>
+                  {testType === TestType.Water && (
+                    <div className="mb-6 space-y-2">
+                      <Label>Water limit profile</Label>
+                      <Select
+                        value={String(
+                          details.waterStandardId ??
+                            waterStandards?.find((standard) => standard.isDefault)?.id ??
+                            "",
+                        )}
+                        onValueChange={(value) =>
+                          setDetails((current) => ({
+                            ...current,
+                            waterStandardId: Number(value),
+                          }))
+                        }
+                        disabled={!waterStandards?.length}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a Water limit profile..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(waterStandards ?? []).map((standard) => (
+                            <SelectItem key={standard.id} value={String(standard.id)}>
+                              {standard.name}{standard.isDefault ? " (default)" : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        The selected profile is saved with this record and used for Pass/Fail evaluation.
+                      </p>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {getDynamicFields().map(field => (
                     <div key={field.key} className="space-y-2">
                       <Label>{field.label}</Label>
@@ -2633,7 +2701,8 @@ export default function RecordForm() {
                       />
                     </div>
                   ))}
-                </div>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
@@ -2652,8 +2721,12 @@ export default function RecordForm() {
             </CardContent>
             <CardFooter className="bg-muted/30 border-t px-6 py-4 flex justify-between items-center">
               <p className="text-sm text-muted-foreground">
-                {testType === TestType.Ready_Mix || testType === TestType.Blocks
-                  ? "Ready Mix and Blocks statuses are calculated from the configured standard and specimen measurements."
+                {testType === TestType.Ready_Mix ||
+                testType === TestType.Blocks ||
+                testType === TestType.Paving_Blocks ||
+                testType === TestType.Precast ||
+                testType === TestType.Water
+                  ? "This status is calculated from the linked standard and entered test results."
                   : "New records are created in 'Review' status pending supervisor approval."}
               </p>
               <Button type="submit" disabled={createRecord.isPending || updateRecord.isPending} size="lg">

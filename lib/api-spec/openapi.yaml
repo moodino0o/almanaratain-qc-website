@@ -670,6 +670,66 @@ paths:
       responses:
         "204":
           description: Sieve standard deleted
+  /water-standards:
+    get:
+      operationId: listWaterStandards
+      tags: [qc]
+      summary: List configurable Water limits
+      responses:
+        "200":
+          description: Configured Water limit profiles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WaterStandard"
+    post:
+      operationId: createWaterStandard
+      tags: [qc]
+      summary: Create a Water limit profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WaterStandardInput"
+      responses:
+        "201":
+          description: Created Water limit profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WaterStandard"
+  /water-standards/{id}:
+    patch:
+      operationId: updateWaterStandard
+      tags: [qc]
+      summary: Update a Water limit profile
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WaterStandardUpdate"
+      responses:
+        "200":
+          description: Updated Water limit profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WaterStandard"
+    delete:
+      operationId: deleteWaterStandard
+      tags: [qc]
+      summary: Delete a Water limit profile
+      parameters:
+        - $ref: "#/components/parameters/RecordIdParam"
+      responses:
+        "204":
+          description: Water limit profile deleted
   /shape-factors:
     get:
       operationId: listShapeFactors
@@ -1775,6 +1835,7 @@ components:
         - material
         - blockType
         - blockSize
+        - cubeAge
         - bsStandard
         - requiredStrength
         - strengthUnit
@@ -1789,6 +1850,8 @@ components:
           type: ["string", "null"]
         blockSize:
           type: ["string", "null"]
+        cubeAge:
+          type: ["number", "null"]
         bsStandard:
           type: string
         requiredStrength:
@@ -1812,6 +1875,9 @@ components:
           type: ["string", "null"]
         blockSize:
           type: ["string", "null"]
+        cubeAge:
+          type: ["number", "null"]
+          enum: [1, 7, 28, null]
         bsStandard:
           type: string
           minLength: 1
@@ -1833,6 +1899,9 @@ components:
           type: ["string", "null"]
         blockSize:
           type: ["string", "null"]
+        cubeAge:
+          type: ["number", "null"]
+          enum: [1, 7, 28, null]
         bsStandard:
           type: string
           minLength: 1
@@ -1841,6 +1910,113 @@ components:
           minimum: 0
         strengthUnit:
           type: string
+    WaterStandard:
+      type: object
+      required:
+        - id
+        - name
+        - phMin
+        - phMax
+        - chlorideMin
+        - chlorideMax
+        - tdsMin
+        - tdsMax
+        - so3Min
+        - so3Max
+        - isDefault
+      properties:
+        id:
+          type: number
+        name:
+          type: string
+        phMin:
+          type: number
+        phMax:
+          type: number
+        chlorideMin:
+          type: number
+        chlorideMax:
+          type: number
+        tdsMin:
+          type: number
+        tdsMax:
+          type: number
+        so3Min:
+          type: number
+        so3Max:
+          type: number
+        isDefault:
+          type: boolean
+    WaterStandardInput:
+      type: object
+      required:
+        - name
+        - phMin
+        - phMax
+        - chlorideMin
+        - chlorideMax
+        - tdsMin
+        - tdsMax
+        - so3Min
+        - so3Max
+      properties:
+        name:
+          type: string
+          minLength: 1
+        phMin:
+          type: number
+          minimum: 0
+        phMax:
+          type: number
+          minimum: 0
+        chlorideMin:
+          type: number
+          minimum: 0
+        chlorideMax:
+          type: number
+          minimum: 0
+        tdsMin:
+          type: number
+          minimum: 0
+        tdsMax:
+          type: number
+          minimum: 0
+        so3Min:
+          type: number
+          minimum: 0
+        so3Max:
+          type: number
+          minimum: 0
+    WaterStandardUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        phMin:
+          type: number
+          minimum: 0
+        phMax:
+          type: number
+          minimum: 0
+        chlorideMin:
+          type: number
+          minimum: 0
+        chlorideMax:
+          type: number
+          minimum: 0
+        tdsMin:
+          type: number
+          minimum: 0
+        tdsMax:
+          type: number
+          minimum: 0
+        so3Min:
+          type: number
+          minimum: 0
+        so3Max:
+          type: number
+          minimum: 0
     SieveStandard:
       type: object
       required:

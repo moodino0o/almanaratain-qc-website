@@ -628,6 +628,7 @@ export const ListStrengthStandardsResponseItem = zod.object({
   "material": zod.string(),
   "blockType": zod.string().nullable(),
   "blockSize": zod.string().nullable(),
+  "cubeAge": zod.number().nullable(),
   "bsStandard": zod.string(),
   "requiredStrength": zod.number(),
   "strengthUnit": zod.string()
@@ -649,6 +650,7 @@ export const CreateStrengthStandardBody = zod.object({
   "material": zod.string().min(1),
   "blockType": zod.string().nullish(),
   "blockSize": zod.string().nullish(),
+  "cubeAge": zod.union([zod.literal(1),zod.literal(7),zod.literal(28),zod.literal(null)]).nullish(),
   "bsStandard": zod.string().min(1),
   "requiredStrength": zod.number().min(createStrengthStandardBodyRequiredStrengthMin),
   "strengthUnit": zod.string().default(createStrengthStandardBodyStrengthUnitDefault)
@@ -660,6 +662,7 @@ export const CreateStrengthStandardResponse = zod.object({
   "material": zod.string(),
   "blockType": zod.string().nullable(),
   "blockSize": zod.string().nullable(),
+  "cubeAge": zod.number().nullable(),
   "bsStandard": zod.string(),
   "requiredStrength": zod.number(),
   "strengthUnit": zod.string()
@@ -684,6 +687,7 @@ export const UpdateStrengthStandardBody = zod.object({
   "material": zod.string().min(1).optional(),
   "blockType": zod.string().nullish(),
   "blockSize": zod.string().nullish(),
+  "cubeAge": zod.union([zod.literal(1),zod.literal(7),zod.literal(28),zod.literal(null)]).nullish(),
   "bsStandard": zod.string().min(1).optional(),
   "requiredStrength": zod.number().min(updateStrengthStandardBodyRequiredStrengthMin).optional(),
   "strengthUnit": zod.string().optional()
@@ -695,6 +699,7 @@ export const UpdateStrengthStandardResponse = zod.object({
   "material": zod.string(),
   "blockType": zod.string().nullable(),
   "blockSize": zod.string().nullable(),
+  "cubeAge": zod.number().nullable(),
   "bsStandard": zod.string(),
   "requiredStrength": zod.number(),
   "strengthUnit": zod.string()
@@ -810,6 +815,137 @@ export const DeleteSieveStandardParams = zod.object({
 })
 
 export const DeleteSieveStandardResponse = zod.void()
+
+
+/**
+ * @summary List configurable Water limits
+ */
+export const ListWaterStandardsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "phMin": zod.number(),
+  "phMax": zod.number(),
+  "chlorideMin": zod.number(),
+  "chlorideMax": zod.number(),
+  "tdsMin": zod.number(),
+  "tdsMax": zod.number(),
+  "so3Min": zod.number(),
+  "so3Max": zod.number(),
+  "isDefault": zod.boolean()
+})
+export const ListWaterStandardsResponse = zod.array(ListWaterStandardsResponseItem)
+
+
+/**
+ * @summary Create a Water limit profile
+ */
+
+export const createWaterStandardBodyPhMinMin = 0;
+
+export const createWaterStandardBodyPhMaxMin = 0;
+
+export const createWaterStandardBodyChlorideMinMin = 0;
+
+export const createWaterStandardBodyChlorideMaxMin = 0;
+
+export const createWaterStandardBodyTdsMinMin = 0;
+
+export const createWaterStandardBodyTdsMaxMin = 0;
+
+export const createWaterStandardBodySo3MinMin = 0;
+
+export const createWaterStandardBodySo3MaxMin = 0;
+
+
+
+export const CreateWaterStandardBody = zod.object({
+  "name": zod.string().min(1),
+  "phMin": zod.number().min(createWaterStandardBodyPhMinMin),
+  "phMax": zod.number().min(createWaterStandardBodyPhMaxMin),
+  "chlorideMin": zod.number().min(createWaterStandardBodyChlorideMinMin),
+  "chlorideMax": zod.number().min(createWaterStandardBodyChlorideMaxMin),
+  "tdsMin": zod.number().min(createWaterStandardBodyTdsMinMin),
+  "tdsMax": zod.number().min(createWaterStandardBodyTdsMaxMin),
+  "so3Min": zod.number().min(createWaterStandardBodySo3MinMin),
+  "so3Max": zod.number().min(createWaterStandardBodySo3MaxMin)
+})
+
+export const CreateWaterStandardResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "phMin": zod.number(),
+  "phMax": zod.number(),
+  "chlorideMin": zod.number(),
+  "chlorideMax": zod.number(),
+  "tdsMin": zod.number(),
+  "tdsMax": zod.number(),
+  "so3Min": zod.number(),
+  "so3Max": zod.number(),
+  "isDefault": zod.boolean()
+})
+
+
+/**
+ * @summary Update a Water limit profile
+ */
+export const UpdateWaterStandardParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+export const updateWaterStandardBodyPhMinMin = 0;
+
+export const updateWaterStandardBodyPhMaxMin = 0;
+
+export const updateWaterStandardBodyChlorideMinMin = 0;
+
+export const updateWaterStandardBodyChlorideMaxMin = 0;
+
+export const updateWaterStandardBodyTdsMinMin = 0;
+
+export const updateWaterStandardBodyTdsMaxMin = 0;
+
+export const updateWaterStandardBodySo3MinMin = 0;
+
+export const updateWaterStandardBodySo3MaxMin = 0;
+
+
+
+export const UpdateWaterStandardBody = zod.object({
+  "name": zod.string().min(1).optional(),
+  "phMin": zod.number().min(updateWaterStandardBodyPhMinMin).optional(),
+  "phMax": zod.number().min(updateWaterStandardBodyPhMaxMin).optional(),
+  "chlorideMin": zod.number().min(updateWaterStandardBodyChlorideMinMin).optional(),
+  "chlorideMax": zod.number().min(updateWaterStandardBodyChlorideMaxMin).optional(),
+  "tdsMin": zod.number().min(updateWaterStandardBodyTdsMinMin).optional(),
+  "tdsMax": zod.number().min(updateWaterStandardBodyTdsMaxMin).optional(),
+  "so3Min": zod.number().min(updateWaterStandardBodySo3MinMin).optional(),
+  "so3Max": zod.number().min(updateWaterStandardBodySo3MaxMin).optional()
+})
+
+export const UpdateWaterStandardResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "phMin": zod.number(),
+  "phMax": zod.number(),
+  "chlorideMin": zod.number(),
+  "chlorideMax": zod.number(),
+  "tdsMin": zod.number(),
+  "tdsMax": zod.number(),
+  "so3Min": zod.number(),
+  "so3Max": zod.number(),
+  "isDefault": zod.boolean()
+})
+
+
+/**
+ * @summary Delete a Water limit profile
+ */
+export const DeleteWaterStandardParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteWaterStandardResponse = zod.void()
 
 
 /**

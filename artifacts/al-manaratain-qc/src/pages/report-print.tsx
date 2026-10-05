@@ -1717,6 +1717,7 @@ function StrengthStandardsTable({
           material: record.material,
           blockType: typeof evaluation.blockType === "string" ? evaluation.blockType : null,
           blockSize: typeof evaluation.blockSize === "string" ? evaluation.blockSize : null,
+          cubeAge: null,
           bsStandard: textValue(evaluation.bsStandard),
           requiredStrength: Number(evaluation.requiredStrength),
           strengthUnit: textValue(evaluation.strengthUnit, "N/mm²"),
@@ -2528,8 +2529,22 @@ function ConfiguredDetailsReport({
   </>;
 }
 
-function PrecastReport({ record, layout }: { record: QcRecord; layout?: ReportLayout }) {
+function PrecastReport({
+  record,
+  standards,
+  layout,
+}: {
+  record: QcRecord;
+  standards: StrengthStandard[];
+  layout?: ReportLayout;
+}) {
   const details = record.details;
+  const matchingPrecastStandards = standards.filter(
+    (standard) =>
+      standard.testType === "Precast" &&
+      standard.cubeAge !== null &&
+      strengthStandardMatchesRecord(standard, record),
+  );
   const rows = sortCubeRowsByAge(
     Array.isArray(details.testRows) ? details.testRows : [],
   );
@@ -2662,12 +2677,23 @@ function PrecastReport({ record, layout }: { record: QcRecord; layout?: ReportLa
             </tr>
           </thead>
           <tbody>
-            {PRECAST_AGE_STRENGTH_CRITERIA.map((criterion) => (
-              <tr key={criterion.age}>
-                <td>{criterion.age} DAY{criterion.age === 1 ? "" : "S"}</td>
-                <td>{formatNumber(criterion.minimumStrength)} N/mm²</td>
-              </tr>
-            ))}
+            {PRECAST_AGE_STRENGTH_CRITERIA.map((criterion) => {
+              const configuredStandard = matchingPrecastStandards.find(
+                (standard) => standard.cubeAge === criterion.age,
+              );
+              return (
+                <tr key={criterion.age}>
+                  <td>{criterion.age} DAY{criterion.age === 1 ? "" : "S"}</td>
+                  <td>
+                    {formatNumber(
+                      configuredStandard?.requiredStrength ??
+                        criterion.minimumStrength,
+                    )}{" "}
+                    {configuredStandard?.strengthUnit ?? "N/mm²"}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -2805,7 +2831,7 @@ export function ReportDocument({ report, strengthStandards = [], sieveStandards 
         <LayoutElements layout={layout} sectionKey="results" placement="before" />
         <div className="report-layout-section" style={layoutSectionStyle(layout, "results")}>
           {record.testType === "Ready Mix" ? <ReadyMixReport record={record} standards={strengthStandards} selectedStandard={selectedStrengthStandard} layout={layout} /> :
-            record.testType === "Precast" ? <PrecastReport record={record} layout={layout} /> :
+            record.testType === "Precast" ? <PrecastReport record={record} standards={strengthStandards} layout={layout} /> :
             record.testType === "Water" ? <WaterReport record={record} layout={layout} /> :
             record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve" ? <SieveReport record={record} layout={layout} /> :
             record.testType === "Paving Blocks" ? <PavingBlocksReport record={record} standards={strengthStandards} layout={layout} /> :

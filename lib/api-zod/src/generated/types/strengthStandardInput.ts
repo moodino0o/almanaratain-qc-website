@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { StrengthStandardInputCubeAge } from './strengthStandardInputCubeAge';
 import type { TestType } from './testType';
 
 export interface StrengthStandardInput {
@@ -15,6 +16,8 @@ export interface StrengthStandardInput {
   blockType?: string | null;
   /** @nullable */
   blockSize?: string | null;
+  /** @nullable */
+  cubeAge?: StrengthStandardInputCubeAge;
   /** @minLength 1 */
   bsStandard: string;
   /** @minimum 0 */

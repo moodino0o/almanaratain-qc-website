@@ -3,27 +3,33 @@ import {
   getListSieveStandardsQueryKey,
   getListShapeFactorsQueryKey,
   getListStrengthStandardsQueryKey,
+  getListWaterStandardsQueryKey,
   getGetLookupsQueryKey,
   getGetReferenceDataQueryKey,
   SieveStandard,
   ShapeFactor,
   StrengthStandard,
+  WaterStandard,
   TestType,
   useCreateSieveStandard,
   useCreateShapeFactor,
   useCreateReferenceItem,
   useCreateStrengthStandard,
+  useCreateWaterStandard,
   useDeleteSieveStandard,
   useDeleteShapeFactor,
   useDeleteStrengthStandard,
+  useDeleteWaterStandard,
   useGetLookups,
   useGetReferenceData,
   useListSieveStandards,
   useListShapeFactors,
   useListStrengthStandards,
+  useListWaterStandards,
   useUpdateSieveStandard,
   useUpdateShapeFactor,
   useUpdateStrengthStandard,
+  useUpdateWaterStandard,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@workspace/replit-auth-web";
@@ -68,7 +74,7 @@ import {
   PRECAST_AGE_STRENGTH_CRITERIA,
 } from "./record-form-utils";
 
-type AutomatedTestType = "Ready Mix" | "Blocks" | "Paving Blocks";
+type AutomatedTestType = "Ready Mix" | "Blocks" | "Paving Blocks" | "Precast";
 type SieveTestType = "Sand Sieve" | "Aggregate Sieve";
 
 type ShapeFactorForm = {
@@ -82,9 +88,22 @@ type StandardForm = {
   material: string;
   blockType: string;
   blockSize: string;
+  cubeAge: string;
   bsStandard: string;
   requiredStrength: string;
   strengthUnit: string;
+};
+
+type WaterLimitForm = {
+  name: string;
+  phMin: string;
+  phMax: string;
+  chlorideMin: string;
+  chlorideMax: string;
+  tdsMin: string;
+  tdsMax: string;
+  so3Min: string;
+  so3Max: string;
 };
 
 type SieveCriterion = {
@@ -108,10 +127,35 @@ const emptyForm: StandardForm = {
   material: "",
   blockType: "",
   blockSize: "",
+  cubeAge: "",
   bsStandard: "",
   requiredStrength: "",
   strengthUnit: "N/mm²",
 };
+
+const emptyWaterForm: WaterLimitForm = {
+  name: "Water Quality Limits",
+  phMin: "4.5",
+  phMax: "8",
+  chlorideMin: "0",
+  chlorideMax: "350",
+  tdsMin: "0",
+  tdsMax: "2000",
+  so3Min: "0",
+  so3Max: "1000",
+};
+
+const waterFormFromStandard = (standard: WaterStandard): WaterLimitForm => ({
+  name: standard.name,
+  phMin: String(standard.phMin),
+  phMax: String(standard.phMax),
+  chlorideMin: String(standard.chlorideMin),
+  chlorideMax: String(standard.chlorideMax),
+  tdsMin: String(standard.tdsMin),
+  tdsMax: String(standard.tdsMax),
+  so3Min: String(standard.so3Min),
+  so3Max: String(standard.so3Max),
+});
 
 const emptySieveForm: SieveForm = {
   testType: TestType.Sand_Sieve,
@@ -140,6 +184,7 @@ function formFromStandard(standard: StrengthStandard): StandardForm {
     material: standard.material,
     blockType: standard.blockType ?? "",
     blockSize: standard.blockSize ?? "",
+    cubeAge: standard.cubeAge == null ? "" : String(standard.cubeAge),
     bsStandard: standard.bsStandard,
     requiredStrength: String(standard.requiredStrength),
     strengthUnit: standard.strengthUnit,
@@ -198,11 +243,13 @@ function StandardEditor({
     mixStrengths: string[];
     blockTypes: string[];
     blockSizes: string[];
+    precastTypes: string[];
   };
 }) {
   const materialOptions = useMemo(
-    () =>
-      Array.from(
+    () => form.testType === TestType.Precast
+      ? [...(lookups?.precastTypes ?? [])]
+      : Array.from(
         new Set([
           ...(lookups?.materials ?? []),
           ...(form.testType === TestType.Ready_Mix
@@ -225,8 +272,7 @@ function StandardEditor({
               {editing ? "Edit strength standard" : "Add strength standard"}
             </CardTitle>
             <CardDescription>
-               Set the minimum compressive strength used when Ready Mix, Blocks, or Paving Blocks
-              records are checked.
+              Set the minimum strength for the selected product and, for Precast, cube age.
             </CardDescription>
           </div>
           <Button
@@ -251,11 +297,12 @@ function StandardEditor({
                 material:
                   value === TestType.Blocks
                     ? BLOCK_RECORD_MATERIAL
-                    : form.testType === TestType.Blocks
+                    : form.testType === TestType.Blocks || value !== form.testType
                       ? ""
                       : form.material,
                 blockType: "",
                 blockSize: "",
+                cubeAge: "",
               })
             }
           >
@@ -265,7 +312,8 @@ function StandardEditor({
             <SelectContent>
               <SelectItem value={TestType.Ready_Mix}>Ready Mix</SelectItem>
               <SelectItem value={TestType.Blocks}>Blocks</SelectItem>
-                <SelectItem value={TestType.Paving_Blocks}>Paving Blocks</SelectItem>
+              <SelectItem value={TestType.Paving_Blocks}>Paving Blocks</SelectItem>
+              <SelectItem value={TestType.Precast}>Precast</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -274,7 +322,9 @@ function StandardEditor({
             <Label>
               {form.testType === TestType.Paving_Blocks
                 ? "Block Type"
-                : "Material or mix design"}
+                : form.testType === TestType.Precast
+                  ? "Precast type"
+                  : "Material or mix design"}
             </Label>
             <TypeaheadInput
               value={form.material}
@@ -283,17 +333,39 @@ function StandardEditor({
               placeholder={
                 form.testType === TestType.Paving_Blocks
                   ? "Select or type a Block Type..."
-                  : "Select or type a material..."
+                  : form.testType === TestType.Precast
+                    ? "Select or type a Precast type..."
+                    : "Select or type a material..."
               }
               onCreateOption={(value) =>
                 onCreateReferenceItem(
                   form.testType === TestType.Paving_Blocks
                     ? "blockTypes"
-                    : "materials",
+                    : form.testType === TestType.Precast
+                      ? "precastTypes"
+                      : "materials",
                   value,
                 )
               }
             />
+          </div>
+        )}
+        {form.testType === TestType.Precast && (
+          <div className="space-y-2">
+            <Label>Cube age</Label>
+            <Select
+              value={form.cubeAge}
+              onValueChange={(cubeAge) => setForm({ ...form, cubeAge })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select age..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1 day</SelectItem>
+                <SelectItem value="7">7 days</SelectItem>
+                <SelectItem value="28">28 days</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         )}
         {(form.testType === TestType.Blocks || form.testType === TestType.Paving_Blocks) && (
@@ -364,6 +436,98 @@ function StandardEditor({
           <Button type="button" onClick={onSave} disabled={isSaving}>
             <Check className="mr-2 h-4 w-4" />
             {isSaving ? "Saving..." : editing ? "Save Changes" : "Add Standard"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function WaterStandardEditor({
+  form,
+  setForm,
+  editing,
+  onCancel,
+  onSave,
+  isSaving,
+}: {
+  form: WaterLimitForm;
+  setForm: (value: WaterLimitForm) => void;
+  editing: WaterStandard | null;
+  onCancel: () => void;
+  onSave: () => void;
+  isSaving: boolean;
+}) {
+  const fields: Array<{
+    label: string;
+    min: Exclude<keyof WaterLimitForm, "name">;
+    max: Exclude<keyof WaterLimitForm, "name">;
+  }> = [
+    { label: "pH", min: "phMin", max: "phMax" },
+    { label: "Chloride (Cl)", min: "chlorideMin", max: "chlorideMax" },
+    { label: "TDS", min: "tdsMin", max: "tdsMax" },
+    { label: "SO3", min: "so3Min", max: "so3Max" },
+  ];
+  return (
+    <Card className="border-primary/20 shadow-sm">
+      <CardHeader className="border-b border-border/70 bg-muted/30">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <CardTitle>{editing ? "Edit Water limits" : "Add Water limit profile"}</CardTitle>
+            <CardDescription>
+              Define inclusive minimum and maximum results. Records can link to a profile when entered.
+            </CardDescription>
+          </div>
+          <Button variant="ghost" size="icon" onClick={onCancel} aria-label="Close editor">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4 pt-5">
+        <div className="space-y-2">
+          <Label>Profile name</Label>
+          <Input
+            value={form.name}
+            onChange={(event) => setForm({ ...form, name: event.target.value })}
+            placeholder="Water Quality Limits"
+          />
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          {fields.map((field) => (
+            <div key={field.label} className="rounded-lg border p-3">
+              <Label className="mb-3 block">{field.label}</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor={`water-${field.min}`} className="text-xs text-muted-foreground">Minimum</Label>
+                  <Input
+                    id={`water-${field.min}`}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={form[field.min]}
+                    onChange={(event) => setForm({ ...form, [field.min]: event.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={`water-${field.max}`} className="text-xs text-muted-foreground">Maximum</Label>
+                  <Input
+                    id={`water-${field.max}`}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={form[field.max]}
+                    onChange={(event) => setForm({ ...form, [field.max]: event.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+          <Button type="button" onClick={onSave} disabled={isSaving}>
+            <Check className="mr-2 h-4 w-4" />
+            {isSaving ? "Saving..." : editing ? "Save Changes" : "Add Profile"}
           </Button>
         </div>
       </CardContent>
@@ -654,6 +818,7 @@ type StrengthFolderKey = "readyMix" | "blocks" | "paving" | "precast";
 function StrengthStandardsFolder({
   label,
   standards,
+  isPrecast = false,
   expanded,
   onToggle,
   onAdd,
@@ -662,6 +827,7 @@ function StrengthStandardsFolder({
 }: {
   label: string;
   standards: StrengthStandard[];
+  isPrecast?: boolean;
   expanded: boolean;
   onToggle: () => void;
   onAdd: () => void;
@@ -707,9 +873,10 @@ function StrengthStandardsFolder({
                 <thead className="bg-muted/40 text-left text-foreground">
                   <tr className="border-b">
                     <th className="px-4 py-3 font-semibold">Test Type</th>
-                    <th className="px-4 py-3 font-semibold">Material / Mix</th>
-                    <th className="px-4 py-3 font-semibold">Block Type</th>
-                    <th className="px-4 py-3 font-semibold">Block Size</th>
+                    <th className="px-4 py-3 font-semibold">{isPrecast ? "Precast Type" : "Material / Mix"}</th>
+                    <th className={`px-4 py-3 font-semibold ${isPrecast ? "" : "hidden"}`}>Cube Age</th>
+                    <th className={`px-4 py-3 font-semibold ${isPrecast ? "hidden" : ""}`}>Block Type</th>
+                    <th className={`px-4 py-3 font-semibold ${isPrecast ? "hidden" : ""}`}>Block Size</th>
                     <th className="px-4 py-3 font-semibold">BS Standard</th>
                     <th className="px-4 py-3 font-semibold">Minimum</th>
                     <th className="px-4 py-3 text-right font-semibold">
@@ -724,10 +891,15 @@ function StrengthStandardsFolder({
                         {standard.testType}
                       </td>
                       <td className="px-4 py-3">{standard.material}</td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      <td className={`px-4 py-3 text-muted-foreground ${isPrecast ? "" : "hidden"}`}>
+                        {standard.cubeAge
+                          ? `${standard.cubeAge} day${standard.cubeAge === 1 ? "" : "s"}`
+                          : "—"}
+                      </td>
+                      <td className={`px-4 py-3 text-muted-foreground ${isPrecast ? "hidden" : ""}`}>
                         {standard.blockType || "—"}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      <td className={`px-4 py-3 text-muted-foreground ${isPrecast ? "hidden" : ""}`}>
                         {standard.blockSize || "—"}
                       </td>
                       <td className="px-4 py-3">{standard.bsStandard}</td>
@@ -802,10 +974,10 @@ function PrecastStrengthStandardsFolder({
           )}
           <span className="min-w-0">
             <span className="block truncate font-semibold text-foreground">
-              Precast strength standards
+              Precast fallback criteria
             </span>
             <span className="block text-xs text-muted-foreground">
-              3 age-based criteria · shared across all types
+              Used only when no type-specific age standard is configured
             </span>
           </span>
         </span>
@@ -819,7 +991,7 @@ function PrecastStrengthStandardsFolder({
         <div className="border-t border-border">
           <p className="border-b border-border px-4 py-3 text-sm text-muted-foreground">
             <span className="font-medium text-foreground">
-              Applies to all Precast types:
+              Fallback criteria for Precast types without configured age rows:
             </span>{" "}
             {precastTypes.length
               ? precastTypes.join(", ")
@@ -1075,7 +1247,8 @@ function BlockStandardAssignmentFlow({
 
 type ProductStrengthTestType =
   | typeof TestType.Ready_Mix
-  | typeof TestType.Paving_Blocks;
+  | typeof TestType.Paving_Blocks
+  | typeof TestType.Precast;
 
 function ProductStrengthStandardAssignmentFlow({
   testType,
@@ -1106,6 +1279,7 @@ function ProductStrengthStandardAssignmentFlow({
   typeSelector: ReactNode;
 }) {
   const isPaving = testType === TestType.Paving_Blocks;
+  const isPrecast = testType === TestType.Precast;
   const [productInput, setProductInput] = useState("");
   const [blockSizeInput, setBlockSizeInput] = useState("");
   const [manualStandardId, setManualStandardId] = useState("");
@@ -1160,7 +1334,11 @@ function ProductStrengthStandardAssignmentFlow({
     manualStandard?.material.trim().toLocaleLowerCase() ===
       product.trim().toLocaleLowerCase() &&
     (!isPaving || blockSizeMatches(manualStandard?.blockSize, blockSize));
-  const productLabel = isPaving ? "Block Type" : "Mix design";
+  const productLabel = isPaving
+    ? "Block Type"
+    : isPrecast
+      ? "Precast Type"
+      : "Mix design";
   return (
     <Card className="border-primary/20 shadow-sm">
       <CardHeader className="border-b border-border/70 bg-muted/30">
@@ -1194,7 +1372,11 @@ function ProductStrengthStandardAssignmentFlow({
               placeholder={`Select or type a ${productLabel}`}
               onCreateOption={(value) =>
                 onCreateReferenceItem(
-                  isPaving ? "blockTypes" : "materials",
+                  isPaving
+                    ? "blockTypes"
+                    : isPrecast
+                      ? "precastTypes"
+                      : "materials",
                   value,
                 )
               }
@@ -1231,6 +1413,9 @@ function ProductStrengthStandardAssignmentFlow({
                   {matchingStandards[0].requiredStrength} {matchingStandards[0].strengthUnit}
                   {isPaving && matchingStandards[0].blockSize
                     ? ` · ${matchingStandards[0].blockSize}`
+                    : ""}
+                  {isPrecast && matchingStandards[0].cubeAge
+                    ? ` · ${matchingStandards[0].cubeAge} day${matchingStandards[0].cubeAge === 1 ? "" : "s"}`
                     : ""}
                 </p>
               </div>
@@ -1281,6 +1466,9 @@ function ProductStrengthStandardAssignmentFlow({
                   {productStandards.map((standard) => (
                     <option key={standard.id} value={standard.id}>
                       {standard.bsStandard} — {standard.requiredStrength} {standard.strengthUnit}
+                      {isPrecast && standard.cubeAge
+                        ? ` · ${standard.cubeAge} day${standard.cubeAge === 1 ? "" : "s"}`
+                        : ""}
                       {` · ${standard.material}`}
                       {isPaving ? ` · ${standard.blockSize || "All sizes"}` : ""}
                     </option>
@@ -1333,6 +1521,7 @@ function StrengthStandardAssignmentFlow({
   blockSizes,
   materials,
   mixStrengths,
+  precastTypes,
   onCreateReferenceItem,
   onCreateBlockStandard,
   onLinkBlockStandard,
@@ -1345,6 +1534,7 @@ function StrengthStandardAssignmentFlow({
   blockSizes: string[];
   materials: string[];
   mixStrengths: string[];
+  precastTypes: string[];
   onCreateReferenceItem: (
     categoryKey: string,
     value: string,
@@ -1389,6 +1579,7 @@ function StrengthStandardAssignmentFlow({
           <SelectItem value={TestType.Ready_Mix}>Ready Mix</SelectItem>
           <SelectItem value={TestType.Blocks}>Blocks</SelectItem>
           <SelectItem value={TestType.Paving_Blocks}>Paving Blocks</SelectItem>
+          <SelectItem value={TestType.Precast}>Precast</SelectItem>
         </SelectContent>
       </Select>
     </div>
@@ -1416,7 +1607,9 @@ function StrengthStandardAssignmentFlow({
       productOptions={
         testType === TestType.Ready_Mix
           ? [...materials, ...mixStrengths]
-          : blockTypes
+          : testType === TestType.Paving_Blocks
+            ? blockTypes
+            : precastTypes
       }
       blockSizes={blockSizes}
       onCreateReferenceItem={onCreateReferenceItem}
@@ -1635,6 +1828,12 @@ export default function Standards() {
     refetch: refetchStrength,
   } = useListStrengthStandards();
   const {
+    data: waterStandards,
+    isLoading: waterLoading,
+    isError: waterError,
+    refetch: refetchWaterStandards,
+  } = useListWaterStandards();
+  const {
     data: sieveStandards,
     isLoading: sieveLoading,
     isError: sieveError,
@@ -1651,6 +1850,9 @@ export default function Standards() {
   const createStandard = useCreateStrengthStandard();
   const updateStandard = useUpdateStrengthStandard();
   const deleteStandard = useDeleteStrengthStandard();
+  const createWaterStandard = useCreateWaterStandard();
+  const updateWaterStandard = useUpdateWaterStandard();
+  const deleteWaterStandard = useDeleteWaterStandard();
   const createSieveStandard = useCreateSieveStandard();
   const createReferenceItem = useCreateReferenceItem();
   const updateSieveStandard = useUpdateSieveStandard();
@@ -1661,6 +1863,7 @@ export default function Standards() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [sieveEditorOpen, setSieveEditorOpen] = useState(false);
   const [shapeFactorEditorOpen, setShapeFactorEditorOpen] = useState(false);
+  const [waterEditorOpen, setWaterEditorOpen] = useState(false);
   const [editing, setEditing] = useState<StrengthStandard | null>(null);
   const [editingSieve, setEditingSieve] = useState<SieveStandard[] | null>(
     null,
@@ -1668,11 +1871,13 @@ export default function Standards() {
   const [editingShapeFactor, setEditingShapeFactor] = useState<ShapeFactor | null>(
     null,
   );
+  const [editingWaterStandard, setEditingWaterStandard] = useState<WaterStandard | null>(null);
   const [form, setForm] = useState<StandardForm>(emptyForm);
   const [sieveForm, setSieveForm] = useState<SieveForm>(emptySieveForm);
   const [shapeFactorForm, setShapeFactorForm] =
     useState<ShapeFactorForm>(emptyShapeFactorForm);
-  const [standardView, setStandardView] = useState<"strength" | "sieve" | "shapeFactor">(
+  const [waterForm, setWaterForm] = useState<WaterLimitForm>(emptyWaterForm);
+  const [standardView, setStandardView] = useState<"strength" | "sieve" | "shapeFactor" | "water">(
     "strength",
   );
   const [expandedStrengthFolders, setExpandedStrengthFolders] = useState<
@@ -1741,6 +1946,14 @@ export default function Standards() {
             (standard) => standard.testType === TestType.Paving_Blocks,
           ) ?? [],
       },
+      {
+        key: "precast" as const,
+        label: "Precast standards by type",
+        standards:
+          strengthStandards?.filter(
+            (standard) => standard.testType === TestType.Precast,
+          ) ?? [],
+      },
     ],
     [strengthStandards],
   );
@@ -1754,6 +1967,9 @@ export default function Standards() {
     });
     queryClient.invalidateQueries({
       queryKey: getListShapeFactorsQueryKey(),
+    });
+    queryClient.invalidateQueries({
+      queryKey: getListWaterStandardsQueryKey(),
     });
     queryClient.invalidateQueries({
       predicate: ({ queryKey }) => {
@@ -1790,6 +2006,9 @@ export default function Standards() {
           queryKey: getGetReferenceDataQueryKey(),
         }),
         queryClient.invalidateQueries({ queryKey: getGetLookupsQueryKey() }),
+        queryClient.invalidateQueries({
+          queryKey: getListStrengthStandardsQueryKey(),
+        }),
       ]);
       toast.success(`Added “${createdItem.value}” to Reference Data.`);
       return createdItem.value;
@@ -1834,6 +2053,7 @@ export default function Standards() {
       testType,
       material: product,
       blockSize: testType === TestType.Paving_Blocks ? blockSize : "",
+      cubeAge: testType === TestType.Precast ? "1" : "",
     });
     setStandardView("strength");
     setEditorOpen(true);
@@ -1886,6 +2106,90 @@ export default function Standards() {
     setSieveEditorOpen(false);
   };
 
+  const openWaterCreate = () => {
+    setEditingWaterStandard(null);
+    setWaterForm(emptyWaterForm);
+    setStandardView("water");
+    setWaterEditorOpen(true);
+    setEditorOpen(false);
+    setSieveEditorOpen(false);
+    setShapeFactorEditorOpen(false);
+  };
+
+  const openWaterEdit = (standard: WaterStandard) => {
+    setEditingWaterStandard(standard);
+    setWaterForm(waterFormFromStandard(standard));
+    setStandardView("water");
+    setWaterEditorOpen(true);
+    setEditorOpen(false);
+    setSieveEditorOpen(false);
+    setShapeFactorEditorOpen(false);
+  };
+
+  const handleSaveWaterStandard = () => {
+    const numberFields = [
+      "phMin",
+      "phMax",
+      "chlorideMin",
+      "chlorideMax",
+      "tdsMin",
+      "tdsMax",
+      "so3Min",
+      "so3Max",
+    ] as const;
+    const numbers = Object.fromEntries(
+      numberFields.map((key) => [key, Number(waterForm[key])]),
+    ) as Record<(typeof numberFields)[number], number>;
+    const allValid = numberFields.every(
+      (key) => waterForm[key].trim() !== "" && Number.isFinite(numbers[key]) && numbers[key] >= 0,
+    );
+    const rangesValid = [
+      ["phMin", "phMax"],
+      ["chlorideMin", "chlorideMax"],
+      ["tdsMin", "tdsMax"],
+      ["so3Min", "so3Max"],
+    ].every(([minimum, maximum]) =>
+      numbers[minimum as keyof typeof numbers] <= numbers[maximum as keyof typeof numbers],
+    );
+    if (!waterForm.name.trim() || !allValid || !rangesValid) {
+      toast.error("Enter a profile name and valid minimum/maximum limits.");
+      return;
+    }
+    const data = { name: waterForm.name.trim(), ...numbers };
+    const options = {
+      onSuccess: () => {
+        toast.success(
+          editingWaterStandard
+            ? "Water limits updated."
+            : "Water limit profile added.",
+        );
+        setWaterEditorOpen(false);
+        invalidateStandards();
+      },
+      onError: () => toast.error("Unable to save the Water limit profile."),
+    };
+    if (editingWaterStandard) {
+      updateWaterStandard.mutate(
+        { id: editingWaterStandard.id, data },
+        options,
+      );
+    } else {
+      createWaterStandard.mutate({ data }, options);
+    }
+  };
+
+  const handleDeleteWaterStandard = async (standard: WaterStandard) => {
+    if (standard.isDefault) return;
+    if (!confirm(`Delete the Water limit profile "${standard.name}"?`)) return;
+    try {
+      await deleteWaterStandard.mutateAsync({ id: standard.id });
+      toast.success("Water limit profile deleted.");
+      invalidateStandards();
+    } catch {
+      toast.error("Unable to delete this profile. It may be linked to Water records.");
+    }
+  };
+
   const handleSave = () => {
     const requiredStrength = Number(form.requiredStrength);
     if (
@@ -1894,6 +2198,8 @@ export default function Standards() {
       !form.strengthUnit.trim() ||
       !Number.isFinite(requiredStrength) ||
       requiredStrength < 0 ||
+      (form.testType === TestType.Precast &&
+        !["1", "7", "28"].includes(form.cubeAge)) ||
       ((form.testType === TestType.Blocks &&
         (!form.blockType.trim() || !form.blockSize.trim())) ||
         (form.testType === TestType.Paving_Blocks && !form.blockSize.trim()))
@@ -1913,6 +2219,10 @@ export default function Standards() {
         form.testType === TestType.Blocks || form.testType === TestType.Paving_Blocks
           ? form.blockSize.trim()
           : null,
+      cubeAge:
+        form.testType === TestType.Precast
+          ? (Number(form.cubeAge) as 1 | 7 | 28)
+          : null,
       bsStandard: form.bsStandard.trim(),
       requiredStrength,
       strengthUnit: form.strengthUnit.trim(),
@@ -1929,7 +2239,9 @@ export default function Standards() {
              ? "blocks"
              : data.testType === TestType.Paving_Blocks
                ? "paving"
-               : "readyMix"]: true,
+                 : data.testType === TestType.Precast
+                   ? "precast"
+                   : "readyMix"]: true,
         }));
         invalidateStandards();
       },
@@ -2014,6 +2326,10 @@ export default function Standards() {
           material: product,
           blockType: null,
           blockSize: testType === TestType.Paving_Blocks ? blockSize : null,
+          cubeAge:
+            testType === TestType.Precast
+              ? (standard.cubeAge as 1 | 7 | 28)
+              : null,
           bsStandard: standard.bsStandard,
           requiredStrength: standard.requiredStrength,
           strengthUnit: standard.strengthUnit,
@@ -2022,7 +2338,11 @@ export default function Standards() {
       toast.success(`${standard.bsStandard} linked to ${nextProduct}.`);
       setExpandedStrengthFolders((current) => ({
         ...current,
-        [testType === TestType.Ready_Mix ? "readyMix" : "paving"]: true,
+        [testType === TestType.Ready_Mix
+          ? "readyMix"
+          : testType === TestType.Paving_Blocks
+            ? "paving"
+            : "precast"]: true,
       }));
       invalidateStandards();
     } catch {
@@ -2258,6 +2578,7 @@ export default function Standards() {
             mixStrengths: lookups?.mixStrengths ?? [],
             blockTypes: lookups?.blockTypes ?? [],
             blockSizes: lookups?.blockSizes ?? [],
+            precastTypes,
           }}
           onCreateReferenceItem={addReferenceDataItem}
         />
@@ -2341,6 +2662,22 @@ export default function Standards() {
             ({shapeFactors?.length ?? 0})
           </span>
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={standardView === "water"}
+          onClick={() => setStandardView("water")}
+          className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
+            standardView === "water"
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Water limits
+          <span className="ml-1.5 text-xs text-muted-foreground">
+            ({waterStandards?.length ?? 0})
+          </span>
+        </button>
       </div>
 
       <div className={standardView === "strength" ? "space-y-3" : "hidden"}>
@@ -2370,6 +2707,7 @@ export default function Standards() {
                 blockSizes={lookups?.blockSizes ?? []}
                 materials={lookups?.materials ?? []}
                 mixStrengths={lookups?.mixStrengths ?? []}
+                precastTypes={precastTypes}
                 onCreateReferenceItem={addReferenceDataItem}
                 onCreateBlockStandard={openCreateBlockStandardFor}
                 onLinkBlockStandard={handleLinkBlockStandard}
@@ -2383,6 +2721,7 @@ export default function Standards() {
                 key={folder.key}
                 label={folder.label}
                 standards={folder.standards}
+                isPrecast={folder.key === "precast"}
                 expanded={expandedStrengthFolders[folder.key]}
                 onToggle={() =>
                   setExpandedStrengthFolders((current) => ({
@@ -2401,7 +2740,9 @@ export default function Standards() {
                         ? TestType.Blocks
                         : folder.key === "paving"
                           ? TestType.Paving_Blocks
-                          : TestType.Ready_Mix,
+                          : folder.key === "precast"
+                            ? TestType.Precast
+                            : TestType.Ready_Mix,
                   });
                   setEditorOpen(true);
                   setSieveEditorOpen(false);
@@ -2410,16 +2751,20 @@ export default function Standards() {
                 onDelete={canEditStandards ? handleDelete : () => undefined}
               />
             ))}
-            <PrecastStrengthStandardsFolder
-              expanded={expandedStrengthFolders.precast}
-              precastTypes={precastTypes}
-              onToggle={() =>
-                setExpandedStrengthFolders((current) => ({
-                  ...current,
-                  precast: !current.precast,
-                }))
-              }
-            />
+            {!strengthStandards?.some(
+              (standard) => standard.testType === TestType.Precast,
+            ) && (
+              <PrecastStrengthStandardsFolder
+                expanded={expandedStrengthFolders.precast}
+                precastTypes={precastTypes}
+                onToggle={() =>
+                  setExpandedStrengthFolders((current) => ({
+                    ...current,
+                    precast: !current.precast,
+                  }))
+                }
+              />
+            )}
           </>
         )}
       </div>
@@ -2454,6 +2799,116 @@ export default function Standards() {
               canEditStandards ? handleDeleteShapeFactor : () => undefined
             }
           />
+        )}
+      </div>
+
+      <div className={standardView === "water" ? "space-y-3" : "hidden"}>
+        {waterLoading ? (
+          <Card>
+            <CardContent className="p-12 text-center text-muted-foreground">
+              Loading Water limits...
+            </CardContent>
+          </Card>
+        ) : waterError ? (
+          <Card>
+            <CardContent className="flex flex-col items-center gap-3 p-12 text-center">
+              <p className="text-sm text-destructive">Water limits could not be loaded.</p>
+              <Button variant="outline" onClick={() => refetchWaterStandards()}>
+                Try Again
+              </Button>
+            </CardContent>
+          </Card>
+        ) : waterEditorOpen ? (
+          <WaterStandardEditor
+            form={waterForm}
+            setForm={setWaterForm}
+            editing={editingWaterStandard}
+            onCancel={() => setWaterEditorOpen(false)}
+            onSave={handleSaveWaterStandard}
+            isSaving={createWaterStandard.isPending || updateWaterStandard.isPending}
+          />
+        ) : (
+          <Card className="border-border shadow-sm">
+            <CardHeader className="border-b border-border/70 bg-muted/30">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <CardTitle>Water limit profiles</CardTitle>
+                  <CardDescription>
+                    Select a profile when entering a Water record. Values on the limits are inclusive.
+                  </CardDescription>
+                </div>
+                {canEditStandards && (
+                  <Button onClick={openWaterCreate}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Water limits
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {waterStandards?.length ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[850px] text-sm">
+                    <thead className="bg-muted/40 text-left">
+                      <tr className="border-b">
+                        <th className="px-4 py-3">Profile</th>
+                        <th className="px-4 py-3">pH</th>
+                        <th className="px-4 py-3">Chloride (Cl)</th>
+                        <th className="px-4 py-3">TDS</th>
+                        <th className="px-4 py-3">SO3</th>
+                        <th className="px-4 py-3">Status</th>
+                        {canEditStandards && <th className="px-4 py-3 text-right">Actions</th>}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {waterStandards.map((standard) => (
+                        <tr key={standard.id} className="border-b last:border-0">
+                          <td className="px-4 py-3 font-medium">{standard.name}</td>
+                          <td className="px-4 py-3">{standard.phMin}–{standard.phMax}</td>
+                          <td className="px-4 py-3">{standard.chlorideMin}–{standard.chlorideMax}</td>
+                          <td className="px-4 py-3">{standard.tdsMin}–{standard.tdsMax}</td>
+                          <td className="px-4 py-3">{standard.so3Min}–{standard.so3Max}</td>
+                          <td className="px-4 py-3">
+                            <span className="rounded-full bg-muted px-2 py-1 text-xs">
+                              {standard.isDefault ? "Default" : "Available to link"}
+                            </span>
+                          </td>
+                          {canEditStandards && (
+                            <td className="px-4 py-3">
+                              <div className="flex justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openWaterEdit(standard)}
+                                  aria-label={`Edit ${standard.name}`}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => void handleDeleteWaterStandard(standard)}
+                                  disabled={standard.isDefault || deleteWaterStandard.isPending}
+                                  aria-label={`Delete ${standard.name}`}
+                                  title={standard.isDefault ? "The default profile cannot be deleted" : "Delete profile"}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="p-8 text-center text-sm text-muted-foreground">
+                  No Water limit profiles are configured.
+                </p>
+              )}
+            </CardContent>
+          </Card>
         )}
       </div>
 

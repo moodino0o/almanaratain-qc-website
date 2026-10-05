@@ -83,11 +83,12 @@ export const precastStrengthOutcome = (
   age: number,
   averageStrength: number | null,
   complete = true,
+  configuredMinimum?: number,
 ) => {
   const criterion = PRECAST_AGE_STRENGTH_CRITERIA.find((item) => item.age === age);
   if (!criterion) return "—";
   if (!complete || averageStrength === null) return "Pending";
-  return averageStrength >= criterion.minimumStrength
+  return averageStrength >= (configuredMinimum ?? criterion.minimumStrength)
     ? criterion.passOutcome
     : criterion.failOutcome;
 };

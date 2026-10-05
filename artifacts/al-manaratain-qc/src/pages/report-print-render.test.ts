@@ -9,6 +9,7 @@ import type {
   QcRecord,
   ReportTemplateDesign,
   ReportTemplateObject,
+  StrengthStandard,
 } from "@workspace/api-client-react";
 import type { ReportDocumentProps } from "./report-print";
 import { createEmptyDesign } from "./report-designer-types";
@@ -187,6 +188,7 @@ function renderDocument(
   record: QcRecord,
   templateDesign?: ReportTemplateDesign,
   layout?: ReportDocumentProps["report"]["layout"],
+  strengthStandards?: StrengthStandard[],
 ) {
   const props: ReportDocumentProps = {
     report: {
@@ -196,6 +198,7 @@ function renderDocument(
       ...(layout ? { layout } : {}),
     },
     ...(templateDesign ? { templateDesign } : {}),
+    ...(strengthStandards ? { strengthStandards } : {}),
   };
   return renderToStaticMarkup(createElement(ReportDocument, props));
 }
@@ -566,4 +569,45 @@ test("places remarks after report details and before specimen results across eve
       `${scenario.testType}: Remarks should render once`,
     );
   }
+});
+
+test("prints editable Precast standards for the matching product type", () => {
+  const record = {
+    ...reportFixture(),
+    testType: "Precast",
+    material: "150 mm slab",
+    details: { testRows: [] },
+  } as QcRecord;
+  const standards = [
+    {
+      id: 1,
+      testType: "Precast",
+      material: "150 mm slab",
+      blockType: null,
+      blockSize: null,
+      cubeAge: 7,
+      bsStandard: "150 mm slab 7-day",
+      requiredStrength: 57,
+      strengthUnit: "N/mm²",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    },
+    {
+      id: 2,
+      testType: "Precast",
+      material: "200",
+      blockType: null,
+      blockSize: null,
+      cubeAge: 7,
+      bsStandard: "200 7-day",
+      requiredStrength: 77,
+      strengthUnit: "N/mm²",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    },
+  ] as StrengthStandard[];
+  const markup = renderDocument(record, undefined, undefined, standards);
+
+  assert.match(markup, /7 DAYS<\/td>\s*<td>57\.0 N\/mm²<\/td>/);
+  assert.doesNotMatch(markup, /77\.0 N\/mm²/);
 });

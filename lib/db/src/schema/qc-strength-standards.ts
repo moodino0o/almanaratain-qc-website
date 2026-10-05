@@ -14,6 +14,7 @@ export const qcStrengthStandardsTable = pgTable("qc_strength_standards", {
   material: text("material").notNull(),
   blockType: text("block_type"),
   blockSize: text("block_size"),
+  cubeAge: numeric("cube_age", { precision: 4, scale: 0 }),
   bsStandard: text("bs_standard").notNull(),
   requiredStrength: numeric("required_strength", { precision: 10, scale: 2 }).notNull(),
   strengthUnit: text("strength_unit").notNull().default("N/mm²"),

@@ -323,10 +323,24 @@ export interface StrengthStandard {
   blockType: string | null;
   /** @nullable */
   blockSize: string | null;
+  /** @nullable */
+  cubeAge: number | null;
   bsStandard: string;
   requiredStrength: number;
   strengthUnit: string;
 }
+
+/**
+ * @nullable
+ */
+export type StrengthStandardInputCubeAge = typeof StrengthStandardInputCubeAge[keyof typeof StrengthStandardInputCubeAge] | null;
+
+
+export const StrengthStandardInputCubeAge = {
+  NUMBER_1: 1,
+  NUMBER_7: 7,
+  NUMBER_28: 28,
+} as const;
 
 export interface StrengthStandardInput {
   testType: TestType;
@@ -336,12 +350,26 @@ export interface StrengthStandardInput {
   blockType?: string | null;
   /** @nullable */
   blockSize?: string | null;
+  /** @nullable */
+  cubeAge?: StrengthStandardInputCubeAge;
   /** @minLength 1 */
   bsStandard: string;
   /** @minimum 0 */
   requiredStrength: number;
   strengthUnit?: string;
 }
+
+/**
+ * @nullable
+ */
+export type StrengthStandardUpdateCubeAge = typeof StrengthStandardUpdateCubeAge[keyof typeof StrengthStandardUpdateCubeAge] | null;
+
+
+export const StrengthStandardUpdateCubeAge = {
+  NUMBER_1: 1,
+  NUMBER_7: 7,
+  NUMBER_28: 28,
+} as const;
 
 export interface StrengthStandardUpdate {
   testType?: TestType;
@@ -351,11 +379,69 @@ export interface StrengthStandardUpdate {
   blockType?: string | null;
   /** @nullable */
   blockSize?: string | null;
+  /** @nullable */
+  cubeAge?: StrengthStandardUpdateCubeAge;
   /** @minLength 1 */
   bsStandard?: string;
   /** @minimum 0 */
   requiredStrength?: number;
   strengthUnit?: string;
+}
+
+export interface WaterStandard {
+  id: number;
+  name: string;
+  phMin: number;
+  phMax: number;
+  chlorideMin: number;
+  chlorideMax: number;
+  tdsMin: number;
+  tdsMax: number;
+  so3Min: number;
+  so3Max: number;
+  isDefault: boolean;
+}
+
+export interface WaterStandardInput {
+  /** @minLength 1 */
+  name: string;
+  /** @minimum 0 */
+  phMin: number;
+  /** @minimum 0 */
+  phMax: number;
+  /** @minimum 0 */
+  chlorideMin: number;
+  /** @minimum 0 */
+  chlorideMax: number;
+  /** @minimum 0 */
+  tdsMin: number;
+  /** @minimum 0 */
+  tdsMax: number;
+  /** @minimum 0 */
+  so3Min: number;
+  /** @minimum 0 */
+  so3Max: number;
+}
+
+export interface WaterStandardUpdate {
+  /** @minLength 1 */
+  name?: string;
+  /** @minimum 0 */
+  phMin?: number;
+  /** @minimum 0 */
+  phMax?: number;
+  /** @minimum 0 */
+  chlorideMin?: number;
+  /** @minimum 0 */
+  chlorideMax?: number;
+  /** @minimum 0 */
+  tdsMin?: number;
+  /** @minimum 0 */
+  tdsMax?: number;
+  /** @minimum 0 */
+  so3Min?: number;
+  /** @minimum 0 */
+  so3Max?: number;
 }
 
 export type SieveStandardMeasurementType = typeof SieveStandardMeasurementType[keyof typeof SieveStandardMeasurementType];

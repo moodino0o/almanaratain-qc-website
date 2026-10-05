@@ -22,6 +22,7 @@ import {
   qcReportLayoutsTable,
   qcReportTemplatesTable,
   qcStrengthStandardsTable,
+  qcWaterStandardsTable,
 } from "@workspace/db";
 import {
   ApplyRecordAgeBackfillBody,
@@ -69,8 +70,12 @@ import {
   UpdateReportLayoutResponse,
   CreateStrengthStandardBody,
   CreateStrengthStandardResponse,
+  CreateWaterStandardBody,
+  CreateWaterStandardResponse,
   DeleteStrengthStandardParams,
+  DeleteWaterStandardParams,
   ListStrengthStandardsResponse,
+  ListWaterStandardsResponse,
   ListRecordsQueryParams,
   ListRecordsResponse,
   UpdateReferenceCategoryBody,
@@ -85,6 +90,9 @@ import {
   UpdateStrengthStandardBody,
   UpdateStrengthStandardParams,
   UpdateStrengthStandardResponse,
+  UpdateWaterStandardBody,
+  UpdateWaterStandardParams,
+  UpdateWaterStandardResponse,
   CreateSieveStandardBody,
   CreateSieveStandardResponse,
   DeleteSieveStandardParams,
@@ -119,8 +127,10 @@ import {
   pavingCorrectionFactorFromSize,
   evaluateSieveRecord,
   evaluateStrengthRecord,
+  PRECAST_AGE_STRENGTH_CRITERIA,
   type SieveStandardForEvaluation,
 } from "../lib/qc-strength";
+import { evaluateWaterRecord as evaluateWaterQcRecord } from "../lib/qc-water";
 import { normalizeMasonryMachineDetails } from "../lib/qc-machine-names";
 import {
   ageDetailKeyForTestType,
@@ -303,6 +313,7 @@ const REFERENCE_SEED = [
 
 let referenceSeedPromise: Promise<void> | null = null;
 let strengthSeedPromise: Promise<void> | null = null;
+let waterSeedPromise: Promise<void> | null = null;
 let masonryMachineNormalizationPromise: Promise<void> | null = null;
 
 const READY_MIX_DEFAULT_DESIGNS = [
@@ -634,14 +645,16 @@ const strengthStandardKey = (value: {
   material: string;
   blockType: string | null;
   blockSize: string | null;
+  cubeAge?: number | string | null;
 }) =>
   [
     value.testType,
     value.material,
     value.blockType ?? "",
     value.blockSize ?? "",
+    value.cubeAge ?? "",
   ]
-    .map((part) => part.trim().toLocaleLowerCase())
+    .map((part) => String(part).trim().toLocaleLowerCase())
     .join("|");
 
 async function ensureDefaultStrengthStandards() {
@@ -650,8 +663,12 @@ async function ensureDefaultStrengthStandards() {
       const existing = await db
         .select()
         .from(qcStrengthStandardsTable)
-        .where(inArray(qcStrengthStandardsTable.testType, ["Ready Mix", "Blocks"]));
-      const existingMaterials = new Set(existing.map((row) => row.material.trim().toLocaleLowerCase()));
+        .where(inArray(qcStrengthStandardsTable.testType, ["Ready Mix", "Blocks", "Precast"]));
+      const existingMaterials = new Set(
+        existing
+          .filter((row) => row.testType === "Ready Mix")
+          .map((row) => row.material.trim().toLocaleLowerCase()),
+      );
       let insertedDefault = false;
       const existingKeys = new Set(existing.map((row) => strengthStandardKey(row)));
       for (const material of READY_MIX_DEFAULT_DESIGNS) {
@@ -689,8 +706,46 @@ async function ensureDefaultStrengthStandards() {
         existingKeys.add(key);
         insertedDefault = true;
       }
-      if (insertedDefault || existing.length > 0) {
-        await refreshRecordEvaluations(["Ready Mix", "Blocks"]);
+      const [precastCategory] = await db
+        .select()
+        .from(qcReferenceCategoriesTable)
+        .where(eq(qcReferenceCategoriesTable.key, "precastTypes"));
+      const configuredPrecastTypes = precastCategory
+        ? await db
+            .select()
+            .from(qcReferenceItemsTable)
+            .where(eq(qcReferenceItemsTable.categoryId, precastCategory.id))
+            .orderBy(asc(qcReferenceItemsTable.value))
+        : [];
+      const precastTypes = configuredPrecastTypes.length
+        ? configuredPrecastTypes.map((item) => item.value)
+        : ["150 mm slab", "200", "250", "260"];
+      for (const material of precastTypes) {
+        for (const criterion of PRECAST_AGE_STRENGTH_CRITERIA) {
+          const key = strengthStandardKey({
+            testType: "Precast",
+            material,
+            blockType: null,
+            blockSize: null,
+            cubeAge: criterion.age,
+          });
+          if (existingKeys.has(key)) continue;
+          await db.insert(qcStrengthStandardsTable).values({
+            testType: "Precast",
+            material,
+            blockType: null,
+            blockSize: null,
+            cubeAge: String(criterion.age),
+            bsStandard: "Al Manaratain Precast",
+            requiredStrength: String(criterion.minimumStrength),
+            strengthUnit: "N/mm²",
+          });
+          existingKeys.add(key);
+          insertedDefault = true;
+        }
+      }
+      if (insertedDefault) {
+        await refreshRecordEvaluations(["Ready Mix", "Blocks", "Precast"]);
       }
     })().catch((error) => {
       strengthSeedPromise = null;
@@ -698,6 +753,43 @@ async function ensureDefaultStrengthStandards() {
     });
   }
   await strengthSeedPromise;
+  strengthSeedPromise = null;
+}
+
+async function ensureDefaultWaterStandard() {
+  if (!waterSeedPromise) {
+    waterSeedPromise = (async () => {
+      const standards = await db.select().from(qcWaterStandardsTable);
+      if (standards.some((standard) => standard.isDefault)) return;
+      if (standards[0]) {
+        await db
+          .update(qcWaterStandardsTable)
+          .set({ isDefault: true })
+          .where(eq(qcWaterStandardsTable.id, standards[0].id));
+        return;
+      }
+      await db.insert(qcWaterStandardsTable).values({
+        name: "Water Quality Limits",
+        phMin: "4.5",
+        phMax: "8",
+        chlorideMin: "0",
+        chlorideMax: "350",
+        tdsMin: "0",
+        tdsMax: "2000",
+        so3Min: "0",
+        so3Max: "1000",
+        isDefault: true,
+      });
+    })().catch((error) => {
+      waterSeedPromise = null;
+      throw error;
+    });
+  }
+  await waterSeedPromise;
+}
+
+function isSupportedPrecastAge(value: unknown): boolean {
+  return Number.isInteger(value) && [1, 7, 28].includes(value as number);
 }
 
 async function ensureDefaultShapeFactors() {
@@ -1233,10 +1325,11 @@ async function toRecordWithCreator(
 async function refreshRecordEvaluations(testTypes: string[]) {
   const uniqueTestTypes = [...new Set(testTypes)];
   if (!uniqueTestTypes.length) return;
-  const [strengthStandards, sieveStandards, shapeFactors, records] = await Promise.all([
+  const [strengthStandards, sieveStandards, shapeFactors, waterStandards, records] = await Promise.all([
     db.select().from(qcStrengthStandardsTable),
     loadSieveStandards(),
     db.select().from(qcShapeFactorsTable),
+    db.select().from(qcWaterStandardsTable),
     db
       .select()
       .from(qcRecordsTable)
@@ -1253,6 +1346,8 @@ async function refreshRecordEvaluations(testTypes: string[]) {
     const evaluated =
       record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve"
         ? evaluateSieveRecord(candidate, sieveStandards)
+        : record.testType === "Water"
+          ? evaluateWaterQcRecord(candidate, waterStandards)
         : evaluateStrengthRecord(candidate, strengthStandards, shapeFactors);
     if (evaluated.status === undefined) continue;
     await db
@@ -1326,10 +1421,40 @@ const toStrengthStandard = (row: typeof qcStrengthStandardsTable.$inferSelect) =
   material: row.material,
   blockType: row.blockType,
   blockSize: row.blockSize,
+  cubeAge: row.cubeAge === null ? null : Number(row.cubeAge),
   bsStandard: row.bsStandard,
   requiredStrength: Number(row.requiredStrength),
   strengthUnit: row.strengthUnit,
 });
+
+const toWaterStandard = (row: typeof qcWaterStandardsTable.$inferSelect) => ({
+  id: row.id,
+  name: row.name,
+  phMin: Number(row.phMin),
+  phMax: Number(row.phMax),
+  chlorideMin: Number(row.chlorideMin),
+  chlorideMax: Number(row.chlorideMax),
+  tdsMin: Number(row.tdsMin),
+  tdsMax: Number(row.tdsMax),
+  so3Min: Number(row.so3Min),
+  so3Max: Number(row.so3Max),
+  isDefault: row.isDefault,
+});
+
+const WATER_LIMIT_PAIRS = [
+  ["phMin", "phMax"],
+  ["chlorideMin", "chlorideMax"],
+  ["tdsMin", "tdsMax"],
+  ["so3Min", "so3Max"],
+] as const;
+
+function waterLimitsAreOrdered(values: Record<string, unknown>) {
+  return WATER_LIMIT_PAIRS.every(([minimumKey, maximumKey]) => {
+    const minimum = Number(values[minimumKey]);
+    const maximum = Number(values[maximumKey]);
+    return Number.isFinite(minimum) && Number.isFinite(maximum) && minimum <= maximum;
+  });
+}
 
 const toShapeFactor = (row: typeof qcShapeFactorsTable.$inferSelect) => ({
   id: row.id,
@@ -1674,6 +1799,16 @@ router.post("/strength-standards", requireAdministrator, async (req, res): Promi
     res.status(400).json({ error: body.error.message });
     return;
   }
+  if (
+    (body.data.testType === "Precast" &&
+      !isSupportedPrecastAge(body.data.cubeAge)) ||
+    (body.data.testType !== "Precast" && body.data.cubeAge != null)
+  ) {
+    res.status(400).json({
+      error: "Precast standards require an age of 1, 7, or 28 days; other strength standards cannot have a cube age.",
+    });
+    return;
+  }
 
   const [standard] = await db
     .insert(qcStrengthStandardsTable)
@@ -1682,6 +1817,7 @@ router.post("/strength-standards", requireAdministrator, async (req, res): Promi
       material: body.data.material.trim(),
       blockType: body.data.blockType?.trim() || null,
       blockSize: body.data.blockSize?.trim() || null,
+      cubeAge: body.data.testType === "Precast" ? String(body.data.cubeAge) : null,
       bsStandard: body.data.bsStandard.trim(),
       requiredStrength: String(body.data.requiredStrength),
       strengthUnit: body.data.strengthUnit?.trim() || "N/mm²",
@@ -1716,6 +1852,18 @@ router.patch("/strength-standards/:id", requireAdministrator, async (req, res): 
     res.status(404).json({ error: "Strength standard not found" });
     return;
   }
+  const nextTestType = body.data.testType ?? existing.testType;
+  const nextCubeAge =
+    body.data.cubeAge !== undefined ? body.data.cubeAge : existing.cubeAge;
+  if (
+    nextTestType === "Precast" &&
+    !isSupportedPrecastAge(Number(nextCubeAge))
+  ) {
+    res.status(400).json({
+      error: "Precast standards require a cube age of 1, 7, or 28 days.",
+    });
+    return;
+  }
 
   const updates = {
     ...(body.data.testType !== undefined ? { testType: body.data.testType } : {}),
@@ -1726,6 +1874,7 @@ router.patch("/strength-standards/:id", requireAdministrator, async (req, res): 
     ...(body.data.blockSize !== undefined
       ? { blockSize: body.data.blockSize?.trim() || null }
       : {}),
+    cubeAge: nextTestType === "Precast" ? String(nextCubeAge) : null,
     ...(body.data.bsStandard !== undefined ? { bsStandard: body.data.bsStandard.trim() } : {}),
     ...(body.data.requiredStrength !== undefined
       ? { requiredStrength: String(body.data.requiredStrength) }
@@ -2194,6 +2343,143 @@ function validateSieveLimits(
   return null;
 }
 
+router.get("/water-standards", async (_req, res): Promise<void> => {
+  await ensureDefaultWaterStandard();
+  const standards = await db
+    .select()
+    .from(qcWaterStandardsTable)
+    .orderBy(desc(qcWaterStandardsTable.isDefault), asc(qcWaterStandardsTable.name));
+  res.json(ListWaterStandardsResponse.parse(standards.map(toWaterStandard)));
+});
+
+router.post("/water-standards", requireAdministrator, async (req, res): Promise<void> => {
+  const body = CreateWaterStandardBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+  if (!waterLimitsAreOrdered(body.data)) {
+    res.status(400).json({ error: "Each Water minimum must be less than or equal to its maximum." });
+    return;
+  }
+  await ensureDefaultWaterStandard();
+  const [standard] = await db
+    .insert(qcWaterStandardsTable)
+    .values({
+      name: body.data.name.trim(),
+      phMin: String(body.data.phMin),
+      phMax: String(body.data.phMax),
+      chlorideMin: String(body.data.chlorideMin),
+      chlorideMax: String(body.data.chlorideMax),
+      tdsMin: String(body.data.tdsMin),
+      tdsMax: String(body.data.tdsMax),
+      so3Min: String(body.data.so3Min),
+      so3Max: String(body.data.so3Max),
+      isDefault: false,
+    })
+    .returning();
+  if (!standard) {
+    res.status(500).json({ error: "Unable to create Water limit profile" });
+    return;
+  }
+  res.status(201).json(CreateWaterStandardResponse.parse(toWaterStandard(standard)));
+});
+
+router.patch("/water-standards/:id", requireAdministrator, async (req, res): Promise<void> => {
+  const params = UpdateWaterStandardParams.safeParse(req.params);
+  const body = UpdateWaterStandardBody.safeParse(req.body);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+  const [existing] = await db
+    .select()
+    .from(qcWaterStandardsTable)
+    .where(eq(qcWaterStandardsTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Water limit profile not found" });
+    return;
+  }
+  const nextValues: Record<string, unknown> = {
+    phMin: body.data.phMin ?? Number(existing.phMin),
+    phMax: body.data.phMax ?? Number(existing.phMax),
+    chlorideMin: body.data.chlorideMin ?? Number(existing.chlorideMin),
+    chlorideMax: body.data.chlorideMax ?? Number(existing.chlorideMax),
+    tdsMin: body.data.tdsMin ?? Number(existing.tdsMin),
+    tdsMax: body.data.tdsMax ?? Number(existing.tdsMax),
+    so3Min: body.data.so3Min ?? Number(existing.so3Min),
+    so3Max: body.data.so3Max ?? Number(existing.so3Max),
+  };
+  if (!waterLimitsAreOrdered(nextValues)) {
+    res.status(400).json({ error: "Each Water minimum must be less than or equal to its maximum." });
+    return;
+  }
+  const [standard] = await db
+    .update(qcWaterStandardsTable)
+    .set({
+      ...(body.data.name !== undefined ? { name: body.data.name.trim() } : {}),
+      phMin: String(nextValues.phMin),
+      phMax: String(nextValues.phMax),
+      chlorideMin: String(nextValues.chlorideMin),
+      chlorideMax: String(nextValues.chlorideMax),
+      tdsMin: String(nextValues.tdsMin),
+      tdsMax: String(nextValues.tdsMax),
+      so3Min: String(nextValues.so3Min),
+      so3Max: String(nextValues.so3Max),
+    })
+    .where(eq(qcWaterStandardsTable.id, params.data.id))
+    .returning();
+  if (!standard) return;
+  await refreshRecordEvaluations(["Water"]);
+  res.json(UpdateWaterStandardResponse.parse(toWaterStandard(standard)));
+});
+
+router.delete("/water-standards/:id", requireAdministrator, async (req, res): Promise<void> => {
+  const params = DeleteWaterStandardParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const [existing] = await db
+    .select()
+    .from(qcWaterStandardsTable)
+    .where(eq(qcWaterStandardsTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Water limit profile not found" });
+    return;
+  }
+  if (existing.isDefault) {
+    res.status(409).json({ error: "The default Water limit profile cannot be deleted." });
+    return;
+  }
+  const waterRecords = await db
+    .select({ details: qcRecordsTable.details })
+    .from(qcRecordsTable)
+    .where(eq(qcRecordsTable.testType, "Water"));
+  const isLinked = waterRecords.some((record) => {
+    const details =
+      typeof record.details === "object" && record.details !== null
+        ? record.details as Record<string, unknown>
+        : {};
+    return Number(details.waterStandardId) === existing.id;
+  });
+  if (isLinked) {
+    res.status(409).json({
+      error: "This Water limit profile is linked to one or more records and cannot be deleted.",
+    });
+    return;
+  }
+  await db
+    .delete(qcWaterStandardsTable)
+    .where(eq(qcWaterStandardsTable.id, params.data.id));
+  await refreshRecordEvaluations(["Water"]);
+  res.sendStatus(204);
+});
+
 router.get("/sieve-standards", async (_req, res): Promise<void> => {
   res.json(ListSieveStandardsResponse.parse(await listSieveStandards()));
 });
@@ -2559,28 +2845,29 @@ router.post("/records", requireQcEditor, async (req, res): Promise<void> => {
     parsed.data.testType,
     dateCalculation.details,
   );
-  const [strengthStandards, sieveStandards, shapeFactors] = await Promise.all([
+  if (parsed.data.testType === "Water") await ensureDefaultWaterStandard();
+  const [strengthStandards, sieveStandards, shapeFactors, waterStandards] = await Promise.all([
     db.select().from(qcStrengthStandardsTable),
     loadSieveStandards(),
     db.select().from(qcShapeFactorsTable),
+    db.select().from(qcWaterStandardsTable),
   ]);
+  const candidate = {
+    testType: parsed.data.testType,
+    material: parsed.data.material,
+    location: parsed.data.location,
+    details: normalizedDetails,
+  };
   const evaluated =
     parsed.data.testType === "Sand Sieve" || parsed.data.testType === "Aggregate Sieve"
       ? evaluateSieveRecord(
-          {
-            testType: parsed.data.testType,
-            material: parsed.data.material,
-            details: normalizedDetails,
-          },
+          candidate,
           sieveStandards,
         )
-      : evaluateStrengthRecord(
-    {
-      testType: parsed.data.testType,
-      material: parsed.data.material,
-      location: parsed.data.location,
-      details: normalizedDetails,
-    },
+      : parsed.data.testType === "Water"
+        ? evaluateWaterQcRecord(candidate, waterStandards)
+        : evaluateStrengthRecord(
+          candidate,
           strengthStandards,
           shapeFactors,
         );
@@ -2873,15 +3160,19 @@ router.patch("/records/:id", requireQcEditor, async (req, res): Promise<void> =>
     ...candidateBase,
     details: dateCalculation.details,
   };
-  const [strengthStandards, sieveStandards, shapeFactors] = await Promise.all([
+  if (candidate.testType === "Water") await ensureDefaultWaterStandard();
+  const [strengthStandards, sieveStandards, shapeFactors, waterStandards] = await Promise.all([
     db.select().from(qcStrengthStandardsTable),
     loadSieveStandards(),
     db.select().from(qcShapeFactorsTable),
+    db.select().from(qcWaterStandardsTable),
   ]);
   const evaluated =
     candidate.testType === "Sand Sieve" || candidate.testType === "Aggregate Sieve"
       ? evaluateSieveRecord(candidate, sieveStandards)
-      : evaluateStrengthRecord(candidate, strengthStandards, shapeFactors);
+      : candidate.testType === "Water"
+        ? evaluateWaterQcRecord(candidate, waterStandards)
+        : evaluateStrengthRecord(candidate, strengthStandards, shapeFactors);
   const { sampleDate: submittedSampleDate, ...rest } = body.data;
   const updates = {
     ...rest,

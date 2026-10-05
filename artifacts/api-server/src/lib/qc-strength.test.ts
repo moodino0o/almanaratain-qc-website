@@ -19,12 +19,32 @@ const blockStandard = (
   material: "Concrete Block",
   blockType: "8'' Solid Block",
   blockSize: "400 x 200 x 200",
+  cubeAge: null,
   bsStandard: "BS EN 771-3",
   requiredStrength: "5",
   strengthUnit: "N/mm²",
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   updatedAt: new Date("2026-01-01T00:00:00.000Z"),
   ...overrides,
+});
+
+const precastStandard = (
+  id: number,
+  material: string,
+  cubeAge: number,
+  requiredStrength: number,
+): QcStrengthStandardRow => ({
+  id,
+  testType: "Precast",
+  material,
+  blockType: null,
+  blockSize: null,
+  cubeAge: String(cubeAge),
+  bsStandard: `Precast ${cubeAge}-day criterion`,
+  requiredStrength: String(requiredStrength),
+  strengthUnit: "N/mm²",
+  createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 });
 
 const blockShapeFactor = (
@@ -171,6 +191,41 @@ test("evaluates Precast age thresholds and calculates cube density from weight",
     ],
   );
   assert.equal(rows[0].density, "2000.00");
+});
+
+test("matches editable Precast age thresholds by product type", () => {
+  const standards = [
+    precastStandard(1, "150 mm slab", 28, 68),
+    precastStandard(2, "200", 28, 72),
+  ];
+  const specimenRows = [
+    { rowNo: 1, testAge: 28, length: 100, width: 100, height: 100, load: 700 },
+  ];
+  const lowerThreshold = evaluateStrengthRecord(
+    precastRecord(specimenRows, "g", "150 mm slab"),
+    standards,
+  );
+  const higherThreshold = evaluateStrengthRecord(
+    precastRecord(specimenRows, "g", "200"),
+    standards,
+  );
+
+  assert.equal(lowerThreshold.status, "Passed");
+  assert.equal(higherThreshold.status, "Failed");
+  assert.equal(
+    (
+      (lowerThreshold.details as Record<string, unknown>)
+        .precastAgeEvaluations as Array<Record<string, unknown>>
+    ).find((evaluation) => evaluation.age === 28)?.minimumStrength,
+    68,
+  );
+  assert.equal(
+    (
+      (higherThreshold.details as Record<string, unknown>)
+        .precastAgeEvaluations as Array<Record<string, unknown>>
+    ).find((evaluation) => evaluation.age === 28)?.minimumStrength,
+    72,
+  );
 });
 
 test("applies the same Precast age thresholds to other product types", () => {

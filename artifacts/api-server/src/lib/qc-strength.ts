@@ -66,7 +66,7 @@ const AUTOMATED_TEST_TYPES = new Set([
   "Precast",
 ]);
 const DEFAULT_STRENGTH_UNIT = "N/mm²";
-const PRECAST_AGE_STRENGTH_CRITERIA = [
+export const PRECAST_AGE_STRENGTH_CRITERIA = [
   {
     age: 1,
     minimumStrength: 30,
@@ -505,7 +505,10 @@ function calculateRow(
   };
 }
 
-function evaluatePrecastStrengthRecord(record: RecordForStrength) {
+function evaluatePrecastStrengthRecord(
+  record: RecordForStrength,
+  standards: QcStrengthStandardRow[],
+) {
   const sourceRows = Array.isArray(record.details.testRows)
     ? record.details.testRows
     : [];
@@ -514,7 +517,18 @@ function evaluatePrecastStrengthRecord(record: RecordForStrength) {
   const calculatedRows = sourceRows.map((row) =>
     calculateRow(row, undefined, undefined, false, false, true, precastWeightIsGrams),
   );
+  const matchingPrecastStandards = standards.filter(
+    (standard) =>
+      standard.testType === "Precast" &&
+      standard.material.trim().toLocaleLowerCase() ===
+        record.material.trim().toLocaleLowerCase(),
+  );
   const ageEvaluations = PRECAST_AGE_STRENGTH_CRITERIA.map((criterion) => {
+    const ageStandard = matchingPrecastStandards.find(
+      (standard) => Number(standard.cubeAge) === criterion.age,
+    );
+    const minimumStrength =
+      numericValue(ageStandard?.requiredStrength) ?? criterion.minimumStrength;
     const ageRows = calculatedRows.filter((row) => {
       const values = typeof row.row === "object" && row.row !== null
         ? row.row as Record<string, unknown>
@@ -537,17 +551,22 @@ function evaluatePrecastStrengthRecord(record: RecordForStrength) {
     const outcome =
       !complete || averageStrength === null
         ? "Pending"
-        : averageStrength >= criterion.minimumStrength
+        : averageStrength >= minimumStrength
           ? criterion.passOutcome
           : criterion.failOutcome;
     return {
       age: criterion.age,
-      minimumStrength: criterion.minimumStrength,
+      minimumStrength,
+      standardId: ageStandard?.id ?? null,
+      bsStandard: ageStandard?.bsStandard ?? null,
       averageStrength,
       outcome,
     };
   });
   const finalAgeEvaluation = ageEvaluations.find((evaluation) => evaluation.age === 28);
+  const finalAgeStandard = matchingPrecastStandards.find(
+    (standard) => Number(standard.cubeAge) === 28,
+  );
   const finalAgeRows = calculatedRows.filter((row) => {
     const values = typeof row.row === "object" && row.row !== null
       ? row.row as Record<string, unknown>
@@ -569,12 +588,14 @@ function evaluatePrecastStrengthRecord(record: RecordForStrength) {
     status === "Review"
       ? "Complete 28-day Precast cube results are required for final approval."
       : status === "Failed"
-        ? "The average 28-day Precast strength is below 65 N/mm²."
+        ? `The average 28-day Precast strength is below ${finalAgeEvaluation?.minimumStrength ?? 65} N/mm².`
         : null;
   const strengthEvaluation: StrengthEvaluation = {
     status,
-    bsStandard: "Al Manaratain Precast age-based strength criteria",
-    requiredStrength: 65,
+    bsStandard:
+      finalAgeStandard?.bsStandard ??
+      "Al Manaratain Precast age-based strength criteria",
+    requiredStrength: finalAgeEvaluation?.minimumStrength ?? 65,
     averageStrength: finalAgeEvaluation?.averageStrength ?? null,
     minimumStrength: finalAgeStrengths.length
       ? Math.min(...finalAgeStrengths)
@@ -582,7 +603,7 @@ function evaluatePrecastStrengthRecord(record: RecordForStrength) {
     maximumStrength: finalAgeStrengths.length
       ? Math.max(...finalAgeStrengths)
       : null,
-    strengthUnit: DEFAULT_STRENGTH_UNIT,
+    strengthUnit: finalAgeStandard?.strengthUnit ?? DEFAULT_STRENGTH_UNIT,
     reason,
   };
   const details = {
@@ -609,7 +630,7 @@ export function evaluateStrengthRecord(
   }
 
   if (record.testType === "Precast") {
-    return evaluatePrecastStrengthRecord(record);
+    return evaluatePrecastStrengthRecord(record, standards);
   }
 
   const normalizedDetails: Record<string, unknown> =

@@ -79,7 +79,10 @@ import type {
   StrengthStandardInput,
   StrengthStandardUpdate,
   UploadUrlRequest,
-  UploadUrlResponse
+  UploadUrlResponse,
+  WaterStandard,
+  WaterStandardInput,
+  WaterStandardUpdate
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -2943,6 +2946,297 @@ export const useDeleteSieveStandard = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteSieveStandardMutationOptions(options));
+    }
+
+export const getListWaterStandardsUrl = () => {
+
+
+
+
+  return `/api/water-standards`
+}
+
+/**
+ * @summary List configurable Water limits
+ */
+export const listWaterStandards = async ( options?: Parameters<typeof customFetch>[1]): Promise<WaterStandard[]> => {
+
+  return customFetch<WaterStandard[]>(getListWaterStandardsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWaterStandardsQueryKey = () => {
+    return [
+    `/api/water-standards`
+    ] as const;
+    }
+
+
+export const getListWaterStandardsQueryOptions = <TData = Awaited<ReturnType<typeof listWaterStandards>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWaterStandards>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWaterStandardsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWaterStandards>>> = ({ signal }) => listWaterStandards({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWaterStandards>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWaterStandardsQueryResult = NonNullable<Awaited<ReturnType<typeof listWaterStandards>>>
+export type ListWaterStandardsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List configurable Water limits
+ */
+
+export function useListWaterStandards<TData = Awaited<ReturnType<typeof listWaterStandards>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWaterStandards>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWaterStandardsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateWaterStandardUrl = () => {
+
+
+
+
+  return `/api/water-standards`
+}
+
+/**
+ * @summary Create a Water limit profile
+ */
+export const createWaterStandard = async (waterStandardInput: WaterStandardInput, options?: Parameters<typeof customFetch>[1]): Promise<WaterStandard> => {
+
+  return customFetch<WaterStandard>(getCreateWaterStandardUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(waterStandardInput)
+  }
+);}
+
+
+
+
+
+export const getCreateWaterStandardMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWaterStandard>>, TError,{data: BodyType<WaterStandardInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createWaterStandard>>, TError,{data: BodyType<WaterStandardInput>}, TContext> => {
+
+const mutationKey = ['createWaterStandard'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createWaterStandard>>, {data: BodyType<WaterStandardInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createWaterStandard(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateWaterStandardMutationResult = NonNullable<Awaited<ReturnType<typeof createWaterStandard>>>
+    export type CreateWaterStandardMutationBody = BodyType<WaterStandardInput>
+    export type CreateWaterStandardMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a Water limit profile
+ */
+export const useCreateWaterStandard = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWaterStandard>>, TError,{data: BodyType<WaterStandardInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createWaterStandard>>,
+        TError,
+        {data: BodyType<WaterStandardInput>},
+        TContext
+      > => {
+      return useMutation(getCreateWaterStandardMutationOptions(options));
+    }
+
+export const getUpdateWaterStandardUrl = (id: number,) => {
+
+
+
+
+  return `/api/water-standards/${id}`
+}
+
+/**
+ * @summary Update a Water limit profile
+ */
+export const updateWaterStandard = async (id: number,
+    waterStandardUpdate: WaterStandardUpdate, options?: Parameters<typeof customFetch>[1]): Promise<WaterStandard> => {
+
+  return customFetch<WaterStandard>(getUpdateWaterStandardUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(waterStandardUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateWaterStandardMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWaterStandard>>, TError,{id: number;data: BodyType<WaterStandardUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateWaterStandard>>, TError,{id: number;data: BodyType<WaterStandardUpdate>}, TContext> => {
+
+const mutationKey = ['updateWaterStandard'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateWaterStandard>>, {id: number;data: BodyType<WaterStandardUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateWaterStandard(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateWaterStandardMutationResult = NonNullable<Awaited<ReturnType<typeof updateWaterStandard>>>
+    export type UpdateWaterStandardMutationBody = BodyType<WaterStandardUpdate>
+    export type UpdateWaterStandardMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update a Water limit profile
+ */
+export const useUpdateWaterStandard = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWaterStandard>>, TError,{id: number;data: BodyType<WaterStandardUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateWaterStandard>>,
+        TError,
+        {id: number;data: BodyType<WaterStandardUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateWaterStandardMutationOptions(options));
+    }
+
+export const getDeleteWaterStandardUrl = (id: number,) => {
+
+
+
+
+  return `/api/water-standards/${id}`
+}
+
+/**
+ * @summary Delete a Water limit profile
+ */
+export const deleteWaterStandard = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteWaterStandardUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteWaterStandardMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWaterStandard>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteWaterStandard>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteWaterStandard'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteWaterStandard>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteWaterStandard(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteWaterStandardMutationResult = NonNullable<Awaited<ReturnType<typeof deleteWaterStandard>>>
+
+    export type DeleteWaterStandardMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a Water limit profile
+ */
+export const useDeleteWaterStandard = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWaterStandard>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteWaterStandard>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteWaterStandardMutationOptions(options));
     }
 
 export const getListShapeFactorsUrl = () => {
