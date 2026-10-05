@@ -586,7 +586,7 @@ export default function Records() {
                     </TableCell>
                     <TableCell className="whitespace-normal break-words px-1 py-1">{record.location}</TableCell>
                     {!hideCustomerAndSiteLocation && (
-                      <TableCell className="whitespace-normal break-words px-1 py-1">
+                      <TableCell className="whitespace-normal break-words px-1 py-1 text-[12px]">
                         {getRecordDetail(record.details, ["customerName", "customer"])}
                       </TableCell>
                     )}
@@ -626,7 +626,7 @@ export default function Records() {
                         </TableCell>
                       </>
                     ) : (
-                      <TableCell className="whitespace-normal break-words px-1 py-1 tabular-nums">
+                      <TableCell className="whitespace-normal break-words px-1 py-1 tabular-nums text-[12px]">
                         {formatRegisterDate(record.sampleDate)}
                       </TableCell>
                     )}

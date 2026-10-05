@@ -304,13 +304,13 @@
 
 .qc-table-readable thead th {
   color: #000;
-  font-size: 0.75rem;
+  font-size: 12px;
   line-height: 1.25;
 }
 
 .qc-table-readable tbody td {
   color: #000;
-  font-size: 0.8125rem;
+  font-size: 12px;
   line-height: 1.35;
 }
 
@@ -324,7 +324,7 @@
 }
 
 .qc-table-readable thead th.masonry-strength-header {
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .qc-table-readable tbody td.masonry-strength-value {
@@ -339,11 +339,11 @@
 
 @media (min-width: 640px) {
   .qc-table-readable thead th {
-    font-size: 0.875rem;
+    font-size: 12px;
   }
 
   .qc-table-readable tbody td {
-    font-size: 0.875rem;
+    font-size: 12px;
   }
 }
 
