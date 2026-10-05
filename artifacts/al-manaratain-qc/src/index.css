@@ -301,6 +301,23 @@
   min-width: 960px;
 }
 
+.qc-register-table-ready-mix thead th {
+  color: #000;
+  font-size: 0.75rem;
+  line-height: 1.25;
+}
+
+.qc-register-table-ready-mix tbody td {
+  color: #000;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+}
+
+.dark .qc-register-table-ready-mix thead th,
+.dark .qc-register-table-ready-mix tbody td {
+  color: #fff;
+}
+
 @container (min-width: 960px) {
   .qc-register-table {
     min-width: 0;

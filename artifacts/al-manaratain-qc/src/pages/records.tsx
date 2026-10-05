@@ -279,7 +279,7 @@ export default function Records() {
       case RecordStatus.Passed: return <Badge variant="success" className="whitespace-normal px-1.5 py-0.5 text-[10px] leading-tight"><CheckCircle2 className="mr-1 h-3 w-3 shrink-0" /> Passed</Badge>;
       case RecordStatus.Review: return <Badge variant="warning" className="whitespace-normal px-1.5 py-0.5 text-[10px] leading-tight"><AlertTriangle className="mr-1 h-3 w-3 shrink-0" /> Review</Badge>;
       case RecordStatus.Failed: return <Badge variant="destructive" className="whitespace-normal px-1.5 py-0.5 text-[10px] leading-tight"><XCircle className="mr-1 h-3 w-3 shrink-0" /> Failed</Badge>;
-      case "Waiting for results": return <Badge variant="outline" className="whitespace-normal border-lime-300 bg-lime-100 px-1.5 py-0.5 text-[10px] leading-tight text-lime-800 dark:border-lime-700 dark:bg-lime-950 dark:text-lime-200"><Clock3 className="mr-1 h-3 w-3 shrink-0" /> Waiting for results</Badge>;
+      case "Waiting for results": return <Badge variant="outline" className="whitespace-normal border-lime-300 bg-lime-100 px-1.5 py-0.5 text-[10px] leading-tight text-lime-800 dark:border-lime-700 dark:bg-lime-950 dark:text-lime-200"><Clock3 className="mr-1 h-3 w-3 shrink-0" /> Waiting</Badge>;
       default: return <Badge variant="secondary" className="whitespace-normal px-1.5 py-0.5 text-[10px] leading-tight">{status}</Badge>;
     }
   };
@@ -311,12 +311,12 @@ export default function Records() {
         </div>
          {canEditQc && (
            <div className="flex flex-wrap gap-2">
-                <Link data-testid="link-edit-all-records" href={`/records/edit-all?section=${section}`} className="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-5 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground">
-               <TableProperties className="mr-2 h-4 w-4" />
+                 <Link data-testid="link-edit-all-records" href={`/records/edit-all?section=${section}`} className={`inline-flex items-center justify-center whitespace-nowrap rounded-md border border-input bg-background font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground ${isReadyMixSection ? "h-8 px-2.5 text-xs sm:h-9 sm:px-4 sm:text-sm" : "h-10 px-5 text-sm"}`}>
+                <TableProperties className={isReadyMixSection ? "mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" : "mr-2 h-4 w-4"} />
                Edit All Records
              </Link>
-              <Link data-testid="link-new-record" href={`/records/new?section=${section}`} className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary text-primary-foreground shadow hover:bg-primary/90 h-10 px-6">
-               <Plus className="w-4 h-4 mr-2" />
+               <Link data-testid="link-new-record" href={`/records/new?section=${section}`} className={`inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary text-primary-foreground shadow hover:bg-primary/90 ${isReadyMixSection ? "h-8 px-2.5 text-xs sm:h-9 sm:px-4 sm:text-sm" : "h-10 px-6 text-sm"}`}>
+                <Plus className={isReadyMixSection ? "mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" : "mr-2 h-4 w-4"} />
                New Record
              </Link>
            </div>
@@ -342,7 +342,11 @@ export default function Records() {
                   href={item.href}
                   data-testid={`register-section-${item.id}`}
                   aria-current={section === item.id ? "page" : undefined}
-                  className={`inline-flex min-h-10 items-center justify-center rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                  className={`inline-flex items-center justify-center rounded-md border font-medium transition-colors ${
+                    isReadyMixSection
+                      ? "min-h-8 px-2 py-1 text-xs sm:min-h-10 sm:px-3 sm:py-2 sm:text-sm"
+                      : "min-h-10 px-3 py-2 text-sm"
+                  } ${
                     section === item.id
                       ? "border-primary bg-primary text-primary-foreground shadow-sm"
                       : "border-input bg-background hover:bg-accent hover:text-accent-foreground"
@@ -479,7 +483,7 @@ export default function Records() {
             </div>
           ) : (
           <div className="qc-register-table-container w-full min-w-0">
-          <Table className="qc-register-table w-full table-fixed text-[9px] leading-tight sm:text-[10px]">
+          <Table className={`qc-register-table w-full table-fixed text-[9px] leading-tight sm:text-[10px] ${isReadyMixSection ? "qc-register-table-ready-mix" : ""}`}>
             <TableHeader className="sticky top-0 bg-card z-10 shadow-sm">
               <TableRow>
                 <TableHead className={`${columnWidths.record} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>
@@ -575,13 +579,13 @@ export default function Records() {
                           ? getRecordDetail(record.details, ["referenceNumber", "referenceNo", "reference"])
                           : record.recordNo}
                       </div>
-                      <div className="mt-0.5 break-words text-[8px] font-normal leading-tight text-muted-foreground">
+                      <div className={`mt-0.5 break-words font-normal leading-tight ${isReadyMixSection ? "text-[10px] text-black dark:text-white" : "text-[8px] text-muted-foreground"}`}>
                         Added by {record.createdBy?.trim() || "Not recorded"} ·{" "}
                         {formatDateTime(record.createdAt)}
                       </div>
                     </TableCell>
                     <TableCell className="whitespace-normal break-words px-1 py-1">
-                      <span className="inline-block max-w-full break-words rounded-sm bg-muted px-1 py-0.5 text-[10px] font-medium leading-tight">
+                      <span className={`inline-block max-w-full break-words rounded-sm bg-muted px-1 py-0.5 font-medium leading-tight ${isReadyMixSection ? "text-xs" : "text-[10px]"}`}>
                         {record.testType}
                       </span>
                     </TableCell>
@@ -641,21 +645,21 @@ export default function Records() {
                     <TableCell className="px-1 py-1">{getStatusBadge(record.status)}</TableCell>
                     {isReadyMixSection && (
                       <TableCell className="px-1 py-1">
-                        <div className="space-y-1 text-[9px] leading-tight tabular-nums">
+                        <div className="space-y-1 text-xs leading-snug tabular-nums sm:text-sm">
                           <div className="flex justify-between gap-1">
-                            <span className="text-muted-foreground">2–5 days</span>
+                            <span className="text-black dark:text-white">2–5 days</span>
                             <span className="font-medium">
                               {readyMixAgeAverages.get(record.id)?.twoToFiveDays?.toFixed(2) ?? "—"}
                             </span>
                           </div>
                           <div className="flex justify-between gap-1">
-                            <span className="text-muted-foreground">6–8 days</span>
+                            <span className="text-black dark:text-white">6–8 days</span>
                             <span className="font-medium">
                               {readyMixAgeAverages.get(record.id)?.sixToEightDays?.toFixed(2) ?? "—"}
                             </span>
                           </div>
                           <div className="flex justify-between gap-1">
-                            <span className="text-muted-foreground">28–29 days</span>
+                            <span className="text-black dark:text-white">28–29 days</span>
                             <span className="font-medium">
                               {readyMixAgeAverages.get(record.id)?.twentyEightToTwentyNineDays?.toFixed(2) ?? "—"}
                             </span>
@@ -680,15 +684,15 @@ export default function Records() {
                       <div className="flex flex-wrap justify-end gap-0.5">
                         <Link
                           href={`/records/${record.id}`}
-                          className="inline-flex h-6 items-center justify-center whitespace-nowrap rounded-md bg-secondary px-1 text-[9px] font-medium text-secondary-foreground shadow-sm transition-colors hover:bg-secondary/80 sm:text-[10px]"
+                          className={`inline-flex items-center justify-center whitespace-nowrap rounded-md bg-secondary font-medium text-secondary-foreground shadow-sm transition-colors hover:bg-secondary/80 ${isReadyMixSection ? "h-5 px-0.5 text-[8px] sm:h-6 sm:px-1 sm:text-[10px]" : "h-6 px-1 text-[9px] sm:text-[10px]"}`}
                         >
                           View
                         </Link>
                         <Link
                           href={`/reports/${record.id}`}
-                          className="inline-flex h-6 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-1 text-[9px] font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground sm:text-[10px]"
+                          className={`inline-flex items-center justify-center whitespace-nowrap rounded-md border border-input bg-background font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground ${isReadyMixSection ? "h-5 px-0.5 text-[8px] sm:h-6 sm:px-1 sm:text-[10px]" : "h-6 px-1 text-[9px] sm:text-[10px]"}`}
                         >
-                          <Printer className="mr-1 h-3 w-3 shrink-0" />
+                          <Printer className={`mr-1 shrink-0 ${isReadyMixSection ? "h-2.5 w-2.5 sm:h-3 sm:w-3" : "h-3 w-3"}`} />
                           Print
                         </Link>
                       </div>

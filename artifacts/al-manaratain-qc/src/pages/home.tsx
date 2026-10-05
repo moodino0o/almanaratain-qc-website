@@ -113,7 +113,7 @@ function StatusBadge({ status }: { status: string }) {
           variant="outline"
           className="border-lime-300 bg-lime-100 text-lime-800 dark:border-lime-700 dark:bg-lime-950 dark:text-lime-200"
         >
-          <Clock3 className="mr-1 h-3 w-3" /> Waiting for results
+          <Clock3 className="mr-1 h-3 w-3" /> Waiting
         </Badge>
       );
     case "Failed":
