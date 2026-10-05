@@ -335,7 +335,7 @@ export default function Records() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <nav aria-label="QC register sections" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-7">
+            <nav aria-label="QC register sections" className="grid grid-cols-4 gap-2 sm:grid-cols-3 lg:grid-cols-7">
               {REGISTER_SECTIONS.map((item) => (
                 <Link
                   key={item.id}
@@ -393,7 +393,7 @@ export default function Records() {
                       <TableCell className="whitespace-normal break-words px-2 py-2">{record.remarks?.trim() || "—"}</TableCell>
                       <TableCell className="px-2 py-2">{getWaterResultBadge(record.status)}</TableCell>
                       <TableCell className="px-2 py-2 text-right">
-                        <div className="flex justify-end gap-1">
+                         <div className="flex justify-center gap-1">
                            <Link href={`/records/${record.id}`} className="inline-flex h-5 items-center rounded-md bg-secondary px-1 text-[9px] font-medium text-secondary-foreground sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs">View</Link>
                            <Link href={`/reports/${record.id}`} className="inline-flex h-5 items-center rounded-md border px-1 text-[9px] font-medium sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs">Print</Link>
                         </div>
@@ -430,7 +430,7 @@ export default function Records() {
                       <TableCell className="px-2 py-2 text-right tabular-nums">{precastAverageStrength(record, 7, ["averageStrength7Days", "avgStrength7Days", "day7AverageStrength"])}</TableCell>
                       <TableCell className="px-2 py-2 text-right tabular-nums">{precastAverageStrength(record, 28, ["averageStrength28Days", "avgStrength28Days", "day28AverageStrength"])}</TableCell>
                       <TableCell className="px-2 py-2 text-right">
-                        <div className="flex justify-end gap-1">
+                         <div className="flex justify-center gap-1">
                            <Link href={`/records/${record.id}`} className="inline-flex h-5 items-center rounded-md bg-secondary px-1 text-[9px] font-medium text-secondary-foreground sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs">View</Link>
                            <Link href={`/reports/${record.id}`} className="inline-flex h-5 items-center rounded-md border px-1 text-[9px] font-medium sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs">Print</Link>
                         </div>
@@ -467,7 +467,7 @@ export default function Records() {
                       <TableCell className="px-2 py-2 text-right tabular-nums">{detailValue(record, ["minimumStrength", "minStrength"])}</TableCell>
                       <TableCell className="px-2 py-2 text-right tabular-nums">{detailValue(record, ["maximumStrength", "maxStrength"])}</TableCell>
                       <TableCell className="px-2 py-2 text-right">
-                        <div className="flex justify-end gap-1">
+                         <div className="flex justify-center gap-1">
                            <Link href={`/records/${record.id}`} className="inline-flex h-5 items-center rounded-md bg-secondary px-1 text-[9px] font-medium text-secondary-foreground sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs">View</Link>
                            <Link href={`/reports/${record.id}`} className="inline-flex h-5 items-center rounded-md border px-1 text-[9px] font-medium sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs">Print</Link>
                         </div>
@@ -642,19 +642,19 @@ export default function Records() {
                     {isReadyMixSection && (
                       <TableCell className="px-1 py-1">
                         <div className="space-y-1 text-xs leading-snug tabular-nums sm:text-sm">
-                          <div className="flex justify-between gap-1">
+                          <div className="flex flex-col items-center gap-0.5 text-center">
                             <span className="text-black dark:text-white">2–5 days</span>
                             <span className="font-medium">
                               {readyMixAgeAverages.get(record.id)?.twoToFiveDays?.toFixed(2) ?? "—"}
                             </span>
                           </div>
-                          <div className="flex justify-between gap-1">
+                          <div className="flex flex-col items-center gap-0.5 text-center">
                             <span className="text-black dark:text-white">6–8 days</span>
                             <span className="font-medium">
                               {readyMixAgeAverages.get(record.id)?.sixToEightDays?.toFixed(2) ?? "—"}
                             </span>
                           </div>
-                          <div className="flex justify-between gap-1">
+                          <div className="flex flex-col items-center gap-0.5 text-center">
                             <span className="text-black dark:text-white">28–29 days</span>
                             <span className="font-medium">
                               {readyMixAgeAverages.get(record.id)?.twentyEightToTwentyNineDays?.toFixed(2) ?? "—"}
@@ -677,7 +677,7 @@ export default function Records() {
                       </>
                     )}
                     <TableCell className="px-1 py-1 text-right">
-                      <div className="flex flex-wrap justify-end gap-0.5">
+                       <div className="flex flex-wrap justify-center gap-0.5">
                         <Link
                           href={`/records/${record.id}`}
                           className="inline-flex h-5 items-center justify-center whitespace-nowrap rounded-md bg-secondary px-1 text-[9px] font-medium text-secondary-foreground shadow-sm transition-colors hover:bg-secondary/80 sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs"

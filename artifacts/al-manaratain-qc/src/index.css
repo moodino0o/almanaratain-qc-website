@@ -317,6 +317,11 @@
   color: #000;
 }
 
+.qc-table-readable thead th,
+.qc-table-readable tbody td {
+  text-align: center;
+}
+
 .dark .qc-table-readable thead th,
 .dark .qc-table-readable tbody td,
 .dark .qc-table-readable tbody td .text-muted-foreground {
