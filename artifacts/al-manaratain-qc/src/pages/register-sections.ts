@@ -4,9 +4,10 @@ export type RegisterSection =
   | "all"
   | "readymix"
   | "masonry"
-  | "aggregate"
   | "precast"
-  | "kerbstone";
+  | "kerbstone"
+  | "aggregate"
+  | "water";
 
 export const REGISTER_SECTIONS: Array<{
   id: RegisterSection;
@@ -17,14 +18,14 @@ export const REGISTER_SECTIONS: Array<{
 }> = [
   {
     id: "all",
-    label: "All Results",
+    label: "All Tests",
     href: "/records",
     testTypes: Object.values(TestType),
     defaultTestType: TestType.Ready_Mix,
   },
   {
     id: "readymix",
-    label: "ReadyMix",
+    label: "Ready Mix",
     href: "/records/readymix",
     testTypes: [TestType.Ready_Mix],
     defaultTestType: TestType.Ready_Mix,
@@ -35,6 +36,20 @@ export const REGISTER_SECTIONS: Array<{
     href: "/records/masonry",
     testTypes: [TestType.Blocks, TestType.Paving_Blocks],
     defaultTestType: TestType.Blocks,
+  },
+  {
+    id: "precast",
+    label: "Precast",
+    href: "/records/precast",
+    testTypes: [TestType.Precast],
+    defaultTestType: TestType.Precast,
+  },
+  {
+    id: "kerbstone",
+    label: "Kerbstone",
+    href: "/records/kerb-stone",
+    testTypes: [TestType.Kerb_Stone],
+    defaultTestType: TestType.Kerb_Stone,
   },
   {
     id: "aggregate",
@@ -48,18 +63,11 @@ export const REGISTER_SECTIONS: Array<{
     defaultTestType: TestType.Sand_Sieve,
   },
   {
-    id: "precast",
-    label: "Precast",
-    href: "/records/precast",
-    testTypes: [TestType.Precast],
-    defaultTestType: TestType.Precast,
-  },
-  {
-    id: "kerbstone",
-    label: "Kerb Stone",
-    href: "/records/kerb-stone",
-    testTypes: [TestType.Kerb_Stone],
-    defaultTestType: TestType.Kerb_Stone,
+    id: "water",
+    label: "Water",
+    href: "/records/water",
+    testTypes: [TestType.Water],
+    defaultTestType: TestType.Water,
   },
 ];
 
