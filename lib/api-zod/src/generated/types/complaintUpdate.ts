@@ -20,6 +20,8 @@ export interface ComplaintUpdate {
   details?: string;
   solution?: string;
   recommendation?: string;
+  qcReviewerName?: string | null;
+  reviewDate?: Date | null;
   status?: ComplaintUpdateStatus;
   picturePaths?: ComplaintPicture[];
 }

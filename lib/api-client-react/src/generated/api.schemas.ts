@@ -159,6 +159,8 @@ export interface Complaint {
   details: string;
   solution: string;
   recommendation: string;
+  qcReviewerName: string | null;
+  reviewDate: string | null;
   status: ComplaintStatus;
   picturePaths: ComplaintPicture[];
   createdAt: string;
@@ -177,6 +179,8 @@ export interface ComplaintInput {
   details: string;
   solution?: string;
   recommendation?: string;
+  qcReviewerName?: string | null;
+  reviewDate?: string | null;
   picturePaths?: ComplaintPicture[];
 }
 
@@ -200,6 +204,8 @@ export interface ComplaintUpdate {
   details?: string;
   solution?: string;
   recommendation?: string;
+  qcReviewerName?: string | null;
+  reviewDate?: string | null;
   status?: ComplaintUpdateStatus;
   picturePaths?: ComplaintPicture[];
 }

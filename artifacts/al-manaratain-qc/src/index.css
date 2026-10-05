@@ -136,6 +136,7 @@
 .complaint-register-table td {
   padding: 0.55rem 0.45rem;
   vertical-align: top;
+  text-align: center;
 }
 
 .complaint-register-table th {
@@ -262,7 +263,7 @@
 .complaint-print-table td {
   border: 1px solid hsl(210 15% 32%);
   padding: 0.65rem;
-  text-align: left;
+  text-align: center;
   vertical-align: top;
 }
 

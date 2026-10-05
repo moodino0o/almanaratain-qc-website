@@ -1344,6 +1344,8 @@ export const ListComplaintsResponseItem = zod.object({
   "details": zod.string(),
   "solution": zod.string(),
   "recommendation": zod.string(),
+  "qcReviewerName": zod.string().nullable(),
+  "reviewDate": zod.coerce.date().nullable(),
   "status": zod.enum(['open', 'complete']),
   "picturePaths": zod.array(zod.object({
   "objectPath": zod.string().min(1),
@@ -1379,6 +1381,8 @@ export const CreateComplaintBody = zod.object({
   "details": zod.string().min(1),
   "solution": zod.string().default(createComplaintBodySolutionDefault),
   "recommendation": zod.string().default(createComplaintBodyRecommendationDefault),
+  "qcReviewerName": zod.string().nullish(),
+  "reviewDate": zod.coerce.date().nullish(),
   "picturePaths": zod.array(zod.object({
   "objectPath": zod.string().min(1),
   "originalName": zod.string().min(1),
@@ -1403,6 +1407,8 @@ export const CreateComplaintResponse = zod.object({
   "details": zod.string(),
   "solution": zod.string(),
   "recommendation": zod.string(),
+  "qcReviewerName": zod.string().nullable(),
+  "reviewDate": zod.coerce.date().nullable(),
   "status": zod.enum(['open', 'complete']),
   "picturePaths": zod.array(zod.object({
   "objectPath": zod.string().min(1),
@@ -1438,6 +1444,8 @@ export const GetComplaintResponse = zod.object({
   "details": zod.string(),
   "solution": zod.string(),
   "recommendation": zod.string(),
+  "qcReviewerName": zod.string().nullable(),
+  "reviewDate": zod.coerce.date().nullable(),
   "status": zod.enum(['open', 'complete']),
   "picturePaths": zod.array(zod.object({
   "objectPath": zod.string().min(1),
@@ -1475,6 +1483,8 @@ export const UpdateComplaintBody = zod.object({
   "details": zod.string().min(1).optional(),
   "solution": zod.string().optional(),
   "recommendation": zod.string().optional(),
+  "qcReviewerName": zod.string().nullish(),
+  "reviewDate": zod.coerce.date().nullish(),
   "status": zod.enum(['open', 'complete']).optional(),
   "picturePaths": zod.array(zod.object({
   "objectPath": zod.string().min(1),
@@ -1500,6 +1510,8 @@ export const UpdateComplaintResponse = zod.object({
   "details": zod.string(),
   "solution": zod.string(),
   "recommendation": zod.string(),
+  "qcReviewerName": zod.string().nullable(),
+  "reviewDate": zod.coerce.date().nullable(),
   "status": zod.enum(['open', 'complete']),
   "picturePaths": zod.array(zod.object({
   "objectPath": zod.string().min(1),

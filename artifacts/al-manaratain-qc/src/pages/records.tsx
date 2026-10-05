@@ -322,7 +322,6 @@ export default function Records() {
            </div>
          )}
       </div>
-
       <Card className="flex flex-col border-t-4 border-t-primary md:min-h-0 md:flex-1">
         <CardHeader className="pb-4 shrink-0">
           <div className="flex flex-col gap-4">
@@ -640,22 +639,22 @@ export default function Records() {
                     )}
                     <TableCell className="px-1 py-1">{getStatusBadge(record.status)}</TableCell>
                     {isReadyMixSection && (
-                      <TableCell className="px-1 py-1">
-                        <div className="space-y-1 text-xs leading-snug tabular-nums sm:text-sm">
-                          <div className="flex flex-col items-center gap-0.5 text-center">
-                            <span className="text-black dark:text-white">2–5 days</span>
-                            <span className="font-medium">
+                      <TableCell className="px-1 py-1 pl-[10px] pr-[10px]">
+                        <div className="space-y-1 text-[10px] leading-tight tabular-nums sm:text-[11px]">
+                          <div className="flex items-center justify-center gap-1 whitespace-nowrap text-center mb-[4px] pl-[4px] pr-[4px]">
+                            <span className="text-black dark:text-white pl-[15px] pr-[15px]">2–5 days</span>
+                            <span className="font-medium text-center">
                               {readyMixAgeAverages.get(record.id)?.twoToFiveDays?.toFixed(2) ?? "—"}
                             </span>
                           </div>
-                          <div className="flex flex-col items-center gap-0.5 text-center">
-                            <span className="text-black dark:text-white">6–8 days</span>
+                          <div className="flex items-center justify-center gap-1 whitespace-nowrap text-center">
+                            <span className="text-black dark:text-white pl-[16px] pr-[16px]">6–8 days</span>
                             <span className="font-medium">
                               {readyMixAgeAverages.get(record.id)?.sixToEightDays?.toFixed(2) ?? "—"}
                             </span>
                           </div>
-                          <div className="flex flex-col items-center gap-0.5 text-center">
-                            <span className="text-black dark:text-white">28–29 days</span>
+                          <div className="flex items-center justify-center gap-1 whitespace-nowrap text-center">
+                            <span className="text-black dark:text-white pl-[10px] pr-[10px]">28–29 days</span>
                             <span className="font-medium">
                               {readyMixAgeAverages.get(record.id)?.twentyEightToTwentyNineDays?.toFixed(2) ?? "—"}
                             </span>

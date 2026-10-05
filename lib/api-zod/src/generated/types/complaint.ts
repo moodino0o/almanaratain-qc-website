@@ -18,6 +18,8 @@ export interface Complaint {
   details: string;
   solution: string;
   recommendation: string;
+  qcReviewerName: string | null;
+  reviewDate: Date | null;
   status: ComplaintStatus;
   picturePaths: ComplaintPicture[];
   createdAt: Date;

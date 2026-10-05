@@ -1494,6 +1494,8 @@ components:
         - details
         - solution
         - recommendation
+        - qcReviewerName
+        - reviewDate
         - status
         - picturePaths
         - createdAt
@@ -1518,6 +1520,13 @@ components:
           type: string
         recommendation:
           type: string
+        qcReviewerName:
+          type: string
+          nullable: true
+        reviewDate:
+          type: string
+          format: date
+          nullable: true
         status:
           type: string
           enum: [open, complete]
@@ -1561,6 +1570,13 @@ components:
         recommendation:
           type: string
           default: ""
+        qcReviewerName:
+          type: string
+          nullable: true
+        reviewDate:
+          type: string
+          format: date
+          nullable: true
         picturePaths:
           type: array
           items:
@@ -1588,6 +1604,13 @@ components:
           type: string
         recommendation:
           type: string
+        qcReviewerName:
+          type: string
+          nullable: true
+        reviewDate:
+          type: string
+          format: date
+          nullable: true
         status:
           type: string
           enum: [open, complete]

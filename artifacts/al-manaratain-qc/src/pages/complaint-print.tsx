@@ -76,8 +76,18 @@ export default function ComplaintPrint() {
           ) : <p className="text-sm text-muted-foreground">No pictures attached.</p>}
         </section>
         <footer className="mt-16 grid gap-12 border-t pt-5 text-sm sm:grid-cols-2">
-          <div><p className="border-b border-foreground pb-8">QC reviewer</p><p className="mt-2 text-xs text-muted-foreground">Name / signature</p></div>
-          <div><p className="border-b border-foreground pb-8">Review date</p><p className="mt-2 text-xs text-muted-foreground">Date</p></div>
+          <div className="space-y-2">
+            <p className="font-semibold">QC reviewer</p>
+            <p className="min-h-8 border-b border-foreground pb-1">
+              {complaint.qcReviewerName || "\u00a0"}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <p className="font-semibold">Review date</p>
+            <p className="min-h-8 border-b border-foreground pb-1">
+              {complaint.reviewDate ? displayDate(complaint.reviewDate) : "\u00a0"}
+            </p>
+          </div>
         </footer>
       </article>
     </main>

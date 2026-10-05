@@ -66,6 +66,8 @@ export default function ComplaintForm() {
   const [details, setDetails] = useState("");
   const [solution, setSolution] = useState("");
   const [recommendation, setRecommendation] = useState("");
+  const [qcReviewerName, setQcReviewerName] = useState("");
+  const [reviewDate, setReviewDate] = useState("");
   const [pictures, setPictures] = useState<ComplaintPicture[]>([]);
   const [customType, setCustomType] = useState("");
   const [customMaterial, setCustomMaterial] = useState("");
@@ -100,6 +102,8 @@ export default function ComplaintForm() {
       setDetails(complaint.details);
       setSolution(complaint.solution);
       setRecommendation(complaint.recommendation);
+      setQcReviewerName(complaint.qcReviewerName ?? "");
+      setReviewDate(dateOnly(complaint.reviewDate ?? ""));
       setPictures(complaint.picturePaths);
     }
   }, [complaintId, detailQuery.data, isNew]);
@@ -171,7 +175,18 @@ export default function ComplaintForm() {
       toast.error("Complete the required complaint fields before saving.");
       return;
     }
-    const data: ComplaintInput = { customerName: customerName.trim(), deliveryDate, complaintType: selectedType, materialType: selectedMaterial, details: details.trim(), solution: solution.trim(), recommendation: recommendation.trim(), picturePaths: pictures };
+    const data: ComplaintInput = {
+      customerName: customerName.trim(),
+      deliveryDate,
+      complaintType: selectedType,
+      materialType: selectedMaterial,
+      details: details.trim(),
+      solution: solution.trim(),
+      recommendation: recommendation.trim(),
+      qcReviewerName: qcReviewerName.trim() || null,
+      reviewDate: reviewDate || null,
+      picturePaths: pictures,
+    };
     setSaving(true);
     try {
       if (isNew) {
@@ -217,6 +232,26 @@ export default function ComplaintForm() {
         <Card><CardHeader className="border-b bg-muted/20"><CardTitle className="text-base">Complaint review</CardTitle></CardHeader><CardContent className="space-y-5 p-5">
           <div className="space-y-2"><Label htmlFor="details">Complaint details <span className="text-destructive">*</span></Label><Textarea id="details" value={details} onChange={(event) => setDetails(event.target.value)} required rows={6} placeholder="Describe what was reported, observed, and when it was raised." /></div>
           <div className="grid gap-5 md:grid-cols-2"><div className="space-y-2"><Label htmlFor="solution">Solution / action taken</Label><Textarea id="solution" value={solution} onChange={(event) => setSolution(event.target.value)} rows={5} placeholder="Record the response, replacement, investigation, or corrective action." /></div><div className="space-y-2"><Label htmlFor="recommendation">Recommendation</Label><Textarea id="recommendation" value={recommendation} onChange={(event) => setRecommendation(event.target.value)} rows={5} placeholder="Note prevention steps or follow-up recommended by QC." /></div></div>
+          <div className="grid gap-5 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="qcReviewerName">QC reviewer name</Label>
+              <Input
+                id="qcReviewerName"
+                value={qcReviewerName}
+                onChange={(event) => setQcReviewerName(event.target.value)}
+                placeholder="Enter reviewer name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reviewDate">Review date</Label>
+              <Input
+                id="reviewDate"
+                type="date"
+                value={reviewDate}
+                onChange={(event) => setReviewDate(event.target.value)}
+              />
+            </div>
+          </div>
         </CardContent></Card>
         <Card><CardHeader className="border-b bg-muted/20"><CardTitle className="text-base">Picture evidence</CardTitle></CardHeader><CardContent className="space-y-4 p-5"><div className="flex flex-col justify-between gap-3 rounded-lg border border-dashed border-primary/40 bg-primary/[0.03] p-4 sm:flex-row sm:items-center"><div><p className="font-medium">Attach delivery or product pictures</p><p className="mt-1 text-xs text-muted-foreground">Images only, up to 10 MB each. Files are stored securely; only their paths are saved in this record.</p></div><Button type="button" variant="outline" onClick={() => fileRef.current?.click()} disabled={uploading}>{uploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Uploading</> : <><Upload className="mr-2 h-4 w-4" />Choose pictures</>}<input ref={fileRef} className="hidden" type="file" accept="image/*" multiple onChange={(event) => void addPictures(event.target.files)} /></Button></div>{pictures.length > 0 && <div className="space-y-2">{pictures.map((picture) => <div key={picture.objectPath} className="flex items-center gap-3 rounded-md border p-2"><img src={`/api/storage${picture.objectPath}`} alt="" className="h-12 w-16 rounded object-cover" /><FileImage className="h-4 w-4 text-muted-foreground" /><span className="min-w-0 flex-1 truncate text-sm">{picture.originalName}</span><Button type="button" variant="ghost" size="icon" aria-label={`Remove ${picture.originalName}`} onClick={() => setPictures((current) => current.filter((item) => item.objectPath !== picture.objectPath))}><X className="h-4 w-4" /></Button></div>)}</div>}</CardContent></Card>
         <div className="flex flex-col-reverse justify-end gap-2 sm:flex-row"><Button type="button" variant="outline" onClick={goBack}>Cancel</Button><Button type="submit" disabled={saving || uploading || requestUrl.isPending}>{saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving</> : <><Check className="mr-2 h-4 w-4" />{isNew ? "Record complaint" : "Save changes"}</>}</Button></div>
