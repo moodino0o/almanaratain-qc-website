@@ -164,6 +164,8 @@ export default function Records() {
         return allRecords.filter((record) => record.testType === TestType.Precast);
       case "kerbstone":
         return allRecords.filter((record) => record.testType === TestType.Kerb_Stone);
+      case "water":
+        return allRecords.filter((record) => record.testType === TestType.Water);
       default:
         return allRecords;
     }
@@ -173,6 +175,7 @@ export default function Records() {
   const isAggregateSection = section === "aggregate";
   const isPrecastSection = section === "precast";
   const isKerbStoneSection = section === "kerbstone";
+  const isWaterSection = section === "water";
   const hideCustomerAndSiteLocation =
     isMasonrySection || isAggregateSection;
   const tableColumnCount =
@@ -279,6 +282,18 @@ export default function Records() {
       default: return <Badge variant="secondary" className="whitespace-normal px-1.5 py-0.5 text-[10px] leading-tight">{status}</Badge>;
     }
   };
+  const getWaterResultBadge = (status: string) => {
+    switch (status) {
+      case RecordStatus.Passed:
+        return <Badge variant="success" className="whitespace-nowrap px-1.5 py-0.5 text-[10px] leading-tight">Pass</Badge>;
+      case RecordStatus.Failed:
+        return <Badge variant="destructive" className="whitespace-nowrap px-1.5 py-0.5 text-[10px] leading-tight">Fail</Badge>;
+      case RecordStatus.Review:
+        return <Badge variant="warning" className="whitespace-nowrap px-1.5 py-0.5 text-[10px] leading-tight">Review</Badge>;
+      default:
+        return getStatusBadge(status);
+    }
+  };
 
   const getRecordDetail = (
     details: Record<string, unknown>,
@@ -319,7 +334,7 @@ export default function Records() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <nav aria-label="QC register sections" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+            <nav aria-label="QC register sections" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-7">
               {REGISTER_SECTIONS.map((item) => (
                 <Link
                   key={item.id}
@@ -339,7 +354,55 @@ export default function Records() {
           </div>
         </CardHeader>
         <CardContent className="flex-1 overflow-auto p-0">
-          {isPrecastSection ? (
+          {isWaterSection ? (
+            <div className="qc-register-table-container w-full min-w-0">
+              <Table className="qc-register-table min-w-[1220px] w-full table-fixed text-[10px]">
+                <TableHeader className="sticky top-0 z-10 bg-card shadow-sm">
+                  <TableRow>
+                    <TableHead className="w-[7%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">Serial<br />No.</TableHead>
+                    <TableHead className="w-[9%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">Sampling<br />Date</TableHead>
+                    <TableHead className="w-[9%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">Testing<br />Date</TableHead>
+                    <TableHead className="w-[12%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">Tested By</TableHead>
+                    <TableHead className="w-[8%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">Factory</TableHead>
+                    <TableHead className="w-[5%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">pH</TableHead>
+                    <TableHead className="w-[7%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">TDS<br />(ppm)</TableHead>
+                    <TableHead className="w-[9%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">Chloride<br />content</TableHead>
+                    <TableHead className="w-[9%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">Sulphate<br />Content</TableHead>
+                    <TableHead className="w-[10%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">Remark</TableHead>
+                    <TableHead className="w-[7%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">Pass / Fail</TableHead>
+                    <TableHead className="w-[8%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow><TableCell colSpan={12} className="h-32 text-center text-muted-foreground">Loading register...</TableCell></TableRow>
+                  ) : sectionRecords.length === 0 ? (
+                    <TableRow><TableCell colSpan={12} className="h-32 text-center text-muted-foreground">No Water records found.</TableCell></TableRow>
+                  ) : sectionRecords.map((record) => (
+                    <TableRow key={record.id}>
+                      <TableCell className="whitespace-normal break-words px-2 py-2 font-semibold text-primary">{record.recordNo}</TableCell>
+                      <TableCell className="whitespace-normal break-words px-2 py-2 tabular-nums">{formatRegisterDate(record.sampleDate)}</TableCell>
+                      <TableCell className="whitespace-normal break-words px-2 py-2 tabular-nums">{formatRegisterDate(getRecordDetail(record.details, ["testingDate"], ""))}</TableCell>
+                      <TableCell className="whitespace-normal break-words px-2 py-2">{record.testedBy || "—"}</TableCell>
+                      <TableCell className="whitespace-normal break-words px-2 py-2">{getRecordDetail(record.details, ["factory"], record.location || "—")}</TableCell>
+                      <TableCell className="whitespace-normal break-words px-2 py-2 tabular-nums">{getRecordDetail(record.details, ["ph"])}</TableCell>
+                      <TableCell className="whitespace-normal break-words px-2 py-2 tabular-nums">{getRecordDetail(record.details, ["tds"])}</TableCell>
+                      <TableCell className="whitespace-normal break-words px-2 py-2 tabular-nums">{getRecordDetail(record.details, ["chloride", "chlorideContent"])}</TableCell>
+                      <TableCell className="whitespace-normal break-words px-2 py-2 tabular-nums">{getRecordDetail(record.details, ["sulphate", "sulfate", "sulphateContent"])}</TableCell>
+                      <TableCell className="whitespace-normal break-words px-2 py-2">{record.remarks?.trim() || "—"}</TableCell>
+                      <TableCell className="px-2 py-2">{getWaterResultBadge(record.status)}</TableCell>
+                      <TableCell className="px-2 py-2 text-right">
+                        <div className="flex justify-end gap-1">
+                          <Link href={`/records/${record.id}`} className="rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground">View</Link>
+                          <Link href={`/reports/${record.id}`} className="rounded-md border px-2 py-1 text-xs font-medium">Print</Link>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : isPrecastSection ? (
             <div className="qc-register-table-container w-full min-w-0">
               <Table className="qc-register-table w-full table-fixed text-[10px]">
                 <TableHeader className="sticky top-0 z-10 bg-card shadow-sm">

@@ -3,10 +3,10 @@ import test from "node:test";
 import { TestType } from "@workspace/api-client-react";
 import { REGISTER_SECTIONS } from "./register-sections";
 
-test("register sections include the six requested QC views", () => {
+test("register sections include the seven requested QC views in order", () => {
   assert.deepEqual(
     REGISTER_SECTIONS.map(({ label }) => label),
-    ["All Results", "ReadyMix", "Masonry", "Aggregate", "Precast", "Kerb Stone"],
+    ["All Tests", "Ready Mix", "Masonry", "Precast", "Kerbstone", "Aggregate", "Water"],
   );
 });
 
@@ -30,5 +30,9 @@ test("each scoped register contains only its supported test types", () => {
   assert.deepEqual(
     REGISTER_SECTIONS.find(({ id }) => id === "kerbstone")?.testTypes,
     [TestType.Kerb_Stone],
+  );
+  assert.deepEqual(
+    REGISTER_SECTIONS.find(({ id }) => id === "water")?.testTypes,
+    [TestType.Water],
   );
 });

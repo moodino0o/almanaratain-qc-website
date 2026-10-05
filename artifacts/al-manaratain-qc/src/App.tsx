@@ -65,6 +65,7 @@ function Router() {
             <Route path="/records/aggregate" component={Records} />
             <Route path="/records/precast" component={Records} />
             <Route path="/records/kerb-stone" component={Records} />
+            <Route path="/records/water" component={Records} />
             <Route path="/records/new" component={RecordForm} />
             <Route path="/records/edit-all" component={RecordsBulkEdit} />
             <Route path="/records/:id/edit" component={RecordForm} />
