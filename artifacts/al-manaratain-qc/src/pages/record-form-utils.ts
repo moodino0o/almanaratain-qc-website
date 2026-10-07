@@ -21,6 +21,8 @@ export type TestRow = {
   length: string;
   width: string;
   height: string;
+  faceThickness?: string;
+  webThickness?: string;
   dryWeight: string;
   wetWeight: string;
   weight: string;
@@ -705,8 +707,22 @@ export const getDammamBlockHoleCount = (blockSize: unknown): number | null => {
   return null;
 };
 
+export const getDammamBlockThicknessDefaults = (blockSize: unknown) => {
+  const width = Number(blockDimensionsFromSize(blockSize)?.width);
+  return {
+    faceThickness: "30",
+    webThickness: width === 100 || width === 150 ? "25" : "30",
+  };
+};
+
 export const calculateDammamBlockResults = (
-  row: { length?: unknown; width?: unknown; load?: unknown },
+  row: {
+    length?: unknown;
+    width?: unknown;
+    load?: unknown;
+    faceThickness?: unknown;
+    webThickness?: unknown;
+  },
   blockSize: unknown,
   faceThicknessValue: unknown,
   webThicknessValue: unknown,
@@ -855,6 +871,12 @@ export const toFormRow = (row: unknown, id: number): TestRow => {
     length: numericInputValue(values.length),
     width: numericInputValue(values.width),
     height: numericInputValue(values.height),
+    ...(values.faceThickness != null
+      ? { faceThickness: numericInputValue(values.faceThickness) }
+      : {}),
+    ...(values.webThickness != null
+      ? { webThickness: numericInputValue(values.webThickness) }
+      : {}),
     dryWeight: numericInputValue(values.dryWeight),
     wetWeight: numericInputValue(values.wetWeight),
     weight: numericInputValue(values.weight),

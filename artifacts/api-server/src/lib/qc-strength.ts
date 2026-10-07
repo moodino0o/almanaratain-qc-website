@@ -98,6 +98,14 @@ export function getDammamBlockHoleCount(blockSize: unknown): number | null {
   return null;
 }
 
+function dammamBlockThicknessDefaults(blockSize: unknown) {
+  const width = blockDimensionsFromSize(blockSize)?.width;
+  return {
+    faceThickness: 30,
+    webThickness: width === 100 || width === 150 ? 25 : 30,
+  };
+}
+
 export function calculateDammamBlockResults(
   row: unknown,
   details: Record<string, unknown>,
@@ -106,8 +114,13 @@ export function calculateDammamBlockResults(
   const values = row as Record<string, unknown>;
   const length = numericValue(values.length);
   const width = numericValue(values.width);
-  const face = numericValue(details.faceThickness);
-  const web = numericValue(details.webThickness);
+  const thicknessDefaults = dammamBlockThicknessDefaults(details.blockSize);
+  const face = numericValue(
+    values.faceThickness ?? details.faceThickness ?? thicknessDefaults.faceThickness,
+  );
+  const web = numericValue(
+    values.webThickness ?? details.webThickness ?? thicknessDefaults.webThickness,
+  );
   const holes = getDammamBlockHoleCount(details.blockSize);
   const load = numericValue(values.load ?? values.failureLoad);
 
@@ -139,10 +152,11 @@ export function calculateDammamBlockResults(
 }
 
 function normalizeDammamBlockDetails(details: Record<string, unknown>) {
+  const thicknessDefaults = dammamBlockThicknessDefaults(details.blockSize);
   const normalized: Record<string, unknown> = {
     ...details,
-    faceThickness: details.faceThickness ?? 30,
-    webThickness: details.webThickness ?? 30,
+    faceThickness: details.faceThickness ?? thicknessDefaults.faceThickness,
+    webThickness: details.webThickness ?? thicknessDefaults.webThickness,
   };
   const numberOfHoles = getDammamBlockHoleCount(normalized.blockSize);
   const rows: unknown[] = Array.isArray(normalized.testRows) ? normalized.testRows : [];
@@ -152,9 +166,14 @@ function normalizeDammamBlockDetails(details: Record<string, unknown>) {
     testRows: rows.map((row) => {
       if (typeof row !== "object" || row === null) return row;
       const values = row as Record<string, unknown>;
-      const results = calculateDammamBlockResults(values, normalized);
-      return {
+      const normalizedRow = {
         ...values,
+        faceThickness: values.faceThickness ?? normalized.faceThickness,
+        webThickness: values.webThickness ?? normalized.webThickness,
+      };
+      const results = calculateDammamBlockResults(normalizedRow, normalized);
+      return {
+        ...normalizedRow,
         failureLoad: values.load ?? values.failureLoad ?? "",
         numberOfHoles,
         failureLoadN: results?.failureLoadN ?? null,

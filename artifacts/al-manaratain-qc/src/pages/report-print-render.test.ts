@@ -403,7 +403,26 @@ test("prints recalculated Dammam geometry and strength in saved Block report tab
       blockSize: '8"',
       faceThickness: "30",
       webThickness: "30",
-      testRows: [{ rowNo: 1, length: 400, width: 200, height: 200, load: 500 }],
+      testRows: [
+        {
+          rowNo: 1,
+          length: 400,
+          width: 200,
+          height: 200,
+          load: 500,
+          faceThickness: 30,
+          webThickness: 30,
+        },
+        {
+          rowNo: 2,
+          length: 400,
+          width: 200,
+          height: 200,
+          load: 500,
+          faceThickness: 40,
+          webThickness: 25,
+        },
+      ],
     },
   } as QcRecord;
 
@@ -411,10 +430,15 @@ test("prints recalculated Dammam geometry and strength in saved Block report tab
   assert.match(markup, /Failure Load \(kN\)/);
   assert.match(markup, /Gross Area \(mm²\)/);
   assert.match(markup, /Net Area \(mm²\)/);
+  assert.match(markup, /Web Thickness \(mm\)/);
+  assert.match(markup, /Face Thickness \(mm\)/);
   assert.match(markup, /Gross Strength \(N\/mm²\)/);
   assert.match(markup, /Net Strength \(N\/mm²\)/);
   assert.match(markup, /80,000/);
   assert.match(markup, /72,533/);
+  assert.match(markup, />25\.0<\/td>/);
+  assert.match(markup, />40\.0<\/td>/);
+  assert.match(markup, /73,700/);
   assert.match(markup, />6\.3<\/td>/);
   assert.match(markup, />6\.9<\/td>/);
 

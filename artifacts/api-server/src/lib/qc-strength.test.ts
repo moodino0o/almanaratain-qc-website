@@ -581,6 +581,56 @@ test("calculates and saves Dammam gross and net results without changing complia
   assert.equal(result.status, "Passed");
 });
 
+test("uses size defaults and each specimen's own Dammam thickness values", () => {
+  const cases = [
+    { blockSize: "400*200*200", width: 200, expectedWeb: 30 },
+    { blockSize: "400*150*200", width: 150, expectedWeb: 25 },
+    { blockSize: "400*100*200", width: 100, expectedWeb: 25 },
+  ];
+
+  for (const { blockSize, width, expectedWeb } of cases) {
+    const result = evaluateStrengthRecord(
+      {
+        ...blockRecord([{ length: 400, width, height: 200, load: 1000 }]),
+        location: "Dammam",
+        details: {
+          ...blockRecord([]).details,
+          blockSize,
+          testRows: [{ length: 400, width, height: 200, load: 1000 }],
+        },
+      },
+      [blockStandard()],
+    );
+    const row = (result.details.testRows as Record<string, unknown>[])[0];
+    assert.equal(row.faceThickness, 30);
+    assert.equal(row.webThickness, expectedWeb);
+  }
+
+  const customResult = evaluateStrengthRecord(
+    {
+      ...blockRecord([
+        { length: 400, width: 200, height: 200, load: 1000 },
+        {
+          length: 400,
+          width: 200,
+          height: 200,
+          load: 1000,
+          faceThickness: 40,
+          webThickness: 30,
+        },
+      ]),
+      location: "Dammam",
+    },
+    [blockStandard()],
+  );
+  const rows = customResult.details.testRows as Record<string, unknown>[];
+  assert.equal(rows[0].webThickness, 30);
+  assert.equal(rows[0].faceThickness, 30);
+  assert.equal(rows[1].webThickness, 30);
+  assert.equal(rows[1].faceThickness, 40);
+  assert.notEqual(rows[0].netArea, rows[1].netArea);
+});
+
 test("does not add Dammam result fields or change strength outside Dammam", () => {
   const result = evaluateStrengthRecord(
     blockRecord([{ length: 400, width: 200, height: 200, load: 1000 }]),

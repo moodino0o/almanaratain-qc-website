@@ -15,6 +15,7 @@ import {
   calculateBlockStrengths,
   calculateDammamBlockResults,
   getDammamBlockHoleCount,
+  getDammamBlockThicknessDefaults,
   isDammamBlockLocation,
   calculateCubeCompressiveStrength,
   averageCubeStrengthAtAge,
@@ -393,6 +394,18 @@ test("calculates Dammam Block gross and net results from saved inputs", () => {
   assert.equal(getDammamBlockHoleCount('6"'), 2);
   assert.equal(getDammamBlockHoleCount('8"'), 3);
   assert.equal(getDammamBlockHoleCount('12"'), null);
+  assert.deepEqual(getDammamBlockThicknessDefaults("400*200*200"), {
+    faceThickness: "30",
+    webThickness: "30",
+  });
+  assert.deepEqual(getDammamBlockThicknessDefaults("400*150*200"), {
+    faceThickness: "30",
+    webThickness: "25",
+  });
+  assert.deepEqual(getDammamBlockThicknessDefaults("400*100*200"), {
+    faceThickness: "30",
+    webThickness: "25",
+  });
 
   const eightInch = calculateDammamBlockResults(
     { length: "400", width: "200", load: "1500" },

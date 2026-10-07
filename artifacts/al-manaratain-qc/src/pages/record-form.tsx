@@ -28,6 +28,7 @@ import {
   calculateBlockDensity,
   calculateDammamBlockResults,
   getDammamBlockHoleCount,
+  getDammamBlockThicknessDefaults,
   isDammamBlockLocation,
   calculateCubeDensity,
   integerIdentifierValue,
@@ -301,16 +302,34 @@ export default function RecordForm() {
     const loadedRows = loadedSourceRows.length
       ? loadedSourceRows.map((row, index) => {
           const formRow = toFormRow(row, index + 1);
+          const blockThicknessDefaults = getDammamBlockThicknessDefaults(
+            savedDetails.blockSize,
+          );
+          const dammamFormRow =
+            existingRecord.testType === TestType.Blocks &&
+            isDammamBlockLocation(existingRecord.location)
+              ? {
+                  ...formRow,
+                  faceThickness:
+                    formRow.faceThickness ||
+                    stringValue(savedDetails.faceThickness) ||
+                    blockThicknessDefaults.faceThickness,
+                  webThickness:
+                    formRow.webThickness ||
+                    stringValue(savedDetails.webThickness) ||
+                    blockThicknessDefaults.webThickness,
+                }
+              : formRow;
           return existingRecord.testType === TestType.Precast
             ? {
-                ...formRow,
+                ...dammamFormRow,
                 testAge:
-                  formRow.testAge ||
-                  formRow.sampleAge ||
+                  dammamFormRow.testAge ||
+                  dammamFormRow.sampleAge ||
                   PRECAST_CUBE_AGES[index] ||
                   "",
               }
-            : formRow;
+            : dammamFormRow;
         })
       : createDefaultTestRows(existingRecord.testType);
     const calculatedRows = existingRecord.testType === TestType.Sand_Sieve ||
@@ -342,6 +361,7 @@ export default function RecordForm() {
   const isDammamBlock =
     testType === TestType.Blocks && isDammamBlockLocation(locationValue);
   const dammamHoleCount = getDammamBlockHoleCount(details.blockSize);
+  const dammamThicknessDefaults = getDammamBlockThicknessDefaults(details.blockSize);
   const calculatedMoistureContent = calculateMoistureContent(
     details.dryWeight || details.drySample,
     details.wetWeight || details.wetSample,
@@ -362,21 +382,6 @@ export default function RecordForm() {
   );
 
   useEffect(() => {
-    if (testType !== TestType.Blocks || !isDammamBlockLocation(locationValue)) return;
-    setDetails((previousDetails) => {
-      const faceThickness = previousDetails.faceThickness ?? "30";
-      const webThickness = previousDetails.webThickness ?? "30";
-      if (
-        previousDetails.faceThickness === faceThickness &&
-        previousDetails.webThickness === webThickness
-      ) {
-        return previousDetails;
-      }
-      return { ...previousDetails, faceThickness, webThickness };
-    });
-  }, [locationValue, testType]);
-
-  useEffect(() => {
     if (testType !== TestType.Blocks) {
       previousBlockSizeRef.current = "";
       return;
@@ -384,20 +389,47 @@ export default function RecordForm() {
 
     const nextBlockSize = String(details.blockSize ?? "").trim();
     const nextDimensions = blockDimensionsFromSize(nextBlockSize);
-    const previousDimensions = blockDimensionsFromSize(previousBlockSizeRef.current);
+    const previousBlockSize = previousBlockSizeRef.current;
+    const previousDimensions = blockDimensionsFromSize(previousBlockSize);
     previousBlockSizeRef.current = nextBlockSize;
     if (!nextDimensions) return;
+    const nextThicknessDefaults = getDammamBlockThicknessDefaults(nextBlockSize);
+    const previousThicknessDefaults = previousDimensions
+      ? getDammamBlockThicknessDefaults(previousBlockSize)
+      : null;
 
     setTestRows((previousRows) =>
-      previousRows.map((row) =>
-        applySizeDimensionDefaults(
+      previousRows.map((row) => {
+        const dimensionedRow = applySizeDimensionDefaults(
           row,
           nextDimensions,
           previousDimensions,
-        ),
-      ),
+        );
+        if (!isDammamBlockLocation(locationValue)) return dimensionedRow;
+
+        const faceThickness = String(dimensionedRow.faceThickness ?? "").trim();
+        const webThickness = String(dimensionedRow.webThickness ?? "").trim();
+        const faceMatchesPreviousDefault =
+          previousThicknessDefaults !== null &&
+          Number(faceThickness) === Number(previousThicknessDefaults.faceThickness);
+        const webMatchesPreviousDefault =
+          previousThicknessDefaults !== null &&
+          Number(webThickness) === Number(previousThicknessDefaults.webThickness);
+
+        return {
+          ...dimensionedRow,
+          faceThickness:
+            !faceThickness || faceMatchesPreviousDefault
+              ? nextThicknessDefaults.faceThickness
+              : faceThickness,
+          webThickness:
+            !webThickness || webMatchesPreviousDefault
+              ? nextThicknessDefaults.webThickness
+              : webThickness,
+        };
+      }),
     );
-  }, [details.blockSize, testType]);
+  }, [details.blockSize, locationValue, testType]);
 
   useEffect(() => {
     if (testType !== TestType.Paving_Blocks) {
@@ -582,7 +614,10 @@ export default function RecordForm() {
   };
 
   const insertTestRow = (rowIndex: number) => {
-    const newRow = createEmptyRow(nextRowId.current++);
+    const newRow = {
+      ...createEmptyRow(nextRowId.current++),
+      ...(isDammamBlock ? dammamThicknessDefaults : {}),
+    };
     setTestRows(prev => {
       const next = [...prev];
       next.splice(rowIndex + 1, 0, newRow);
@@ -843,7 +878,12 @@ export default function RecordForm() {
 
   const calculateStrength = (row: Pick<TestRow, "length" | "width" | "load">) =>
     calculateBlockStrengths(row, details.shapeFactor, locationValue);
-  const calculateDammamRow = (row: Pick<TestRow, "length" | "width" | "load">) =>
+  const calculateDammamRow = (
+    row: Pick<
+      TestRow,
+      "length" | "width" | "load" | "faceThickness" | "webThickness"
+    >,
+  ) =>
     calculateDammamBlockResults(
       {
         ...row,
@@ -851,8 +891,8 @@ export default function RecordForm() {
         width: row.width || blockDimensions?.width || "",
       },
       details.blockSize,
-      details.faceThickness,
-      details.webThickness,
+      row.faceThickness ?? dammamThicknessDefaults.faceThickness,
+      row.webThickness ?? dammamThicknessDefaults.webThickness,
     );
   const formatDammamArea = (value: number | null | undefined) =>
     value === null || value === undefined ? "—" : Math.round(value).toLocaleString("en-US");
@@ -959,15 +999,19 @@ export default function RecordForm() {
         toast.error("Dammam Block calculations support 4, 6, and 8 inch sizes.");
         return;
       }
-      const faceThickness = Number(String(details.faceThickness ?? "30").trim());
-      const webThickness = Number(String(details.webThickness ?? "30").trim());
-      if (
-        !Number.isFinite(faceThickness) ||
-        faceThickness <= 0 ||
-        !Number.isFinite(webThickness) ||
-        webThickness <= 0
-      ) {
-        toast.error("Face and Web thickness must be greater than zero.");
+      if (testRows.some((row) => {
+        const faceThickness = Number(
+          String(row.faceThickness ?? dammamThicknessDefaults.faceThickness).trim(),
+        );
+        const webThickness = Number(
+          String(row.webThickness ?? dammamThicknessDefaults.webThickness).trim(),
+        );
+        return !Number.isFinite(faceThickness) ||
+          faceThickness <= 0 ||
+          !Number.isFinite(webThickness) ||
+          webThickness <= 0;
+      })) {
+        toast.error("Face and Web thickness must be greater than zero for every specimen.");
         return;
       }
       if (testRows.some((row) => {
@@ -987,8 +1031,8 @@ export default function RecordForm() {
             width: row.width || blockDimensions?.width || "",
           },
           details.blockSize,
-          details.faceThickness,
-          details.webThickness,
+          row.faceThickness ?? dammamThicknessDefaults.faceThickness,
+          row.webThickness ?? dammamThicknessDefaults.webThickness,
         ),
       )) {
         toast.error("Face/Web thickness leaves no valid hole dimensions for this specimen.");
@@ -1106,8 +1150,10 @@ export default function RecordForm() {
     if (testType === TestType.Blocks) {
       payloadDetails.machine = machine;
       if (isDammamBlock) {
-        payloadDetails.faceThickness = details.faceThickness ?? "30";
-        payloadDetails.webThickness = details.webThickness ?? "30";
+        payloadDetails.faceThickness =
+          testRows[0]?.faceThickness ?? dammamThicknessDefaults.faceThickness;
+        payloadDetails.webThickness =
+          testRows[0]?.webThickness ?? dammamThicknessDefaults.webThickness;
         payloadDetails.numberOfHoles = dammamHoleCount;
       } else {
         delete payloadDetails.faceThickness;
@@ -1136,8 +1182,8 @@ export default function RecordForm() {
                 width: row.width || blockDimensions?.width || "",
               },
               details.blockSize,
-              details.faceThickness,
-              details.webThickness,
+              row.faceThickness ?? dammamThicknessDefaults.faceThickness,
+              row.webThickness ?? dammamThicknessDefaults.webThickness,
             )
           : null;
         return ({
@@ -1200,6 +1246,10 @@ export default function RecordForm() {
             }),
           ...(isDammamBlock
             ? {
+                faceThickness:
+                  row.faceThickness ?? dammamThicknessDefaults.faceThickness,
+                webThickness:
+                  row.webThickness ?? dammamThicknessDefaults.webThickness,
                 failureLoad: row.load,
                 numberOfHoles: dammamHoleCount,
                 failureLoadN: dammamResults?.failureLoadN ?? null,
@@ -1931,30 +1981,6 @@ export default function RecordForm() {
                   {isDammamBlock && (
                     <>
                       <div className="space-y-2">
-                        <Label>Face Thickness (mm)</Label>
-                        <Input
-                          type="text"
-                          inputMode="decimal"
-                          value={String(details.faceThickness ?? "30")}
-                          onChange={(event) =>
-                            handleDetailChange("faceThickness", event.target.value)
-                          }
-                          placeholder="30"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Web Thickness (mm)</Label>
-                        <Input
-                          type="text"
-                          inputMode="decimal"
-                          value={String(details.webThickness ?? "30")}
-                          onChange={(event) =>
-                            handleDetailChange("webThickness", event.target.value)
-                          }
-                          placeholder="30"
-                        />
-                      </div>
-                      <div className="space-y-2">
                         <Label>Number of Holes</Label>
                         <Input
                           value={dammamHoleCount === null ? "" : String(dammamHoleCount)}
@@ -2399,6 +2425,12 @@ export default function RecordForm() {
                                <th className={`${isCompactBlockTable ? "w-[12%] px-1 py-2 text-[10px]" : "px-3 py-3"} text-left font-semibold`}>Length (mm)</th>
                                <th className={`${isCompactBlockTable ? "w-[12%] px-1 py-2 text-[10px]" : "px-3 py-3"} text-left font-semibold`}>Width (mm)</th>
                                <th className={`${isCompactBlockTable ? "w-[12%] px-1 py-2 text-[10px]" : "px-3 py-3"} text-left font-semibold`}>Height (mm)</th>
+                               {isDammamBlock && (
+                                 <>
+                                   <th className="w-[8%] px-1 py-2 text-left text-[10px] font-semibold">Web Thickness (mm)</th>
+                                   <th className="w-[8%] px-1 py-2 text-left text-[10px] font-semibold">Face Thickness (mm)</th>
+                                 </>
+                               )}
                               {testType === TestType.Ready_Mix && (
                                 <th className="px-3 py-3 text-left font-semibold">Dry Weight</th>
                               )}
@@ -2682,6 +2714,40 @@ export default function RecordForm() {
                                 />
                               </td>
                             ))}
+                             {isDammamBlock && (
+                               <>
+                                 <td className={compactBlockCellClass}>
+                                   <Input
+                                     type="text"
+                                     inputMode="decimal"
+                                     value={String(
+                                       row.webThickness ?? dammamThicknessDefaults.webThickness,
+                                     )}
+                                     onChange={(event) =>
+                                       updateTestRow(rowIndex, "webThickness", event.target.value)
+                                     }
+                                     placeholder={dammamThicknessDefaults.webThickness}
+                                     aria-label={`Web thickness for specimen ${rowIndex + 1}`}
+                                     className={compactBlockInputClass}
+                                   />
+                                 </td>
+                                 <td className={compactBlockCellClass}>
+                                   <Input
+                                     type="text"
+                                     inputMode="decimal"
+                                     value={String(
+                                       row.faceThickness ?? dammamThicknessDefaults.faceThickness,
+                                     )}
+                                     onChange={(event) =>
+                                       updateTestRow(rowIndex, "faceThickness", event.target.value)
+                                     }
+                                     placeholder={dammamThicknessDefaults.faceThickness}
+                                     aria-label={`Face thickness for specimen ${rowIndex + 1}`}
+                                     className={compactBlockInputClass}
+                                   />
+                                 </td>
+                               </>
+                             )}
                              {testType === TestType.Ready_Mix && (
                                <td className="px-2 py-2">
                                   <div
