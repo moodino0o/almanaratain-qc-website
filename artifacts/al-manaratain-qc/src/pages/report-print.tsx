@@ -639,6 +639,13 @@ function resolveReportTemplateDynamicField(
   if (!fieldKey.startsWith("details.")) return `{{${fieldKey}}}`;
 
   const key = fieldKey.slice("details.".length).toLocaleLowerCase();
+  if (
+    record.testType === "Blocks" &&
+    isDammamLocation(record.location) &&
+    key === "numberofholes"
+  ) {
+    return "";
+  }
   const details = record.details;
   const recordFields: Record<string, string> = {
     sampledate: formatReportDate(record.sampleDate),
@@ -828,6 +835,13 @@ function reportTemplateCellField(
   rowIndex: number,
   isBlockCompression: boolean,
 ): string {
+  if (
+    record.testType === "Blocks" &&
+    isDammamLocation(record.location) &&
+    reportColumnKey(key) === "numberofholes"
+  ) {
+    return "";
+  }
   if (row && key.startsWith("details.")) {
     return reportTemplateTableCell(row, key.slice("details.".length), rowIndex, isBlockCompression);
   }
@@ -904,6 +918,7 @@ export function ReportTemplateDataTable({
           "normalizedstrength",
           "facethickness",
           "webthickness",
+          "numberofholes",
           "grossarea",
           "airdry",
           "airdrystrength",
@@ -916,7 +931,7 @@ export function ReportTemplateDataTable({
     ? configuredColumns.filter((column) => {
         const key = reportColumnKey(column.key);
         return dammamBlock
-          ? !dammamExcludedKeys.has(key)
+          ? key !== "numberofholes" && !dammamExcludedKeys.has(key)
           : !DAMMAM_ONLY_BLOCK_LAYOUT_KEYS.has(key);
       })
     : configuredColumns;
@@ -976,8 +991,9 @@ export function ReportTemplateDataTable({
       const key = reportColumnKey(cell.fieldKey ?? "");
       if (dammamExcludedKeys.has(key)) return true;
       const label = `${cell.name} ${cell.content ?? ""}`.toLocaleLowerCase();
+      if (key === "numberofholes" || label.includes("number of holes")) return true;
       return blockDetails
-        ? ["face thickness", "web thickness", "number of holes"].some((value) => label.includes(value))
+        ? ["face thickness", "web thickness"].some((value) => label.includes(value))
         : blockCompression &&
           [
             "normalized strength",
@@ -1471,6 +1487,7 @@ function BlockCompressionRowsTable({
               "normalizedstrength",
               "facethickness",
               "webthickness",
+              "numberofholes",
               "grossarea",
               "airdry",
               "airdrystrength",

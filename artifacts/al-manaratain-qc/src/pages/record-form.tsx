@@ -1913,6 +1913,20 @@ export default function RecordForm() {
                       onCreateOption={createReferenceOption("blockSizes")}
                     />
                   </div>
+                  {isDammamBlock && (
+                    <div className="space-y-2">
+                      <Label htmlFor="dammam-number-of-holes">Number of Holes</Label>
+                      <Input
+                        id="dammam-number-of-holes"
+                        value={dammamHoleCount === null ? "" : String(dammamHoleCount)}
+                        placeholder="Select a supported Block Size"
+                        readOnly
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Calculated from the selected Block Size.
+                      </p>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label>Machine</Label>
                     <TypeaheadInput

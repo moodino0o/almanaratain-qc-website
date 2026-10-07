@@ -308,7 +308,8 @@ test("adds calculated Net Area to saved structured Block tables without that cel
           { key: "height", label: "Height (mm)", width: 20, visible: true, order: 3 },
           { key: "faceThickness", label: "Face Thickness (mm)", width: 10, visible: true, order: 4 },
           { key: "webThickness", label: "Web Thickness (mm)", width: 10, visible: true, order: 5 },
-          { key: "load", label: "Load (kN)", width: 20, visible: true, order: 6 },
+          { key: "numberOfHoles", label: "Number of Holes", width: 10, visible: true, order: 6 },
+          { key: "load", label: "Load (kN)", width: 20, visible: true, order: 7 },
         ],
       },
     },
@@ -432,7 +433,7 @@ test("prints recalculated Dammam geometry and strength in saved Block report tab
   assert.match(markup, /Failure Load \(kN\)/);
   assert.doesNotMatch(markup, /Gross Area|Air Dry/);
   assert.match(markup, /Net Area \(mm²\)/);
-  assert.doesNotMatch(markup, /Web Thickness|Face Thickness/);
+  assert.doesNotMatch(markup, /Web Thickness|Face Thickness|Number of Holes/);
   assert.match(markup, /Gross Strength \(N\/mm²\)/);
   assert.match(markup, /Net Strength \(N\/mm²\)/);
   assert.match(markup, /72,533/);
@@ -601,13 +602,14 @@ test("prints Dammam net area and Net Strength summaries without Gross Area or Ai
           { key: "webThickness", label: "Web Thickness (mm)", width: 20, visible: true, order: 1 },
           { key: "grossArea", label: "Gross Area (mm²)", width: 20, visible: true, order: 2 },
           { key: "airDry", label: "Air Dry (N/mm2)", width: 20, visible: true, order: 3 },
+          { key: "numberOfHoles", label: "Number of Holes", width: 20, visible: true, order: 4 },
         ],
       },
       elements: [],
     },
   } as NonNullable<ReportDocumentProps["report"]["layout"]>;
   const savedMarkup = renderDocument(record, undefined, savedLayout);
-  assert.doesNotMatch(savedMarkup, /Web Thickness|Face Thickness|Gross Area|Air Dry/);
+  assert.doesNotMatch(savedMarkup, /Web Thickness|Face Thickness|Number of Holes|Gross Area|Air Dry/);
   assert.match(savedMarkup, /Net Area/);
   assert.match(savedMarkup, /Net Strength/);
 
