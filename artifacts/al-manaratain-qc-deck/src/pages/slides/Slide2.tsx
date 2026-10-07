@@ -1,34 +1,24 @@
-import { Bullet, Rule, SectionTag, SlideFooter, SlideFrame, SlideHeader, SlideTitle } from '../../components/SlideFrame';
+import { Card, ManagementSlide, Note } from '../../components/ManagementSlide';
 
 export default function Slide2() {
   return (
-    <SlideFrame>
-      <SlideHeader section="Project Overview" number="02 / 16" />
-      <div className="absolute left-[5vw] right-[5vw] top-[16vh]">
-        <SlideTitle>Project Brief</SlideTitle>
-        <div className="mt-[7vh] grid grid-cols-[1.05fr_0.95fr] gap-[6vw]">
-          <div>
-            <p className="max-w-[43vw] text-[2.2vw] font-medium leading-[1.3] text-muted">
-              One web workspace for day-to-day QC operations.
-            </p>
-            <Rule />
-            <div className="mt-[4vh] space-y-[2.5vh]">
-              <Bullet number="01">One web workspace for day-to-day QC operations</Bullet>
-              <Bullet number="02">Structured records instead of disconnected paperwork</Bullet>
-              <Bullet number="03">Shared standards and reference data across workflows</Bullet>
-              <Bullet number="04">Controlled access for registered employees</Bullet>
-            </div>
-          </div>
-          <div className="border border-line bg-soft px-[3vw] py-[4vh]">
-            <SectionTag>Project focus</SectionTag>
-            <p className="font-display text-[2.6vw] font-extrabold leading-[1.08] tracking-[-0.03em] text-primary">
-              Make quality work easier to enter, review, protect, and reuse.
-            </p>
-            <div className="mt-[6vh] h-[1.2vh] w-[12vw] bg-accent" />
-          </div>
-        </div>
+    <ManagementSlide section="Executive Summary" page="02" title="A digital path from test data to QC reporting">
+      <div className="grid h-[46vh] grid-cols-3 gap-[1.5vw]">
+        <Card label="01 / CAPTURE" title="Structured records">
+          Test type, sample details, plant, material and test-specific measurements are stored together.
+        </Card>
+        <Card label="02 / CALCULATE" title="Application rules">
+          Test calculations and configured standards turn measurements into reviewable results.
+        </Card>
+        <Card label="03 / REPORT" title="Consistent outputs">
+          Print-ready reports and a daily results spreadsheet support review and historical lookup.
+        </Card>
       </div>
-      <SlideFooter label="Project Overview / Project Brief" number="02" />
-    </SlideFrame>
+      <div className="mt-[2.5vh] flex items-center justify-between border-y border-line py-[1.5vh]">
+        <div className="font-display text-[2.3vw] font-bold text-primary">Digital QC foundation</div>
+        <div className="max-w-[57vw] text-[1.8vw] leading-[1.2] text-muted">The platform is designed to reduce repeated calculation and report preparation; measured time or error reductions have not been established in this review.</div>
+      </div>
+      <Note>Current capabilities are separated from future recommendations throughout this presentation.</Note>
+    </ManagementSlide>
   );
 }

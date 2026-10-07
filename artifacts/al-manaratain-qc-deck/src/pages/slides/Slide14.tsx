@@ -1,27 +1,27 @@
-import reportImage from '@assets/image_1788071780139.png';
-import { Bullet, SectionTag, SlideFooter, SlideFrame, SlideHeader, SlideTitle } from '../../components/SlideFrame';
+import { Card, ManagementSlide, Note } from '../../components/ManagementSlide';
 
 export default function Slide14() {
   return (
-    <SlideFrame>
-      <SlideHeader section="Administration" number="14 / 16" />
-      <div className="absolute left-[5vw] right-[5vw] top-[16vh]">
-        <SlideTitle>Evidence and Storage</SlideTitle>
-        <div className="mt-[6vh] grid grid-cols-[0.9fr_1.1fr] gap-[6vw]">
-          <div className="relative h-[48vh] overflow-hidden border border-line bg-soft">
-            <img src={reportImage} crossOrigin="anonymous" className="h-full w-full object-cover object-top" alt="QC report example" />
-            <div className="absolute inset-0 bg-primary/5" />
-          </div>
-          <div className="space-y-[3.3vh] pt-[2vh]">
-            <SectionTag>Record evidence</SectionTag>
-            <Bullet number="01">QC workflows support image and file evidence where needed</Bullet>
-            <Bullet number="02">Uploaded files are stored separately from record data</Bullet>
-            <Bullet number="03">Records retain the returned object path and searchable metadata</Bullet>
-            <Bullet number="04">Storage responses are validated before they reach the UI</Bullet>
-          </div>
-        </div>
+    <ManagementSlide section="Publishing" page="14" title="Published on Replit Autoscale">
+      <div className="grid h-[43vh] grid-cols-3 gap-[1.3vw]">
+        <Card label="SOURCE" title="GitHub remote">
+          A GitHub source remote is configured for the repository.
+          <div>Automated deployment trigger was not confirmed.</div>
+        </Card>
+        <Card label="BUILD" title="Two application services">
+          Vite builds the browser UI; the Node.js service runs the Express API.
+          <div>The API health endpoint is configured at /api/healthz.</div>
+        </Card>
+        <Card label="LIVE STATUS" title="Public deployment">
+          Replit Autoscale deployment is listed as deployed with a successful build.
+          <div>Deployment status verified during this review.</div>
+        </Card>
       </div>
-      <SlideFooter label="Administration / Evidence and Storage" number="14" />
-    </SlideFrame>
+      <div className="mt-[3vh] border border-accent/50 bg-soft p-[1.5vw]">
+        <div className="font-mono text-[1.5vw] uppercase tracking-[0.12em] text-[#718096]">CURRENT APPLICATION URL</div>
+        <div className="mt-[1vh] break-all font-display text-[2.5vw] font-bold text-primary">https://al-manaratain-qc-system.replit.app</div>
+      </div>
+      <Note>Runtime configuration and database connection are supplied through environment settings; no credentials are included in the presentation.</Note>
+    </ManagementSlide>
   );
 }

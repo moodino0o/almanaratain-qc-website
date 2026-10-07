@@ -1,33 +1,34 @@
-import { Bullet, Rule, SlideFooter, SlideFrame, SlideHeader, SlideTitle } from '../../components/SlideFrame';
+import { Card, ManagementSlide, Note } from '../../components/ManagementSlide';
 
 export default function Slide6() {
   return (
-    <SlideFrame>
-      <SlideHeader section="QC Workflows" number="06 / 16" />
-      <div className="absolute left-[5vw] right-[5vw] top-[16vh]">
-        <SlideTitle>Structured Data Entry</SlideTitle>
-        <div className="mt-[7vh] grid grid-cols-2 gap-[6vw]">
-          <div>
-            <p className="max-w-[40vw] text-[2.2vw] font-medium leading-[1.25] text-muted">
-              Capture the same operational context every time.
-            </p>
-            <Rule />
-            <div className="mt-[4vh] space-y-[2.6vh]">
-              <Bullet number="01">Material, plant, supplier, location, and reference fields</Bullet>
-              <Bullet number="02">Test-specific detail sections</Bullet>
-              <Bullet number="03">Specimen and sieve rows where required</Bullet>
-            </div>
-          </div>
-          <div className="space-y-[2.6vh] border-l-2 border-accent pl-[3vw]">
-            <Bullet number="04">Copy-from-existing-record support for repeat work</Bullet>
-            <Bullet number="05">Controlled reference values to reduce inconsistent entry</Bullet>
-            <div className="pt-[3vh] font-mono text-[1.5vw] uppercase tracking-[0.14em] text-[#718096]">
-              CONSISTENT INPUT / REPEATABLE REVIEW
-            </div>
-          </div>
-        </div>
+    <ManagementSlide section="Data Entry" page="06" title="Structured inputs, tailored to each test">
+      <div className="grid h-[48vh] grid-cols-2 gap-[1.4vw]">
+        <Card label="RECORD HEADER" title="Shared context">
+          Record number · test type · sample date · location · material · status
+          <div>Tested by · reviewer · remarks</div>
+        </Card>
+        <Card label="SPECIMEN & LOAD" title="Where applicable">
+          Length · width · height · failure load · wet / dry weight
+          <div>Dammam Block face and web thickness inputs</div>
+        </Card>
+        <Card label="AGGREGATE & MATERIAL" title="Test-specific measurements" soft>
+          Sieve sizes and retained amounts
+          <div>Silt, chloride, sulphate and moisture-related values</div>
+        </Card>
+        <Card label="SAMPLE DETAILS" title="Record identification" soft>
+          Product / sample details depend on the selected test workflow
+          <div>Inputs are not assumed to be identical across all tests</div>
+        </Card>
       </div>
-      <SlideFooter label="QC Workflows / Structured Data Entry" number="06" />
-    </SlideFrame>
+      <div className="mt-[2.3vh] grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-[1vw]">
+        <div className="border border-line bg-white p-[1.1vh] text-center text-[1.8vw] font-semibold text-primary">INPUT</div>
+        <div className="text-[2.3vw] text-accent">→</div>
+        <div className="border border-line bg-soft p-[1.1vh] text-center text-[1.8vw] font-semibold text-primary">CALCULATION</div>
+        <div className="text-[2.3vw] text-accent">→</div>
+        <div className="border border-line bg-white p-[1.1vh] text-center text-[1.8vw] font-semibold text-primary">RESULT</div>
+      </div>
+      <Note>Exact fields vary by test type; the record model stores shared metadata plus test-specific details.</Note>
+    </ManagementSlide>
   );
 }

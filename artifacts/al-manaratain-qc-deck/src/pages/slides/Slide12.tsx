@@ -1,26 +1,32 @@
-import { Bullet, SlideFooter, SlideFrame, SlideHeader, SlideTitle } from '../../components/SlideFrame';
+import { Card, ManagementSlide } from '../../components/ManagementSlide';
 
 export default function Slide12() {
   return (
-    <SlideFrame>
-      <SlideHeader section="Access and Governance" number="12 / 16" />
-      <div className="absolute left-[5vw] right-[5vw] top-[16vh]">
-        <SlideTitle>Access Controls</SlideTitle>
-        <div className="mt-[7vh] grid grid-cols-[1fr_1fr] gap-[6vw]">
-          <div className="space-y-[3.5vh]">
-            <Bullet number="01">Server-side authorization protects administrative actions</Bullet>
-            <Bullet number="02">Employee directory identity is tied to the registered employee ID</Bullet>
-          </div>
-          <div className="border-l-2 border-accent pl-[3vw]">
-            <Bullet number="03">Administrator safeguards prevent removing the last active administrator</Bullet>
-            <div className="mt-[5vh]">
-              <Bullet number="04">Access changes are reflected in the current employee list</Bullet>
-            </div>
-          </div>
-        </div>
-        <div className="absolute -right-[5vw] top-[35vh] h-[22vh] w-[28vw] border border-primary/10 bg-primary/[0.03]" />
+    <ManagementSlide section="Architecture" page="12" title="A browser application backed by an API and PostgreSQL">
+      <div className="grid h-[47vh] grid-cols-4 gap-[1vw]">
+        <Card label="USER" title="Web browser">
+          Employee login and QC screens
+        </Card>
+        <Card label="FRONT END" title="React + TypeScript">
+          Vite-built static application
+        </Card>
+        <Card label="API" title="Node.js + Express">
+          Auth, records, validation and reporting data
+        </Card>
+        <Card label="PERSISTENCE" title="PostgreSQL">
+          Drizzle ORM; object storage for files
+        </Card>
       </div>
-      <SlideFooter label="Access and Governance / Access Controls" number="12" />
-    </SlideFrame>
+      <div className="mt-[3vh] grid grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] items-center gap-[0.7vw] text-center">
+        <div className="border border-line bg-white px-[0.8vw] py-[1.3vh] text-[1.7vw] font-semibold text-primary">Browser</div><div className="text-[2vw] text-accent">→</div>
+        <div className="border border-line bg-soft px-[0.8vw] py-[1.3vh] text-[1.7vw] font-semibold text-primary">Static app</div><div className="text-[2vw] text-accent">→</div>
+        <div className="border border-line bg-white px-[0.8vw] py-[1.3vh] text-[1.7vw] font-semibold text-primary">/api service</div><div className="text-[2vw] text-accent">→</div>
+        <div className="border border-accent/50 bg-soft px-[0.8vw] py-[1.3vh] text-[1.7vw] font-semibold text-primary">PostgreSQL</div>
+      </div>
+      <div className="mt-[2.4vh] grid grid-cols-2 gap-[1.2vw]">
+        <div className="border border-line p-[1.1vw] text-[1.7vw] leading-[1.2] text-muted">UI reports use application views and browser print; daily result export is generated as an .xlsx file.</div>
+        <div className="border border-line p-[1.1vw] text-[1.7vw] leading-[1.2] text-muted">Files use object-storage upload URLs; records retain the related object path and metadata.</div>
+      </div>
+    </ManagementSlide>
   );
 }
