@@ -1,6 +1,59 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { calculateReadyMixAgeBandAverages } from "./records-utils";
+import { RecordStatus } from "@workspace/api-client-react";
+import {
+  calculateReadyMixAgeBandAverages,
+  dashboardStatusRegisterUrl,
+  filterRecordsByDashboardStatus,
+  parseDashboardRegisterFilters,
+} from "./records-utils";
+
+test("builds QC register links for the selected month and status", () => {
+  assert.equal(dashboardStatusRegisterUrl("2026-10"), "/records?month=2026-10");
+  assert.equal(
+    dashboardStatusRegisterUrl("2026-10", RecordStatus.Passed),
+    "/records?month=2026-10&status=Passed",
+  );
+  assert.equal(
+    dashboardStatusRegisterUrl("2026-10", RecordStatus.Review),
+    "/records?month=2026-10&status=Review",
+  );
+  assert.equal(
+    dashboardStatusRegisterUrl("2026-10", RecordStatus.Failed),
+    "/records?month=2026-10&status=Failed",
+  );
+});
+
+test("parses only supported dashboard register filters", () => {
+  assert.deepEqual(
+    parseDashboardRegisterFilters("?month=2026-10&status=Review"),
+    { month: "2026-10", status: RecordStatus.Review },
+  );
+  assert.deepEqual(
+    parseDashboardRegisterFilters("?month=2026-13&status=unknown"),
+    {},
+  );
+});
+
+test("filters register rows by sample month and requested status", () => {
+  const records = [
+    { id: 1, sampleDate: "2026-10-03", status: RecordStatus.Passed },
+    { id: 2, sampleDate: "2026-10-12", status: RecordStatus.Review },
+    { id: 3, sampleDate: "2026-09-30", status: RecordStatus.Passed },
+  ];
+
+  assert.deepEqual(
+    filterRecordsByDashboardStatus(records, {
+      month: "2026-10",
+      status: RecordStatus.Passed,
+    }).map(({ id }) => id),
+    [1],
+  );
+  assert.deepEqual(
+    filterRecordsByDashboardStatus(records, { month: "2026-10" }).map(({ id }) => id),
+    [1, 2],
+  );
+});
 
 test("calculates per-record Ready Mix averages for the requested age bands", () => {
   assert.deepEqual(

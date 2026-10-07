@@ -12,6 +12,8 @@ import { useLocation } from "wouter";
 import { REGISTER_SECTIONS, type RegisterSection } from "./register-sections";
 import {
   calculateReadyMixAgeBandAverages,
+  filterRecordsByDashboardStatus,
+  parseDashboardRegisterFilters,
   type ReadyMixAgeBandAverages,
 } from "./records-utils";
 import { averageCubeStrengthAtAge } from "./record-form-utils";
@@ -139,12 +141,20 @@ export default function Records() {
   const canEditQc = role === "technician" || role === "managerial" || role === "administrator";
   const [search, setSearch] = useState("");
   const section = REGISTER_SECTIONS.find(({ href }) => href === location)?.id ?? "all";
+  const dashboardFilters = parseDashboardRegisterFilters(
+    typeof window === "undefined" ? "" : window.location.search,
+  );
+  const dashboardMonthLabel = dashboardFilters.month
+    ? new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(
+        new Date(`${dashboardFilters.month}-01T00:00:00`),
+      )
+    : null;
 
   const { data: records, isLoading } = useListRecords({
     search: search || undefined,
     limit: 1000,
   });
-  const sectionRecords = useMemo(() => {
+  const sectionRecordsByType = useMemo(() => {
     const allRecords = records ?? [];
     switch (section) {
       case "readymix":
@@ -170,6 +180,10 @@ export default function Records() {
         return allRecords;
     }
   }, [records, section]);
+  const sectionRecords = useMemo(
+    () => filterRecordsByDashboardStatus(sectionRecordsByType, dashboardFilters),
+    [sectionRecordsByType, dashboardFilters.month, dashboardFilters.status],
+  );
   const isReadyMixSection = section === "readymix";
   const isMasonrySection = section === "masonry";
   const isAggregateSection = section === "aggregate";
@@ -308,6 +322,22 @@ export default function Records() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">QC Register</h1>
           <p className="text-muted-foreground mt-1 text-sm">Browse QC records by test section. Section membership follows each record’s test type.</p>
+          {(dashboardMonthLabel || dashboardFilters.status) && (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {dashboardMonthLabel && (
+                <Badge variant="outline">Month: {dashboardMonthLabel}</Badge>
+              )}
+              {dashboardFilters.status && (
+                <Badge variant="outline">Status: {dashboardFilters.status}</Badge>
+              )}
+              <Link
+                href="/records"
+                className="text-xs font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Clear filters
+              </Link>
+            </div>
+          )}
         </div>
          {canEditQc && (
            <div className="flex flex-wrap gap-2">

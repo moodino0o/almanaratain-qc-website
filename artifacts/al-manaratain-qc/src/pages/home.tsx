@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import {
   getListComplaintsQueryKey,
   getListRecordsQueryKey,
+  RecordStatus,
   useGetDashboard,
   useListComplaints,
   useListRecords,
@@ -50,6 +51,7 @@ import {
 } from "@/components/ui/table";
 import { formatDate } from "@/lib/utils";
 import { useAuth } from "@workspace/replit-auth-web";
+import { dashboardStatusRegisterUrl } from "./records-utils";
 
 function StatusSummary({
   label,
@@ -57,12 +59,14 @@ function StatusSummary({
   detail,
   icon: Icon,
   tone,
+  href,
 }: {
   label: string;
   value: number;
   detail: string;
   icon: typeof FileText;
   tone: "neutral" | "success" | "warning" | "danger";
+  href: string;
 }) {
   const iconClasses = {
     neutral: "bg-muted text-muted-foreground",
@@ -78,7 +82,11 @@ function StatusSummary({
   };
 
   return (
-    <div className="flex items-center gap-3 rounded-md border border-border/70 bg-muted/20 p-3">
+    <Link
+      href={href}
+      aria-label={`Open QC register: ${label}`}
+      className="flex items-center gap-3 rounded-md border border-border/70 bg-muted/20 p-3 text-left transition-colors hover:border-primary/40 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
       <span className={`rounded-md p-2 ${iconClasses[tone]}`}>
         <Icon className="h-4 w-4" />
       </span>
@@ -89,7 +97,7 @@ function StatusSummary({
         </p>
         <p className="truncate text-[11px] text-muted-foreground">{detail}</p>
       </div>
-    </div>
+    </Link>
   );
 }
 
@@ -361,6 +369,7 @@ export default function Home() {
                 detail="In the QC register"
                 icon={FileText}
                 tone="neutral"
+                href={dashboardStatusRegisterUrl(selectedQcMonth)}
               />
               <StatusSummary
                 label="Passed"
@@ -368,6 +377,7 @@ export default function Home() {
                 detail={`${passRate.toFixed(1)}% pass rate`}
                 icon={CheckCircle2}
                 tone="success"
+                href={dashboardStatusRegisterUrl(selectedQcMonth, RecordStatus.Passed)}
               />
               <StatusSummary
                 label="Needs review"
@@ -375,6 +385,7 @@ export default function Home() {
                 detail="Supervisor approval needed"
                 icon={AlertTriangle}
                 tone="warning"
+                href={dashboardStatusRegisterUrl(selectedQcMonth, RecordStatus.Review)}
               />
               <StatusSummary
                 label="Failed"
@@ -382,6 +393,7 @@ export default function Home() {
                 detail="Immediate action required"
                 icon={XCircle}
                 tone="danger"
+                href={dashboardStatusRegisterUrl(selectedQcMonth, RecordStatus.Failed)}
               />
             </div>
             <div>

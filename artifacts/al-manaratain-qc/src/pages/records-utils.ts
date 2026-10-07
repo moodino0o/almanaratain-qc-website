@@ -1,8 +1,50 @@
+import { RecordStatus, type QcRecord } from "@workspace/api-client-react";
+
 export type ReadyMixAgeBandAverages = {
   twoToFiveDays: number | null;
   sixToEightDays: number | null;
   twentyEightToTwentyNineDays: number | null;
 };
+
+export type DashboardRegisterFilters = {
+  month?: string;
+  status?: RecordStatus;
+};
+
+const validMonth = /^\d{4}-(0[1-9]|1[0-2])$/;
+const recordStatuses = new Set<string>(Object.values(RecordStatus));
+
+export function dashboardStatusRegisterUrl(
+  month: string,
+  status?: RecordStatus,
+) {
+  const params = new URLSearchParams({ month });
+  if (status) params.set("status", status);
+  return `/records?${params.toString()}`;
+}
+
+export function parseDashboardRegisterFilters(search: string): DashboardRegisterFilters {
+  const params = new URLSearchParams(search);
+  const monthValue = params.get("month") ?? "";
+  const statusValue = params.get("status") ?? "";
+
+  return {
+    ...(validMonth.test(monthValue) ? { month: monthValue } : {}),
+    ...(recordStatuses.has(statusValue)
+      ? { status: statusValue as RecordStatus }
+      : {}),
+  };
+}
+
+export function filterRecordsByDashboardStatus<T extends Pick<QcRecord, "sampleDate" | "status">>(
+  records: T[],
+  filters: DashboardRegisterFilters,
+) {
+  return records.filter((record) =>
+    (!filters.month || record.sampleDate.slice(0, 7) === filters.month) &&
+    (!filters.status || record.status === filters.status),
+  );
+}
 
 const numericValue = (value: unknown) => {
   if (typeof value === "number" && Number.isFinite(value)) return value;
