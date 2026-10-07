@@ -44,6 +44,12 @@ export function formatBlockNetArea(width: unknown, length: unknown) {
   return area === null ? "-" : String(Math.round(area));
 }
 
+export function formatDammamBlockArea(value: unknown) {
+  if (value === null || value === undefined || value === "") return "-";
+  const parsed = typeof value === "number" ? value : Number(String(value).trim());
+  return Number.isFinite(parsed) ? Math.round(parsed).toLocaleString("en-US") : "-";
+}
+
 type ConfiguredBlockColumn = {
   key: string;
   label: string;
@@ -87,6 +93,41 @@ export function blockReportColumnsWithFaceArea<T extends ConfiguredBlockColumn>(
       : column)
     : withFaceArea;
   return adjustedColumns.sort((left, right) => left.order - right.order);
+}
+
+export function blockReportColumnsWithRequiredFields<T extends ConfiguredBlockColumn>(
+  columns: T[],
+  defaults: T[],
+  requiredKeys: string[],
+) {
+  const result = [...columns];
+  let nextOrder = Math.max(-1, ...result.map((column) => column.order)) + 1;
+
+  for (const key of requiredKeys) {
+    const defaultColumn = defaults.find((column) => column.key === key);
+    if (!defaultColumn) continue;
+    const existingIndex = result.findIndex((column) => column.key === key);
+    if (existingIndex >= 0) {
+      result[existingIndex] = {
+        ...result[existingIndex],
+        label: defaultColumn.label,
+        visible: true,
+      };
+    } else {
+      result.push({ ...defaultColumn, visible: true, order: nextOrder++ });
+    }
+  }
+
+  const visibleWidth = result.reduce(
+    (total, column) => total + (column.visible ? column.width : 0),
+    0,
+  );
+  const adjusted = visibleWidth > 100
+    ? result.map((column) => column.visible
+      ? { ...column, width: column.width * 100 / visibleWidth }
+      : column)
+    : result;
+  return adjusted.sort((left, right) => left.order - right.order);
 }
 
 export function filterRowsWithLoad<T>(rows: T[]): T[] {

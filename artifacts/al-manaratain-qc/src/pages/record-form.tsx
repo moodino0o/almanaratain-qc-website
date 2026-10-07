@@ -26,6 +26,9 @@ import {
   calculateCubeCompressiveStrength,
   calculateSulphateContent,
   calculateBlockDensity,
+  calculateDammamBlockResults,
+  getDammamBlockHoleCount,
+  isDammamBlockLocation,
   calculateCubeDensity,
   integerIdentifierValue,
   cubeWeightInGrams,
@@ -336,6 +339,9 @@ export default function RecordForm() {
 
   const sieveMassUnit = "g";
   const blockDimensions = blockDimensionsFromSize(details.blockSize);
+  const isDammamBlock =
+    testType === TestType.Blocks && isDammamBlockLocation(locationValue);
+  const dammamHoleCount = getDammamBlockHoleCount(details.blockSize);
   const calculatedMoistureContent = calculateMoistureContent(
     details.dryWeight || details.drySample,
     details.wetWeight || details.wetSample,
@@ -354,6 +360,21 @@ export default function RecordForm() {
     details.crucibleWeight,
     details.crucibleAshWeight,
   );
+
+  useEffect(() => {
+    if (testType !== TestType.Blocks || !isDammamBlockLocation(locationValue)) return;
+    setDetails((previousDetails) => {
+      const faceThickness = previousDetails.faceThickness ?? "30";
+      const webThickness = previousDetails.webThickness ?? "30";
+      if (
+        previousDetails.faceThickness === faceThickness &&
+        previousDetails.webThickness === webThickness
+      ) {
+        return previousDetails;
+      }
+      return { ...previousDetails, faceThickness, webThickness };
+    });
+  }, [locationValue, testType]);
 
   useEffect(() => {
     if (testType !== TestType.Blocks) {
@@ -822,6 +843,21 @@ export default function RecordForm() {
 
   const calculateStrength = (row: Pick<TestRow, "length" | "width" | "load">) =>
     calculateBlockStrengths(row, details.shapeFactor, locationValue);
+  const calculateDammamRow = (row: Pick<TestRow, "length" | "width" | "load">) =>
+    calculateDammamBlockResults(
+      {
+        ...row,
+        length: row.length || blockDimensions?.length || "",
+        width: row.width || blockDimensions?.width || "",
+      },
+      details.blockSize,
+      details.faceThickness,
+      details.webThickness,
+    );
+  const formatDammamArea = (value: number | null | undefined) =>
+    value === null || value === undefined ? "—" : Math.round(value).toLocaleString("en-US");
+  const formatDammamStrength = (value: number | null | undefined) =>
+    value === null || value === undefined ? "—" : value.toFixed(1);
   const calculatePrecastStrength = (row: Pick<TestRow, "load">) => {
     const dimensions = blockDimensionsFromSize(details.cubeSize);
     return dimensions
@@ -917,6 +953,47 @@ export default function RecordForm() {
     ) {
       toast.error("Please select a Block Type and Block Size.");
       return;
+    }
+    if (isDammamBlock) {
+      if (dammamHoleCount === null) {
+        toast.error("Dammam Block calculations support 4, 6, and 8 inch sizes.");
+        return;
+      }
+      const faceThickness = Number(String(details.faceThickness ?? "30").trim());
+      const webThickness = Number(String(details.webThickness ?? "30").trim());
+      if (
+        !Number.isFinite(faceThickness) ||
+        faceThickness <= 0 ||
+        !Number.isFinite(webThickness) ||
+        webThickness <= 0
+      ) {
+        toast.error("Face and Web thickness must be greater than zero.");
+        return;
+      }
+      if (testRows.some((row) => {
+        const enteredLoad = String(row.load ?? "").trim();
+        return enteredLoad !== "" &&
+          (!Number.isFinite(Number(enteredLoad)) || Number(enteredLoad) <= 0);
+      })) {
+        toast.error("Failure Load must be greater than zero.");
+        return;
+      }
+      if (testRows.some((row) =>
+        String(row.load ?? "").trim() !== "" &&
+        !calculateDammamBlockResults(
+          {
+            ...row,
+            length: row.length || blockDimensions?.length || "",
+            width: row.width || blockDimensions?.width || "",
+          },
+          details.blockSize,
+          details.faceThickness,
+          details.webThickness,
+        ),
+      )) {
+        toast.error("Face/Web thickness leaves no valid hole dimensions for this specimen.");
+        return;
+      }
     }
     if (
       testType === TestType.Blocks &&
@@ -1028,6 +1105,15 @@ export default function RecordForm() {
     }
     if (testType === TestType.Blocks) {
       payloadDetails.machine = machine;
+      if (isDammamBlock) {
+        payloadDetails.faceThickness = details.faceThickness ?? "30";
+        payloadDetails.webThickness = details.webThickness ?? "30";
+        payloadDetails.numberOfHoles = dammamHoleCount;
+      } else {
+        delete payloadDetails.faceThickness;
+        delete payloadDetails.webThickness;
+        delete payloadDetails.numberOfHoles;
+      }
     }
     if (testType === TestType.Precast) {
       payloadDetails.cubeSize = String(
@@ -1041,7 +1127,20 @@ export default function RecordForm() {
     }
 
     if (usesTestRows) {
-      payloadDetails.testRows = testRows.map(({ id: _id, ...row }, index) => ({
+      payloadDetails.testRows = testRows.map(({ id: _id, ...row }, index) => {
+        const dammamResults = isDammamBlock
+          ? calculateDammamBlockResults(
+              {
+                ...row,
+                length: row.length || blockDimensions?.length || "",
+                width: row.width || blockDimensions?.width || "",
+              },
+              details.blockSize,
+              details.faceThickness,
+              details.webThickness,
+            )
+          : null;
+        return ({
         rowNo: index + 1,
         ...(testType === TestType.Ready_Mix || testType === TestType.Precast
           ? { testAge: row.testAge }
@@ -1099,7 +1198,19 @@ export default function RecordForm() {
                 row.wetWeight,
               ),
             }),
-      }));
+          ...(isDammamBlock
+            ? {
+                failureLoad: row.load,
+                numberOfHoles: dammamHoleCount,
+                failureLoadN: dammamResults?.failureLoadN ?? null,
+                grossArea: dammamResults?.grossArea ?? null,
+                netArea: dammamResults?.netArea ?? null,
+                grossStrength: dammamResults?.grossStrength ?? null,
+                netStrength: dammamResults?.netStrength ?? null,
+              }
+            : {}),
+        });
+      });
     }
 
     const payload: QcRecordInput = {
@@ -1817,6 +1928,46 @@ export default function RecordForm() {
                       placeholder="Enter shape factor"
                     />
                   </div>
+                  {isDammamBlock && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Face Thickness (mm)</Label>
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          value={String(details.faceThickness ?? "30")}
+                          onChange={(event) =>
+                            handleDetailChange("faceThickness", event.target.value)
+                          }
+                          placeholder="30"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Web Thickness (mm)</Label>
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          value={String(details.webThickness ?? "30")}
+                          onChange={(event) =>
+                            handleDetailChange("webThickness", event.target.value)
+                          }
+                          placeholder="30"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Number of Holes</Label>
+                        <Input
+                          value={dammamHoleCount === null ? "" : String(dammamHoleCount)}
+                          readOnly
+                          aria-label="Automatically calculated number of holes"
+                          placeholder="Based on Block Size"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Calculated automatically from Block Size.
+                        </p>
+                      </div>
+                    </>
+                  )}
                 </>
               )}
       {testType === TestType.Paving_Blocks && (
@@ -2212,8 +2363,8 @@ export default function RecordForm() {
 
                     </>
                   )}
-                   {usesSieveRows && !sieveEntryItems.length ? null : <div className={`${isCompactBlockTable ? "overflow-hidden" : "overflow-x-auto"} rounded-md border`}>
-                        <table className={`w-full ${usesSieveRows ? "min-w-[1240px] text-sm" : isCompactBlockTable ? "table-fixed text-[11px]" : testType === TestType.Paving_Blocks ? "min-w-[1440px] text-sm" : testType === TestType.Precast ? "min-w-[980px] text-sm" : "min-w-[1080px] text-sm"}`}>
+                    {usesSieveRows && !sieveEntryItems.length ? null : <div className={`${isCompactBlockTable ? isDammamBlock ? "overflow-x-auto" : "overflow-hidden" : "overflow-x-auto"} rounded-md border`}>
+                         <table className={`w-full ${usesSieveRows ? "min-w-[1240px] text-sm" : isCompactBlockTable ? isDammamBlock ? "table-fixed min-w-[1680px] text-[11px]" : "table-fixed text-[11px]" : testType === TestType.Paving_Blocks ? "min-w-[1440px] text-sm" : testType === TestType.Precast ? "min-w-[980px] text-sm" : "min-w-[1080px] text-sm"}`}>
                       <thead className="bg-muted/50">
                         <tr className="border-b">
                             {testType !== TestType.Precast && (
@@ -2271,7 +2422,9 @@ export default function RecordForm() {
                               testType === TestType.Paving_Blocks ||
                               testType === TestType.Precast) && (
                              <>
-                               <th className={`${isCompactBlockTable ? "w-[10%] px-1 py-2 text-[10px]" : "px-3 py-3"} text-left font-semibold`}>Load (kN)</th>
+                                <th className={`${isCompactBlockTable ? "w-[10%] px-1 py-2 text-[10px]" : "px-3 py-3"} text-left font-semibold`}>
+                                  {isDammamBlock ? "Failure Load (kN)" : "Load (kN)"}
+                                </th>
                                {testType === TestType.Blocks ? (
                                  <th className="w-[12%] px-1 py-2 text-left text-[10px] font-semibold">Wet Weight (kg)</th>
                                ) : (
@@ -2295,6 +2448,14 @@ export default function RecordForm() {
                                 )}
                                {testType === TestType.Blocks && (
                                  <>
+                                    {isDammamBlock && (
+                                      <>
+                                        <th className="px-1 py-2 text-left text-[10px] font-semibold">Gross Area (mm²)</th>
+                                        <th className="px-1 py-2 text-left text-[10px] font-semibold">Net Area (mm²)</th>
+                                        <th className="px-1 py-2 text-left text-[10px] font-semibold">Gross Strength (N/mm²)</th>
+                                        <th className="px-1 py-2 text-left text-[10px] font-semibold">Net Strength (N/mm²)</th>
+                                      </>
+                                    )}
                                     <th className="w-[16%] px-1 py-2 text-left text-[10px] font-semibold">Air Dry Strength (N/mm²)</th>
                                     <th className="w-[14%] px-1 py-2 text-left text-[10px] font-semibold">Density (kg/m³)</th>
                                  </>
@@ -2598,6 +2759,30 @@ export default function RecordForm() {
                                  )}
                                 {testType === TestType.Blocks && (
                                   <>
+                                    {isDammamBlock && (
+                                      <>
+                                        <td className={compactBlockCellClass}>
+                                          <div className="flex h-8 items-center rounded-md border bg-muted/40 px-1.5 text-[11px] font-semibold leading-tight text-foreground">
+                                            {formatDammamArea(calculateDammamRow(row)?.grossArea)}
+                                          </div>
+                                        </td>
+                                        <td className={compactBlockCellClass}>
+                                          <div className="flex h-8 items-center rounded-md border bg-muted/40 px-1.5 text-[11px] font-semibold leading-tight text-foreground">
+                                            {formatDammamArea(calculateDammamRow(row)?.netArea)}
+                                          </div>
+                                        </td>
+                                        <td className={compactBlockCellClass}>
+                                          <div className="flex h-8 items-center rounded-md border bg-muted/40 px-1.5 text-[11px] font-semibold leading-tight text-foreground">
+                                            {formatDammamStrength(calculateDammamRow(row)?.grossStrength)}
+                                          </div>
+                                        </td>
+                                        <td className={compactBlockCellClass}>
+                                          <div className="flex h-8 items-center rounded-md border bg-muted/40 px-1.5 text-[11px] font-semibold leading-tight text-foreground">
+                                            {formatDammamStrength(calculateDammamRow(row)?.netStrength)}
+                                          </div>
+                                        </td>
+                                      </>
+                                    )}
                                  <td className={compactBlockCellClass}>
                                     <div
                                       className="flex h-8 items-center rounded-md border bg-muted/40 px-1.5 text-[11px] font-semibold leading-tight text-foreground"

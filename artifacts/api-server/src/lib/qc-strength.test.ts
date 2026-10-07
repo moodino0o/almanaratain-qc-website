@@ -553,6 +553,46 @@ test("uses the air-dry result for Block pass and fail evaluation", () => {
   assert.equal(result.status, "Passed");
 });
 
+test("calculates and saves Dammam gross and net results without changing compliance basis", () => {
+  const record = blockRecord([
+    { length: 400, width: 200, height: 200, load: 1500 },
+  ]);
+  record.location = "Dammam Plant";
+  record.details.blockSize = '8"';
+  record.details.faceThickness = 30;
+  record.details.webThickness = 30;
+
+  const result = evaluateStrengthRecord(
+    record,
+    [blockStandard({ requiredStrength: "18" })],
+  );
+  const row = (result.details.testRows as Record<string, unknown>[])[0];
+
+  assert.equal((result.details as Record<string, unknown>).numberOfHoles, 3);
+  assert.equal(row.numberOfHoles, 3);
+  assert.equal(row.failureLoad, 1500);
+  assert.equal(row.failureLoadN, 1_500_000);
+  assert.equal(row.grossArea, 80_000);
+  assert.ok(Math.abs(Number(row.netArea) - 72_533.33333333333) < 1e-8);
+  assert.equal(row.grossStrength, 18.75);
+  assert.ok(Math.abs(Number(row.netStrength) - 1_500_000 / 72_533.33333333333) < 1e-10);
+  assert.equal(row.airDryStrength, 18.8);
+  assert.equal(result.evaluation!.averageStrength, 18.8);
+  assert.equal(result.status, "Passed");
+});
+
+test("does not add Dammam result fields or change strength outside Dammam", () => {
+  const result = evaluateStrengthRecord(
+    blockRecord([{ length: 400, width: 200, height: 200, load: 1000 }]),
+    [blockStandard()],
+  );
+  const row = (result.details.testRows as Record<string, unknown>[])[0];
+
+  assert.equal("grossArea" in row, false);
+  assert.equal("netArea" in row, false);
+  assert.equal(row.airDryStrength, 15);
+});
+
 test("matches a Block standard by Block Type and Size without a material entry", () => {
   const result = evaluateStrengthRecord(
     {

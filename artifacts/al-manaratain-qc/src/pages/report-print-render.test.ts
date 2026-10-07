@@ -373,6 +373,145 @@ test("updates legacy structured Face Area cells to Net Area and recalculates wid
   assert.match(markup, /data-report-cell="body-face-area">100000<\/td>/);
 });
 
+test("prints recalculated Dammam geometry and strength in saved Block report tables", () => {
+  const object = templateObject({
+    id: "table",
+    tableKey: "blockCompression",
+    name: "Block compression results",
+  });
+  const design = {
+    layout: {
+      title: "Saved Dammam Blocks",
+      columns: {
+        blockCompression: [
+          { key: "no", label: "No.", width: 20, visible: true, order: 0 },
+          { key: "length", label: "Length (mm)", width: 20, visible: true, order: 1 },
+          { key: "width", label: "Width (mm)", width: 20, visible: true, order: 2 },
+          { key: "height", label: "Height (mm)", width: 20, visible: true, order: 3 },
+          { key: "load", label: "Load (kN)", width: 20, visible: true, order: 4 },
+        ],
+      },
+    },
+    objects: [object],
+  } as ReportTemplateDesign;
+  const record = {
+    ...reportFixture(),
+    testType: "Blocks",
+    location: "Dammam Plant",
+    details: {
+      blockType: '8" Plain Block',
+      blockSize: '8"',
+      faceThickness: "30",
+      webThickness: "30",
+      testRows: [{ rowNo: 1, length: 400, width: 200, height: 200, load: 500 }],
+    },
+  } as QcRecord;
+
+  const markup = renderTable(design, object, record);
+  assert.match(markup, /Failure Load \(kN\)/);
+  assert.match(markup, /Gross Area \(mm²\)/);
+  assert.match(markup, /Net Area \(mm²\)/);
+  assert.match(markup, /Gross Strength \(N\/mm²\)/);
+  assert.match(markup, /Net Strength \(N\/mm²\)/);
+  assert.match(markup, /80,000/);
+  assert.match(markup, /72,533/);
+  assert.match(markup, />6\.3<\/td>/);
+  assert.match(markup, />6\.9<\/td>/);
+
+  const otherPlantMarkup = renderTable(design, object, {
+    ...record,
+    location: "Manama",
+  } as QcRecord);
+  assert.doesNotMatch(otherPlantMarkup, /Gross Area|Gross Strength|Net Strength|Failure Load/);
+  assert.match(otherPlantMarkup, /Net Area \(mm²\)/);
+});
+
+test("adds missing Dammam result columns to saved structured Block tables", () => {
+  const object = templateObject({
+    id: "table",
+    tableKey: "blockCompression",
+    name: "Block compression results",
+  });
+  const savedColumns = [
+    { key: "no", label: "No.", width: 20, visible: true, order: 0 },
+    { key: "length", label: "Length (mm)", width: 20, visible: true, order: 1 },
+    { key: "width", label: "Width (mm)", width: 20, visible: true, order: 2 },
+    { key: "height", label: "Height (mm)", width: 20, visible: true, order: 3 },
+    { key: "load", label: "Load (kN)", width: 20, visible: true, order: 4 },
+  ];
+  const headerCells = [
+    cell("head-no", "block-header", 0, { content: "No." }),
+    cell("head-length", "block-header", 1, { content: "Length (mm)" }),
+    cell("head-width", "block-header", 2, { content: "Width (mm)" }),
+    cell("head-height", "block-header", 3, { content: "Height (mm)" }),
+    cell("head-load", "block-header", 4, { content: "Load (kN)" }),
+  ];
+  const bodyCells = [
+    cell("body-no", "block-body", 0, { fieldKey: "details.no" }),
+    cell("body-length", "block-body", 1, { fieldKey: "details.length" }),
+    cell("body-width", "block-body", 2, { fieldKey: "details.width" }),
+    cell("body-height", "block-body", 3, { fieldKey: "details.height" }),
+    cell("body-load", "block-body", 4, { fieldKey: "details.load" }),
+  ];
+  const design = {
+    layout: { title: "Saved Dammam Blocks", columns: { blockCompression: savedColumns } },
+    objects: [
+      object,
+      ...row("block-header", "header", 0, headerCells),
+      ...row("block-body", "dynamic", 8, bodyCells),
+    ],
+  } as ReportTemplateDesign;
+  const record = {
+    ...reportFixture(),
+    testType: "Blocks",
+    location: "Dammam Plant",
+    details: {
+      blockSize: '8"',
+      faceThickness: "30",
+      webThickness: "30",
+      testRows: [{ rowNo: 1, length: 400, width: 200, height: 200, load: 500 }],
+    },
+  } as QcRecord;
+
+  const markup = renderTable(design, object, record);
+  assert.match(markup, /Failure Load \(kN\)/);
+  assert.match(markup, /Gross Area \(mm²\)/);
+  assert.match(markup, /Net Strength \(N\/mm²\)/);
+  assert.match(markup, /data-report-cell="block-body-grossArea">80,000<\/td>/);
+  assert.match(markup, /data-report-cell="block-body-netArea">72,533<\/td>/);
+  assert.match(markup, /data-report-cell="block-body-grossStrength">6\.3<\/td>/);
+  assert.match(markup, /data-report-cell="block-body-netStrength">6\.9<\/td>/);
+});
+
+test("renders Dammam thickness, hole count, and results in the fixed report only for Dammam", () => {
+  const record = {
+    ...reportFixture(),
+    testType: "Blocks",
+    location: "Dammam Plant",
+    material: '8" Plain Block',
+    details: {
+      blockType: '8" Plain Block',
+      blockSize: '8"',
+      faceThickness: "30",
+      webThickness: "30",
+      testRows: [{ rowNo: 1, length: 400, width: 200, height: 200, load: 500 }],
+    },
+  } as QcRecord;
+  const markup = renderDocument(record);
+
+  assert.match(markup, /Plant:/);
+  assert.match(markup, /FACE THICKNESS \(mm\):/);
+  assert.match(markup, /WEB THICKNESS \(mm\):/);
+  assert.match(markup, /NUMBER OF HOLES:/);
+  assert.match(markup, /Gross Area/);
+  assert.match(markup, /Net Strength/);
+  assert.match(markup, /72,533/);
+
+  const otherPlantMarkup = renderDocument({ ...record, location: "Manama" } as QcRecord);
+  assert.doesNotMatch(otherPlantMarkup, /FACE THICKNESS|WEB THICKNESS|NUMBER OF HOLES|Gross Area|Net Strength/);
+  assert.match(otherPlantMarkup, /Net Area/);
+});
+
 test("renders Blocks remarks between Test Details and SPECIMEN RESULTS", () => {
   const record = {
     ...reportFixture(),

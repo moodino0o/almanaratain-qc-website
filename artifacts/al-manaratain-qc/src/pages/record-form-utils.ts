@@ -491,8 +491,7 @@ export const calculateBlockStrengths = (
   }
 
   const waterStrength = (load * 1000) / (length * width);
-  const location = stringValue(locationValue).trim().toLocaleLowerCase();
-  const airDryFactor = location === "dammam" ? 1 : 1.2;
+  const airDryFactor = isDammamBlockLocation(locationValue) ? 1 : 1.2;
   const airDryStrength =
     Math.round((waterStrength * airDryFactor + Number.EPSILON) * 10) / 10;
   const shapeFactorText = numericInputValue(shapeFactorValue);
@@ -529,8 +528,7 @@ export const blockAirDryRowStrength = (
     "strength",
     "compressiveStrength",
   ]);
-  const isDammam = String(locationValue ?? "").trim().toLocaleLowerCase() === "dammam";
-  if (isDammam && waterStrength !== null) return waterStrength;
+  if (isDammamBlockLocation(locationValue) && waterStrength !== null) return waterStrength;
 
   const storedAirDryStrength = firstNumericValue([
     "airDryStrength",
@@ -692,6 +690,63 @@ export const blockDimensionsFromSize = (value: unknown): BlockDimensions | null 
     length: "400",
     width: widthByInchSize[inchSize],
     height: "200",
+  };
+};
+
+export const isDammamBlockLocation = (value: unknown) => {
+  const location = String(value ?? "").trim().toLocaleLowerCase().replace(/\s+/g, " ");
+  return location === "dammam" || location === "dammam plant";
+};
+
+export const getDammamBlockHoleCount = (blockSize: unknown): number | null => {
+  const width = Number(blockDimensionsFromSize(blockSize)?.width);
+  if (width === 100 || width === 150) return 2;
+  if (width === 200) return 3;
+  return null;
+};
+
+export const calculateDammamBlockResults = (
+  row: { length?: unknown; width?: unknown; load?: unknown },
+  blockSize: unknown,
+  faceThicknessValue: unknown,
+  webThicknessValue: unknown,
+) => {
+  const length = Number(String(row.length ?? "").trim());
+  const width = Number(String(row.width ?? "").trim());
+  const face = Number(String(faceThicknessValue ?? "").trim());
+  const web = Number(String(webThicknessValue ?? "").trim());
+  const holes = getDammamBlockHoleCount(blockSize);
+  const loadText = String(row.load ?? "").trim();
+  const load = loadText ? Number(loadText) : null;
+
+  if (
+    holes === null ||
+    ![length, width, face, web].every(Number.isFinite) ||
+    length <= 0 ||
+    width <= 0 ||
+    face <= 0 ||
+    web <= 0 ||
+    (load !== null && (!Number.isFinite(load) || load <= 0))
+  ) {
+    return null;
+  }
+
+  const holeWidth = (width - (2 * face) - ((holes - 1) * web)) / holes;
+  const holeLength = (length - (2 * face) - ((holes - 1) * web)) / holes;
+  if (holeWidth <= 0 || holeLength <= 0) return null;
+
+  const grossArea = width * length;
+  const netArea = grossArea - (holes * holeWidth * holeLength);
+  if (netArea <= 0 || netArea >= grossArea) return null;
+
+  const failureLoadN = load === null ? null : load * 1000;
+  return {
+    numberOfHoles: holes,
+    failureLoadN,
+    grossArea,
+    netArea,
+    grossStrength: failureLoadN === null ? null : failureLoadN / grossArea,
+    netStrength: failureLoadN === null ? null : failureLoadN / netArea,
   };
 };
 

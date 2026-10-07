@@ -60,7 +60,8 @@ export type BlockDimensions = {
 };
 
 export function isDammamLocation(value: unknown) {
-  return normalizedText(value) === "dammam";
+  const location = textValue(value)?.toLocaleLowerCase().replace(/\s+/g, " ");
+  return location === "dammam" || location === "dammam plant";
 }
 
 const AUTOMATED_TEST_TYPES = new Set([
@@ -88,6 +89,82 @@ function numericValue(value: unknown): number | null {
   if (typeof value !== "string" || value.trim() === "") return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function getDammamBlockHoleCount(blockSize: unknown): number | null {
+  const width = blockDimensionsFromSize(blockSize)?.width;
+  if (width === 100 || width === 150) return 2;
+  if (width === 200) return 3;
+  return null;
+}
+
+export function calculateDammamBlockResults(
+  row: unknown,
+  details: Record<string, unknown>,
+) {
+  if (typeof row !== "object" || row === null) return null;
+  const values = row as Record<string, unknown>;
+  const length = numericValue(values.length);
+  const width = numericValue(values.width);
+  const face = numericValue(details.faceThickness);
+  const web = numericValue(details.webThickness);
+  const holes = getDammamBlockHoleCount(details.blockSize);
+  const load = numericValue(values.load ?? values.failureLoad);
+
+  if (
+    length === null || width === null || face === null || web === null ||
+    holes === null || length <= 0 || width <= 0 || face <= 0 || web <= 0 ||
+    (load !== null && load <= 0)
+  ) {
+    return null;
+  }
+
+  const holeWidth = (width - (2 * face) - ((holes - 1) * web)) / holes;
+  const holeLength = (length - (2 * face) - ((holes - 1) * web)) / holes;
+  if (holeWidth <= 0 || holeLength <= 0) return null;
+
+  const grossArea = width * length;
+  const netArea = grossArea - (holes * holeWidth * holeLength);
+  if (netArea <= 0 || netArea >= grossArea) return null;
+
+  const failureLoadN = load === null ? null : load * 1000;
+  return {
+    numberOfHoles: holes,
+    failureLoadN,
+    grossArea,
+    netArea,
+    grossStrength: failureLoadN === null ? null : failureLoadN / grossArea,
+    netStrength: failureLoadN === null ? null : failureLoadN / netArea,
+  };
+}
+
+function normalizeDammamBlockDetails(details: Record<string, unknown>) {
+  const normalized: Record<string, unknown> = {
+    ...details,
+    faceThickness: details.faceThickness ?? 30,
+    webThickness: details.webThickness ?? 30,
+  };
+  const numberOfHoles = getDammamBlockHoleCount(normalized.blockSize);
+  const rows: unknown[] = Array.isArray(normalized.testRows) ? normalized.testRows : [];
+  return {
+    ...normalized,
+    numberOfHoles,
+    testRows: rows.map((row) => {
+      if (typeof row !== "object" || row === null) return row;
+      const values = row as Record<string, unknown>;
+      const results = calculateDammamBlockResults(values, normalized);
+      return {
+        ...values,
+        failureLoad: values.load ?? values.failureLoad ?? "",
+        numberOfHoles,
+        failureLoadN: results?.failureLoadN ?? null,
+        grossArea: results?.grossArea ?? null,
+        netArea: results?.netArea ?? null,
+        grossStrength: results?.grossStrength ?? null,
+        netStrength: results?.netStrength ?? null,
+      };
+    }),
+  };
 }
 
 function rounded(value: number) {
@@ -655,12 +732,16 @@ export function evaluateStrengthRecord(
     return evaluatePrecastStrengthRecord(record, standards);
   }
 
-  const normalizedDetails: Record<string, unknown> =
+  const baseNormalizedDetails: Record<string, unknown> =
     record.testType === "Blocks"
       ? normalizeBlockDetails(record.details, shapeFactors)
       : record.testType === "Paving Blocks"
         ? normalizePavingDetails(record.details, shapeFactors)
       : record.details;
+  const normalizedDetails: Record<string, unknown> =
+    record.testType === "Blocks" && isDammamLocation(record.location)
+      ? normalizeDammamBlockDetails(baseNormalizedDetails)
+      : baseNormalizedDetails;
   const normalizedRecord = { ...record, details: normalizedDetails };
   const standard = matchingStandard(normalizedRecord, standards);
   const requiredStrength =

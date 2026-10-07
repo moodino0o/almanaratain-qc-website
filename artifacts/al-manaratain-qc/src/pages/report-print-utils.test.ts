@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   blockReportColumnsWithFaceArea,
+  blockReportColumnsWithRequiredFields,
   blockReportColumnsWithoutWetWeight,
   calculateBlockNetArea,
+  formatDammamBlockArea,
   formatBlockNetArea,
   filterRowsWithLoad,
   formatShapeFactor,
@@ -48,11 +50,40 @@ test("calculates Block net area from width and length and handles missing dimens
   assert.equal(calculateBlockNetArea(250, "not entered"), null);
 });
 
+test("formats Dammam area with grouping and preserves one-decimal report strengths", () => {
+  assert.equal(formatDammamBlockArea(176245.7), "176,246");
+  assert.equal(formatDammamBlockArea(""), "-");
+});
+
+test("Dammam Block layouts always include plant, geometry, and strength result fields", () => {
+  const fallback = fieldsForReport("Blocks", "blockCompression")
+    .map((field, order) => ({ ...field, order, visible: true }));
+  const saved = fallback.filter((column) =>
+    !["faceArea", "water", "grossArea", "netArea", "grossStrength", "netStrength"].includes(column.key),
+  );
+  const compatible = blockReportColumnsWithRequiredFields(
+    saved,
+    fallback.map((column) =>
+      column.key === "load" ? { ...column, label: "Failure Load (kN)" } : column,
+    ),
+    ["no", "length", "width", "height", "load", "grossArea", "netArea", "grossStrength", "netStrength", "airDry", "normalized", "density"],
+  );
+
+  assert.ok(compatible.some((column) => column.key === "grossArea" && column.visible));
+  assert.ok(compatible.some((column) => column.key === "netArea" && column.visible));
+  assert.ok(compatible.some((column) => column.key === "grossStrength" && column.visible));
+  assert.ok(compatible.some((column) => column.key === "netStrength" && column.visible));
+  assert.equal(compatible.find((column) => column.key === "load")?.label, "Failure Load (kN)");
+  assert.ok(compatible.reduce((sum, column) => sum + (column.visible ? column.width : 0), 0) <= 100.001);
+});
+
 test("adds Net Area after Height to older Block compression column layouts", () => {
   const fallback = fieldsForReport("Blocks", "blockCompression")
     .map((field, order) => ({ ...field, order, visible: true }));
   const saved = fallback
-    .filter((column) => column.key !== "faceArea")
+    .filter((column) =>
+      !["faceArea", "grossArea", "netArea", "grossStrength", "netStrength"].includes(column.key),
+    )
     .map((column, order) => ({ ...column, order }));
   const compatible = blockReportColumnsWithFaceArea(
     saved,

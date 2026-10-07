@@ -13,6 +13,9 @@ import {
   cubeWeightInGrams,
   integerIdentifierValue,
   calculateBlockStrengths,
+  calculateDammamBlockResults,
+  getDammamBlockHoleCount,
+  isDammamBlockLocation,
   calculateCubeCompressiveStrength,
   averageCubeStrengthAtAge,
   precastAgeStrengthSummary,
@@ -379,6 +382,48 @@ test("uses the Dammam Block compliance basis in the form preview", () => {
       airDryStrength: "2.7",
       normalizedStrength: "3.6",
     },
+  );
+});
+
+test("calculates Dammam Block gross and net results from saved inputs", () => {
+  assert.equal(isDammamBlockLocation("Dammam"), true);
+  assert.equal(isDammamBlockLocation("Dammam Plant"), true);
+  assert.equal(isDammamBlockLocation("Hidd"), false);
+  assert.equal(getDammamBlockHoleCount('4"'), 2);
+  assert.equal(getDammamBlockHoleCount('6"'), 2);
+  assert.equal(getDammamBlockHoleCount('8"'), 3);
+  assert.equal(getDammamBlockHoleCount('12"'), null);
+
+  const eightInch = calculateDammamBlockResults(
+    { length: "400", width: "200", load: "1500" },
+    '8"',
+    "30",
+    "30",
+  );
+  assert.ok(eightInch);
+  assert.equal(eightInch.numberOfHoles, 3);
+  assert.equal(eightInch.failureLoadN, 1_500_000);
+  assert.equal(eightInch.grossArea, 80_000);
+  assert.ok(Math.abs(eightInch.netArea - 72_533.33333333333) < 1e-8);
+  assert.equal(eightInch.grossStrength, 18.75);
+  assert.ok(Math.abs(eightInch.netStrength - 1_500_000 / 72_533.33333333333) < 1e-10);
+
+  const sixInch = calculateDammamBlockResults(
+    { length: "400", width: "150", load: "1000" },
+    '6"',
+    "30",
+    "30",
+  );
+  assert.equal(sixInch?.netArea, 50_700);
+  assert.equal(sixInch?.grossStrength, 1000 / 60);
+  assert.equal(
+    calculateDammamBlockResults(
+      { length: "400", width: "200", load: "0" },
+      '8"',
+      "30",
+      "30",
+    ),
+    null,
   );
 });
 

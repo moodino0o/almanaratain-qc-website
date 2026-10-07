@@ -178,7 +178,8 @@ const blockAirDryStrength = (row: unknown, location: string) => {
     "strength",
     "compressiveStrength",
   ]);
-  const isDammam = location.trim().toLocaleLowerCase() === "dammam";
+  const normalizedLocation = location.trim().toLocaleLowerCase().replace(/\s+/g, " ");
+  const isDammam = normalizedLocation === "dammam" || normalizedLocation === "dammam plant";
   if (isDammam && waterStrength !== null) return waterStrength;
   const storedAirDryStrength = firstNumericValue(values, ["airDryStrength", "dryAirStrength"]);
   if (storedAirDryStrength !== null) return storedAirDryStrength;
@@ -237,7 +238,10 @@ const recordStrengths = (record: QcRecord, details: Record<string, unknown>) => 
   ) {
     return [directStrength];
   }
-  return [Number((directStrength * (record.location.trim().toLocaleLowerCase() === "dammam" ? 1 : 1.2)).toFixed(1))];
+  const normalizedLocation = record.location.trim().toLocaleLowerCase().replace(/\s+/g, " ");
+  const airDryFactor =
+    normalizedLocation === "dammam" || normalizedLocation === "dammam plant" ? 1 : 1.2;
+  return [Number((directStrength * airDryFactor).toFixed(1))];
 };
 
 export function summarizeRecordStrengths(record: QcRecord): RecordStrengthSummary | null {

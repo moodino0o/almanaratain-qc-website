@@ -12,6 +12,7 @@
 - [Complaint material categories](complaint-material-categories.md) — derive complaint categories from material labels using OPC/SRC, inch sizes, and 60/80mm rules.
 - [Block derived strengths](block-derived-strengths.md) — calculate air-dry and normalized Block strengths from wet strength and shape factor, rounded to one decimal.
 - [Block net area](block-net-area.md) — label Block area as Net Area and calculate width × length; keep Paving Blocks' tensile area separate.
+- [Dammam-only Block reporting](dammam-only-block-reporting.md) — restrict new geometry inputs/results and report columns to Dammam; leave other plants unchanged.
 - [Shape factor defaults](shape-factor-defaults.md) — seed one editable row per Block size, but keep the numeric value empty until an approved standard is provided.
 - [Report layout safety](report-layout-safety.md) — preserve saved layouts and account for absolute section positions when enforcing report order.
 - [QC register typography](qc-register-typography.md) — verify effective CSS for per-column sizes; shared readable-table rules can override utility classes.
