@@ -39,6 +39,10 @@ import {
   filterSieveSizeItems,
   sieveSizeNumber,
 } from "./record-form-utils";
+import {
+  dammamBlockDisplayResults,
+  summarizeDammamBlockNetStrengths,
+} from "./record-detail-utils";
 
 test("defaults Ready Mix and Masonry entry rows to the requested ages and counts", () => {
   const readyMixRows = createDefaultTestRows(TestType.Ready_Mix);
@@ -54,6 +58,45 @@ test("defaults Ready Mix and Masonry entry rows to the requested ages and counts
     createDefaultTestRows(TestType.Ready_Mix, 10).map((row) => row.id),
     [10, 11, 12, 13],
   );
+});
+
+test("Dammam Block details display recalculated Net Area and Net Strength", () => {
+  const row = {
+    length: "400",
+    width: "100",
+    load: "297.9",
+    faceThickness: "30",
+    webThickness: "25",
+    loadedFaceArea: "40000",
+    netArea: "40000",
+    airDryStrength: "7.45",
+    netStrength: "7.45",
+  };
+
+  const result = dammamBlockDisplayResults(row, "400*100*200");
+
+  assert.equal(result.netArea, 37_637.5);
+  assert.ok(Math.abs((result.netStrength ?? 0) - 297_900 / 37_637.5) < 1e-10);
+  assert.notEqual(result.netArea, Number(row.loadedFaceArea));
+  assert.notEqual(result.netStrength, Number(row.airDryStrength));
+});
+
+test("Dammam Block minimum, average, and maximum use Net Strength", () => {
+  const rows = [
+    { length: "400", width: "100", load: "297.9", faceThickness: "30", webThickness: "25", airDryStrength: "7.45" },
+    { length: "400", width: "100", load: "215.7", faceThickness: "30", webThickness: "25", airDryStrength: "5.39" },
+    { length: "400", width: "100", load: "221.5", faceThickness: "30", webThickness: "25", airDryStrength: "5.54" },
+  ];
+  const strengths = rows.map((row) => dammamBlockDisplayResults(row, "400*100*200").netStrength!);
+  const summary = summarizeDammamBlockNetStrengths(rows, "400*100*200");
+
+  assert.equal(summary.minimum, Math.min(...strengths));
+  assert.equal(summary.maximum, Math.max(...strengths));
+  assert.equal(
+    summary.average,
+    strengths.reduce((total, strength) => total + strength, 0) / strengths.length,
+  );
+  assert.ok((summary.average ?? 0) > 6.51);
 });
 
 test("calculates Precast cube compressive strength and averages specimens by age", () => {

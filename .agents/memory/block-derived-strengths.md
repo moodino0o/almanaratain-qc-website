@@ -3,8 +3,8 @@ name: Block derived strengths
 description: Formula and rounding rules for Block compression air-dry and normalized strength.
 ---
 
-For every Block specimen, compliance averages, minimums, maximums, and pass/fail decisions use air-dry strength. Outside Dammam, air-dry strength equals wet strength multiplied by 1.2; in Dammam, water strength and air-dry strength are equal. Normalized strength uses the rounded air-dry strength multiplied by the record's shape factor. Round derived values to one decimal place.
+Outside Dammam, Block air-dry strength equals wet strength multiplied by 1.2; normalized strength uses rounded air-dry strength multiplied by the record's shape factor. For Dammam Blocks, use Net Strength (failure load divided by Dammam Net Area) for displayed specimen results and average/minimum/maximum summaries instead of Air-dry Strength.
 
-**Why:** The source report did not document these equations; the user supplied the air-dry compliance basis and Dammam exception directly.
+**Why:** The user requires Dammam details and summaries to use Net Strength, while other plants retain their existing air-dry basis.
 
-**How to apply:** Recalculate the values on the server before saving whenever the required inputs are available. Use air-dry values in server evaluation and report summaries. Hide the Dammam water-strength column in printable reports. Client calculations are previews only, and historical manual values remain readable when inputs are missing.
+**How to apply:** Keep Dammam net strength and net summaries tied to its hole-adjusted Net Area. Preserve the air-dry and normalized calculations for other plants; do not relabel Air-dry Strength as Net Strength.

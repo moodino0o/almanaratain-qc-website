@@ -16,6 +16,7 @@ import {
   AGGREGATE_CHEMISTRY_FIELDS,
   AGGREGATE_SULPHATE_LIMIT_PERCENT,
   blockAirDryRowStrength,
+  isDammamBlockLocation,
   calculateCubeDensity,
   cubeWeightInGrams,
   calculateRetainedPercentage,
@@ -26,6 +27,7 @@ import {
   calculateSulphateContent,
   evaluateContentAgainstLimit,
   evaluateSiltContent,
+  getDammamBlockThicknessDefaults,
   findSieveEvaluationCriterion,
   PRECAST_AGE_STRENGTH_CRITERIA,
   precastAgeStrengthSummary,
@@ -34,6 +36,10 @@ import {
   sortSieveRowsByPoreSize,
   cubeRowStrength as getCubeRowStrength,
 } from "./record-form-utils";
+import {
+  dammamBlockDisplayResults,
+  summarizeDammamBlockNetStrengths,
+} from "./record-detail-utils";
 
 function calculatedWaterAbsorption(values: Record<string, unknown>) {
   const dryWeight = Number(values.dryWeight);
@@ -132,8 +138,16 @@ function strengthSummary(
 }
 
 function formatStrengthMetric(value: unknown) {
+  if (value === null || value === undefined || value === "") return "—";
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed.toFixed(2) : "—";
+}
+
+function formatBlockNetArea(value: unknown) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0
+    ? Math.round(parsed).toLocaleString("en-US")
+    : "—";
 }
 
 function formatAverageStrength(value: number | null) {
@@ -269,6 +283,7 @@ function TestRowsTable({
   strengthLabel = "Calculated Strength (N/mm²)",
   areaLabel = "Loaded Face Area (mm²)",
   strengthValueForRow,
+  areaValueForRow,
 }: {
   rows: unknown[];
   includeAbsorption: boolean;
@@ -277,6 +292,7 @@ function TestRowsTable({
   strengthLabel?: string;
   areaLabel?: string;
   strengthValueForRow?: (row: Record<string, unknown>) => unknown;
+  areaValueForRow?: (row: Record<string, unknown>) => unknown;
 }) {
   const displayRows = sortByAge ? sortCubeRowsByAge(rows) : rows;
   return (
@@ -315,7 +331,11 @@ function TestRowsTable({
                 <td className="p-2">{displayValue(values.wetWeight)}</td>
                 {includeAbsorption && <td className="p-2">{calculatedWaterAbsorption(values)}</td>}
                 <td className="p-2">{displayValue(values.load)}</td>
-                <td className="p-2">{displayValue(values.loadedFaceArea)}</td>
+                <td className="p-2">
+                  {displayValue(
+                    areaValueForRow ? areaValueForRow(values) : values.loadedFaceArea,
+                  )}
+                </td>
                 <td className="p-2 font-semibold">
                   {displayValue(
                     strengthValueForRow
@@ -668,10 +688,22 @@ export default function RecordDetail() {
     recordDetails.strengthEvaluation !== null
     ? recordDetails.strengthEvaluation as Record<string, unknown>
     : {};
-  const blockStrengthSummary = strengthSummary(
-    specimenRows,
-    (row) => blockAirDryRowStrength(row, record.location),
-  );
+  const isDammamBlock =
+    record.testType === "Blocks" && isDammamBlockLocation(record.location);
+  const blockStrengthSummary = isDammamBlock
+    ? summarizeDammamBlockNetStrengths(specimenRows, recordDetails.blockSize)
+    : strengthSummary(
+        specimenRows,
+        (row) => blockAirDryRowStrength(row, record.location),
+      );
+  const strengthEvaluationForDisplay = isDammamBlock
+    ? {
+        ...strengthEvaluation,
+        averageStrength: blockStrengthSummary.average,
+        minimumStrength: blockStrengthSummary.minimum,
+        maximumStrength: blockStrengthSummary.maximum,
+      }
+    : recordDetails.strengthEvaluation;
 
   const handleDelete = () => {
     if (!confirm("Are you sure you want to delete this record? This action cannot be undone.")) return;
@@ -1030,7 +1062,11 @@ export default function RecordDetail() {
           <Card>
             <CardHeader className="bg-muted/30 border-b">
               <CardTitle>Specimen Measurements</CardTitle>
-              <CardDescription>Block sample dimensions, weights, load, and air-dry strength.</CardDescription>
+              <CardDescription>
+                {isDammamBlock
+                  ? "Block sample dimensions, weights, load, Net Area, and Net Strength."
+                  : "Block sample dimensions, weights, load, and air-dry strength."}
+              </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
               {specimenRows.length > 0
@@ -1039,10 +1075,20 @@ export default function RecordDetail() {
                     rows={specimenRows}
                     includeAbsorption={false}
                     includeAge={false}
-                    strengthLabel="Air-dry Strength (N/mm²)"
+                    strengthLabel={isDammamBlock
+                      ? "Net Strength (N/mm²)"
+                      : "Air-dry Strength (N/mm²)"}
                     areaLabel="Net Area (mm²)"
-                    strengthValueForRow={(row) =>
-                      blockAirDryRowStrength(row, record.location)}
+                    areaValueForRow={isDammamBlock
+                      ? (row) => formatBlockNetArea(
+                          dammamBlockDisplayResults(row, recordDetails.blockSize).netArea,
+                        )
+                      : undefined}
+                    strengthValueForRow={(row) => isDammamBlock
+                      ? formatStrengthMetric(
+                          dammamBlockDisplayResults(row, recordDetails.blockSize).netStrength,
+                        )
+                      : blockAirDryRowStrength(row, record.location)}
                   />
                 )
                 : <p className="p-6 text-center text-muted-foreground">No specimen measurements recorded.</p>}
@@ -1052,9 +1098,30 @@ export default function RecordDetail() {
             title="Block Test Result"
             entries={[
               ["Block No.", detailText(recordDetails, "blockNo", detailText(recordDetails, "blockNumber"))],
-              ["Average Air-dry Strength (N/mm²)", formatStrengthMetric(strengthEvaluation.averageStrength ?? blockStrengthSummary.average)],
-              ["Minimum Air-dry Strength (N/mm²)", formatStrengthMetric(blockStrengthSummary.minimum ?? strengthEvaluation.minimumStrength)],
-              ["Maximum Air-dry Strength (N/mm²)", formatStrengthMetric(blockStrengthSummary.maximum ?? strengthEvaluation.maximumStrength)],
+              [
+                `Average ${isDammamBlock ? "Net" : "Air-dry"} Strength (N/mm²)`,
+                formatStrengthMetric(
+                  isDammamBlock
+                    ? blockStrengthSummary.average
+                    : strengthEvaluation.averageStrength ?? blockStrengthSummary.average,
+                ),
+              ],
+              [
+                `Minimum ${isDammamBlock ? "Net" : "Air-dry"} Strength (N/mm²)`,
+                formatStrengthMetric(
+                  isDammamBlock
+                    ? blockStrengthSummary.minimum
+                    : blockStrengthSummary.minimum ?? strengthEvaluation.minimumStrength,
+                ),
+              ],
+              [
+                `Maximum ${isDammamBlock ? "Net" : "Air-dry"} Strength (N/mm²)`,
+                formatStrengthMetric(
+                  isDammamBlock
+                    ? blockStrengthSummary.maximum
+                    : blockStrengthSummary.maximum ?? strengthEvaluation.maximumStrength,
+                ),
+              ],
               ["Shape Factor", detailText(recordDetails, "shapeFactor")],
               ["Compliance", displayValue(strengthEvaluation.status ?? record.status)],
             ]}
@@ -1186,10 +1253,12 @@ export default function RecordDetail() {
           </CardHeader>
           <CardContent>
             <StrengthEvaluation
-              value={recordDetails.strengthEvaluation}
+              value={strengthEvaluationForDisplay}
                 strengthName={
                   record.testType === "Blocks"
-                    ? "air-dry strength"
+                  ? isDammamBlock
+                    ? "net strength"
+                    : "air-dry strength"
                     : record.testType === "Paving Blocks"
                       ? "tensile strength"
                       : "strength"
