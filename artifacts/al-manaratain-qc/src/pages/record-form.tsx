@@ -1978,22 +1978,6 @@ export default function RecordForm() {
                       placeholder="Enter shape factor"
                     />
                   </div>
-                  {isDammamBlock && (
-                    <>
-                      <div className="space-y-2">
-                        <Label>Number of Holes</Label>
-                        <Input
-                          value={dammamHoleCount === null ? "" : String(dammamHoleCount)}
-                          readOnly
-                          aria-label="Automatically calculated number of holes"
-                          placeholder="Based on Block Size"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Calculated automatically from Block Size.
-                        </p>
-                      </div>
-                    </>
-                  )}
                 </>
               )}
       {testType === TestType.Paving_Blocks && (
@@ -2390,11 +2374,11 @@ export default function RecordForm() {
                     </>
                   )}
                     {usesSieveRows && !sieveEntryItems.length ? null : <div className={`${isCompactBlockTable ? isDammamBlock ? "overflow-x-auto" : "overflow-hidden" : "overflow-x-auto"} rounded-md border`}>
-                         <table className={`w-full ${usesSieveRows ? "min-w-[1240px] text-sm" : isCompactBlockTable ? isDammamBlock ? "table-fixed min-w-[1680px] text-[11px]" : "table-fixed text-[11px]" : testType === TestType.Paving_Blocks ? "min-w-[1440px] text-sm" : testType === TestType.Precast ? "min-w-[980px] text-sm" : "min-w-[1080px] text-sm"}`}>
+                         <table className={`w-full ${usesSieveRows ? "min-w-[1240px] text-sm" : isCompactBlockTable ? isDammamBlock ? "table-fixed min-w-[1920px] text-[11px]" : "table-fixed text-[11px]" : testType === TestType.Paving_Blocks ? "min-w-[1440px] text-sm" : testType === TestType.Precast ? "min-w-[980px] text-sm" : "min-w-[1080px] text-sm"}`}>
                       <thead className="bg-muted/50">
                         <tr className="border-b">
                             {testType !== TestType.Precast && (
-                              <th className={`${isCompactBlockTable ? "w-[4%] px-1 py-2 text-[10px]" : "w-12 px-3 py-3"} text-left font-semibold`}>No.</th>
+                                <th className={`${isCompactBlockTable ? isDammamBlock ? "w-[3%] px-1 py-2 text-[10px]" : "w-[4%] px-1 py-2 text-[10px]" : "w-12 px-3 py-3"} text-left font-semibold`}>No.</th>
                             )}
                           {usesSieveRows ? (
                             <th className="px-3 py-3 text-left font-semibold">Sieve / Pore Size</th>
@@ -2422,13 +2406,13 @@ export default function RecordForm() {
                             </>
                           ) : (
                             <>
-                               <th className={`${isCompactBlockTable ? "w-[12%] px-1 py-2 text-[10px]" : "px-3 py-3"} text-left font-semibold`}>Length (mm)</th>
-                               <th className={`${isCompactBlockTable ? "w-[12%] px-1 py-2 text-[10px]" : "px-3 py-3"} text-left font-semibold`}>Width (mm)</th>
-                               <th className={`${isCompactBlockTable ? "w-[12%] px-1 py-2 text-[10px]" : "px-3 py-3"} text-left font-semibold`}>Height (mm)</th>
+                               <th className={`${isCompactBlockTable ? isDammamBlock ? "w-[8%] px-1 py-2 text-[10px]" : "w-[12%] px-1 py-2 text-[10px]" : "px-3 py-3"} text-left font-semibold`}>Length (mm)</th>
+                               <th className={`${isCompactBlockTable ? isDammamBlock ? "w-[8%] px-1 py-2 text-[10px]" : "w-[12%] px-1 py-2 text-[10px]" : "px-3 py-3"} text-left font-semibold`}>Width (mm)</th>
+                               <th className={`${isCompactBlockTable ? isDammamBlock ? "w-[8%] px-1 py-2 text-[10px]" : "w-[12%] px-1 py-2 text-[10px]" : "px-3 py-3"} text-left font-semibold`}>Height (mm)</th>
                                {isDammamBlock && (
                                  <>
-                                   <th className="w-[8%] px-1 py-2 text-left text-[10px] font-semibold">Web Thickness (mm)</th>
-                                   <th className="w-[8%] px-1 py-2 text-left text-[10px] font-semibold">Face Thickness (mm)</th>
+                                    <th className="w-[5.5%] px-1 py-2 text-left text-[10px] font-semibold">Web Thickness (mm)</th>
+                                    <th className="w-[5.5%] px-1 py-2 text-left text-[10px] font-semibold">Face Thickness (mm)</th>
                                  </>
                                )}
                               {testType === TestType.Ready_Mix && (
@@ -2454,11 +2438,11 @@ export default function RecordForm() {
                               testType === TestType.Paving_Blocks ||
                               testType === TestType.Precast) && (
                              <>
-                                <th className={`${isCompactBlockTable ? "w-[10%] px-1 py-2 text-[10px]" : "px-3 py-3"} text-left font-semibold`}>
+                                <th className={`${isCompactBlockTable ? isDammamBlock ? "w-[7%] px-1 py-2 text-[10px]" : "w-[10%] px-1 py-2 text-[10px]" : "px-3 py-3"} text-left font-semibold`}>
                                   {isDammamBlock ? "Failure Load (kN)" : "Load (kN)"}
                                 </th>
                                {testType === TestType.Blocks ? (
-                                 <th className="w-[12%] px-1 py-2 text-left text-[10px] font-semibold">Wet Weight (kg)</th>
+                                 <th className={`${isDammamBlock ? "w-[6%]" : "w-[12%]"} px-1 py-2 text-left text-[10px] font-semibold`}>{isDammamBlock ? "Weight" : "Wet Weight (kg)"}</th>
                                ) : (
                                   <th className="px-3 py-3 text-left font-semibold">
                                      {testType === TestType.Paving_Blocks
@@ -2482,19 +2466,19 @@ export default function RecordForm() {
                                  <>
                                     {isDammamBlock && (
                                       <>
-                                        <th className="px-1 py-2 text-left text-[10px] font-semibold">Gross Area (mm²)</th>
-                                        <th className="px-1 py-2 text-left text-[10px] font-semibold">Net Area (mm²)</th>
-                                        <th className="px-1 py-2 text-left text-[10px] font-semibold">Gross Strength (N/mm²)</th>
-                                        <th className="px-1 py-2 text-left text-[10px] font-semibold">Net Strength (N/mm²)</th>
+                                        <th className="w-[6%] px-1 py-2 text-left text-[10px] font-semibold">Gross Area (mm²)</th>
+                                        <th className="w-[6%] px-1 py-2 text-left text-[10px] font-semibold">Net Area (mm²)</th>
+                                        <th className="w-[7%] px-1 py-2 text-left text-[10px] font-semibold">Gross Strength (N/mm²)</th>
+                                        <th className="w-[7%] px-1 py-2 text-left text-[10px] font-semibold">Net Strength (N/mm²)</th>
                                       </>
                                     )}
-                                    <th className="w-[16%] px-1 py-2 text-left text-[10px] font-semibold">Air Dry Strength (N/mm²)</th>
-                                    <th className="w-[14%] px-1 py-2 text-left text-[10px] font-semibold">Density (kg/m³)</th>
+                                    <th className={`${isDammamBlock ? "w-[9%]" : "w-[16%]"} px-1 py-2 text-left text-[10px] font-semibold`}>Air Dry Strength (N/mm²)</th>
+                                    <th className={`${isDammamBlock ? "w-[9%]" : "w-[14%]"} px-1 py-2 text-left text-[10px] font-semibold`}>Density (kg/m³)</th>
                                  </>
                                )}
                              </>
                            )}
-                          <th className={`${isCompactBlockTable ? "w-[8%] px-1 py-2 text-[10px]" : "w-20 px-3 py-3"} text-left font-semibold`}>Action</th>
+                          <th className={`${isCompactBlockTable ? isDammamBlock ? "w-[5%] px-1 py-2 text-[10px]" : "w-[8%] px-1 py-2 text-[10px]" : "w-20 px-3 py-3"} text-left font-semibold`}>Action</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -2784,7 +2768,7 @@ export default function RecordForm() {
                                       value={row.wetWeight ?? ""}
                                       onChange={event => updateTestRow(rowIndex, "wetWeight", event.target.value)}
                                       placeholder="kg"
-                                      aria-label={`Wet weight for row ${rowIndex + 1}`}
+                                      aria-label={`${isDammamBlock ? "Weight" : "Wet weight"} for row ${rowIndex + 1}`}
                                       className={compactBlockInputClass}
                                     />
                                   </td>

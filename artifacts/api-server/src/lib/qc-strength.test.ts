@@ -527,19 +527,20 @@ test("calculates Block air-dry and normalized strength with one-decimal rounding
   assert.equal(row.normalizedStrength, 4.5);
 });
 
-test("uses air-dry strength for every Block evaluation and keeps Dammam water equal to air-dry", () => {
+test("uses net strength for Dammam evaluation and keeps its water and air-dry results equal", () => {
   const result = evaluateStrengthRecord(
     {
       ...blockRecord([{ length: 400, width: 200, height: 200, load: 1000 }]),
       location: "Dammam",
     },
-    [blockStandard({ requiredStrength: "12.5" })],
+    [blockStandard({ requiredStrength: "13" })],
   );
   const row = (result.details.testRows as Record<string, unknown>[])[0];
 
   assert.equal(row.waterStrength, "12.50");
   assert.equal(row.airDryStrength, 12.5);
-  assert.equal(result.evaluation!.averageStrength, 12.5);
+  assert.ok(Math.abs(Number(row.netStrength) - 13.786764705882353) < 1e-10);
+  assert.equal(result.evaluation!.averageStrength, 13.79);
   assert.equal(result.status, "Passed");
 });
 
@@ -553,8 +554,9 @@ test("uses the air-dry result for Block pass and fail evaluation", () => {
   assert.equal(result.status, "Passed");
 });
 
-test("calculates and saves Dammam gross and net results without changing compliance basis", () => {
+test("calculates Dammam gross and net results and uses net strength for compliance", () => {
   const record = blockRecord([
+    { length: 400, width: 200, height: 200, load: 1200 },
     { length: 400, width: 200, height: 200, load: 1500 },
   ]);
   record.location = "Dammam Plant";
@@ -566,18 +568,20 @@ test("calculates and saves Dammam gross and net results without changing complia
     record,
     [blockStandard({ requiredStrength: "18" })],
   );
-  const row = (result.details.testRows as Record<string, unknown>[])[0];
+  const rows = result.details.testRows as Record<string, unknown>[];
 
   assert.equal((result.details as Record<string, unknown>).numberOfHoles, 3);
-  assert.equal(row.numberOfHoles, 3);
-  assert.equal(row.failureLoad, 1500);
-  assert.equal(row.failureLoadN, 1_500_000);
-  assert.equal(row.grossArea, 80_000);
-  assert.ok(Math.abs(Number(row.netArea) - 72_533.33333333333) < 1e-8);
-  assert.equal(row.grossStrength, 18.75);
-  assert.ok(Math.abs(Number(row.netStrength) - 1_500_000 / 72_533.33333333333) < 1e-10);
-  assert.equal(row.airDryStrength, 18.8);
-  assert.equal(result.evaluation!.averageStrength, 18.8);
+  assert.equal(rows[1].numberOfHoles, 3);
+  assert.equal(rows[1].failureLoad, 1500);
+  assert.equal(rows[1].failureLoadN, 1_500_000);
+  assert.equal(rows[1].grossArea, 80_000);
+  assert.ok(Math.abs(Number(rows[1].netArea) - 72_533.33333333333) < 1e-8);
+  assert.equal(rows[1].grossStrength, 18.75);
+  assert.ok(Math.abs(Number(rows[1].netStrength) - 1_500_000 / 72_533.33333333333) < 1e-10);
+  assert.equal(rows[1].airDryStrength, 18.8);
+  assert.equal(result.evaluation!.averageStrength, 18.61);
+  assert.ok(Math.abs(result.evaluation!.minimumStrength! - 1_200_000 / 72_533.33333333333) < 1e-10);
+  assert.ok(Math.abs(result.evaluation!.maximumStrength! - 1_500_000 / 72_533.33333333333) < 1e-10);
   assert.equal(result.status, "Passed");
 });
 
@@ -1031,22 +1035,29 @@ test("evaluates block compliance using the average sample strength", () => {
   assert.equal(result.evaluation!.reason, null);
 });
 
-test("uses Air Dry strength for Dammam Block compliance", () => {
+test("keeps Dammam Blocks in Review when Net Strength cannot be calculated", () => {
   const result = evaluateStrengthRecord(
     {
       ...blockRecord([
-        { rowNo: 1, length: 100, width: 100, load: 125 },
-        { rowNo: 2, length: 100, width: 100, load: 150 },
+        {
+          rowNo: 1,
+          length: 400,
+          width: 200,
+          height: 200,
+          load: 1500,
+          faceThickness: 500,
+          webThickness: 500,
+          airDryStrength: 100,
+        },
       ]),
       location: "Dammam",
     },
-    [blockStandard({ requiredStrength: "13.75" })],
+    [blockStandard({ requiredStrength: "13" })],
   );
 
-  assert.equal(result.status, "Passed");
-  assert.equal(result.evaluation!.averageStrength, 13.75);
-  assert.equal(result.evaluation!.minimumStrength, 12.5);
-  assert.equal(result.evaluation!.maximumStrength, 15);
+  assert.equal(result.status, "Review");
+  assert.equal(result.evaluation!.averageStrength, null);
+  assert.match(result.evaluation!.reason ?? "", /net strength/i);
 });
 
 test("fails block compliance when the average sample strength is below the standard", () => {

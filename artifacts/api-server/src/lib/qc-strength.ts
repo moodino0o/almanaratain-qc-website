@@ -815,7 +815,9 @@ export function evaluateStrengthRecord(
           numericValue(values.correctedStrength);
       }
       if (record.testType === "Blocks") {
-        return numericValue(values.airDryStrength ?? values.dryAirStrength);
+        return isDammamLocation(record.location)
+          ? numericValue(values.netStrength)
+          : numericValue(values.airDryStrength ?? values.dryAirStrength);
       }
       return row.calculatedStrength;
     })
@@ -832,7 +834,9 @@ export function evaluateStrengthRecord(
         const values = typeof row.row === "object" && row.row !== null
           ? row.row as Record<string, unknown>
           : {};
-        return numericValue(values.airDryStrength ?? values.dryAirStrength) === null;
+        return (isDammamLocation(record.location)
+          ? numericValue(values.netStrength)
+          : numericValue(values.airDryStrength ?? values.dryAirStrength)) === null;
       }
       return !row.complete;
     }) ||
@@ -848,7 +852,9 @@ export function evaluateStrengthRecord(
     record.testType === "Ready Mix"
       ? "A complete 28-day cube result is required."
       : record.testType === "Blocks"
-        ? "Complete specimen load, dimensions, air-dry strength, and Block age are required."
+          ? isDammamLocation(record.location)
+            ? "Complete specimen load, dimensions, net strength, and Block age are required."
+            : "Complete specimen load, dimensions, air-dry strength, and Block age are required."
         : "Enter each paving specimen's dimensions, dry and wet weights, load, and correction factor.";
   if (!standard) {
       reason =
@@ -870,9 +876,9 @@ export function evaluateStrengthRecord(
     status = "Failed";
     reason =
       record.testType === "Blocks"
-        ? isDammamLocation(record.location)
-          ? "The average Block air-dry strength is below the configured minimum."
-          : "The average Block air-dry strength is below the configured minimum."
+          ? isDammamLocation(record.location)
+            ? "The average Block net strength is below the configured minimum."
+            : "The average Block air-dry strength is below the configured minimum."
         : record.testType === "Paving Blocks"
           ? "The average paving block tensile strength is below the configured minimum."
           : "The measured strength is below the configured minimum.";

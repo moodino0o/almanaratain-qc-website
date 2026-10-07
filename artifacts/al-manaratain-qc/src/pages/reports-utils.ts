@@ -79,6 +79,10 @@ const numericValue = (value: unknown) => {
   const parsed = Number.parseFloat(value.replace(/,/g, ""));
   return Number.isFinite(parsed) ? parsed : null;
 };
+const isDammamLocation = (location: string) => {
+  const normalizedLocation = location.trim().toLocaleLowerCase().replace(/\s+/g, " ");
+  return normalizedLocation === "dammam" || normalizedLocation === "dammam plant";
+};
 
 const firstNumericValue = (values: Record<string, unknown>, keys: string[]) => {
   for (const key of keys) {
@@ -169,18 +173,16 @@ const rowStrength = (row: unknown, testType: QcRecord["testType"]) => {
   return firstNumericValue(values, strengthKeys);
 };
 
-const blockAirDryStrength = (row: unknown, location: string) => {
+const blockSummaryStrength = (row: unknown, location: string) => {
   if (typeof row !== "object" || row === null) return null;
   const values = row as Record<string, unknown>;
+  if (isDammamLocation(location)) return firstNumericValue(values, ["netStrength"]);
   const waterStrength = firstNumericValue(values, [
     "waterStrength",
     "calculatedStrength",
     "strength",
     "compressiveStrength",
   ]);
-  const normalizedLocation = location.trim().toLocaleLowerCase().replace(/\s+/g, " ");
-  const isDammam = normalizedLocation === "dammam" || normalizedLocation === "dammam plant";
-  if (isDammam && waterStrength !== null) return waterStrength;
   const storedAirDryStrength = firstNumericValue(values, ["airDryStrength", "dryAirStrength"]);
   if (storedAirDryStrength !== null) return storedAirDryStrength;
   if (waterStrength === null) return null;
@@ -196,7 +198,7 @@ const recordStrengths = (record: QcRecord, details: Record<string, unknown>) => 
   const rows = loadRequired ? filterRowsWithLoad(savedRows) : savedRows;
   const strengths = rows
     .map((row) => record.testType === "Blocks"
-      ? blockAirDryStrength(row, record.location)
+      ? blockSummaryStrength(row, record.location)
       : rowStrength(row, record.testType))
     .filter((value): value is number => value !== null);
   if (strengths.length) return strengths;
@@ -205,9 +207,13 @@ const recordStrengths = (record: QcRecord, details: Record<string, unknown>) => 
     ? ["averageStrength", "calculatedStrength", "strength", "compressiveStrength"]
     : record.testType === "Blocks"
       ? [
+          ...(isDammamLocation(record.location)
+            ? ["averageNetStrength", "netStrength"]
+            : []),
           "averageStrength",
-          "airDryStrength",
-          "dryAirStrength",
+          ...(isDammamLocation(record.location)
+            ? []
+            : ["airDryStrength", "dryAirStrength"]),
           "calculatedStrength",
           "strength",
           "compressiveStrength",
@@ -230,18 +236,23 @@ const recordStrengths = (record: QcRecord, details: Record<string, unknown>) => 
             "strength",
             "compressiveStrength",
           ];
-  const directStrength = firstNumericValue(details, directStrengthKeys);
+  const dammamEvaluation =
+    typeof details.strengthEvaluation === "object" && details.strengthEvaluation !== null
+      ? details.strengthEvaluation as Record<string, unknown>
+      : {};
+  const directStrength = record.testType === "Blocks" && isDammamLocation(record.location)
+    ? firstNumericValue(details, ["averageNetStrength", "netStrength"]) ??
+      firstNumericValue(dammamEvaluation, ["averageStrength"])
+    : firstNumericValue(details, directStrengthKeys);
   if (directStrength === null) return [];
   if (
     record.testType !== "Blocks" ||
+    isDammamLocation(record.location) ||
     firstNumericValue(details, ["averageStrength", "airDryStrength", "dryAirStrength"]) !== null
   ) {
     return [directStrength];
   }
-  const normalizedLocation = record.location.trim().toLocaleLowerCase().replace(/\s+/g, " ");
-  const airDryFactor =
-    normalizedLocation === "dammam" || normalizedLocation === "dammam plant" ? 1 : 1.2;
-  return [Number((directStrength * airDryFactor).toFixed(1))];
+  return [Number((directStrength * 1.2).toFixed(1))];
 };
 
 export function summarizeRecordStrengths(record: QcRecord): RecordStrengthSummary | null {

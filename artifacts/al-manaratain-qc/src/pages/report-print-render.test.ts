@@ -306,7 +306,9 @@ test("adds calculated Net Area to saved structured Block tables without that cel
           { key: "length", label: "Length (mm)", width: 20, visible: true, order: 1 },
           { key: "width", label: "Width (mm)", width: 20, visible: true, order: 2 },
           { key: "height", label: "Height (mm)", width: 20, visible: true, order: 3 },
-          { key: "load", label: "Load (kN)", width: 20, visible: true, order: 4 },
+          { key: "faceThickness", label: "Face Thickness (mm)", width: 10, visible: true, order: 4 },
+          { key: "webThickness", label: "Web Thickness (mm)", width: 10, visible: true, order: 5 },
+          { key: "load", label: "Load (kN)", width: 20, visible: true, order: 6 },
         ],
       },
     },
@@ -428,19 +430,16 @@ test("prints recalculated Dammam geometry and strength in saved Block report tab
 
   const markup = renderTable(design, object, record);
   assert.match(markup, /Failure Load \(kN\)/);
-  assert.match(markup, /Gross Area \(mm²\)/);
+  assert.doesNotMatch(markup, /Gross Area|Air Dry/);
   assert.match(markup, /Net Area \(mm²\)/);
-  assert.match(markup, /Web Thickness \(mm\)/);
-  assert.match(markup, /Face Thickness \(mm\)/);
+  assert.doesNotMatch(markup, /Web Thickness|Face Thickness/);
   assert.match(markup, /Gross Strength \(N\/mm²\)/);
   assert.match(markup, /Net Strength \(N\/mm²\)/);
-  assert.match(markup, /80,000/);
   assert.match(markup, /72,533/);
-  assert.match(markup, />25\.0<\/td>/);
-  assert.match(markup, />40\.0<\/td>/);
   assert.match(markup, /73,700/);
   assert.match(markup, />6\.3<\/td>/);
   assert.match(markup, />6\.9<\/td>/);
+  assert.doesNotMatch(markup, /Normalized/);
 
   const otherPlantMarkup = renderTable(design, object, {
     ...record,
@@ -499,15 +498,51 @@ test("adds missing Dammam result columns to saved structured Block tables", () =
 
   const markup = renderTable(design, object, record);
   assert.match(markup, /Failure Load \(kN\)/);
-  assert.match(markup, /Gross Area \(mm²\)/);
+  assert.match(markup, /Net Area \(mm²\)/);
+  assert.doesNotMatch(markup, /Gross Area|Air Dry/);
   assert.match(markup, /Net Strength \(N\/mm²\)/);
-  assert.match(markup, /data-report-cell="block-body-grossArea">80,000<\/td>/);
   assert.match(markup, /data-report-cell="block-body-netArea">72,533<\/td>/);
   assert.match(markup, /data-report-cell="block-body-grossStrength">6\.3<\/td>/);
   assert.match(markup, /data-report-cell="block-body-netStrength">6\.9<\/td>/);
 });
 
-test("renders Dammam thickness, hole count, and results in the fixed report only for Dammam", () => {
+test("omits Dammam thickness and hole count from saved Block Test Details tables", () => {
+  const object = templateObject({
+    id: "details-table",
+    tableKey: "blockDetails",
+    name: "Block test details",
+  });
+  const columns = [
+    { key: "blockSize", label: "Block Size", width: 20, visible: true, order: 0 },
+    { key: "faceThickness", label: "Face Thickness (mm)", width: 20, visible: true, order: 1 },
+    { key: "webThickness", label: "Web Thickness (mm)", width: 20, visible: true, order: 2 },
+    { key: "numberOfHoles", label: "Number of Holes", width: 20, visible: true, order: 3 },
+  ];
+  const design = {
+    layout: { title: "Dammam Block Details", columns: { blockDetails: columns } },
+    objects: [object],
+  } as ReportTemplateDesign;
+  const record = {
+    ...reportFixture(),
+    testType: "Blocks",
+    location: "Dammam",
+    details: {
+      blockType: '8" Plain Block',
+      blockSize: '8"',
+      faceThickness: "30",
+      webThickness: "30",
+      numberOfHoles: 3,
+      testRows: [],
+    },
+  } as QcRecord;
+
+  const markup = renderTable(design, object, record);
+
+  assert.match(markup, /Block Size/);
+  assert.doesNotMatch(markup, /Face Thickness|Web Thickness|Number of Holes/);
+});
+
+test("prints Dammam net area and Net Strength summaries without Gross Area or Air Dry", () => {
   const record = {
     ...reportFixture(),
     testType: "Blocks",
@@ -524,15 +559,61 @@ test("renders Dammam thickness, hole count, and results in the fixed report only
   const markup = renderDocument(record);
 
   assert.match(markup, /Plant:/);
-  assert.match(markup, /FACE THICKNESS \(mm\):/);
-  assert.match(markup, /WEB THICKNESS \(mm\):/);
-  assert.match(markup, /NUMBER OF HOLES:/);
-  assert.match(markup, /Gross Area/);
+  assert.match(markup, /Dammam: Net Strength compliance basis/);
+  assert.match(markup, /STRENGTH BASIS:<\/span><strong>NET STRENGTH/);
+  assert.match(markup, /Net Area/);
+  assert.match(markup, /Gross Strength/);
   assert.match(markup, /Net Strength/);
   assert.match(markup, /72,533/);
+  assert.doesNotMatch(markup, /Normalized/);
+  assert.match(markup, /Maximum<\/strong><span>Net Strength<\/span><b>6\.9<\/b>/);
+  const detailsStart = markup.indexOf("Test details");
+  const detailsEnd = markup.indexOf("</section>", detailsStart);
+  const testDetails = markup.slice(detailsStart, detailsEnd);
+  assert.doesNotMatch(testDetails, /FACE THICKNESS|WEB THICKNESS|NUMBER OF HOLES/);
+  assert.doesNotMatch(markup, /Web Thickness|Face Thickness|Gross Area|Air Dry/);
+  assert.match(markup, /block-report-average-row"><td colSpan="6">AVERAGE:<\/td><td>6\.3<\/td><td>6\.9<\/td>/);
+  assert.match(markup, /Maximum<\/strong><span>Net Strength<\/span><b>6\.9<\/b>/);
+  assert.match(markup, /Minimum<\/strong><span>Net Strength<\/span><b>6\.9<\/b>/);
+
+  const savedLayout = {
+    id: 1,
+    testType: "Blocks",
+    name: "Dammam Blocks layout",
+    config: {
+      title: "Dammam Blocks",
+      fontFamily: "Arial",
+      fontSize: 13,
+      textColor: "#20252b",
+      accentColor: "#9b1739",
+      paperPadding: 13,
+      sections: [
+        { key: "header", visible: true, order: 0 },
+        { key: "standard", visible: true, order: 1 },
+        { key: "context", visible: true, order: 2 },
+        { key: "remarks", visible: true, order: 3 },
+        { key: "results", visible: true, order: 4 },
+        { key: "signatures", visible: true, order: 5 },
+      ],
+      columns: {
+        blockCompression: [
+          { key: "faceThickness", label: "Face Thickness (mm)", width: 20, visible: true, order: 0 },
+          { key: "webThickness", label: "Web Thickness (mm)", width: 20, visible: true, order: 1 },
+          { key: "grossArea", label: "Gross Area (mm²)", width: 20, visible: true, order: 2 },
+          { key: "airDry", label: "Air Dry (N/mm2)", width: 20, visible: true, order: 3 },
+        ],
+      },
+      elements: [],
+    },
+  } as NonNullable<ReportDocumentProps["report"]["layout"]>;
+  const savedMarkup = renderDocument(record, undefined, savedLayout);
+  assert.doesNotMatch(savedMarkup, /Web Thickness|Face Thickness|Gross Area|Air Dry/);
+  assert.match(savedMarkup, /Net Area/);
+  assert.match(savedMarkup, /Net Strength/);
 
   const otherPlantMarkup = renderDocument({ ...record, location: "Manama" } as QcRecord);
   assert.doesNotMatch(otherPlantMarkup, /FACE THICKNESS|WEB THICKNESS|NUMBER OF HOLES|Gross Area|Net Strength/);
+  assert.match(otherPlantMarkup, /Normalized/);
   assert.match(otherPlantMarkup, /Net Area/);
 });
 

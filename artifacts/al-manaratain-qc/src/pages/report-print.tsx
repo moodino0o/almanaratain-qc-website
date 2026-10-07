@@ -776,24 +776,16 @@ const DAMMAM_BLOCK_DETAILS_REQUIRED_KEYS = [
   "plant",
   "blockType",
   "blockSize",
-  "faceThickness",
-  "webThickness",
-  "numberOfHoles",
 ];
 const DAMMAM_BLOCK_RESULTS_REQUIRED_KEYS = [
   "no",
   "length",
   "width",
   "height",
-  "webThickness",
-  "faceThickness",
   "load",
-  "grossArea",
   "netArea",
   "grossStrength",
   "netStrength",
-  "airDry",
-  "normalized",
   "density",
 ];
 const reportColumnKey = (key: string) =>
@@ -902,34 +894,35 @@ export function ReportTemplateDataTable({
   const blockCompression = record.testType === "Blocks" && tableKey === "blockCompression";
   const blockDetails = record.testType === "Blocks" && tableKey === "blockDetails";
   const dammamBlock = record.testType === "Blocks" && isDammamLocation(record.location);
+  const dammamExcludedKeys = blockDetails
+    ? new Set(["facethickness", "webthickness", "numberofholes"])
+    : blockCompression
+      ? new Set([
+          "facearea",
+          "water",
+          "normalized",
+          "normalizedstrength",
+          "facethickness",
+          "webthickness",
+          "grossarea",
+          "airdry",
+          "airdrystrength",
+          "dryair",
+          "dryairstrength",
+        ])
+      : new Set<string>();
   const configuredColumns = design.layout.columns[tableKey] ?? fallback;
   const plantCompatibleColumns = record.testType === "Blocks"
     ? configuredColumns.filter((column) => {
         const key = reportColumnKey(column.key);
         return dammamBlock
-          ? key !== "facearea" && key !== "water"
+          ? !dammamExcludedKeys.has(key)
           : !DAMMAM_ONLY_BLOCK_LAYOUT_KEYS.has(key);
       })
     : configuredColumns;
-  const dammamDefaults = [
-    ...fallback.map((column) =>
-      column.key === "load" ? { ...column, label: "Failure Load (kN)" } : column,
-    ),
-    {
-      key: "webThickness",
-      label: "Web Thickness (mm)",
-      width: 8,
-      visible: true,
-      order: fallback.length,
-    },
-    {
-      key: "faceThickness",
-      label: "Face Thickness (mm)",
-      width: 8,
-      visible: true,
-      order: fallback.length + 1,
-    },
-  ];
+  const dammamDefaults = fallback.map((column) =>
+    column.key === "load" ? { ...column, label: "Failure Load (kN)" } : column,
+  );
   const compatibleColumns = blockCompression
     ? dammamBlock
       ? blockReportColumnsWithRequiredFields(
@@ -979,12 +972,29 @@ export function ReportTemplateDataTable({
         fieldKey === "details.netarea" || fieldKey === "netarea" ||
         label.includes("face area") || label.includes("net area");
     };
+    const isExcludedDammamCell = (cell: ReportTemplateObject) => {
+      const key = reportColumnKey(cell.fieldKey ?? "");
+      if (dammamExcludedKeys.has(key)) return true;
+      const label = `${cell.name} ${cell.content ?? ""}`.toLocaleLowerCase();
+      return blockDetails
+        ? ["face thickness", "web thickness", "number of holes"].some((value) => label.includes(value))
+        : blockCompression &&
+          [
+            "normalized strength",
+            "normalized",
+            "face thickness",
+            "web thickness",
+            "gross area",
+            "air dry",
+          ]
+            .some((value) => label.includes(value));
+    };
     const cellObjects = (row: ReportTemplateObject) => directChildren(design.objects, row.id)
       .filter((cell) =>
         cell.type === "tableCell" &&
         cell.visible &&
         (dammamBlock
-          ? !["facearea", "water"].includes(reportColumnKey(cell.fieldKey ?? ""))
+          ? !isExcludedDammamCell(cell)
           : !DAMMAM_ONLY_BLOCK_LAYOUT_KEYS.has(reportColumnKey(cell.fieldKey ?? ""))) &&
         (faceAreaVisible || !isNetAreaCell(cell) ||
           (dammamBlock && reportColumnKey(cell.fieldKey ?? "") === "netarea")),
@@ -1417,15 +1427,16 @@ function BlockCompressionRowsTable({
     grossStrength: numericSummary(columns.grossStrength).average,
     netStrength: numericSummary(columns.netStrength).average,
   };
-  const strengthSummary = numericSummary(columns.airDry);
-  const strengthLabel = "Air Dry Strength";
+  const strengthValues = hideWaterStrength ? columns.netStrength : columns.airDry;
+  const strengthSummary = numericSummary(strengthValues);
+  const strengthLabel = hideWaterStrength ? "Net Strength" : "Air Dry Strength";
   const displayNumber = (value: number | null) =>
     value === null ? "-" : formatNumber(value);
   const fixedKeys = hideWaterStrength
-    ? DAMMAM_BLOCK_RESULTS_REQUIRED_KEYS
+    ? ["no", "length", "width", "height", "netArea", "load", "grossStrength", "netStrength", "density"]
     : ["no", "length", "width", "height", "faceArea", "load", "water", "airDry", "normalized", "density"];
   const fixedLabels = hideWaterStrength
-    ? ["No.", "Length (mm)", "Width (mm)", "Height (mm)", "Web Thickness (mm)", "Face Thickness (mm)", "Failure Load (kN)", "Gross Area (mm²)", "Net Area (mm²)", "Gross Strength (N/mm²)", "Net Strength (N/mm²)", "Air Dry (N/mm2)", "Normalized (N/mm2)", "Density (kg/m3)"]
+    ? ["No.", "Length (mm)", "Width (mm)", "Height (mm)", "Net Area (mm²)", "Failure Load (kN)", "Gross Strength (N/mm²)", "Net Strength (N/mm²)", "Density (kg/m3)"]
     : ["No.", "Length (mm)", "Width (mm)", "Height (mm)", "Net Area (mm²)", "Load (kN)", "Water (N/mm2)", "Air Dry (N/mm2)", "Normalized (N/mm2)", "Density (kg/m3)"];
   const saved = layout?.config.columns.blockCompression;
   const defaultColumns = (REPORT_LAYOUT_FIELD_GROUPS.Blocks.blockCompression ?? [])
@@ -1452,7 +1463,23 @@ function BlockCompressionRowsTable({
   const savedColumns = saved
     ? hideWaterStrength
       ? blockReportColumnsWithRequiredFields(
-          saved.filter((column) => !["faceArea", "water"].includes(column.key)),
+          saved.filter((column) =>
+            ![
+              "facearea",
+              "water",
+              "normalized",
+              "normalizedstrength",
+              "facethickness",
+              "webthickness",
+              "grossarea",
+              "airdry",
+              "airdrystrength",
+              "dryair",
+              "dryairstrength",
+            ].includes(
+              reportColumnKey(column.key),
+            ),
+          ),
           dammamDefaultColumns,
           DAMMAM_BLOCK_RESULTS_REQUIRED_KEYS,
         )
@@ -1473,8 +1500,6 @@ function BlockCompressionRowsTable({
       : key === "netArea" ? formatDammamBlockArea(dammamResults[index]?.netArea)
       : key === "grossStrength" ? displayNumber(dammamResults[index]?.grossStrength ?? null)
       : key === "netStrength" ? displayNumber(dammamResults[index]?.netStrength ?? null)
-      : key === "webThickness" || key === "faceThickness"
-        ? formatWholeNumber(values[key])
       : key === "load" ? textValue(values.failureLoad ?? values.load)
       : key === "water" ? displayNumber(blockWaterStrength(values))
       : key === "airDry" ? displayNumber(blockAirDryStrength(values, hideWaterStrength))
@@ -1484,7 +1509,7 @@ function BlockCompressionRowsTable({
     return <><div className="block-report-section-heading"><div><span>Specimen results</span></div></div>
       <div className="block-report-table-wrap"><table className="report-table block-report-table"><thead><tr>{columns.map((c) => <th key={c.key} style={{ width: `${c.width}%` }}>{c.label}</th>)}</tr></thead><tbody>
         {rowValues.map((values, index) => <tr key={index}>{columns.map((c) => <td key={c.key}>{valueFor(values, c.key, index)}</td>)}</tr>)}
-        <tr className="block-report-average-row"><td colSpan={columns.length}>AVERAGE: {displayNumber(averages.airDry)}</td></tr>
+         <tr className="block-report-average-row"><td colSpan={columns.length}>AVERAGE: {displayNumber(strengthSummary.average)} {strengthLabel}</td></tr>
       </tbody></table></div><div className="block-report-section-heading block-report-statistics-heading"><div><span>Summary statistics</span></div></div>
       <div className="block-report-statistics"><div><strong>Maximum</strong><span>{strengthLabel}</span><b>{displayNumber(strengthSummary.maximum)}</b></div><div><strong>Minimum</strong><span>{strengthLabel}</span><b>{displayNumber(strengthSummary.minimum)}</b></div><div><strong>Stan.Dev.</strong><span>{strengthLabel}</span><b>{displayNumber(strengthSummary.standardDeviation)}</b></div></div></>;
   }
@@ -1505,15 +1530,10 @@ function BlockCompressionRowsTable({
                   <th>Length<br />(mm)</th>
                   <th>Width<br />(mm)</th>
                   <th>Height<br />(mm)</th>
-                  <th>Web Thickness<br />(mm)</th>
-                  <th>Face Thickness<br />(mm)</th>
-                  <th>Gross Area<br />(mm²)</th>
                   <th>Net Area<br />(mm²)</th>
                   <th>Failure Load<br />(kN)</th>
                   <th>Gross Strength<br />(N/mm²)</th>
                   <th>Net Strength<br />(N/mm²)</th>
-                  <th>Air Dry<br />(N/mm2)</th>
-                  <th>Normalized<br />(N/mm2)</th>
                   <th>Density<br />(kg/m3)</th>
                 </>
               ) : (
@@ -1541,15 +1561,10 @@ function BlockCompressionRowsTable({
                 <td>{formatWholeNumber(values.height)}</td>
                 {hideWaterStrength ? (
                   <>
-                    <td>{formatWholeNumber(values.webThickness)}</td>
-                    <td>{formatWholeNumber(values.faceThickness)}</td>
-                    <td>{formatDammamBlockArea(dammamResults[index]?.grossArea)}</td>
                     <td>{formatDammamBlockArea(dammamResults[index]?.netArea)}</td>
                     <td>{textValue(values.failureLoad ?? values.load)}</td>
                     <td>{displayNumber(columns.grossStrength[index])}</td>
                     <td>{displayNumber(columns.netStrength[index])}</td>
-                    <td>{displayNumber(columns.airDry[index])}</td>
-                    <td>{displayNumber(columns.normalized[index])}</td>
                     <td>{displayNumber(columns.density[index])}</td>
                   </>
                 ) : (
@@ -1567,11 +1582,9 @@ function BlockCompressionRowsTable({
             <tr className="block-report-average-row">
               {hideWaterStrength ? (
                 <>
-                  <td colSpan={7}>AVERAGE:</td>
+                    <td colSpan={6}>AVERAGE:</td>
                   <td>{displayNumber(averages.grossStrength)}</td>
                   <td>{displayNumber(averages.netStrength)}</td>
-                  <td>{displayNumber(averages.airDry)}</td>
-                  <td>{displayNumber(averages.normalized)}</td>
                   <td>{displayNumber(averages.density)}</td>
                 </>
               ) : (
@@ -2476,7 +2489,7 @@ function BlocksReport({
               <div><span>Test details</span></div>
               <strong className="block-report-air-dry-note">
                 {useDammamBasis
-                  ? "Dammam: Air Dry compliance basis"
+                  ? "Dammam: Net Strength compliance basis"
                   : "Air Dry strength compliance basis"}
               </strong>
             </div>
@@ -2488,7 +2501,7 @@ function BlocksReport({
                   ["TESTING DATE:", formatReportDate(testingDate)],
                   ["Sp. Strength (N/mm²):", requiredStrength === null ? "-" : formatNumber(requiredStrength)],
                   [useDammamBasis ? "Plant:" : "Factory:", record.location],
-                  ["STRENGTH BASIS:", "AIR DRY STRENGTH"],
+                  ["STRENGTH BASIS:", useDammamBasis ? "NET STRENGTH" : "AIR DRY STRENGTH"],
                 ]}
               />
               <ReportFields
@@ -2500,19 +2513,6 @@ function BlocksReport({
                   ["METHOD OF PREPARATION:", detailValue(details, ["preparationMethod"])],
                   ["SHAPE FACTOR:", formatShapeFactor(details.shapeFactor)],
                   ["BLOCK TYPE:", detailValue(details, ["blockType"], record.material)],
-                  ...(useDammamBasis
-                    ? ([
-                        ["FACE THICKNESS (mm):", detailValue(details, ["faceThickness"], "30")],
-                        ["WEB THICKNESS (mm):", detailValue(details, ["webThickness"], "30")],
-                        [
-                          "NUMBER OF HOLES:",
-                          String(
-                            getDammamBlockHoleCount(details.blockSize) ??
-                            detailValue(details, ["numberOfHoles"], "-"),
-                          ),
-                        ],
-                      ] as const)
-                    : []),
                 ]}
               />
             </div>
