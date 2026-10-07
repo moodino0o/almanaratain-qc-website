@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react';
 import { useAppNavigationTracking } from '@/hooks/use-app-back';
+import { useEnterNavigation } from '@/hooks/use-enter-navigation';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuth } from '@workspace/replit-auth-web';
 import { ErrorBoundary } from '@/components/error-boundary';
@@ -39,6 +40,7 @@ function PrintLayout({ children }: { children: ReactNode }) {
 }
 
 function Router() {
+  useEnterNavigation();
   const [location] = useLocation();
   useAppNavigationTracking(location);
   const { role } = useAuth();

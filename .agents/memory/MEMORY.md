@@ -21,3 +21,4 @@
 - [Employee activity audit](employee-activity-audit.md) — never expose session bearer IDs; distinguish explicit sign-out from expiry and last confirmed activity.
 - [Dashboard month status](dashboard-month-status.md) — QC Test Status groups records by sample/test date for the selected calendar month.
 - [PowerPoint runtime compatibility](powerpoint-runtime-compatibility.md) — PptxGenJS ESM imports can behave differently in native Node and tsx; execute generators to verify compatibility.
+- [Data-entry keyboard behavior](entry-keyboard-behavior.md) — Enter advances through editable fields in visual order and selects existing values; skip hidden and non-editable fields and buttons.

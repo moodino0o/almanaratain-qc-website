@@ -1,4 +1,4 @@
-import { useMemo, useState, type KeyboardEvent } from "react";
+import { useMemo, useState } from "react";
 import {
   TestType,
   getGetDashboardQueryKey,
@@ -112,38 +112,6 @@ const cubeRowFromSaved = (row: unknown): CubeResultRow => {
     wetWeight: stringValue(values.wetWeight),
     load: stringValue(values.load),
   };
-};
-
-const handleCubeInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-  if (event.key !== "Enter" && event.code !== "NumpadEnter") return;
-
-  event.preventDefault();
-  const dialog = event.currentTarget.closest<HTMLElement>('[role="dialog"]');
-  const currentRow = event.currentTarget.closest<HTMLElement>("[data-cube-result-row]");
-  if (!currentRow) return;
-
-  const rows = Array.from(
-    document.querySelectorAll<HTMLElement>("[data-cube-result-row]"),
-  );
-  const currentRowIndex = rows.indexOf(currentRow);
-  if (currentRowIndex < 0) return;
-
-  const getNavigableInputs = (row: HTMLElement) =>
-    Array.from(row.querySelectorAll<HTMLInputElement>("[data-cube-navigation-input]"));
-  const currentRowInputs = getNavigableInputs(currentRow);
-  const currentInputIndex = currentRowInputs.indexOf(event.currentTarget);
-  const candidateInputs = [
-    ...currentRowInputs.slice(currentInputIndex + 1),
-    ...rows.slice(currentRowIndex + 1).flatMap(getNavigableInputs),
-  ];
-  const nextInput = candidateInputs[0];
-  if (nextInput) {
-    nextInput.focus();
-    return;
-  }
-  dialog
-    ?.querySelector<HTMLButtonElement>("[data-cube-results-save]")
-    ?.focus();
 };
 
 export default function Reports() {
@@ -814,8 +782,7 @@ export default function Reports() {
                                     min={0}
                                     step="any"
                                     value={row[key]}
-                                    onKeyDown={handleCubeInputKeyDown}
-                                    data-cube-navigation-input={key === "dryWeight" || key === "wetWeight" || key === "load" ? "true" : undefined}
+                                    data-enter-skip={["length", "width", "height"].includes(key) ? "true" : undefined}
                                     onChange={(event) => updateResultRow(
                                       entry.record.id,
                                       rowIndex as 0 | 1,

@@ -1400,29 +1400,6 @@ export default function RecordForm() {
       <form
         ref={formRef}
         onSubmit={handleSubmit}
-        onKeyDown={(event) => {
-          if (
-            event.key !== "Enter" ||
-            event.nativeEvent.isComposing ||
-            !(event.target instanceof HTMLInputElement)
-          ) return;
-
-          event.preventDefault();
-          const fields = Array.from(
-            formRef.current?.querySelectorAll<HTMLElement>(
-              'input:not([type="hidden"]):not(:disabled):not([readonly]), textarea:not(:disabled):not([readonly]), button[role="combobox"]:not(:disabled):not([aria-disabled="true"]), button[type="submit"]:not(:disabled)',
-            ) ?? [],
-          );
-          const currentIndex = fields.indexOf(event.target);
-          if (currentIndex === -1) return;
-
-          const nextField = fields
-            .slice(currentIndex + 1)
-            .find((field) => field.dataset.enterSkip !== "true");
-          if (!nextField) return;
-          nextField.scrollIntoView({ block: "nearest", inline: "nearest" });
-          nextField.focus({ preventScroll: true });
-        }}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card className="md:col-span-2 border-t-4 border-t-primary">
@@ -2061,7 +2038,7 @@ export default function RecordForm() {
               <CardTitle>Measurement Details: {testType}</CardTitle>
               <CardDescription>
                 {usesTestRows || usesSieveRows
-                  ? "Enter one specimen per row. Press Enter in a row to insert the next numbered entry."
+                  ? "Enter one specimen per row. Press Enter to move to the next editable field."
                   : "Enter the specific readings obtained during the test."}
               </CardDescription>
             </CardHeader>
@@ -2697,8 +2674,8 @@ export default function RecordForm() {
                                   type="text"
                                   inputMode="decimal"
                                   value={row[key] ?? ""}
+                                  data-enter-skip={testType === TestType.Blocks && ["length", "width", "height"].includes(key) ? "true" : undefined}
                                   className={compactBlockInputClass}
-                                  data-enter-skip={["length", "width", "height"].includes(key) ? "true" : undefined}
                                   onChange={event => updateTestRow(rowIndex, key, event.target.value)}
                                    placeholder={
                                       (testType === TestType.Blocks || testType === TestType.Paving_Blocks) &&
