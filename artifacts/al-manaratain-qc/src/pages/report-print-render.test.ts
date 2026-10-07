@@ -541,6 +541,18 @@ test("omits Dammam thickness and hole count from saved Block Test Details tables
 
   assert.match(markup, /Block Size/);
   assert.doesNotMatch(markup, /Face Thickness|Web Thickness|Number of Holes/);
+
+  const dynamicField = templateObject({
+    id: "number-holes-field",
+    type: "dynamicField",
+    name: "Number of Holes",
+    fieldKey: "details.numberOfHoles",
+  });
+  const dynamicDesign = createEmptyDesign("Blocks");
+  dynamicDesign.objects.push(dynamicField);
+  const dynamicMarkup = renderDocument(record, dynamicDesign);
+  assert.match(dynamicMarkup, /data-report-object="number-holes-field"[^>]*><\/div>/);
+  assert.doesNotMatch(dynamicMarkup, /data-report-object="number-holes-field"[^>]*>3<\/div>/);
 });
 
 test("prints Dammam net area and Net Strength summaries without Gross Area or Air Dry", () => {
