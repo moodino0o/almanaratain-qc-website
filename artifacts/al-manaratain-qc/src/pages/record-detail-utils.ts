@@ -11,7 +11,11 @@ function positiveNumber(value: unknown) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
-export function dammamBlockDisplayResults(row: unknown, blockSize: unknown) {
+export function dammamBlockDisplayResults(
+  row: unknown,
+  blockSize: unknown,
+  recordDetails: Record<string, unknown> = {},
+) {
   const values = typeof row === "object" && row !== null
     ? row as Record<string, unknown>
     : {};
@@ -24,8 +28,8 @@ export function dammamBlockDisplayResults(row: unknown, blockSize: unknown) {
       load: values.load ?? values.failureLoad,
     },
     blockSize,
-    values.faceThickness ?? thicknessDefaults.faceThickness,
-    values.webThickness ?? thicknessDefaults.webThickness,
+    values.faceThickness ?? recordDetails.faceThickness ?? thicknessDefaults.faceThickness,
+    values.webThickness ?? recordDetails.webThickness ?? thicknessDefaults.webThickness,
   );
 
   const grossArea =
@@ -45,9 +49,13 @@ export function dammamBlockDisplayResults(row: unknown, blockSize: unknown) {
   };
 }
 
-export function summarizeDammamBlockNetStrengths(rows: unknown[], blockSize: unknown) {
+export function summarizeDammamBlockNetStrengths(
+  rows: unknown[],
+  blockSize: unknown,
+  recordDetails: Record<string, unknown> = {},
+) {
   const strengths = rows
-    .map((row) => dammamBlockDisplayResults(row, blockSize).netStrength)
+    .map((row) => dammamBlockDisplayResults(row, blockSize, recordDetails).netStrength)
     .filter((strength): strength is number => strength !== null);
 
   if (strengths.length === 0) {

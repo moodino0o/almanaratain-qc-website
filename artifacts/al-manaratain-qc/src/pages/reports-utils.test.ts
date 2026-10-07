@@ -582,6 +582,67 @@ test("Block daily report uses Dammam net strength and other plants' air-dry stre
   assert.equal(dammam?.maximumStrength, 22);
 });
 
+test("Dammam register and daily summaries recalculate net strength using record thickness defaults", () => {
+  const dammam = qcRecord({
+    id: 80,
+    testType: "Blocks",
+    sampleDate: "2026-09-10",
+    location: "Dammam Plant",
+    details: {
+      blockSize: '4"',
+      blockAge: 28,
+      faceThickness: "20",
+      webThickness: "20",
+      averageStrength: 88,
+      strengthEvaluation: { averageStrength: 88 },
+      testRows: [
+        { load: 200, airDryStrength: 88, netStrength: 99 },
+        { load: 300, airDryStrength: 88, netStrength: 99 },
+      ],
+    },
+  });
+  const expected = [200_000 / 33_200, 300_000 / 33_200];
+  const summary = summarizeRecordStrengths(dammam)!;
+  assert.equal(summary.minimumStrength, expected[0]);
+  assert.equal(summary.maximumStrength, expected[1]);
+  assert.equal(summary.averageStrength, (expected[0] + expected[1]) / 2);
+  const daily = buildDailyReportRows([dammam], "2026-10-08", "2026-10-08")[0];
+  assert.equal(daily.averageStrength, summary.averageStrength);
+  assert.equal(daily.minimumStrength, summary.minimumStrength);
+  assert.equal(daily.maximumStrength, summary.maximumStrength);
+  assert.equal(daily.standardDeviation, (expected[1] - expected[0]) / 2);
+  const legacyFailureLoad = {
+    ...dammam,
+    details: { ...dammam.details, testRows: [{ failureLoad: 200 }] },
+  };
+  assert.equal(summarizeRecordStrengths(legacyFailureLoad)?.averageStrength, expected[0]);
+});
+
+test("Dammam never substitutes a generic, gross or air-dry average for missing net results", () => {
+  const dammam = qcRecord({
+    id: 81,
+    testType: "Blocks",
+    material: "Concrete Block",
+    sampleDate: "2026-09-10",
+    location: "Dammam",
+    details: {
+      blockAge: 28,
+      averageStrength: 88,
+      calculatedStrength: 44,
+      airDryStrength: 88,
+      strengthEvaluation: { averageStrength: 88 },
+    },
+  });
+  assert.equal(summarizeRecordStrengths(dammam), null);
+  assert.equal(buildDailyReportRows([dammam], "2026-10-08", "2026-10-08").length, 0);
+  assert.equal(summarizeRecordStrengths({
+    ...dammam, details: { ...dammam.details, averageNetStrength: 7 },
+  })?.averageStrength, 7);
+  assert.equal(summarizeRecordStrengths({
+    ...dammam, details: { ...dammam.details, testRows: [{ load: "", airDryStrength: 88, netStrength: 7 }] },
+  }), null);
+});
+
 test("uses the Block age-derived testing date instead of the entered legacy date", () => {
   const rows = buildDailyReportRows(
     [

@@ -508,6 +508,11 @@ export default function Records() {
             </div>
           ) : (
           <div className="qc-register-table-container w-full min-w-0">
+          {isMasonrySection && (
+            <p className="px-2 py-2 text-xs text-muted-foreground">
+              Strength basis: Dammam Blocks — Net Strength; other Blocks — Air-dry Strength; Paving — Tensile Strength.
+            </p>
+          )}
           <Table className="qc-register-table qc-table-readable w-full table-fixed text-[9px] leading-tight sm:text-[10px]">
             <TableHeader className="sticky top-0 bg-card z-10 shadow-sm">
               <TableRow>
@@ -563,7 +568,7 @@ export default function Records() {
                 <TableHead className={`${columnWidths.status} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>Status</TableHead>
                 {isMasonrySection && (
                   <>
-                    <TableHead className="masonry-strength-header w-[5%] whitespace-normal break-words px-1 py-1.5 text-right sm:text-[10px] text-[10px]">Avg. (N/mm²)</TableHead>
+                    <TableHead title="Dammam Blocks: Net Strength. Other Blocks: Air-dry Strength. Paving: Tensile Strength." className="masonry-strength-header w-[5%] whitespace-normal break-words px-1 py-1.5 text-right sm:text-[10px] text-[10px]">Avg. (N/mm²)</TableHead>
                     <TableHead className="masonry-strength-header w-[5%] whitespace-normal break-words px-1 py-1.5 text-right sm:text-[10px] text-[10px]">Min. (N/mm²)</TableHead>
                     <TableHead className="masonry-strength-header w-[5%] whitespace-normal break-words px-1 py-1.5 text-right sm:text-[10px] text-[10px]">Max. (N/mm²)</TableHead>
                   </>

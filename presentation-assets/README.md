@@ -16,6 +16,8 @@ pnpm --filter @workspace/scripts run generate:qc-presentation
 
 The generator writes the presentation to `.local/outputs/Al-Manaratain-QC-Application-Management-Presentation.pptx`. The workspace slides artifact can also export its current slide source to PowerPoint using the built-in slide export flow.
 
+The standalone generator creates native editable PowerPoint text and shapes. The slides-artifact export preserves the preview deck’s JSX layout. Both use the same reviewed content, but their layouts differ. Generating a new version replaces the local output file; keep a copy first if you need the previous version.
+
 ## Dependencies
 
 The generator uses `pptxgenjs`; the `@workspace/scripts` package also uses `tsx` to run TypeScript directly. Both dependencies are declared in the scripts workspace package.

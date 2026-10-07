@@ -691,7 +691,7 @@ export default function RecordDetail() {
   const isDammamBlock =
     record.testType === "Blocks" && isDammamBlockLocation(record.location);
   const blockStrengthSummary = isDammamBlock
-    ? summarizeDammamBlockNetStrengths(specimenRows, recordDetails.blockSize)
+    ? summarizeDammamBlockNetStrengths(specimenRows, recordDetails.blockSize, recordDetails)
     : strengthSummary(
         specimenRows,
         (row) => blockAirDryRowStrength(row, record.location),
@@ -1086,7 +1086,7 @@ export default function RecordDetail() {
                       : undefined}
                     strengthValueForRow={(row) => isDammamBlock
                       ? formatStrengthMetric(
-                          dammamBlockDisplayResults(row, recordDetails.blockSize).netStrength,
+                          dammamBlockDisplayResults(row, recordDetails.blockSize, recordDetails).netStrength,
                         )
                       : blockAirDryRowStrength(row, record.location)}
                   />

@@ -21,11 +21,11 @@ export default function Slide10() {
           <div className="mt-[1vh] text-[1.5vw] text-muted">Illustrative mockup — not a captured application screenshot</div>
         </div>
         <Card label="AVAILABLE OUTPUTS" title="Review and share">
-          <div>Test-specific printable QC reports</div>
-          <div>Browser print flow, including “Print to PDF” where available</div>
-          <div>Daily QC results spreadsheet export (.xlsx)</div>
-          <div>Report layouts and templates are configurable</div>
-          <div>Dammam Block reports use the net-area basis</div>
+          <div>Printable QC reports</div>
+          <div>Browser print / “Print to PDF”</div>
+          <div>Daily results .xlsx export</div>
+          <div>Configurable layouts / templates</div>
+          <div>Dammam: net-area basis</div>
         </Card>
       </div>
       <Note>The signed-in report screen could not be captured in the unauthenticated preview, so the visual above is explicitly illustrative.</Note>

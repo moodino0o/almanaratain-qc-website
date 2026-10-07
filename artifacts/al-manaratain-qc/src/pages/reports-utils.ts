@@ -4,6 +4,7 @@ import type {
   QcRecord,
 } from "@workspace/api-client-react";
 import { filterRowsWithLoad } from "./report-print-utils";
+import { dammamBlockDisplayResults } from "./record-detail-utils";
 
 export type GroupedDailyLocation = {
   location: string;
@@ -173,10 +174,9 @@ const rowStrength = (row: unknown, testType: QcRecord["testType"]) => {
   return firstNumericValue(values, strengthKeys);
 };
 
-const blockSummaryStrength = (row: unknown, location: string) => {
+const blockSummaryStrength = (row: unknown) => {
   if (typeof row !== "object" || row === null) return null;
   const values = row as Record<string, unknown>;
-  if (isDammamLocation(location)) return firstNumericValue(values, ["netStrength"]);
   const waterStrength = firstNumericValue(values, [
     "waterStrength",
     "calculatedStrength",
@@ -191,6 +191,20 @@ const blockSummaryStrength = (row: unknown, location: string) => {
 
 const recordStrengths = (record: QcRecord, details: Record<string, unknown>) => {
   const savedRows = Array.isArray(details.testRows) ? details.testRows : [];
+  if (record.testType === "Blocks" && isDammamLocation(record.location)) {
+    // Recalculate from geometry/load, not stale air-dry or generic evaluation averages.
+    // The register, daily table and workbook share this same result source.
+    const specimens = filterRowsWithLoad((savedRows.length ? savedRows : [details]).map((row) => {
+      const values = typeof row === "object" && row !== null ? row as Record<string, unknown> : {};
+      return { ...values, load: values.load ?? values.failureLoad };
+    }));
+    const netStrengths = specimens
+      .map((row) => dammamBlockDisplayResults(row, details.blockSize, details).netStrength)
+      .filter((value): value is number => value !== null);
+    if (savedRows.length || netStrengths.length) return netStrengths;
+    const explicitlyNet = firstNumericValue(details, ["averageNetStrength", "netStrength"]);
+    return explicitlyNet === null ? [] : [explicitlyNet];
+  }
   const loadRequired =
     record.testType === "Ready Mix" ||
     record.testType === "Blocks" ||
@@ -198,7 +212,7 @@ const recordStrengths = (record: QcRecord, details: Record<string, unknown>) => 
   const rows = loadRequired ? filterRowsWithLoad(savedRows) : savedRows;
   const strengths = rows
     .map((row) => record.testType === "Blocks"
-      ? blockSummaryStrength(row, record.location)
+      ? blockSummaryStrength(row)
       : rowStrength(row, record.testType))
     .filter((value): value is number => value !== null);
   if (strengths.length) return strengths;
@@ -206,18 +220,7 @@ const recordStrengths = (record: QcRecord, details: Record<string, unknown>) => 
   const directStrengthKeys = record.testType === "Ready Mix"
     ? ["averageStrength", "calculatedStrength", "strength", "compressiveStrength"]
     : record.testType === "Blocks"
-      ? [
-          ...(isDammamLocation(record.location)
-            ? ["averageNetStrength", "netStrength"]
-            : []),
-          "averageStrength",
-          ...(isDammamLocation(record.location)
-            ? []
-            : ["airDryStrength", "dryAirStrength"]),
-          "calculatedStrength",
-          "strength",
-          "compressiveStrength",
-        ]
+      ? ["averageStrength", "airDryStrength", "dryAirStrength", "calculatedStrength", "strength", "compressiveStrength"]
       : record.testType === "Paving Blocks"
         ? [
             "averageStrength",
@@ -236,14 +239,7 @@ const recordStrengths = (record: QcRecord, details: Record<string, unknown>) => 
             "strength",
             "compressiveStrength",
           ];
-  const dammamEvaluation =
-    typeof details.strengthEvaluation === "object" && details.strengthEvaluation !== null
-      ? details.strengthEvaluation as Record<string, unknown>
-      : {};
-  const directStrength = record.testType === "Blocks" && isDammamLocation(record.location)
-    ? firstNumericValue(details, ["averageNetStrength", "netStrength"]) ??
-      firstNumericValue(dammamEvaluation, ["averageStrength"])
-    : firstNumericValue(details, directStrengthKeys);
+  const directStrength = firstNumericValue(details, directStrengthKeys);
   if (directStrength === null) return [];
   if (
     record.testType !== "Blocks" ||

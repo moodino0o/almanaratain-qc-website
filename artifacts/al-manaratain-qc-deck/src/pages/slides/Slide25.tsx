@@ -6,17 +6,17 @@ export default function Slide25() {
       <div className="grid h-[51vh] grid-cols-2 gap-[1.3vw]">
         <Card label="IN THE CURRENT CODE" title="Controls observed">
           Salted scrypt password hashes
-          <div>Secure, HttpOnly, SameSite=Lax employee session cookie</div>
-          <div>Server-side authentication and role authorization</div>
-          <div>Inactive-user session rejection / revocation</div>
-          <div>Zod request validation and employee activity records</div>
+          <div>Secure, HttpOnly, SameSite=Lax cookie</div>
+          <div>Server authentication and roles</div>
+          <div>Inactive-session revocation</div>
+          <div>Request validation and activity history</div>
         </Card>
         <Card label="ROADMAP / VERIFY" title="Governance work">
-          Confirm hosted database encryption, backups and restore capability
-          <div>Evaluate MFA / SSO and sign-in rate controls</div>
-          <div>Introduce record-change / report-revision history as required</div>
-          <div>Document monitoring, incident response and retention</div>
-          <div>Schedule independent security testing</div>
+          Verify encryption, backups and restore
+          <div>Assess MFA / SSO and sign-in limits</div>
+          <div>QC change / report revision history</div>
+          <div>Monitoring, incidents and retention</div>
+          <div>Independent security testing</div>
         </Card>
       </div>
       <div className="mt-[2.5vh] grid grid-cols-4 gap-[0.8vw] text-center">

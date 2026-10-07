@@ -497,7 +497,11 @@ test("uses air-dry strength in Block specimen details, with the Dammam exception
   );
   assert.equal(
     blockAirDryRowStrength({ calculatedStrength: "6.46" }, "Dammam"),
-    6.46,
+    null,
+  );
+  assert.equal(
+    blockAirDryRowStrength({ calculatedStrength: "6.46", airDryStrength: "7.8", netStrength: "8.2" }, "Dammam Plant"),
+    8.2,
   );
   assert.equal(blockAirDryRowStrength({}, "HIDD"), null);
 });

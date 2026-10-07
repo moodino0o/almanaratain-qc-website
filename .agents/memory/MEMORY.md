@@ -10,7 +10,7 @@
 - [Complaint completion workflow](complaint-completion-workflow.md) — complaint completion is an explicit Open/Complete status, independent of whether solution notes are filled.
 - [Complaint review sign-off](complaint-review-signoff.md) — reviewer name and review date persist on complaint records and appear on printouts.
 - [Complaint material categories](complaint-material-categories.md) — derive complaint categories from material labels using OPC/SRC, inch sizes, and 60/80mm rules.
-- [Block derived strengths](block-derived-strengths.md) — use Dammam Net Strength for its detail summaries; retain the air-dry basis elsewhere.
+- [Block derived strengths](block-derived-strengths.md) — use Net Strength everywhere Dammam Blocks appear, including registers and exports; retain air-dry elsewhere.
 - [Block net area](block-net-area.md) — use Dammam hole deductions for Net Area; keep width × length for other Blocks and Paving separate.
 - [Dammam-only Block reporting](dammam-only-block-reporting.md) — restrict new geometry inputs/results and report columns to Dammam; leave other plants unchanged.
 - [Shape factor defaults](shape-factor-defaults.md) — seed one editable row per Block size, but keep the numeric value empty until an approved standard is provided.
@@ -20,3 +20,4 @@
 - [Paving correction factors](paving-correction-factors.md) — use the reference tensile formula, apply size factors, and evaluate the average against the matching standard.
 - [Employee activity audit](employee-activity-audit.md) — never expose session bearer IDs; distinguish explicit sign-out from expiry and last confirmed activity.
 - [Dashboard month status](dashboard-month-status.md) — QC Test Status groups records by sample/test date for the selected calendar month.
+- [PowerPoint runtime compatibility](powerpoint-runtime-compatibility.md) — PptxGenJS ESM imports can behave differently in native Node and tsx; execute generators to verify compatibility.

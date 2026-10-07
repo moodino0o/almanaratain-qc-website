@@ -2486,7 +2486,7 @@ export default function RecordForm() {
                                         <th className="w-[7%] px-1 py-2 text-left text-[10px] font-semibold">Net Strength (N/mm²)</th>
                                       </>
                                     )}
-                                    <th className={`${isDammamBlock ? "w-[9%]" : "w-[16%]"} px-1 py-2 text-left text-[10px] font-semibold`}>Air Dry Strength (N/mm²)</th>
+                                    {!isDammamBlock && <th className="w-[16%] px-1 py-2 text-left text-[10px] font-semibold">Air Dry Strength (N/mm²)</th>}
                                     <th className={`${isDammamBlock ? "w-[9%]" : "w-[14%]"} px-1 py-2 text-left text-[10px] font-semibold`}>Density (kg/m³)</th>
                                  </>
                                )}
@@ -2847,7 +2847,7 @@ export default function RecordForm() {
                                         </td>
                                       </>
                                     )}
-                                 <td className={compactBlockCellClass}>
+                                 {!isDammamBlock && <td className={compactBlockCellClass}>
                                     <div
                                       className="flex h-8 items-center rounded-md border bg-muted/40 px-1.5 text-[11px] font-semibold leading-tight text-foreground"
                                         aria-label={`Calculated air dry strength for row ${rowIndex + 1}`}
@@ -2858,7 +2858,7 @@ export default function RecordForm() {
                                             ? `${row.airDryStrength} N/mm²`
                                             : "Enter load and dimensions"}
                                     </div>
-                                 </td>
+                                 </td>}
                                  <td className={compactBlockCellClass}>
                                       <div
                                      className="flex h-8 items-center rounded-md border bg-muted/40 px-1.5 text-[11px] font-semibold leading-tight text-foreground"

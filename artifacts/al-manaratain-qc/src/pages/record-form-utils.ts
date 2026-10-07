@@ -530,7 +530,7 @@ export const blockAirDryRowStrength = (
     "strength",
     "compressiveStrength",
   ]);
-  if (isDammamBlockLocation(locationValue) && waterStrength !== null) return waterStrength;
+  if (isDammamBlockLocation(locationValue)) return firstNumericValue(["netStrength"]);
 
   const storedAirDryStrength = firstNumericValue([
     "airDryStrength",

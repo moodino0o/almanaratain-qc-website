@@ -473,9 +473,14 @@ export default function Reports() {
               ) : (
                 <div>
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                    <h3 className="text-sm font-semibold text-foreground">
-                      By category, plant, product, and date
-                    </h3>
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground">
+                        By category, plant, product, and date
+                      </h3>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Dammam Blocks: Net Strength. Other Blocks: Air-dry Strength.
+                      </p>
+                    </div>
                     <span className="text-xs text-muted-foreground">
                       One summary per day and group
                     </span>

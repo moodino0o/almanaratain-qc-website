@@ -5,14 +5,14 @@ export default function Slide19() {
     <ManagementSlide section="Current Status" page="19" title="Current availability and next decisions">
       <div className="grid h-[53vh] grid-cols-3 gap-[1.3vw]">
         <Card label="AVAILABLE NOW" title="Verified in the application">
-          QC record workflows, calculations and standards
-          <div>Dashboards, printable reports and daily XLSX export</div>
-          <div>Complaints, archive, reference data and employee roles</div>
-          <div>Public Replit Autoscale deployment</div>
+          QC records and calculations
+          <div>Dashboards, reports and XLSX</div>
+          <div>Complaints, archive and roles</div>
+          <div>Public Autoscale deployment</div>
         </Card>
         <Card label="IN PROGRESS" title="No feature confirmed">
-          No separate in-development application feature was identifiable from the inspected repository state.
-          <div>Confirm the active delivery backlog with product owners.</div>
+          No separate in-development feature was confirmed by this review.
+          <div>Confirm the active backlog with product owners.</div>
         </Card>
         <Card label="RECOMMENDED NEXT" title="Govern, then analyze" soft>
           Verify backup / restore and security posture
