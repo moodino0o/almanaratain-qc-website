@@ -132,7 +132,7 @@ export function calculateDammamBlockResults(
     return null;
   }
 
-  const holeWidth = (width - (2 * face) - ((holes - 1) * web)) / holes;
+  const holeWidth = width - (2 * face);
   const holeLength = (length - (2 * face) - ((holes - 1) * web)) / holes;
   if (holeWidth <= 0 || holeLength <= 0) return null;
 

@@ -75,8 +75,8 @@ test("Dammam Block details display recalculated Net Area and Net Strength", () =
 
   const result = dammamBlockDisplayResults(row, "400*100*200");
 
-  assert.equal(result.netArea, 37_637.5);
-  assert.ok(Math.abs((result.netStrength ?? 0) - 297_900 / 37_637.5) < 1e-10);
+  assert.equal(result.netArea, 27_400);
+  assert.ok(Math.abs((result.netStrength ?? 0) - 297_900 / 27_400) < 1e-10);
   assert.notEqual(result.netArea, Number(row.loadedFaceArea));
   assert.notEqual(result.netStrength, Number(row.airDryStrength));
 });
@@ -460,9 +460,9 @@ test("calculates Dammam Block gross and net results from saved inputs", () => {
   assert.equal(eightInch.numberOfHoles, 3);
   assert.equal(eightInch.failureLoadN, 1_500_000);
   assert.equal(eightInch.grossArea, 80_000);
-  assert.ok(Math.abs(eightInch.netArea - 72_533.33333333333) < 1e-8);
+  assert.equal(eightInch.netArea, 40_800);
   assert.equal(eightInch.grossStrength, 18.75);
-  assert.ok(Math.abs(eightInch.netStrength - 1_500_000 / 72_533.33333333333) < 1e-10);
+  assert.ok(Math.abs(eightInch.netStrength - 1_500_000 / 40_800) < 1e-10);
 
   const sixInch = calculateDammamBlockResults(
     { length: "400", width: "150", load: "1000" },
@@ -470,7 +470,7 @@ test("calculates Dammam Block gross and net results from saved inputs", () => {
     "30",
     "30",
   );
-  assert.equal(sixInch?.netArea, 50_700);
+  assert.equal(sixInch?.netArea, 32_100);
   assert.equal(sixInch?.grossStrength, 1000 / 60);
   assert.equal(
     calculateDammamBlockResults(

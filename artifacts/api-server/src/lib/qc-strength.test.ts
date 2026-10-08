@@ -539,8 +539,8 @@ test("uses net strength for Dammam evaluation and keeps its water and air-dry re
 
   assert.equal(row.waterStrength, "12.50");
   assert.equal(row.airDryStrength, 12.5);
-  assert.ok(Math.abs(Number(row.netStrength) - 13.786764705882353) < 1e-10);
-  assert.equal(result.evaluation!.averageStrength, 13.79);
+  assert.ok(Math.abs(Number(row.netStrength) - 24.509803921568626) < 1e-10);
+  assert.equal(result.evaluation!.averageStrength, 24.51);
   assert.equal(result.status, "Passed");
 });
 
@@ -575,13 +575,13 @@ test("calculates Dammam gross and net results and uses net strength for complian
   assert.equal(rows[1].failureLoad, 1500);
   assert.equal(rows[1].failureLoadN, 1_500_000);
   assert.equal(rows[1].grossArea, 80_000);
-  assert.ok(Math.abs(Number(rows[1].netArea) - 72_533.33333333333) < 1e-8);
+  assert.equal(rows[1].netArea, 40_800);
   assert.equal(rows[1].grossStrength, 18.75);
-  assert.ok(Math.abs(Number(rows[1].netStrength) - 1_500_000 / 72_533.33333333333) < 1e-10);
+  assert.ok(Math.abs(Number(rows[1].netStrength) - 1_500_000 / 40_800) < 1e-10);
   assert.equal(rows[1].airDryStrength, 18.8);
-  assert.equal(result.evaluation!.averageStrength, 18.61);
-  assert.ok(Math.abs(result.evaluation!.minimumStrength! - 1_200_000 / 72_533.33333333333) < 1e-10);
-  assert.ok(Math.abs(result.evaluation!.maximumStrength! - 1_500_000 / 72_533.33333333333) < 1e-10);
+  assert.equal(result.evaluation!.averageStrength, 33.09);
+  assert.ok(Math.abs(result.evaluation!.minimumStrength! - 1_200_000 / 40_800) < 1e-10);
+  assert.ok(Math.abs(result.evaluation!.maximumStrength! - 1_500_000 / 40_800) < 1e-10);
   assert.equal(result.status, "Passed");
 });
 
