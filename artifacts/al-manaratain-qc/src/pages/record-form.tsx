@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useParams } from "wouter";
-import { getGetDashboardQueryKey, getGetLookupsQueryKey, getGetRecordQueryKey, getGetReferenceDataQueryKey, getGetReportQueryKey, getListRecordsQueryKey, useCreateRecord, useCreateReferenceItem, useGetLookups, useGetReferenceData, useGetRecord, useListSieveStandards, useListShapeFactors, useListStrengthStandards, useListWaterStandards, useUpdateRecord, TestType, RecordStatus, QcRecordInput, QcRecordUpdate } from "@workspace/api-client-react";
+import { getGetDashboardQueryKey, getGetLookupsQueryKey, getGetRecordQueryKey, getGetReferenceDataQueryKey, getGetReportQueryKey, getListRecordsQueryKey, getListShapeFactorsQueryKey, useCreateRecord, useCreateReferenceItem, useGetLookups, useGetReferenceData, useGetRecord, useListSieveStandards, useListShapeFactors, useListStrengthStandards, useListWaterStandards, useUpdateRecord, TestType, RecordStatus, QcRecordInput, QcRecordUpdate } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -190,6 +190,9 @@ export default function RecordForm() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: getGetReferenceDataQueryKey() }),
         queryClient.invalidateQueries({ queryKey: getGetLookupsQueryKey() }),
+        ...(categoryKey === "blockSizes"
+          ? [queryClient.invalidateQueries({ queryKey: getListShapeFactorsQueryKey() })]
+          : []),
       ]);
       toast.success(`Added “${createdItem.value}” to Reference Data.`);
       return createdItem.value;

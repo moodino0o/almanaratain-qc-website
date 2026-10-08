@@ -9,6 +9,7 @@ import {
   useDeleteReferenceItem,
   getGetReferenceDataQueryKey,
   getGetLookupsQueryKey,
+  getListShapeFactorsQueryKey,
   getGetEmployeeAccessQueryKey,
   useGetEmployeeAccess,
   useCreateEmployeeAccess,
@@ -570,6 +571,9 @@ function CategoryCard({ category }: { category: ReferenceCategory }) {
   const invalidateData = () => {
     queryClient.invalidateQueries({ queryKey: getGetReferenceDataQueryKey() });
     queryClient.invalidateQueries({ queryKey: getGetLookupsQueryKey() });
+    if (category.key === "blockSizes") {
+      queryClient.invalidateQueries({ queryKey: getListShapeFactorsQueryKey() });
+    }
   };
 
   const handleUpdateCategory = () => {

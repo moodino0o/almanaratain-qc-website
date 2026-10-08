@@ -1,5 +1,6 @@
 - [Archive retirement authorization](archive-retirement-authorization.md) — keep archive retirement fail-closed behind the configured manager email allowlist.
 - [Reference-data seeding](reference-data-seeding.md) — startup seed reconciliation must add missing categories and items to existing databases instead of returning early.
+- [QC lookup freshness](qc-lookup-freshness.md) — cache idempotent setup, not editable lookup responses; invalidate shape defaults when Block-size references change.
 - [OpenAPI query dates](openapi-query-dates.md) — date query parameters need string validation because generated Zod query schemas do not coerce them to Date.
 - [OpenAPI Zod compatibility](openapi-zod-compatibility.md) — avoid integer schemas when the pinned generator emits unsupported `z.int()` calls.
 - [Block defaults compatibility](block-defaults-compatibility.md) — new Block defaults use canonical material/type/size labels while legacy labels and dimensions remain readable.

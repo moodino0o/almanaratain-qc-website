@@ -38,3 +38,28 @@ test("standard refreshes write saved evaluations in batches", () => {
   assert.match(refresh, /updated_at = NOW\(\)/);
   assert.doesNotMatch(refresh, /await db\.update\(qcRecordsTable\)/);
 });
+
+test("lookups avoid loading the full reference-data payload", () => {
+  const route = routeDefinition("get", "/lookups");
+  assert.match(route, /listLookupValues\(\)/);
+  assert.doesNotMatch(route, /listReferenceData\(\)/);
+
+  const start = routeSource.indexOf("async function listLookupValues()");
+  const end = routeSource.indexOf("\nasync function getReferenceCategory", start);
+  assert.notEqual(start, -1, "Expected the focused lookup query");
+  assert.notEqual(end, -1, "Expected the end of the focused lookup query");
+  const query = routeSource.slice(start, end);
+  assert.match(query, /\.select\(\{\s*categoryKey:/);
+  assert.match(query, /\.innerJoin\(/);
+  assert.match(query, /\.where\(inArray\(qcReferenceCategoriesTable\.key/);
+});
+
+test("reference and shape-factor reads reuse safe initialization", () => {
+  const referenceRoute = routeDefinition("get", "/reference-data");
+  const shapeFactorRoute = routeDefinition("get", "/shape-factors");
+  assert.match(referenceRoute, /listReferenceData\(\)/);
+  assert.match(shapeFactorRoute, /ensureDefaultShapeFactors\(\)/);
+  assert.match(routeSource, /shapeFactorInitializer\.ensure\(\)/);
+  assert.match(routeSource, /reportLayoutInitializer\.ensure\(\)/);
+  assert.match(routeSource, /if \(!backfillNullShapeFactorDefaults\) continue/);
+});

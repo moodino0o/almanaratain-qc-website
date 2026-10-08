@@ -116,6 +116,7 @@ import {
   requireQcEditor,
 } from "../middlewares/requireAuthenticated";
 import { isConfiguredAdministrator } from "../lib/auth";
+import { createInvalidatableInitializer } from "../lib/async-initializer";
 import {
   getEmployeeActivityRequestSessionId,
   getActivityEmployeeName,
@@ -315,6 +316,7 @@ let referenceSeedPromise: Promise<void> | null = null;
 let strengthSeedPromise: Promise<void> | null = null;
 let waterSeedPromise: Promise<void> | null = null;
 let masonryMachineNormalizationPromise: Promise<void> | null = null;
+let backfillNullShapeFactorDefaults = true;
 
 const READY_MIX_DEFAULT_DESIGNS = [
   "20 N OPC",
@@ -821,7 +823,7 @@ function isSupportedPrecastAge(value: unknown): boolean {
   return Number.isInteger(value) && [1, 7, 28].includes(value as number);
 }
 
-async function ensureDefaultShapeFactors() {
+async function reconcileDefaultShapeFactors() {
   const [category] = await db
     .select()
     .from(qcReferenceCategoriesTable)
@@ -850,6 +852,7 @@ async function ensureDefaultShapeFactors() {
       changed = true;
       continue;
     }
+    if (!backfillNullShapeFactorDefaults) continue;
     if (defaultShapeFactor !== null) {
       const [updated] = await db
         .update(qcShapeFactorsTable)
@@ -875,9 +878,21 @@ async function ensureDefaultShapeFactors() {
   if (changed) {
     await refreshRecordEvaluations(["Blocks", "Paving Blocks"]);
   }
+  backfillNullShapeFactorDefaults = false;
 }
 
-async function ensureReportLayouts() {
+const shapeFactorInitializer =
+  createInvalidatableInitializer(reconcileDefaultShapeFactors);
+
+async function ensureDefaultShapeFactors() {
+  await shapeFactorInitializer.ensure();
+}
+
+function invalidateDefaultShapeFactors() {
+  shapeFactorInitializer.invalidate();
+}
+
+async function reconcileReportLayouts() {
   for (const testType of REPORT_LAYOUT_TEST_TYPES) {
     const defaults = REPORT_LAYOUT_DEFAULTS[testType];
     await db
@@ -983,6 +998,13 @@ async function ensureReportLayouts() {
         .where(eq(qcReportLayoutsTable.id, existing.id));
     }
   }
+}
+
+const reportLayoutInitializer =
+  createInvalidatableInitializer(reconcileReportLayouts);
+
+async function ensureReportLayouts() {
+  await reportLayoutInitializer.ensure();
 }
 
 const REPORT_TEMPLATE_FIELD_KEYS = new Set([
@@ -1266,10 +1288,55 @@ async function listReferenceData() {
     db.select().from(qcReferenceCategoriesTable).orderBy(asc(qcReferenceCategoriesTable.label)),
     db.select().from(qcReferenceItemsTable).orderBy(asc(qcReferenceItemsTable.value)),
   ]);
+  const itemsByCategory = new Map<number, typeof items>();
+  for (const item of items) {
+    const categoryItems = itemsByCategory.get(item.categoryId) ?? [];
+    categoryItems.push(item);
+    itemsByCategory.set(item.categoryId, categoryItems);
+  }
   return categories.map((category) => ({
     ...category,
-    items: items.filter((item) => item.categoryId === category.id),
+    items: itemsByCategory.get(category.id) ?? [],
   }));
+}
+
+const LOOKUP_CATEGORY_KEYS = [
+  "factories",
+  "plants",
+  "employees",
+  "suppliers",
+  "materials",
+  "locations",
+  "blockTypes",
+  "blockSizes",
+  "mixStrengths",
+  "customers",
+  "customerLocations",
+  "sieveSizes",
+] as const;
+
+async function listLookupValues() {
+  await ensureReferenceData();
+  const rows = await db
+    .select({
+      categoryKey: qcReferenceCategoriesTable.key,
+      value: qcReferenceItemsTable.value,
+    })
+    .from(qcReferenceItemsTable)
+    .innerJoin(
+      qcReferenceCategoriesTable,
+      eq(qcReferenceCategoriesTable.id, qcReferenceItemsTable.categoryId),
+    )
+    .where(inArray(qcReferenceCategoriesTable.key, LOOKUP_CATEGORY_KEYS))
+    .orderBy(asc(qcReferenceItemsTable.value));
+
+  const valuesByCategory = new Map<string, string[]>(
+    LOOKUP_CATEGORY_KEYS.map((key) => [key, []]),
+  );
+  for (const row of rows) {
+    valuesByCategory.get(row.categoryKey)?.push(row.value);
+  }
+  return valuesByCategory;
 }
 
 async function getReferenceCategory(id: number) {
@@ -1286,11 +1353,12 @@ async function getReferenceCategory(id: number) {
   return { ...category, items };
 }
 
-function lookupValues(
-  categories: Awaited<ReturnType<typeof listReferenceData>>,
-  key: string,
-) {
-  return categories.find((category) => category.key === key)?.items.map((item) => item.value) ?? [];
+async function invalidateShapeFactorDefaultsForCategory(categoryId: number) {
+  const [category] = await db
+    .select({ key: qcReferenceCategoriesTable.key })
+    .from(qcReferenceCategoriesTable)
+    .where(eq(qcReferenceCategoriesTable.id, categoryId));
+  if (category?.key === "blockSizes") invalidateDefaultShapeFactors();
 }
 
 const toRecord = (
@@ -1640,21 +1708,21 @@ router.get("/dashboard", async (req, res): Promise<void> => {
 });
 
 router.get("/lookups", async (_req, res): Promise<void> => {
-  const categories = await listReferenceData();
+  const values = await listLookupValues();
   res.json(
     GetLookupsResponse.parse({
-      factories: lookupValues(categories, "factories"),
-      plants: lookupValues(categories, "plants"),
-      employees: lookupValues(categories, "employees"),
-      suppliers: lookupValues(categories, "suppliers"),
-      materials: lookupValues(categories, "materials"),
-      locations: lookupValues(categories, "locations"),
-      blockTypes: lookupValues(categories, "blockTypes"),
-      blockSizes: lookupValues(categories, "blockSizes"),
-      mixStrengths: lookupValues(categories, "mixStrengths"),
-      customers: lookupValues(categories, "customers"),
-      customerLocations: lookupValues(categories, "customerLocations"),
-      sieveSizes: lookupValues(categories, "sieveSizes"),
+      factories: values.get("factories"),
+      plants: values.get("plants"),
+      employees: values.get("employees"),
+      suppliers: values.get("suppliers"),
+      materials: values.get("materials"),
+      locations: values.get("locations"),
+      blockTypes: values.get("blockTypes"),
+      blockSizes: values.get("blockSizes"),
+      mixStrengths: values.get("mixStrengths"),
+      customers: values.get("customers"),
+      customerLocations: values.get("customerLocations"),
+      sieveSizes: values.get("sieveSizes"),
     }),
   );
 });
@@ -1684,6 +1752,7 @@ router.post("/reference-data/categories", requireAdministrator, async (req, res)
       res.status(500).json({ error: "Unable to create reference category" });
       return;
     }
+    if (category.key === "blockSizes") invalidateDefaultShapeFactors();
     res.status(201).json(
       CreateReferenceCategoryResponse.parse(await getReferenceCategory(category.id)),
     );
@@ -1708,6 +1777,14 @@ router.patch("/reference-data/categories/:id", requireAdministrator, async (req,
     ...(body.data.label ? { label: body.data.label.trim() } : {}),
   };
   try {
+    const [existingCategory] = await db
+      .select({ key: qcReferenceCategoriesTable.key })
+      .from(qcReferenceCategoriesTable)
+      .where(eq(qcReferenceCategoriesTable.id, params.data.id));
+    if (!existingCategory) {
+      res.status(404).json({ error: "Reference category not found" });
+      return;
+    }
     const [category] = await db
       .update(qcReferenceCategoriesTable)
       .set(updates)
@@ -1716,6 +1793,12 @@ router.patch("/reference-data/categories/:id", requireAdministrator, async (req,
     if (!category) {
       res.status(404).json({ error: "Reference category not found" });
       return;
+    }
+    if (
+      existingCategory.key === "blockSizes" ||
+      category.key === "blockSizes"
+    ) {
+      invalidateDefaultShapeFactors();
     }
     res.json(
       UpdateReferenceCategoryResponse.parse(await getReferenceCategory(category.id)),
@@ -1739,6 +1822,7 @@ router.delete("/reference-data/categories/:id", requireAdministrator, async (req
     res.status(404).json({ error: "Reference category not found" });
     return;
   }
+  if (category.key === "blockSizes") invalidateDefaultShapeFactors();
   res.sendStatus(204);
 });
 
@@ -1781,6 +1865,7 @@ router.post("/reference-data/categories/:categoryId/items", requireAuthenticated
       res.status(500).json({ error: "Unable to create reference value" });
       return;
     }
+    if (category.key === "blockSizes") invalidateDefaultShapeFactors();
     res.status(201).json(CreateReferenceItemResponse.parse(item));
   } catch {
     res.status(409).json({ error: "This value already exists in the category" });
@@ -1798,20 +1883,23 @@ router.patch("/reference-data/items/:id", requireAdministrator, async (req, res)
     res.status(400).json({ error: body.error.message });
     return;
   }
+  let item: typeof qcReferenceItemsTable.$inferSelect | undefined;
   try {
-    const [item] = await db
+    [item] = await db
       .update(qcReferenceItemsTable)
       .set({ value: body.data.value.trim() })
       .where(eq(qcReferenceItemsTable.id, params.data.id))
       .returning();
-    if (!item) {
-      res.status(404).json({ error: "Reference value not found" });
-      return;
-    }
-    res.json(UpdateReferenceItemResponse.parse(item));
   } catch {
     res.status(409).json({ error: "This value already exists in the category" });
+    return;
   }
+  if (!item) {
+    res.status(404).json({ error: "Reference value not found" });
+    return;
+  }
+  await invalidateShapeFactorDefaultsForCategory(item.categoryId);
+  res.json(UpdateReferenceItemResponse.parse(item));
 });
 
 router.delete("/reference-data/items/:id", requireAdministrator, async (req, res): Promise<void> => {
@@ -1820,21 +1908,24 @@ router.delete("/reference-data/items/:id", requireAdministrator, async (req, res
     res.status(400).json({ error: params.error.message });
     return;
   }
+  let item: typeof qcReferenceItemsTable.$inferSelect | undefined;
   try {
-    const [item] = await db
+    [item] = await db
       .delete(qcReferenceItemsTable)
       .where(eq(qcReferenceItemsTable.id, params.data.id))
       .returning();
-    if (!item) {
-      res.status(404).json({ error: "Reference value not found" });
-      return;
-    }
-    res.sendStatus(204);
   } catch {
     res.status(409).json({
       error: "This reference value is used by a configured sieve standard and cannot be deleted.",
     });
+    return;
   }
+  if (!item) {
+    res.status(404).json({ error: "Reference value not found" });
+    return;
+  }
+  await invalidateShapeFactorDefaultsForCategory(item.categoryId);
+  res.sendStatus(204);
 });
 
 router.get("/strength-standards", async (_req, res): Promise<void> => {
@@ -2111,6 +2202,7 @@ router.delete("/shape-factors/:id", requireAdministrator, async (req, res): Prom
     res.status(404).json({ error: "Shape factor not found" });
     return;
   }
+  invalidateDefaultShapeFactors();
   await refreshRecordEvaluations(["Blocks", "Paving Blocks"]);
   res.sendStatus(204);
 });
