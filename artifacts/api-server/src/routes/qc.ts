@@ -2707,7 +2707,6 @@ router.get("/records", async (req, res): Promise<void> => {
     return;
   }
   await ensureDefaultStrengthStandards();
-  await refreshRecordEvaluations(["Ready Mix", "Blocks"]);
 
   const filters = [];
   if (parsed.data.testType) {
@@ -3167,13 +3166,8 @@ router.get("/records/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Record not found" });
     return;
   }
-  await refreshRecordEvaluations([record.testType]);
-  const [currentRecord] = await db
-    .select()
-    .from(qcRecordsTable)
-    .where(eq(qcRecordsTable.id, parsed.data.id));
   res.json(
-    GetRecordResponse.parse(await toRecordWithCreator(currentRecord ?? record)),
+    GetRecordResponse.parse(await toRecordWithCreator(record)),
   );
 });
 
@@ -3306,18 +3300,13 @@ router.get("/reports/:id", async (req, res): Promise<void> => {
     return;
   }
   await ensureReferenceData();
-  await refreshRecordEvaluations([record.testType]);
-  const [currentRecord] = await db
-    .select()
-    .from(qcRecordsTable)
-    .where(eq(qcRecordsTable.id, parsed.data.id));
   const [layout] = await db
     .select()
     .from(qcReportLayoutsTable)
     .where(eq(qcReportLayoutsTable.testType, record.testType));
   res.json(
     GetReportResponse.parse({
-      record: await toRecordWithCreator(currentRecord ?? record),
+      record: await toRecordWithCreator(record),
       companyName: "AL MANARATAIN",
       companySubtitle: "Al Manaratain Company & Ali Shaab Group W.L.L",
       layout: toReportLayout(layout ?? {
