@@ -672,7 +672,7 @@ export default function Records() {
                     ) : !isReadyMixSection && (
                       <TableCell className="whitespace-normal break-words px-1 py-1">{record.testedBy}</TableCell>
                     )}
-                    <TableCell className="px-1 py-1">{getStatusBadge(record.status)}</TableCell>
+                    <TableCell className="px-1 py-1 pl-[5px] pr-[5px]">{getStatusBadge(record.status)}</TableCell>
                     {isReadyMixSection && (
                       <TableCell className="px-1 py-1 pl-[10px] pr-[10px]">
                         <div className="space-y-1 text-[10px] leading-tight tabular-nums sm:text-[11px]">
@@ -699,7 +699,7 @@ export default function Records() {
                     )}
                     {isMasonrySection && (
                       <>
-                        <TableCell className="masonry-strength-value px-1 py-1 text-right tabular-nums text-[12px]">
+                        <TableCell className="masonry-strength-value masonry-average-strength px-1 py-1 text-right tabular-nums text-[10px]">
                           {masonryStrengthSummaries.get(record.id)?.averageStrength.toFixed(2) ?? "—"}
                         </TableCell>
                         <TableCell className="masonry-strength-value px-1 py-1 text-right tabular-nums text-[12px]">

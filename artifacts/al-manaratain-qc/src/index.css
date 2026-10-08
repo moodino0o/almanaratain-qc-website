@@ -331,6 +331,10 @@
   font-size: 12px;
 }
 
+.qc-table-readable tbody td.masonry-average-strength {
+  font-size: 10px;
+}
+
 .dark .qc-table-readable thead th,
 .dark .qc-table-readable tbody td,
 .dark .qc-table-readable tbody td .text-muted-foreground {
