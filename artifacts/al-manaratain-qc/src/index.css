@@ -324,7 +324,7 @@
 }
 
 .qc-table-readable thead th.masonry-strength-header {
-  font-size: 12px;
+  font-size: 9px;
 }
 
 .qc-table-readable tbody td.masonry-strength-value {
@@ -344,6 +344,10 @@
 @media (min-width: 640px) {
   .qc-table-readable thead th {
     font-size: 12px;
+  }
+
+  .qc-table-readable thead th.masonry-strength-header {
+    font-size: 10px;
   }
 
   .qc-table-readable tbody td {

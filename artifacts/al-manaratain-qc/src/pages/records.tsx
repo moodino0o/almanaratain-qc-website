@@ -568,9 +568,9 @@ export default function Records() {
                 <TableHead className={`${columnWidths.status} whitespace-normal break-words px-1 py-1.5 text-[9px] leading-tight sm:text-[10px]`}>Status</TableHead>
                 {isMasonrySection && (
                   <>
-                    <TableHead title="Dammam Blocks: Net Strength. Other Blocks: Air-dry Strength. Paving: Tensile Strength." className="masonry-strength-header w-[5%] whitespace-normal break-words px-1 py-1.5 text-right sm:text-[10px] text-[10px]">Avg. (N/mm²)</TableHead>
-                    <TableHead className="masonry-strength-header w-[5%] whitespace-normal break-words px-1 py-1.5 text-right sm:text-[10px] text-[10px]">Min. (N/mm²)</TableHead>
-                    <TableHead className="masonry-strength-header w-[5%] whitespace-normal break-words px-1 py-1.5 text-right sm:text-[10px] text-[10px]">Max. (N/mm²)</TableHead>
+                    <TableHead title="Dammam Blocks: Net Strength. Other Blocks: Air-dry Strength. Paving: Tensile Strength." className="masonry-strength-header w-[5%] whitespace-normal break-words px-1 py-1.5 text-right sm:text-[10px] text-[9px]">Avg. (N/mm²)</TableHead>
+                    <TableHead className="masonry-strength-header w-[5%] whitespace-normal break-words px-1 py-1.5 text-right sm:text-[10px] text-[9px]">Min. (N/mm²)</TableHead>
+                    <TableHead className="masonry-strength-header w-[5%] whitespace-normal break-words px-1 py-1.5 text-right sm:text-[10px] text-[9px]">Max. (N/mm²)</TableHead>
                   </>
                 )}
                 {isReadyMixSection && (
