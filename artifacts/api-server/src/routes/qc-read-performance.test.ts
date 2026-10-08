@@ -24,3 +24,17 @@ for (const path of ["/records", "/records/:id", "/reports/:id"]) {
     );
   });
 }
+
+test("standard refreshes write saved evaluations in batches", () => {
+  const start = routeSource.indexOf("async function refreshRecordEvaluations(");
+  assert.notEqual(start, -1, "Expected the evaluation refresh helper");
+  const end = routeSource.indexOf("\nfunction detailsValue(", start);
+  assert.notEqual(end, -1, "Expected the end of the evaluation refresh helper");
+  const refresh = routeSource.slice(start, end);
+
+  assert.match(refresh, /const batchSize = 250/);
+  assert.match(refresh, /await db\.execute\(sql`/);
+  assert.match(refresh, /UPDATE qc_records AS qc_record/);
+  assert.match(refresh, /updated_at = NOW\(\)/);
+  assert.doesNotMatch(refresh, /await db\.update\(qcRecordsTable\)/);
+});

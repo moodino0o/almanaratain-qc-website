@@ -1365,6 +1365,11 @@ async function refreshRecordEvaluations(testTypes: string[]) {
       .where(inArray(qcRecordsTable.testType, uniqueTestTypes)),
   ]);
 
+  const evaluationUpdates: Array<{
+    id: number;
+    status: string;
+    details: Record<string, unknown>;
+  }> = [];
   for (const record of records) {
     const candidate = {
       testType: record.testType,
@@ -1379,13 +1384,27 @@ async function refreshRecordEvaluations(testTypes: string[]) {
           ? evaluateWaterQcRecord(candidate, waterStandards)
         : evaluateStrengthRecord(candidate, strengthStandards, shapeFactors);
     if (evaluated.status === undefined) continue;
-    await db
-      .update(qcRecordsTable)
-      .set({
-        status: evaluated.status,
-        details: evaluated.details,
-      })
-      .where(eq(qcRecordsTable.id, record.id));
+    evaluationUpdates.push({
+      id: record.id,
+      status: evaluated.status,
+      details: evaluated.details,
+    });
+  }
+
+  const batchSize = 250;
+  for (let offset = 0; offset < evaluationUpdates.length; offset += batchSize) {
+    const batch = evaluationUpdates.slice(offset, offset + batchSize);
+    const values = batch.map(({ id, status, details }) =>
+      sql`(${id}, ${status}, ${JSON.stringify(details)}::jsonb)`,
+    );
+    await db.execute(sql`
+      UPDATE qc_records AS qc_record
+      SET status = batch.status,
+          details = batch.details,
+          updated_at = NOW()
+      FROM (VALUES ${sql.join(values, sql`, `)}) AS batch(id, status, details)
+      WHERE qc_record.id = batch.id
+    `);
   }
 }
 
