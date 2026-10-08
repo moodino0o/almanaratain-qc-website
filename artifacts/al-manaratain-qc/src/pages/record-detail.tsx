@@ -478,9 +478,13 @@ function SieveRowsTable({
 function StrengthEvaluation({
   value,
   strengthName = "strength",
+  dammamBlock = false,
+  dammamSandwich = false,
 }: {
   value: unknown;
   strengthName?: string;
+  dammamBlock?: boolean;
+  dammamSandwich?: boolean;
 }) {
   if (typeof value !== "object" || value === null) {
     return (
@@ -511,11 +515,20 @@ function StrengthEvaluation({
         </>
       )}
       <p>
-        Minimum: {evaluation.requiredStrength == null
+        {dammamBlock
+          ? `Required Dammam average ${dammamSandwich ? "Air-dry" : "Net"} strength:`
+          : "Minimum:"} {evaluation.requiredStrength == null
           ? "Not configured"
           : `${evaluation.requiredStrength} ${String(evaluation.strengthUnit ?? "N/mm²")}`}
       </p>
-      <p>BS reference: {String(evaluation.bsStandard ?? "Not configured")}</p>
+      {dammamBlock && !dammamSandwich && (
+        <p>
+          Minimum specimen Net Strength: {evaluation.minimumRequiredStrength == null
+            ? "Not configured"
+            : `${evaluation.minimumRequiredStrength} ${String(evaluation.strengthUnit ?? "N/mm²")}`}
+        </p>
+      )}
+      <p>Linked standard reference: {String(evaluation.bsStandard ?? "Not configured")}</p>
       {evaluation.reason != null && (
         <p className="text-muted-foreground">{String(evaluation.reason)}</p>
       )}
@@ -1298,15 +1311,17 @@ export default function RecordDetail() {
           <CardContent>
             <StrengthEvaluation
               value={strengthEvaluationForDisplay}
-                strengthName={
-                  record.testType === "Blocks"
+              strengthName={
+                record.testType === "Blocks"
                   ? isDammamBlock && !isDammamSandwich
-                    ? "net strength"
-                    : "air-dry strength"
-                    : record.testType === "Paving Blocks"
-                      ? "tensile strength"
-                      : "strength"
-                }
+                    ? "Net Strength"
+                    : "Air-dry Strength"
+                  : record.testType === "Paving Blocks"
+                    ? "tensile strength"
+                    : "strength"
+              }
+              dammamBlock={isDammamBlock}
+              dammamSandwich={isDammamSandwich}
             />
           </CardContent>
         </Card>

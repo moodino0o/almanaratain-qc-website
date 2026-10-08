@@ -17,6 +17,8 @@ export const qcStrengthStandardsTable = pgTable("qc_strength_standards", {
   cubeAge: numeric("cube_age", { precision: 4, scale: 0 }),
   bsStandard: text("bs_standard").notNull(),
   requiredStrength: numeric("required_strength", { precision: 10, scale: 2 }).notNull(),
+  dammamAverageStrength: numeric("dammam_average_strength", { precision: 10, scale: 2 }),
+  dammamMinimumStrength: numeric("dammam_minimum_strength", { precision: 10, scale: 2 }),
   strengthUnit: text("strength_unit").notNull().default("N/mm²"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

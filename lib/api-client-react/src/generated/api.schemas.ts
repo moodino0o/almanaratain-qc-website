@@ -334,6 +334,10 @@ export interface StrengthStandard {
   cubeAge: number | null;
   bsStandard: string;
   requiredStrength: number;
+  /** @nullable */
+  dammamAverageStrength: number | null;
+  /** @nullable */
+  dammamMinimumStrength: number | null;
   strengthUnit: string;
 }
 
@@ -363,6 +367,16 @@ export interface StrengthStandardInput {
   bsStandard: string;
   /** @minimum 0 */
   requiredStrength: number;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  dammamAverageStrength?: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  dammamMinimumStrength?: number | null;
   strengthUnit?: string;
 }
 
@@ -392,6 +406,16 @@ export interface StrengthStandardUpdate {
   bsStandard?: string;
   /** @minimum 0 */
   requiredStrength?: number;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  dammamAverageStrength?: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  dammamMinimumStrength?: number | null;
   strengthUnit?: string;
 }
 

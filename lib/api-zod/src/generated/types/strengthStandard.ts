@@ -19,5 +19,9 @@ export interface StrengthStandard {
   cubeAge: number | null;
   bsStandard: string;
   requiredStrength: number;
+  /** @nullable */
+  dammamAverageStrength: number | null;
+  /** @nullable */
+  dammamMinimumStrength: number | null;
   strengthUnit: string;
 }

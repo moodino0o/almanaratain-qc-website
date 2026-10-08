@@ -22,5 +22,15 @@ export interface StrengthStandardUpdate {
   bsStandard?: string;
   /** @minimum 0 */
   requiredStrength?: number;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  dammamAverageStrength?: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  dammamMinimumStrength?: number | null;
   strengthUnit?: string;
 }

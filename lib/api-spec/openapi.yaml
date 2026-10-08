@@ -1862,6 +1862,8 @@ components:
         - cubeAge
         - bsStandard
         - requiredStrength
+        - dammamAverageStrength
+        - dammamMinimumStrength
         - strengthUnit
       properties:
         id:
@@ -1880,6 +1882,10 @@ components:
           type: string
         requiredStrength:
           type: number
+        dammamAverageStrength:
+          type: ["number", "null"]
+        dammamMinimumStrength:
+          type: ["number", "null"]
         strengthUnit:
           type: string
     StrengthStandardInput:
@@ -1908,6 +1914,12 @@ components:
         requiredStrength:
           type: number
           minimum: 0
+        dammamAverageStrength:
+          type: ["number", "null"]
+          minimum: 0
+        dammamMinimumStrength:
+          type: ["number", "null"]
+          minimum: 0
         strengthUnit:
           type: string
           default: N/mm²
@@ -1931,6 +1943,12 @@ components:
           minLength: 1
         requiredStrength:
           type: number
+          minimum: 0
+        dammamAverageStrength:
+          type: ["number", "null"]
+          minimum: 0
+        dammamMinimumStrength:
+          type: ["number", "null"]
           minimum: 0
         strengthUnit:
           type: string

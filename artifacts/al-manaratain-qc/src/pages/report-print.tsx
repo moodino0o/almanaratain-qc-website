@@ -612,6 +612,18 @@ function strengthStandardMatchesRecord(standard: StrengthStandard, record: QcRec
     blockSizeMatches(standard.blockSize, blockSize);
 }
 
+function selectedStrengthStandardForRecord(
+  standards: StrengthStandard[],
+  record: QcRecord,
+) {
+  const matchingStandards = standards
+    .filter((standard) => strengthStandardMatchesRecord(standard, record))
+    .sort((left, right) => left.id - right.id);
+  const selectedId = Number(record.details.strengthStandardId);
+  return matchingStandards.find((standard) => standard.id === selectedId) ??
+    matchingStandards[0];
+}
+
 function formatNumber(value: number) {
   return value.toFixed(1);
 }
@@ -2189,6 +2201,8 @@ function StrengthStandardsTable({
           cubeAge: null,
           bsStandard: textValue(evaluation.bsStandard),
           requiredStrength: Number(evaluation.requiredStrength),
+          dammamAverageStrength: null,
+          dammamMinimumStrength: null,
           strengthUnit: textValue(evaluation.strengthUnit, "N/mm²"),
         } satisfies StrengthStandard]
       : [];
@@ -2621,14 +2635,21 @@ function BlocksReport({
   const testingDate =
     (blockAge === null ? null : addDaysToDate(record.sampleDate, blockAge)) ||
     enteredTestingDate;
-  const configuredStandard = standards
-    .filter((standard) => strengthStandardMatchesRecord(standard, record))
-    .sort((left, right) => left.id - right.id)[0];
-  const requiredStrength = configuredStandard?.requiredStrength ??
-    numericValue(evaluation?.requiredStrength);
+  const configuredStandard = selectedStrengthStandardForRecord(standards, record);
   const useDammamBasis = isDammamLocation(record.location);
   const dammamSandwich = useDammamBasis && isSandwichBlockType(details.blockType);
   const useDammamNetBasis = useDammamBasis && !dammamSandwich;
+  const requiredStrength = useDammamBasis
+    ? numericValue(evaluation?.requiredStrength) ??
+      configuredStandard?.dammamAverageStrength ??
+      null
+    : configuredStandard?.requiredStrength ??
+      numericValue(evaluation?.requiredStrength);
+  const minimumRequiredStrength = useDammamNetBasis
+    ? numericValue(evaluation?.minimumRequiredStrength) ??
+      configuredStandard?.dammamMinimumStrength ??
+      null
+    : null;
   const compliance = textValue(evaluation?.status, record.status);
   const complianceLabel = compliance === "Passed"
     ? "PASS"
@@ -2663,7 +2684,14 @@ function BlocksReport({
                   ["BLOCK SIZE:", detailValue(details, ["blockSize"])],
                   ["CASTING DATE:", formatReportDate(record.sampleDate)],
                   ["TESTING DATE:", formatReportDate(testingDate)],
-                  ["Sp. Strength (N/mm²):", requiredStrength === null ? "-" : formatNumber(requiredStrength)],
+                  [
+                    dammamSandwich
+                      ? "MIN. AVG. AIR-DRY STRENGTH (N/mm²):"
+                      : useDammamBasis
+                        ? "MIN. AVG. NET STRENGTH (N/mm²):"
+                        : "Sp. Strength (N/mm²):",
+                    requiredStrength === null ? "-" : formatNumber(requiredStrength),
+                  ],
                   [useDammamBasis ? "Plant:" : "Factory:", record.location],
                   ["STRENGTH BASIS:", useDammamNetBasis ? "NET STRENGTH" : "AIR DRY STRENGTH"],
                 ]}
@@ -2677,6 +2705,14 @@ function BlocksReport({
                   ["METHOD OF PREPARATION:", detailValue(details, ["preparationMethod"])],
                   ["SHAPE FACTOR:", formatShapeFactor(details.shapeFactor)],
                   ["BLOCK TYPE:", detailValue(details, ["blockType"], record.material)],
+                  ...(useDammamNetBasis
+                    ? [[
+                        "MIN. SPECIMEN NET STRENGTH (N/mm²):",
+                        minimumRequiredStrength === null
+                          ? "-"
+                          : formatNumber(minimumRequiredStrength),
+                      ] as [string, string]]
+                    : []),
                 ]}
               />
             </div>
@@ -3413,9 +3449,8 @@ export default function ReportPrint() {
         matchesText(standard.material, record.material),
     )
     .sort((left, right) => left.id - right.id);
-  const configuredStrengthStandard = strengthStandards
-    .filter((standard) => strengthStandardMatchesRecord(standard, record))
-    .sort((left, right) => left.id - right.id)[0];
+  const configuredStrengthStandard =
+    selectedStrengthStandardForRecord(strengthStandards, record);
   const reportStrengthStandard =
     record.testType === "Ready Mix" ? activeStrengthStandard : configuredStrengthStandard;
   const configuredStandard =

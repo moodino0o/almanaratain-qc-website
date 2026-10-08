@@ -1649,7 +1649,9 @@ export default function RecordForm() {
               >
                 {matchingStrengthStandards.map((standard) => (
                   <option key={standard.id} value={standard.id}>
-                    {standard.bsStandard} — {standard.requiredStrength} {standard.strengthUnit}
+                    {isDammamBlock
+                      ? `${standard.bsStandard} — average ${standard.dammamAverageStrength ?? "not set"} ${isDammamSandwich ? "Air-dry" : "Net"}${isDammamSandwich ? "" : `; specimen minimum ${standard.dammamMinimumStrength ?? "not set"}`} ${standard.strengthUnit}`
+                      : `${standard.bsStandard} — ${standard.requiredStrength} ${standard.strengthUnit}`}
                   </option>
                 ))}
               </select>
@@ -1664,9 +1666,9 @@ export default function RecordForm() {
               <span className="text-muted-foreground">Automatically matched standard: </span>
               {matchingStrengthStandards[0] ? (
                 <strong>
-                  {matchingStrengthStandards[0].bsStandard} —{" "}
-                  {matchingStrengthStandards[0].requiredStrength}{" "}
-                  {matchingStrengthStandards[0].strengthUnit}
+                  {isDammamBlock
+                    ? `${matchingStrengthStandards[0].bsStandard} — average ${matchingStrengthStandards[0].dammamAverageStrength ?? "not set"} ${isDammamSandwich ? "Air-dry" : "Net"}${isDammamSandwich ? "" : `; specimen minimum ${matchingStrengthStandards[0].dammamMinimumStrength ?? "not set"}`} ${matchingStrengthStandards[0].strengthUnit}`
+                    : `${matchingStrengthStandards[0].bsStandard} — ${matchingStrengthStandards[0].requiredStrength} ${matchingStrengthStandards[0].strengthUnit}`}
                 </strong>
               ) : (
                 <span className="text-muted-foreground">
@@ -2260,16 +2262,32 @@ export default function RecordForm() {
                   {(testType === TestType.Ready_Mix || testType === TestType.Blocks) && (
                     <div className="rounded-md border border-primary/20 bg-primary/[0.04] px-4 py-3 text-sm">
                       {applicableStandard ? (
-                        <span>
-                          Automatic evaluation: {testType === TestType.Blocks
-                            ? "the average Block sample strength is compared with"
-                            : "28-day cubes are compared with"}{" "}
-                          <strong>{applicableStandard.requiredStrength} {applicableStandard.strengthUnit}</strong>{" "}
-                          under <strong>{applicableStandard.bsStandard}</strong>.
-                        </span>
+                        isDammamBlock ? (
+                          <span>
+                            Dammam-only limits from the linked standard: average{" "}
+                            {isDammamSandwich ? "Air-dry" : "Net"} Strength ≥{" "}
+                            <strong>{applicableStandard.dammamAverageStrength ?? "not set"} {applicableStandard.strengthUnit}</strong>
+                            {!isDammamSandwich && (
+                              <>
+                                {" "}and every specimen's Net Strength ≥{" "}
+                                <strong>{applicableStandard.dammamMinimumStrength ?? "not set"} {applicableStandard.strengthUnit}</strong>
+                              </>
+                            )}.
+                          </span>
+                        ) : (
+                          <span>
+                            Automatic evaluation: {testType === TestType.Blocks
+                              ? "the average Block sample strength is compared with"
+                              : "28-day cubes are compared with"}{" "}
+                            <strong>{applicableStandard.requiredStrength} {applicableStandard.strengthUnit}</strong>{" "}
+                            under <strong>{applicableStandard.bsStandard}</strong>.
+                          </span>
+                        )
                       ) : (
                         <span className="text-muted-foreground">
-                          Automatic evaluation will remain in Review until a matching strength standard is configured.
+                          {isDammamBlock
+                            ? "Dammam evaluation will remain in Review until a linked Block standard with Dammam limits is configured."
+                            : "Automatic evaluation will remain in Review until a matching strength standard is configured."}
                         </span>
                       )}
                     </div>

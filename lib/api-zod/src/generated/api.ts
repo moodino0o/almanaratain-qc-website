@@ -631,6 +631,8 @@ export const ListStrengthStandardsResponseItem = zod.object({
   "cubeAge": zod.number().nullable(),
   "bsStandard": zod.string(),
   "requiredStrength": zod.number(),
+  "dammamAverageStrength": zod.number().nullable(),
+  "dammamMinimumStrength": zod.number().nullable(),
   "strengthUnit": zod.string()
 })
 export const ListStrengthStandardsResponse = zod.array(ListStrengthStandardsResponseItem)
@@ -643,6 +645,10 @@ export const ListStrengthStandardsResponse = zod.array(ListStrengthStandardsResp
 
 export const createStrengthStandardBodyRequiredStrengthMin = 0;
 
+export const createStrengthStandardBodyDammamAverageStrengthMin = 0;
+
+export const createStrengthStandardBodyDammamMinimumStrengthMin = 0;
+
 export const createStrengthStandardBodyStrengthUnitDefault = `N/mm\xB2`;
 
 export const CreateStrengthStandardBody = zod.object({
@@ -653,6 +659,8 @@ export const CreateStrengthStandardBody = zod.object({
   "cubeAge": zod.union([zod.literal(1),zod.literal(7),zod.literal(28),zod.literal(null)]).nullish(),
   "bsStandard": zod.string().min(1),
   "requiredStrength": zod.number().min(createStrengthStandardBodyRequiredStrengthMin),
+  "dammamAverageStrength": zod.number().min(createStrengthStandardBodyDammamAverageStrengthMin).nullish(),
+  "dammamMinimumStrength": zod.number().min(createStrengthStandardBodyDammamMinimumStrengthMin).nullish(),
   "strengthUnit": zod.string().default(createStrengthStandardBodyStrengthUnitDefault)
 })
 
@@ -665,6 +673,8 @@ export const CreateStrengthStandardResponse = zod.object({
   "cubeAge": zod.number().nullable(),
   "bsStandard": zod.string(),
   "requiredStrength": zod.number(),
+  "dammamAverageStrength": zod.number().nullable(),
+  "dammamMinimumStrength": zod.number().nullable(),
   "strengthUnit": zod.string()
 })
 
@@ -680,6 +690,10 @@ export const UpdateStrengthStandardParams = zod.object({
 
 export const updateStrengthStandardBodyRequiredStrengthMin = 0;
 
+export const updateStrengthStandardBodyDammamAverageStrengthMin = 0;
+
+export const updateStrengthStandardBodyDammamMinimumStrengthMin = 0;
+
 
 
 export const UpdateStrengthStandardBody = zod.object({
@@ -690,6 +704,8 @@ export const UpdateStrengthStandardBody = zod.object({
   "cubeAge": zod.union([zod.literal(1),zod.literal(7),zod.literal(28),zod.literal(null)]).nullish(),
   "bsStandard": zod.string().min(1).optional(),
   "requiredStrength": zod.number().min(updateStrengthStandardBodyRequiredStrengthMin).optional(),
+  "dammamAverageStrength": zod.number().min(updateStrengthStandardBodyDammamAverageStrengthMin).nullish(),
+  "dammamMinimumStrength": zod.number().min(updateStrengthStandardBodyDammamMinimumStrengthMin).nullish(),
   "strengthUnit": zod.string().optional()
 })
 
@@ -702,6 +718,8 @@ export const UpdateStrengthStandardResponse = zod.object({
   "cubeAge": zod.number().nullable(),
   "bsStandard": zod.string(),
   "requiredStrength": zod.number(),
+  "dammamAverageStrength": zod.number().nullable(),
+  "dammamMinimumStrength": zod.number().nullable(),
   "strengthUnit": zod.string()
 })
 

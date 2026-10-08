@@ -22,6 +22,8 @@ const blockStandard = (
   cubeAge: null,
   bsStandard: "BS EN 771-3",
   requiredStrength: "5",
+  dammamAverageStrength: "13.8",
+  dammamMinimumStrength: "12.4",
   strengthUnit: "N/mm²",
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   updatedAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -42,6 +44,8 @@ const precastStandard = (
   cubeAge: String(cubeAge),
   bsStandard: `Precast ${cubeAge}-day criterion`,
   requiredStrength: String(requiredStrength),
+  dammamAverageStrength: null,
+  dammamMinimumStrength: null,
   strengthUnit: "N/mm²",
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   updatedAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -73,6 +77,29 @@ const blockRecord = (
   },
 });
 
+const dammamBlockRecord = (
+  loads: number[],
+  blockType = "8'' Solid Block",
+): Parameters<typeof evaluateStrengthRecord>[0] => {
+  const record = blockRecord(
+    loads.map((load) => ({
+      length: 400,
+      width: 200,
+      height: 200,
+      load,
+    })),
+  );
+  record.location = "Dammam Plant";
+  record.details = {
+    ...record.details,
+    blockType,
+    blockSize: '8"',
+    faceThickness: 30,
+    webThickness: 30,
+  };
+  return record;
+};
+
 const precastRecord = (
   rows: Record<string, unknown>[],
   cubeWeightUnit: string | null = "g",
@@ -98,6 +125,8 @@ const readyMixStandard = (
   cubeAge: null,
   bsStandard: "Ready Mix strength",
   requiredStrength: "7",
+  dammamAverageStrength: null,
+  dammamMinimumStrength: null,
   strengthUnit: "N/mm²",
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   updatedAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -585,6 +614,63 @@ test("calculates Dammam gross and net results and uses net strength for complian
   assert.equal(result.status, "Passed");
 });
 
+test("uses the linked standard's Dammam thresholds and passes at inclusive limits", () => {
+  const record = dammamBlockRecord([505.92, 620.16]);
+  record.details.strengthStandardId = 2;
+  const result = evaluateStrengthRecord(record, [
+    blockStandard({
+      id: 1,
+      bsStandard: "Unselected reference",
+      requiredStrength: "0",
+      dammamAverageStrength: "100",
+      dammamMinimumStrength: "100",
+    }),
+    blockStandard({
+      id: 2,
+      bsStandard: "Linked Dammam standard",
+      requiredStrength: "999",
+      dammamAverageStrength: "13.8",
+      dammamMinimumStrength: "12.4",
+    }),
+  ]);
+
+  assert.equal(result.status, "Passed");
+  assert.equal(result.evaluation!.bsStandard, "Linked Dammam standard");
+  assert.equal(result.evaluation!.requiredStrength, 13.8);
+  assert.equal(result.evaluation!.minimumRequiredStrength, 12.4);
+  assert.equal(result.evaluation!.averageStrength, 13.8);
+  assert.ok(Math.abs(result.evaluation!.minimumStrength! - 12.4) < 1e-9);
+});
+
+test("fails Dammam regular Blocks when either the average or specimen minimum is below its linked limit", () => {
+  const minimumFailure = evaluateStrengthRecord(
+    dammamBlockRecord([449, 700]),
+    [blockStandard({ dammamAverageStrength: "13.8", dammamMinimumStrength: "12.4" })],
+  );
+  assert.equal(minimumFailure.status, "Failed");
+  assert.ok(minimumFailure.evaluation!.averageStrength! >= 13.8);
+  assert.ok(minimumFailure.evaluation!.minimumStrength! < 12.4);
+  assert.match(minimumFailure.evaluation!.reason ?? "", /minimum.*net strength/i);
+
+  const averageFailure = evaluateStrengthRecord(
+    dammamBlockRecord([510, 530]),
+    [blockStandard({ dammamAverageStrength: "13.8", dammamMinimumStrength: "12.4" })],
+  );
+  assert.equal(averageFailure.status, "Failed");
+  assert.ok(averageFailure.evaluation!.averageStrength! < 13.8);
+  assert.ok(averageFailure.evaluation!.minimumStrength! >= 12.4);
+  assert.match(averageFailure.evaluation!.reason ?? "", /average.*net strength/i);
+});
+
+test("keeps Dammam Blocks in Review when the linked standard lacks Dammam criteria", () => {
+  const result = evaluateStrengthRecord(
+    dammamBlockRecord([600, 700]),
+    [blockStandard({ dammamAverageStrength: null, dammamMinimumStrength: null })],
+  );
+  assert.equal(result.status, "Review");
+  assert.match(result.evaluation!.reason ?? "", /missing a Dammam average-strength limit/i);
+});
+
 test("uses gross-area Air-dry strength for Dammam Sandwich Block compliance", () => {
   const record = blockRecord([
     { length: 400, width: 200, height: 200, load: 1200 },
@@ -604,6 +690,8 @@ test("uses gross-area Air-dry strength for Dammam Sandwich Block compliance", ()
       blockStandard({
         blockType: "8'' Sandwich Insulation Block",
         requiredStrength: "16.7",
+      dammamAverageStrength: "4.14",
+      dammamMinimumStrength: null,
       }),
     ],
   );

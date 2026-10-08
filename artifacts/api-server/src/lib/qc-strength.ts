@@ -14,6 +14,7 @@ export type StrengthEvaluation = {
   status: StrengthEvaluationStatus;
   bsStandard: string | null;
   requiredStrength: number | null;
+  minimumRequiredStrength?: number | null;
   averageStrength: number | null;
   minimumStrength: number | null;
   maximumStrength: number | null;
@@ -811,10 +812,21 @@ export function evaluateStrengthRecord(
     record.testType === "Blocks" &&
     isDammamLocation(record.location) &&
     isSandwichBlockType(normalizedDetails.blockType);
+  const isDammamBlock =
+    record.testType === "Blocks" && isDammamLocation(record.location);
   const normalizedRecord = { ...record, details: normalizedDetails };
   const standard = matchingStandard(normalizedRecord, standards);
-  const requiredStrength =
-    standard === undefined ? null : numericValue(standard.requiredStrength);
+  const requiredStrength = standard === undefined
+    ? null
+    : numericValue(
+        isDammamBlock
+          ? standard.dammamAverageStrength
+          : standard.requiredStrength,
+      );
+  const minimumRequiredStrength =
+    standard !== undefined && isDammamBlock && !isDammamSandwich
+      ? numericValue(standard.dammamMinimumStrength)
+      : null;
   const rows = Array.isArray(normalizedDetails.testRows) ? normalizedDetails.testRows : [];
   const calculatedRows = rows.map((row) =>
     calculateRow(
@@ -902,6 +914,10 @@ export function evaluateStrengthRecord(
     requiredStrength !== null &&
     averageStrength !== null &&
     averageStrength < requiredStrength;
+  const minimumBelowRequired =
+    minimumRequiredStrength !== null &&
+    minimumStrength !== null &&
+    minimumStrength < minimumRequiredStrength - 1e-9;
 
   let status: StrengthEvaluationStatus = "Review";
   let reason: string | null =
@@ -920,7 +936,11 @@ export function evaluateStrengthRecord(
             ? "No matching standard was configured for this paving block size."
             : "No matching standard was configured for this material.";
   } else if (requiredStrength === null) {
-    reason = "The configured minimum strength is invalid.";
+    reason = isDammamBlock
+      ? "The linked standard is missing a Dammam average-strength limit."
+      : "The configured minimum strength is invalid.";
+  } else if (isDammamBlock && !isDammamSandwich && minimumRequiredStrength === null) {
+    reason = "The linked standard is missing a Dammam minimum specimen-strength limit.";
   } else if (readyMixHasMissingAge) {
     reason = "Enter an age for every Ready Mix specimen.";
   } else if (readyMixWaitingForResults) {
@@ -928,13 +948,18 @@ export function evaluateStrengthRecord(
     reason = "Waiting for 28-day cube results.";
   } else if (record.testType === "Ready Mix" && hasIncompleteMeasurements) {
     reason = "Complete each 28-day cube's dimensions and load.";
-  } else if (averageBelowRequired) {
+  } else if (averageBelowRequired || minimumBelowRequired) {
     status = "Failed";
-    reason =
-      record.testType === "Blocks"
-          ? isDammamLocation(record.location) && !isDammamSandwich
-            ? "The average Block net strength is below the configured minimum."
-            : "The average Block air-dry strength is below the configured minimum."
+    reason = isDammamBlock
+      ? isDammamSandwich
+        ? "The average Dammam Sandwich air-dry strength is below the linked standard's limit."
+        : averageBelowRequired && minimumBelowRequired
+          ? "The average or minimum Dammam Net Strength is below the linked standard's limit."
+          : averageBelowRequired
+            ? "The average Dammam Net Strength is below the linked standard's limit."
+            : "The minimum Dammam specimen Net Strength is below the linked standard's limit."
+      : record.testType === "Blocks"
+        ? "The average Block air-dry strength is below the configured minimum."
         : record.testType === "Paving Blocks"
           ? "The average paving block tensile strength is below the configured minimum."
           : "The measured strength is below the configured minimum.";
@@ -950,6 +975,7 @@ export function evaluateStrengthRecord(
       status,
       bsStandard: standard?.bsStandard ?? null,
       requiredStrength,
+      minimumRequiredStrength,
       averageStrength,
       minimumStrength,
       maximumStrength,

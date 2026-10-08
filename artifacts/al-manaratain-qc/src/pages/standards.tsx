@@ -71,6 +71,7 @@ import {
   BLOCK_RECORD_MATERIAL,
   blockSizeMatches,
   blockTypeMatches,
+  isSandwichBlockType,
   PRECAST_AGE_STRENGTH_CRITERIA,
 } from "./record-form-utils";
 
@@ -91,6 +92,8 @@ type StandardForm = {
   cubeAge: string;
   bsStandard: string;
   requiredStrength: string;
+  dammamAverageStrength: string;
+  dammamMinimumStrength: string;
   strengthUnit: string;
 };
 
@@ -130,8 +133,16 @@ const emptyForm: StandardForm = {
   cubeAge: "",
   bsStandard: "",
   requiredStrength: "",
+  dammamAverageStrength: "",
+  dammamMinimumStrength: "",
   strengthUnit: "N/mm²",
 };
+
+function defaultDammamCriteria(blockType: string) {
+  return isSandwichBlockType(blockType)
+    ? { dammamAverageStrength: "4.14", dammamMinimumStrength: "" }
+    : { dammamAverageStrength: "13.8", dammamMinimumStrength: "12.4" };
+}
 
 const emptyWaterForm: WaterLimitForm = {
   name: "Water Quality Limits",
@@ -187,6 +198,14 @@ function formFromStandard(standard: StrengthStandard): StandardForm {
     cubeAge: standard.cubeAge == null ? "" : String(standard.cubeAge),
     bsStandard: standard.bsStandard,
     requiredStrength: String(standard.requiredStrength),
+    dammamAverageStrength: String(
+      standard.dammamAverageStrength ??
+        Number(defaultDammamCriteria(standard.blockType ?? "").dammamAverageStrength),
+    ),
+    dammamMinimumStrength:
+      standard.dammamMinimumStrength == null
+        ? defaultDammamCriteria(standard.blockType ?? "").dammamMinimumStrength
+        : String(standard.dammamMinimumStrength),
     strengthUnit: standard.strengthUnit,
   };
 }
@@ -272,7 +291,7 @@ function StandardEditor({
               {editing ? "Edit strength standard" : "Add strength standard"}
             </CardTitle>
             <CardDescription>
-              Set the minimum strength for the selected product and, for Precast, cube age.
+              Set the standard limits for the selected product. Dammam Block limits are configured separately below.
             </CardDescription>
           </div>
           <Button
@@ -291,7 +310,7 @@ function StandardEditor({
           <Select
             value={form.testType}
             onValueChange={(value: StandardForm["testType"]) =>
-              setForm({
+                setForm({
                 ...form,
                 testType: value,
                 material:
@@ -303,6 +322,14 @@ function StandardEditor({
                 blockType: "",
                 blockSize: "",
                 cubeAge: "",
+                dammamAverageStrength:
+                  value === TestType.Blocks
+                    ? defaultDammamCriteria("").dammamAverageStrength
+                    : "",
+                dammamMinimumStrength:
+                  value === TestType.Blocks
+                    ? defaultDammamCriteria("").dammamMinimumStrength
+                    : "",
               })
             }
           >
@@ -374,7 +401,13 @@ function StandardEditor({
               <Label>Block Type</Label>
               <TypeaheadInput
                 value={form.blockType}
-                onChange={(value) => setForm({ ...form, blockType: value })}
+                onChange={(value) =>
+                  setForm({
+                    ...form,
+                    blockType: value,
+                    ...defaultDammamCriteria(value),
+                  })
+                }
                 options={lookups?.blockTypes ?? []}
                 placeholder="Select block type..."
                 onCreateOption={(value) =>
@@ -395,7 +428,7 @@ function StandardEditor({
           </>
         )}
         <div className="space-y-2">
-          <Label>BS standard reference</Label>
+            <Label>{form.testType === TestType.Blocks ? "Standard reference (display only)" : "BS standard reference"}</Label>
           <Input
             value={form.bsStandard}
             onChange={(event) =>
@@ -406,7 +439,13 @@ function StandardEditor({
         </div>
         <div className="grid grid-cols-[1fr_120px] gap-3">
           <div className="space-y-2">
-            <Label>Minimum strength</Label>
+            <Label>
+              {form.testType === TestType.Blocks
+                ? "Other-plant minimum average"
+                : form.testType === TestType.Precast
+                  ? "Minimum average"
+                  : "Minimum strength"}
+            </Label>
             <Input
               type="number"
               min="0"
@@ -429,6 +468,48 @@ function StandardEditor({
             />
           </div>
         </div>
+        {form.testType === TestType.Blocks && (
+          <div className="space-y-3 rounded-md border border-primary/20 bg-primary/[0.03] p-4 md:col-span-2">
+            <div>
+              <h3 className="font-semibold">Dammam-only strength limits</h3>
+              <p className="text-sm text-muted-foreground">
+                These fields control Dammam Block pass/fail. The standard reference and other-plant minimum above do not set Dammam limits.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>
+                  Minimum average {isSandwichBlockType(form.blockType) ? "Air-dry" : "Net"} Strength (N/mm²)
+                </Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.dammamAverageStrength}
+                  onChange={(event) =>
+                    setForm({ ...form, dammamAverageStrength: event.target.value })
+                  }
+                  placeholder={isSandwichBlockType(form.blockType) ? "4.14" : "13.8"}
+                />
+              </div>
+              {!isSandwichBlockType(form.blockType) && (
+                <div className="space-y-2">
+                  <Label>Minimum specimen Net Strength (N/mm²)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={form.dammamMinimumStrength}
+                    onChange={(event) =>
+                      setForm({ ...form, dammamMinimumStrength: event.target.value })
+                    }
+                    placeholder="12.4"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         <div className="flex items-end justify-end gap-2 md:col-span-2">
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
@@ -834,6 +915,7 @@ function StrengthStandardsFolder({
   onEdit: (standard: StrengthStandard) => void;
   onDelete: (standard: StrengthStandard) => void;
 }) {
+  const isBlocks = standards[0]?.testType === TestType.Blocks;
   return (
     <Card className="border-border shadow-sm">
       <button
@@ -869,7 +951,7 @@ function StrengthStandardsFolder({
         <div className="border-t border-border">
           {standards.length ? (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[820px] text-xs sm:text-sm">
+              <table className="w-full min-w-[980px] text-xs sm:text-sm">
                 <thead className="bg-muted/40 text-left text-foreground">
                   <tr className="border-b">
                     <th className="px-4 py-3 font-semibold">Test Type</th>
@@ -877,8 +959,11 @@ function StrengthStandardsFolder({
                     <th className={`px-4 py-3 font-semibold ${isPrecast ? "" : "hidden"}`}>Cube Age</th>
                     <th className={`px-4 py-3 font-semibold ${isPrecast ? "hidden" : ""}`}>Block Type</th>
                     <th className={`px-4 py-3 font-semibold ${isPrecast ? "hidden" : ""}`}>Block Size</th>
-                    <th className="px-4 py-3 font-semibold">BS Standard</th>
-                    <th className="px-4 py-3 font-semibold">Minimum</th>
+                    <th className="px-4 py-3 font-semibold">{isBlocks ? "Reference (not Dammam limit)" : "BS Standard"}</th>
+                    <th className="px-4 py-3 font-semibold">
+                      {isBlocks ? "Other-plant minimum average" : isPrecast ? "Minimum average" : "Minimum"}
+                    </th>
+                    {isBlocks && <th className="px-4 py-3 font-semibold">Dammam limits</th>}
                     <th className="px-4 py-3 text-right font-semibold">
                       Actions
                     </th>
@@ -906,6 +991,13 @@ function StrengthStandardsFolder({
                       <td className="px-4 py-3 font-semibold">
                         {standard.requiredStrength} {standard.strengthUnit}
                       </td>
+                      {isBlocks && (
+                        <td className="px-4 py-3">
+                          {isSandwichBlockType(standard.blockType)
+                            ? `Average Air-dry ≥ ${standard.dammamAverageStrength ?? "—"} ${standard.strengthUnit}`
+                            : `Average Net ≥ ${standard.dammamAverageStrength ?? "—"} ${standard.strengthUnit}; minimum specimen Net ≥ ${standard.dammamMinimumStrength ?? "—"} ${standard.strengthUnit}`}
+                        </td>
+                      )}
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-1">
                           <Button
@@ -2035,6 +2127,7 @@ export default function Standards() {
       material: BLOCK_RECORD_MATERIAL,
       blockType,
       blockSize,
+      ...defaultDammamCriteria(blockType),
     });
     setStandardView("strength");
     setEditorOpen(true);
@@ -2192,6 +2285,10 @@ export default function Standards() {
 
   const handleSave = () => {
     const requiredStrength = Number(form.requiredStrength);
+    const dammamAverageStrength = Number(form.dammamAverageStrength);
+    const dammamMinimumStrength = Number(form.dammamMinimumStrength);
+    const isDammamSandwichStandard =
+      form.testType === TestType.Blocks && isSandwichBlockType(form.blockType);
     if (
       (form.testType !== TestType.Blocks && !form.material.trim()) ||
       !form.bsStandard.trim() ||
@@ -2202,7 +2299,15 @@ export default function Standards() {
         !["1", "7", "28"].includes(form.cubeAge)) ||
       ((form.testType === TestType.Blocks &&
         (!form.blockType.trim() || !form.blockSize.trim())) ||
-        (form.testType === TestType.Paving_Blocks && !form.blockSize.trim()))
+        (form.testType === TestType.Paving_Blocks && !form.blockSize.trim())) ||
+      (form.testType === TestType.Blocks &&
+        (form.dammamAverageStrength.trim() === "" ||
+          !Number.isFinite(dammamAverageStrength) ||
+          dammamAverageStrength < 0 ||
+          (!isDammamSandwichStandard &&
+            (form.dammamMinimumStrength.trim() === "" ||
+              !Number.isFinite(dammamMinimumStrength) ||
+              dammamMinimumStrength < 0))))
     ) {
       toast.error("Complete the strength standard fields before saving.");
       return;
@@ -2225,6 +2330,12 @@ export default function Standards() {
           : null,
       bsStandard: form.bsStandard.trim(),
       requiredStrength,
+      dammamAverageStrength:
+        form.testType === TestType.Blocks ? dammamAverageStrength : null,
+      dammamMinimumStrength:
+        form.testType === TestType.Blocks && !isDammamSandwichStandard
+          ? dammamMinimumStrength
+          : null,
       strengthUnit: form.strengthUnit.trim(),
     };
     const options = {
@@ -2256,6 +2367,10 @@ export default function Standards() {
     blockType: string,
     blockSize: string,
   ) => {
+    const targetIsSandwich = isSandwichBlockType(blockType);
+    const sourceIsSandwich = isSandwichBlockType(standard.blockType);
+    const defaultCriteria = defaultDammamCriteria(blockType);
+    const changedBlockFamily = targetIsSandwich !== sourceIsSandwich;
     const alreadyLinked =
       blockTypeMatches(standard.blockType, blockType) &&
       blockSizeMatches(standard.blockSize, blockSize);
@@ -2279,6 +2394,15 @@ export default function Standards() {
           blockSize,
           bsStandard: standard.bsStandard,
           requiredStrength: standard.requiredStrength,
+          dammamAverageStrength:
+            !changedBlockFamily && standard.dammamAverageStrength !== null
+              ? standard.dammamAverageStrength
+              : Number(defaultCriteria.dammamAverageStrength),
+          dammamMinimumStrength: targetIsSandwich
+            ? null
+            : !changedBlockFamily && standard.dammamMinimumStrength !== null
+              ? standard.dammamMinimumStrength
+              : Number(defaultCriteria.dammamMinimumStrength),
           strengthUnit: standard.strengthUnit,
         },
       });

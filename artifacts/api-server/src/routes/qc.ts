@@ -657,6 +657,11 @@ const strengthStandardKey = (value: {
     .map((part) => String(part).trim().toLocaleLowerCase())
     .join("|");
 
+const defaultDammamStrengthCriteria = (blockType: string | null | undefined) =>
+  String(blockType ?? "").toLocaleLowerCase().includes("sandwich")
+    ? { average: "4.14", minimum: null }
+    : { average: "13.8", minimum: "12.4" };
+
 async function ensureDefaultStrengthStandards() {
   if (!strengthSeedPromise) {
     strengthSeedPromise = (async () => {
@@ -671,6 +676,27 @@ async function ensureDefaultStrengthStandards() {
       );
       let insertedDefault = false;
       const existingKeys = new Set(existing.map((row) => strengthStandardKey(row)));
+      for (const standard of existing.filter((row) => row.testType === "Blocks")) {
+        const defaults = defaultDammamStrengthCriteria(standard.blockType);
+        const average = standard.dammamAverageStrength ?? defaults.average;
+        const minimum = defaults.minimum === null
+          ? null
+          : standard.dammamMinimumStrength ?? defaults.minimum;
+        if (
+          standard.dammamAverageStrength === average &&
+          standard.dammamMinimumStrength === minimum
+        ) {
+          continue;
+        }
+        await db
+          .update(qcStrengthStandardsTable)
+          .set({
+            dammamAverageStrength: average,
+            dammamMinimumStrength: minimum,
+          })
+          .where(eq(qcStrengthStandardsTable.id, standard.id));
+        insertedDefault = true;
+      }
       for (const material of READY_MIX_DEFAULT_DESIGNS) {
         if (existingMaterials.has(material.toLocaleLowerCase())) continue;
         const grade = Number.parseInt(material, 10);
@@ -687,6 +713,7 @@ async function ensureDefaultStrengthStandards() {
         insertedDefault = true;
       }
       for (const standard of BLOCK_DEFAULT_STANDARDS) {
+        const dammamCriteria = defaultDammamStrengthCriteria(standard.blockType);
         const key = strengthStandardKey({
           testType: "Blocks",
           material: "Concrete Block",
@@ -701,6 +728,8 @@ async function ensureDefaultStrengthStandards() {
           blockSize: standard.blockSize,
           bsStandard: "BS EN 771-3",
           requiredStrength: standard.requiredStrength,
+          dammamAverageStrength: dammamCriteria.average,
+          dammamMinimumStrength: dammamCriteria.minimum,
           strengthUnit: "N/mm²",
         });
         existingKeys.add(key);
@@ -1424,6 +1453,10 @@ const toStrengthStandard = (row: typeof qcStrengthStandardsTable.$inferSelect) =
   cubeAge: row.cubeAge === null ? null : Number(row.cubeAge),
   bsStandard: row.bsStandard,
   requiredStrength: Number(row.requiredStrength),
+  dammamAverageStrength:
+    row.dammamAverageStrength === null ? null : Number(row.dammamAverageStrength),
+  dammamMinimumStrength:
+    row.dammamMinimumStrength === null ? null : Number(row.dammamMinimumStrength),
   strengthUnit: row.strengthUnit,
 });
 
@@ -1523,6 +1556,7 @@ router.get("/dashboard", async (req, res): Promise<void> => {
     res.status(400).json({ error: query.error.message });
     return;
   }
+  await ensureDefaultStrengthStandards();
 
   const selectedMonthStart = query.data.month
     ? `${query.data.month}-01`
@@ -1810,16 +1844,27 @@ router.post("/strength-standards", requireAdministrator, async (req, res): Promi
     return;
   }
 
+  const blockType = body.data.blockType?.trim() || null;
+  const dammamDefaults = defaultDammamStrengthCriteria(blockType);
+  const isBlockStandard = body.data.testType === "Blocks";
   const [standard] = await db
     .insert(qcStrengthStandardsTable)
     .values({
       testType: body.data.testType,
       material: body.data.material.trim(),
-      blockType: body.data.blockType?.trim() || null,
+      blockType,
       blockSize: body.data.blockSize?.trim() || null,
       cubeAge: body.data.testType === "Precast" ? String(body.data.cubeAge) : null,
       bsStandard: body.data.bsStandard.trim(),
       requiredStrength: String(body.data.requiredStrength),
+      dammamAverageStrength: isBlockStandard
+        ? String(body.data.dammamAverageStrength ?? dammamDefaults.average)
+        : null,
+      dammamMinimumStrength: isBlockStandard
+        ? body.data.dammamMinimumStrength == null
+          ? dammamDefaults.minimum
+          : String(body.data.dammamMinimumStrength)
+        : null,
       strengthUnit: body.data.strengthUnit?.trim() || "N/mm²",
     })
     .returning();
@@ -1853,6 +1898,13 @@ router.patch("/strength-standards/:id", requireAdministrator, async (req, res): 
     return;
   }
   const nextTestType = body.data.testType ?? existing.testType;
+  const nextBlockType =
+    body.data.blockType !== undefined
+      ? body.data.blockType?.trim() || null
+      : existing.blockType;
+  const blockCriteriaChanged =
+    nextTestType !== existing.testType || nextBlockType !== existing.blockType;
+  const nextDammamDefaults = defaultDammamStrengthCriteria(nextBlockType);
   const nextCubeAge =
     body.data.cubeAge !== undefined ? body.data.cubeAge : existing.cubeAge;
   if (
@@ -1879,6 +1931,23 @@ router.patch("/strength-standards/:id", requireAdministrator, async (req, res): 
     ...(body.data.requiredStrength !== undefined
       ? { requiredStrength: String(body.data.requiredStrength) }
       : {}),
+    dammamAverageStrength: nextTestType === "Blocks"
+      ? String(
+          body.data.dammamAverageStrength ??
+            (blockCriteriaChanged
+              ? nextDammamDefaults.average
+              : existing.dammamAverageStrength ?? nextDammamDefaults.average),
+        )
+      : null,
+    dammamMinimumStrength: nextTestType !== "Blocks" ||
+        nextDammamDefaults.minimum === null
+      ? null
+      : String(
+          body.data.dammamMinimumStrength ??
+            (blockCriteriaChanged
+              ? nextDammamDefaults.minimum
+              : existing.dammamMinimumStrength ?? nextDammamDefaults.minimum),
+        ),
     ...(body.data.strengthUnit !== undefined
       ? { strengthUnit: body.data.strengthUnit.trim() || "N/mm²" }
       : {}),
@@ -2637,6 +2706,7 @@ router.get("/records", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+  await ensureDefaultStrengthStandards();
   await refreshRecordEvaluations(["Ready Mix", "Blocks"]);
 
   const filters = [];
@@ -2823,6 +2893,7 @@ router.post("/records", requireQcEditor, async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+  if (parsed.data.testType === "Blocks") await ensureDefaultStrengthStandards();
   if (
     parsed.data.reviewedBy !== undefined &&
     !(await isConfiguredAdministrator(req.user))
@@ -3087,6 +3158,7 @@ router.get("/records/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+  await ensureDefaultStrengthStandards();
   const [record] = await db
     .select()
     .from(qcRecordsTable)
@@ -3160,6 +3232,7 @@ router.patch("/records/:id", requireQcEditor, async (req, res): Promise<void> =>
     ...candidateBase,
     details: dateCalculation.details,
   };
+  if (candidate.testType === "Blocks") await ensureDefaultStrengthStandards();
   if (candidate.testType === "Water") await ensureDefaultWaterStandard();
   const [strengthStandards, sieveStandards, shapeFactors, waterStandards] = await Promise.all([
     db.select().from(qcStrengthStandardsTable),
@@ -3223,6 +3296,7 @@ router.get("/reports/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+  await ensureDefaultStrengthStandards();
   const [record] = await db
     .select()
     .from(qcRecordsTable)
