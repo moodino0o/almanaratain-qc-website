@@ -7,4 +7,4 @@ Keep `/api/lookups`, `/api/reference-data`, and `/api/shape-factors` reads live 
 
 **Why:** These endpoints previously repeated sequential setup queries during every read, while caching their returned values could hide administrator edits. A clear performance fix must preserve live data and avoid undoing saved edits.
 
-**How to apply:** Reduce work by narrowing projections and caching reconciliation, not response payloads. Invalidate derived defaults after relevant reference-data mutations, and keep the client’s corresponding query keys fresh.
+**How to apply:** Reduce work by narrowing projections and caching reconciliation, not response payloads. Invalidate derived defaults after relevant reference-data mutations, and keep the client’s corresponding query keys fresh. For already-open forms across sessions, use finite polling of live lookup/reference/derived-default queries with HTTP caching disabled; refresh query data without resetting component-owned form state.

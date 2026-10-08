@@ -42,6 +42,7 @@ test("standard refreshes write saved evaluations in batches", () => {
 test("lookups avoid loading the full reference-data payload", () => {
   const route = routeDefinition("get", "/lookups");
   assert.match(route, /listLookupValues\(\)/);
+  assert.match(route, /setHeader\("Cache-Control", "no-store"\)/);
   assert.doesNotMatch(route, /listReferenceData\(\)/);
 
   const start = routeSource.indexOf("async function listLookupValues()");
@@ -58,6 +59,8 @@ test("reference and shape-factor reads reuse safe initialization", () => {
   const referenceRoute = routeDefinition("get", "/reference-data");
   const shapeFactorRoute = routeDefinition("get", "/shape-factors");
   assert.match(referenceRoute, /listReferenceData\(\)/);
+  assert.match(referenceRoute, /setHeader\("Cache-Control", "no-store"\)/);
+  assert.match(shapeFactorRoute, /setHeader\("Cache-Control", "no-store"\)/);
   assert.match(shapeFactorRoute, /ensureDefaultShapeFactors\(\)/);
   assert.match(routeSource, /shapeFactorInitializer\.ensure\(\)/);
   assert.match(routeSource, /reportLayoutInitializer\.ensure\(\)/);

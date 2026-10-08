@@ -1708,6 +1708,7 @@ router.get("/dashboard", async (req, res): Promise<void> => {
 });
 
 router.get("/lookups", async (_req, res): Promise<void> => {
+  res.setHeader("Cache-Control", "no-store");
   const values = await listLookupValues();
   res.json(
     GetLookupsResponse.parse({
@@ -1728,6 +1729,7 @@ router.get("/lookups", async (_req, res): Promise<void> => {
 });
 
 router.get("/reference-data", async (_req, res): Promise<void> => {
+  res.setHeader("Cache-Control", "no-store");
   res.json(GetReferenceDataResponse.parse({ categories: await listReferenceData() }));
 });
 
@@ -2097,6 +2099,7 @@ router.delete("/strength-standards/:id", requireAdministrator, async (req, res):
 });
 
 router.get("/shape-factors", async (_req, res): Promise<void> => {
+  res.setHeader("Cache-Control", "no-store");
   await ensureDefaultShapeFactors();
   const shapeFactors = await db
     .select()

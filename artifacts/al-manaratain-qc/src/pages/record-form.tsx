@@ -70,6 +70,7 @@ import { EMPLOYEE_ADDABLE_REFERENCE_CATEGORIES } from "./reference-data-permissi
 import { registerSectionFromQuery } from "./register-sections";
 
 const REFERENCE_NUMBER_MAX_LENGTH = 32;
+const REFERENCE_DATA_REFRESH_INTERVAL_MS = 15_000;
 const DEFAULT_APPROVED_BY = "ADEL ABBAS EBRAHIM";
 const MATERIAL_CONDITIONS = ["Single Washed", "Unwashed", "Double Washed"] as const;
 
@@ -113,8 +114,18 @@ export default function RecordForm() {
   const canEditReferenceData = role === "administrator";
   const queryClient = useQueryClient();
   
-  const { data: lookups, isLoading: lookupsLoading } = useGetLookups();
-  const { data: referenceData } = useGetReferenceData();
+  const { data: lookups, isLoading: lookupsLoading } = useGetLookups({
+    query: {
+      queryKey: getGetLookupsQueryKey(),
+      refetchInterval: REFERENCE_DATA_REFRESH_INTERVAL_MS,
+    },
+  });
+  const { data: referenceData } = useGetReferenceData({
+    query: {
+      queryKey: getGetReferenceDataQueryKey(),
+      refetchInterval: REFERENCE_DATA_REFRESH_INTERVAL_MS,
+    },
+  });
   const createReferenceItem = useCreateReferenceItem();
   const {
     data: existingRecord,
@@ -128,7 +139,12 @@ export default function RecordForm() {
   });
   const { data: strengthStandards } = useListStrengthStandards();
   const { data: waterStandards } = useListWaterStandards();
-  const { data: shapeFactors } = useListShapeFactors();
+  const { data: shapeFactors } = useListShapeFactors({
+    query: {
+      queryKey: getListShapeFactorsQueryKey(),
+      refetchInterval: REFERENCE_DATA_REFRESH_INTERVAL_MS,
+    },
+  });
   const { data: sieveStandards } = useListSieveStandards();
   const createRecord = useCreateRecord();
   const updateRecord = useUpdateRecord();
