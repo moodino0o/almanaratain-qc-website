@@ -5,6 +5,7 @@ import type {
 } from "@workspace/api-client-react";
 import { filterRowsWithLoad } from "./report-print-utils";
 import { dammamBlockDisplayResults } from "./record-detail-utils";
+import { isSandwichBlockType } from "./record-form-utils";
 
 export type GroupedDailyLocation = {
   location: string;
@@ -198,10 +199,18 @@ const recordStrengths = (record: QcRecord, details: Record<string, unknown>) => 
       const values = typeof row === "object" && row !== null ? row as Record<string, unknown> : {};
       return { ...values, load: values.load ?? values.failureLoad };
     }));
-    const netStrengths = specimens
-      .map((row) => dammamBlockDisplayResults(row, details.blockSize, details).netStrength)
+    const isSandwich = isSandwichBlockType(details.blockType);
+    const strengths = specimens
+      .map((row) => {
+        const results = dammamBlockDisplayResults(row, details.blockSize, details);
+        return isSandwich ? results.airDryStrength : results.netStrength;
+      })
       .filter((value): value is number => value !== null);
-    if (savedRows.length || netStrengths.length) return netStrengths;
+    if (savedRows.length || strengths.length) return strengths;
+    if (isSandwich) {
+      const explicitlyAirDry = firstNumericValue(details, ["averageStrength", "airDryStrength"]);
+      return explicitlyAirDry === null ? [] : [explicitlyAirDry];
+    }
     const explicitlyNet = firstNumericValue(details, ["averageNetStrength", "netStrength"]);
     return explicitlyNet === null ? [] : [explicitlyNet];
   }

@@ -585,6 +585,45 @@ test("calculates Dammam gross and net results and uses net strength for complian
   assert.equal(result.status, "Passed");
 });
 
+test("uses gross-area Air-dry strength for Dammam Sandwich Block compliance", () => {
+  const record = blockRecord([
+    { length: 400, width: 200, height: 200, load: 1200 },
+    { length: 400, width: 200, height: 200, load: 1500 },
+  ]);
+  record.location = "Dammam Plant";
+  record.details = {
+    ...record.details,
+    blockType: "8'' Sandwich Insulation Block",
+    blockSize: "400 x 200 x 200",
+    shapeFactor: "1.1",
+  };
+
+  const result = evaluateStrengthRecord(
+    record,
+    [
+      blockStandard({
+        blockType: "8'' Sandwich Insulation Block",
+        requiredStrength: "16.7",
+      }),
+    ],
+  );
+  const details = result.details as Record<string, unknown>;
+  const rows = details.testRows as Record<string, unknown>[];
+
+  assert.equal(rows[1].grossArea, 80_000);
+  assert.equal(rows[1].grossStrength, 18.75);
+  assert.equal(rows[1].waterStrength, "15.63");
+  assert.equal(rows[1].airDryStrength, 18.8);
+  assert.equal(rows[1].normalizedStrength, 20.7);
+  assert.equal("netArea" in rows[1], false);
+  assert.equal("netStrength" in rows[1], false);
+  assert.equal("faceThickness" in rows[1], false);
+  assert.equal("webThickness" in rows[1], false);
+  assert.equal("numberOfHoles" in details, false);
+  assert.equal(result.evaluation!.averageStrength, 16.9);
+  assert.equal(result.status, "Passed");
+});
+
 test("uses size defaults and each specimen's own Dammam thickness values", () => {
   const cases = [
     { blockSize: "400*200*200", width: 200, expectedWeb: 30 },

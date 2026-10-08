@@ -618,6 +618,34 @@ test("Dammam register and daily summaries recalculate net strength using record 
   assert.equal(summarizeRecordStrengths(legacyFailureLoad)?.averageStrength, expected[0]);
 });
 
+test("Dammam Sandwich register and daily summaries use gross-area Air-dry strength", () => {
+  const sandwich = qcRecord({
+    id: 82,
+    testType: "Blocks",
+    sampleDate: "2026-09-10",
+    location: "Dammam Plant",
+    details: {
+      blockType: "8 inch Sandwich Block",
+      blockSize: "400 x 200 x 200",
+      blockAge: 28,
+      testRows: [
+        { length: 400, width: 200, load: 1200, netStrength: 99 },
+        { length: 400, width: 200, load: 1500, netStrength: 99 },
+      ],
+    },
+  });
+
+  const summary = summarizeRecordStrengths(sandwich)!;
+  assert.equal(summary.minimumStrength, 15);
+  assert.equal(summary.maximumStrength, 18.8);
+  assert.equal(summary.averageStrength, 16.9);
+
+  const daily = buildDailyReportRows([sandwich], "2026-10-08", "2026-10-08")[0];
+  assert.equal(daily.averageStrength, summary.averageStrength);
+  assert.equal(daily.minimumStrength, summary.minimumStrength);
+  assert.equal(daily.maximumStrength, summary.maximumStrength);
+});
+
 test("Dammam never substitutes a generic, gross or air-dry average for missing net results", () => {
   const dammam = qcRecord({
     id: 81,

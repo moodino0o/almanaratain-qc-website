@@ -51,6 +51,7 @@ import {
   findSieveEvaluationCriterion,
   getDammamBlockHoleCount,
   getDammamBlockThicknessDefaults,
+  isSandwichBlockType,
   PRECAST_AGE_STRENGTH_CRITERIA,
   precastAgeStrengthSummary,
   SIEVE_SILT_LIMIT_PERCENT,
@@ -704,6 +705,7 @@ function reportTemplateTableRows(record: QcRecord, tableKey: string): ValueMap[]
             record.testType === "Blocks" &&
             isDammamLocation(record.location)
           ) {
+            const isSandwich = isSandwichBlockType(details.blockType);
             const thicknessDefaults = getDammamBlockThicknessDefaults(details.blockSize);
             const faceThickness =
               row.faceThickness ?? details.faceThickness ?? thicknessDefaults.faceThickness;
@@ -714,18 +716,42 @@ function reportTemplateTableRows(record: QcRecord, tableKey: string): ValueMap[]
               details.blockSize,
               faceThickness,
               webThickness,
+              details.blockType,
             );
+            const airDryStrength = calculated?.grossStrength === null ||
+                calculated?.grossStrength === undefined
+              ? null
+              : Math.round((calculated.grossStrength + Number.EPSILON) * 10) / 10;
+            const shapeFactor = numericValue(details.shapeFactor);
             return {
               ...row,
-              faceThickness,
-              webThickness,
-              numberOfHoles: getDammamBlockHoleCount(details.blockSize),
+              ...(isSandwich
+                ? {}
+                : {
+                    faceThickness,
+                    webThickness,
+                    numberOfHoles: getDammamBlockHoleCount(details.blockSize),
+                  }),
               failureLoad: row.failureLoad ?? row.load ?? "",
               failureLoadN: calculated?.failureLoadN ?? null,
               grossArea: calculated?.grossArea ?? null,
-              netArea: calculated?.netArea ?? null,
               grossStrength: calculated?.grossStrength ?? null,
-              netStrength: calculated?.netStrength ?? null,
+              ...(isSandwich
+                ? {
+                    airDryStrength: airDryStrength ?? row.airDryStrength,
+                    waterStrength:
+                      airDryStrength === null
+                        ? row.waterStrength
+                        : (calculated!.grossStrength! / 1.2).toFixed(2),
+                    normalizedStrength:
+                      airDryStrength === null || shapeFactor === null || shapeFactor <= 0
+                        ? row.normalizedStrength
+                        : Math.round((airDryStrength * shapeFactor + Number.EPSILON) * 10) / 10,
+                  }
+                : {
+                    netArea: calculated?.netArea ?? null,
+                    netStrength: calculated?.netStrength ?? null,
+                  }),
             };
           }
           return tableKey === "precastResults"
@@ -793,6 +819,17 @@ const DAMMAM_BLOCK_RESULTS_REQUIRED_KEYS = [
   "netArea",
   "grossStrength",
   "netStrength",
+  "density",
+];
+const DAMMAM_SANDWICH_BLOCK_RESULTS_REQUIRED_KEYS = [
+  "no",
+  "length",
+  "width",
+  "height",
+  "load",
+  "grossArea",
+  "airDry",
+  "normalized",
   "density",
 ];
 const reportColumnKey = (key: string) =>
@@ -911,7 +948,18 @@ export function ReportTemplateDataTable({
   const dammamExcludedKeys = blockDetails
     ? new Set(["facethickness", "webthickness", "numberofholes"])
     : blockCompression
-      ? new Set([
+      ? dammamBlock && isSandwichBlockType(record.details.blockType)
+        ? new Set([
+            "facearea",
+            "water",
+            "facethickness",
+            "webthickness",
+            "numberofholes",
+            "netarea",
+            "grossstrength",
+            "netstrength",
+          ])
+        : new Set([
           "facearea",
           "water",
           "normalized",
@@ -936,14 +984,22 @@ export function ReportTemplateDataTable({
       })
     : configuredColumns;
   const dammamDefaults = fallback.map((column) =>
-    column.key === "load" ? { ...column, label: "Failure Load (kN)" } : column,
+    column.key === "load"
+      ? { ...column, label: "Failure Load (kN)" }
+      : column.key === "airDry"
+        ? { ...column, label: "Air-dry Strength (N/mm²)" }
+        : column.key === "normalized"
+          ? { ...column, label: "Normalized Strength (N/mm²)" }
+          : column,
   );
   const compatibleColumns = blockCompression
     ? dammamBlock
       ? blockReportColumnsWithRequiredFields(
           plantCompatibleColumns,
           dammamDefaults,
-          DAMMAM_BLOCK_RESULTS_REQUIRED_KEYS,
+          isSandwichBlockType(record.details.blockType)
+            ? DAMMAM_SANDWICH_BLOCK_RESULTS_REQUIRED_KEYS
+            : DAMMAM_BLOCK_RESULTS_REQUIRED_KEYS,
         )
       : blockReportColumnsWithFaceArea(
           plantCompatibleColumns,
@@ -970,7 +1026,9 @@ export function ReportTemplateDataTable({
     ? blockDetails
       ? DAMMAM_BLOCK_DETAILS_REQUIRED_KEYS
       : blockCompression
-        ? DAMMAM_BLOCK_RESULTS_REQUIRED_KEYS
+        ? isSandwichBlockType(record.details.blockType)
+          ? DAMMAM_SANDWICH_BLOCK_RESULTS_REQUIRED_KEYS
+          : DAMMAM_BLOCK_RESULTS_REQUIRED_KEYS
         : []
     : [];
   const requiredDammamColumns = columns.filter((column) =>
@@ -995,14 +1053,23 @@ export function ReportTemplateDataTable({
       return blockDetails
         ? ["face thickness", "web thickness"].some((value) => label.includes(value))
         : blockCompression &&
-          [
-            "normalized strength",
-            "normalized",
-            "face thickness",
-            "web thickness",
-            "gross area",
-            "air dry",
-          ]
+          (isSandwichBlockType(record.details.blockType)
+            ? [
+                "face thickness",
+                "web thickness",
+                "net area",
+                "net strength",
+                "gross strength",
+                "water",
+              ]
+            : [
+                "normalized strength",
+                "normalized",
+                "face thickness",
+                "web thickness",
+                "gross area",
+                "air dry",
+              ])
             .some((value) => label.includes(value));
     };
     const cellObjects = (row: ReportTemplateObject) => directChildren(design.objects, row.id)
@@ -1393,11 +1460,13 @@ function blockAirDryStrength(values: ValueMap, useDammamBasis: boolean) {
 function BlockCompressionRowsTable({
   rows,
   hideWaterStrength,
+  dammamSandwich = false,
   layout,
   blockDetails,
 }: {
   rows: unknown[];
   hideWaterStrength: boolean;
+  dammamSandwich?: boolean;
   layout?: ReportLayout;
   blockDetails: ValueMap;
 }) {
@@ -1417,21 +1486,40 @@ function BlockCompressionRowsTable({
           thicknessDefaults.webThickness,
       }
     : values);
-  const dammamResults = hideWaterStrength
+  const dammamResults = hideWaterStrength || dammamSandwich
     ? rowValues.map((values) =>
         calculateDammamBlockResults(
           { ...values, load: values.failureLoad ?? values.load },
           blockDetails.blockSize,
           values.faceThickness,
           values.webThickness,
+          blockDetails.blockType,
         ),
       )
     : [];
+  const sandwichAirDry = dammamResults.map((value) =>
+    value?.grossStrength == null
+      ? null
+      : Math.round((value.grossStrength + Number.EPSILON) * 10) / 10,
+  );
+  const sandwichNormalized = rowValues.map((values, index) => {
+    const shapeFactor = numericValue(blockDetails.shapeFactor);
+    return sandwichAirDry[index] !== null &&
+        shapeFactor !== null &&
+        shapeFactor > 0
+      ? Math.round((sandwichAirDry[index]! * shapeFactor + Number.EPSILON) * 10) / 10
+      : numericValue(values.normalizedStrength);
+  });
   const columns = {
     water: rowValues.map(blockWaterStrength),
-    airDry: rowValues.map((values) => blockAirDryStrength(values, hideWaterStrength)),
-    normalized: rowValues.map((values) => numericValue(values.normalizedStrength)),
+    airDry: rowValues.map((values, index) => dammamSandwich
+      ? sandwichAirDry[index]
+      : blockAirDryStrength(values, hideWaterStrength)),
+    normalized: dammamSandwich
+      ? sandwichNormalized
+      : rowValues.map((values) => numericValue(values.normalizedStrength)),
     density: rowValues.map(blockDensity),
+    grossArea: dammamResults.map((values) => values?.grossArea ?? null),
     grossStrength: dammamResults.map((values) => values?.grossStrength ?? null),
     netStrength: dammamResults.map((values) => values?.netStrength ?? null),
   };
@@ -1440,6 +1528,7 @@ function BlockCompressionRowsTable({
     airDry: numericSummary(columns.airDry).average,
     normalized: numericSummary(columns.normalized).average,
     density: numericSummary(columns.density).average,
+    grossArea: numericSummary(columns.grossArea).average,
     grossStrength: numericSummary(columns.grossStrength).average,
     netStrength: numericSummary(columns.netStrength).average,
   };
@@ -1450,16 +1539,26 @@ function BlockCompressionRowsTable({
     value === null ? "-" : formatNumber(value);
   const fixedKeys = hideWaterStrength
     ? ["no", "length", "width", "height", "netArea", "load", "grossStrength", "netStrength", "density"]
-    : ["no", "length", "width", "height", "faceArea", "load", "water", "airDry", "normalized", "density"];
+    : dammamSandwich
+      ? ["no", "length", "width", "height", "grossArea", "load", "airDry", "normalized", "density"]
+      : ["no", "length", "width", "height", "faceArea", "load", "water", "airDry", "normalized", "density"];
   const fixedLabels = hideWaterStrength
     ? ["No.", "Length (mm)", "Width (mm)", "Height (mm)", "Net Area (mm²)", "Failure Load (kN)", "Gross Strength (N/mm²)", "Net Strength (N/mm²)", "Density (kg/m3)"]
-    : ["No.", "Length (mm)", "Width (mm)", "Height (mm)", "Net Area (mm²)", "Load (kN)", "Water (N/mm2)", "Air Dry (N/mm2)", "Normalized (N/mm2)", "Density (kg/m3)"];
+    : dammamSandwich
+      ? ["No.", "Length (mm)", "Width (mm)", "Height (mm)", "Gross Area (mm²)", "Failure Load (kN)", "Air-dry Strength (N/mm²)", "Normalized Strength (N/mm²)", "Density (kg/m3)"]
+      : ["No.", "Length (mm)", "Width (mm)", "Height (mm)", "Net Area (mm²)", "Load (kN)", "Water (N/mm2)", "Air Dry (N/mm2)", "Normalized (N/mm2)", "Density (kg/m3)"];
   const saved = layout?.config.columns.blockCompression;
   const defaultColumns = (REPORT_LAYOUT_FIELD_GROUPS.Blocks.blockCompression ?? [])
     .map((column, order) => ({ ...column, visible: true, order }));
   const dammamDefaultColumns = [
     ...defaultColumns.map((column) =>
-      column.key === "load" ? { ...column, label: "Failure Load (kN)" } : column,
+      column.key === "load"
+        ? { ...column, label: "Failure Load (kN)" }
+        : column.key === "airDry"
+          ? { ...column, label: "Air-dry Strength (N/mm²)" }
+          : column.key === "normalized"
+            ? { ...column, label: "Normalized Strength (N/mm²)" }
+            : column,
     ),
     {
       key: "webThickness",
@@ -1500,6 +1599,23 @@ function BlockCompressionRowsTable({
           dammamDefaultColumns,
           DAMMAM_BLOCK_RESULTS_REQUIRED_KEYS,
         )
+      : dammamSandwich
+        ? blockReportColumnsWithRequiredFields(
+            saved.filter((column) =>
+              ![
+                "facearea",
+                "water",
+                "facethickness",
+                "webthickness",
+                "numberofholes",
+                "netarea",
+                "grossstrength",
+                "netstrength",
+              ].includes(reportColumnKey(column.key)),
+            ),
+            dammamDefaultColumns,
+            DAMMAM_SANDWICH_BLOCK_RESULTS_REQUIRED_KEYS,
+          )
       : blockReportColumnsWithFaceArea(
           saved,
           defaultColumns.find((column) => column.key === "faceArea"),
@@ -1509,7 +1625,7 @@ function BlockCompressionRowsTable({
     savedColumns.some((column, index) => column.key !== fixedKeys[index] || !column.visible ||
       column.label !== fixedLabels[index])));
   if (custom) {
-    const columns = savedColumns!.filter((column) => column.visible).sort((a, b) => a.order - b.order);
+    const visibleColumns = savedColumns!.filter((column) => column.visible).sort((a, b) => a.order - b.order);
     const valueFor = (values: ValueMap, key: string, index: number) => key === "no" ? rawTextValue(values.rowNo, String(index + 1))
       : ["length", "width", "height"].includes(key) ? formatWholeNumber(values[key])
       : key === "faceArea" ? formatBlockNetArea(values.width, values.length)
@@ -1519,14 +1635,14 @@ function BlockCompressionRowsTable({
       : key === "netStrength" ? displayNumber(dammamResults[index]?.netStrength ?? null)
       : key === "load" ? textValue(values.failureLoad ?? values.load)
       : key === "water" ? displayNumber(blockWaterStrength(values))
-      : key === "airDry" ? displayNumber(blockAirDryStrength(values, hideWaterStrength))
-      : key === "normalized" ? displayNumber(numericValue(values.normalizedStrength))
+      : key === "airDry" ? displayNumber(columns.airDry[index])
+      : key === "normalized" ? displayNumber(columns.normalized[index])
       : key === "density" ? displayNumber(blockDensity(values))
       : textValue(values[key]);
     return <><div className="block-report-section-heading"><div><span>Specimen results</span></div></div>
-      <div className="block-report-table-wrap"><table className="report-table block-report-table"><thead><tr>{columns.map((c) => <th key={c.key} style={{ width: `${c.width}%` }}>{c.label}</th>)}</tr></thead><tbody>
-        {rowValues.map((values, index) => <tr key={index}>{columns.map((c) => <td key={c.key}>{valueFor(values, c.key, index)}</td>)}</tr>)}
-         <tr className="block-report-average-row"><td colSpan={columns.length}>AVERAGE: {displayNumber(strengthSummary.average)} {strengthLabel}</td></tr>
+       <div className="block-report-table-wrap"><table className="report-table block-report-table"><thead><tr>{visibleColumns.map((c) => <th key={c.key} style={{ width: `${c.width}%` }}>{c.label}</th>)}</tr></thead><tbody>
+         {rowValues.map((values, index) => <tr key={index}>{visibleColumns.map((c) => <td key={c.key}>{valueFor(values, c.key, index)}</td>)}</tr>)}
+          <tr className="block-report-average-row"><td colSpan={visibleColumns.length}>AVERAGE: {displayNumber(strengthSummary.average)} {strengthLabel}</td></tr>
       </tbody></table></div><div className="block-report-section-heading block-report-statistics-heading"><div><span>Summary statistics</span></div></div>
       <div className="block-report-statistics"><div><strong>Maximum</strong><span>{strengthLabel}</span><b>{displayNumber(strengthSummary.maximum)}</b></div><div><strong>Minimum</strong><span>{strengthLabel}</span><b>{displayNumber(strengthSummary.minimum)}</b></div><div><strong>Stan.Dev.</strong><span>{strengthLabel}</span><b>{displayNumber(strengthSummary.standardDeviation)}</b></div></div></>;
   }
@@ -1551,6 +1667,18 @@ function BlockCompressionRowsTable({
                   <th>Failure Load<br />(kN)</th>
                   <th>Gross Strength<br />(N/mm²)</th>
                   <th>Net Strength<br />(N/mm²)</th>
+                  <th>Density<br />(kg/m3)</th>
+                </>
+              ) : dammamSandwich ? (
+                <>
+                  <th>No.</th>
+                  <th>Length<br />(mm)</th>
+                  <th>Width<br />(mm)</th>
+                  <th>Height<br />(mm)</th>
+                  <th>Gross Area<br />(mm²)</th>
+                  <th>Failure Load<br />(kN)</th>
+                  <th>Air-dry Strength<br />(N/mm²)</th>
+                  <th>Normalized Strength<br />(N/mm²)</th>
                   <th>Density<br />(kg/m3)</th>
                 </>
               ) : (
@@ -1584,6 +1712,14 @@ function BlockCompressionRowsTable({
                     <td>{displayNumber(columns.netStrength[index])}</td>
                     <td>{displayNumber(columns.density[index])}</td>
                   </>
+                ) : dammamSandwich ? (
+                  <>
+                    <td>{formatDammamBlockArea(dammamResults[index]?.grossArea)}</td>
+                    <td>{textValue(values.failureLoad ?? values.load)}</td>
+                    <td>{displayNumber(columns.airDry[index])}</td>
+                    <td>{displayNumber(columns.normalized[index])}</td>
+                    <td>{displayNumber(columns.density[index])}</td>
+                  </>
                 ) : (
                   <>
                     <td>{formatBlockNetArea(values.width, values.length)}</td>
@@ -1602,6 +1738,13 @@ function BlockCompressionRowsTable({
                     <td colSpan={6}>AVERAGE:</td>
                   <td>{displayNumber(averages.grossStrength)}</td>
                   <td>{displayNumber(averages.netStrength)}</td>
+                  <td>{displayNumber(averages.density)}</td>
+                </>
+              ) : dammamSandwich ? (
+                <>
+                  <td colSpan={6}>AVERAGE:</td>
+                  <td>{displayNumber(averages.airDry)}</td>
+                  <td>{displayNumber(averages.normalized)}</td>
                   <td>{displayNumber(averages.density)}</td>
                 </>
               ) : (
@@ -2484,6 +2627,8 @@ function BlocksReport({
   const requiredStrength = configuredStandard?.requiredStrength ??
     numericValue(evaluation?.requiredStrength);
   const useDammamBasis = isDammamLocation(record.location);
+  const dammamSandwich = useDammamBasis && isSandwichBlockType(details.blockType);
+  const useDammamNetBasis = useDammamBasis && !dammamSandwich;
   const compliance = textValue(evaluation?.status, record.status);
   const complianceLabel = compliance === "Passed"
     ? "PASS"
@@ -2505,9 +2650,11 @@ function BlocksReport({
             <div className="block-report-section-heading">
               <div><span>Test details</span></div>
               <strong className="block-report-air-dry-note">
-                {useDammamBasis
+                {useDammamNetBasis
                   ? "Dammam: Net Strength compliance basis"
-                  : "Air Dry strength compliance basis"}
+                  : dammamSandwich
+                    ? "Dammam Sandwich: Air-dry Strength compliance basis"
+                    : "Air Dry strength compliance basis"}
               </strong>
             </div>
             <div className="block-report-fields">
@@ -2518,7 +2665,7 @@ function BlocksReport({
                   ["TESTING DATE:", formatReportDate(testingDate)],
                   ["Sp. Strength (N/mm²):", requiredStrength === null ? "-" : formatNumber(requiredStrength)],
                   [useDammamBasis ? "Plant:" : "Factory:", record.location],
-                  ["STRENGTH BASIS:", useDammamBasis ? "NET STRENGTH" : "AIR DRY STRENGTH"],
+                  ["STRENGTH BASIS:", useDammamNetBasis ? "NET STRENGTH" : "AIR DRY STRENGTH"],
                 ]}
               />
               <ReportFields
@@ -2551,7 +2698,8 @@ function BlocksReport({
             {testRows.length > 0 && (
               <BlockCompressionRowsTable
                 rows={testRows}
-                hideWaterStrength={useDammamBasis}
+                hideWaterStrength={useDammamNetBasis}
+                dammamSandwich={dammamSandwich}
                 layout={layout}
                 blockDetails={details}
               />

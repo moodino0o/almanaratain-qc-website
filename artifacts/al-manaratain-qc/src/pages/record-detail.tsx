@@ -17,6 +17,7 @@ import {
   AGGREGATE_SULPHATE_LIMIT_PERCENT,
   blockAirDryRowStrength,
   isDammamBlockLocation,
+  isSandwichBlockType,
   calculateCubeDensity,
   cubeWeightInGrams,
   calculateRetainedPercentage,
@@ -38,6 +39,7 @@ import {
 } from "./record-form-utils";
 import {
   dammamBlockDisplayResults,
+  summarizeDammamBlockAirDryStrengths,
   summarizeDammamBlockNetStrengths,
 } from "./record-detail-utils";
 
@@ -284,6 +286,7 @@ function TestRowsTable({
   areaLabel = "Loaded Face Area (mm²)",
   strengthValueForRow,
   areaValueForRow,
+  normalizedValueForRow,
 }: {
   rows: unknown[];
   includeAbsorption: boolean;
@@ -293,11 +296,12 @@ function TestRowsTable({
   areaLabel?: string;
   strengthValueForRow?: (row: Record<string, unknown>) => unknown;
   areaValueForRow?: (row: Record<string, unknown>) => unknown;
+  normalizedValueForRow?: (row: Record<string, unknown>) => unknown;
 }) {
   const displayRows = sortByAge ? sortCubeRowsByAge(rows) : rows;
   return (
     <div className="overflow-x-auto">
-      <table className={`w-full ${includeAbsorption ? "min-w-[1040px]" : "min-w-[900px]"} text-xs`}>
+      <table className={`w-full ${normalizedValueForRow ? "min-w-[1040px]" : includeAbsorption ? "min-w-[1040px]" : "min-w-[900px]"} text-xs`}>
         <thead className="bg-muted/30">
           <tr className="border-b">
             <th className="p-2 text-left">No.</th>
@@ -311,6 +315,9 @@ function TestRowsTable({
             <th className="p-2 text-left">Load (kN)</th>
             <th className="p-2 text-left">{areaLabel}</th>
             <th className="p-2 text-left">{strengthLabel}</th>
+            {normalizedValueForRow && (
+              <th className="p-2 text-left">Normalized Strength (N/mm²)</th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -347,6 +354,11 @@ function TestRowsTable({
                           values.compressiveStrength,
                   )}
                 </td>
+                {normalizedValueForRow && (
+                  <td className="p-2 font-semibold">
+                    {displayValue(normalizedValueForRow(values))}
+                  </td>
+                )}
               </tr>
             );
           })}
@@ -690,8 +702,12 @@ export default function RecordDetail() {
     : {};
   const isDammamBlock =
     record.testType === "Blocks" && isDammamBlockLocation(record.location);
+  const isDammamSandwich =
+    isDammamBlock && isSandwichBlockType(recordDetails.blockType);
   const blockStrengthSummary = isDammamBlock
-    ? summarizeDammamBlockNetStrengths(specimenRows, recordDetails.blockSize, recordDetails)
+    ? isDammamSandwich
+      ? summarizeDammamBlockAirDryStrengths(specimenRows, recordDetails.blockSize, recordDetails)
+      : summarizeDammamBlockNetStrengths(specimenRows, recordDetails.blockSize, recordDetails)
     : strengthSummary(
         specimenRows,
         (row) => blockAirDryRowStrength(row, record.location),
@@ -1064,7 +1080,9 @@ export default function RecordDetail() {
               <CardTitle>Specimen Measurements</CardTitle>
               <CardDescription>
                 {isDammamBlock
-                  ? "Block sample dimensions, weights, load, Net Area, and Net Strength."
+                  ? isDammamSandwich
+                    ? "Block sample dimensions, load, Gross Area, Air-dry Strength, and Normalized Strength."
+                    : "Block sample dimensions, weights, load, Net Area, and Net Strength."
                   : "Block sample dimensions, weights, load, and air-dry strength."}
               </CardDescription>
             </CardHeader>
@@ -1076,19 +1094,45 @@ export default function RecordDetail() {
                     includeAbsorption={false}
                     includeAge={false}
                     strengthLabel={isDammamBlock
-                      ? "Net Strength (N/mm²)"
+                      ? isDammamSandwich
+                        ? "Air-dry Strength (N/mm²)"
+                        : "Net Strength (N/mm²)"
                       : "Air-dry Strength (N/mm²)"}
-                    areaLabel="Net Area (mm²)"
+                    areaLabel={isDammamSandwich ? "Gross Area (mm²)" : "Net Area (mm²)"}
                     areaValueForRow={isDammamBlock
-                      ? (row) => formatBlockNetArea(
-                          dammamBlockDisplayResults(row, recordDetails.blockSize).netArea,
-                        )
+                      ? isDammamSandwich
+                        ? (row) => {
+                            const results = dammamBlockDisplayResults(
+                              row,
+                              recordDetails.blockSize,
+                              recordDetails,
+                            );
+                            return results.grossArea === null
+                              ? "—"
+                              : Math.round(results.grossArea).toLocaleString("en-US");
+                          }
+                        : (row) => formatBlockNetArea(
+                            dammamBlockDisplayResults(row, recordDetails.blockSize, recordDetails).netArea,
+                          )
                       : undefined}
                     strengthValueForRow={(row) => isDammamBlock
-                      ? formatStrengthMetric(
-                          dammamBlockDisplayResults(row, recordDetails.blockSize, recordDetails).netStrength,
-                        )
+                      ? formatStrengthMetric(isDammamSandwich
+                          ? dammamBlockDisplayResults(
+                              row,
+                              recordDetails.blockSize,
+                              recordDetails,
+                            ).airDryStrength
+                          : dammamBlockDisplayResults(row, recordDetails.blockSize, recordDetails).netStrength)
                       : blockAirDryRowStrength(row, record.location)}
+                    normalizedValueForRow={isDammamSandwich
+                      ? (row) => formatStrengthMetric(
+                          dammamBlockDisplayResults(
+                            row,
+                            recordDetails.blockSize,
+                            recordDetails,
+                          ).normalizedStrength,
+                        )
+                      : undefined}
                   />
                 )
                 : <p className="p-6 text-center text-muted-foreground">No specimen measurements recorded.</p>}
@@ -1099,7 +1143,7 @@ export default function RecordDetail() {
             entries={[
               ["Block No.", detailText(recordDetails, "blockNo", detailText(recordDetails, "blockNumber"))],
               [
-                `Average ${isDammamBlock ? "Net" : "Air-dry"} Strength (N/mm²)`,
+                `Average ${isDammamBlock && !isDammamSandwich ? "Net" : "Air-dry"} Strength (N/mm²)`,
                 formatStrengthMetric(
                   isDammamBlock
                     ? blockStrengthSummary.average
@@ -1107,7 +1151,7 @@ export default function RecordDetail() {
                 ),
               ],
               [
-                `Minimum ${isDammamBlock ? "Net" : "Air-dry"} Strength (N/mm²)`,
+                    `Minimum ${isDammamBlock && !isDammamSandwich ? "Net" : "Air-dry"} Strength (N/mm²)`,
                 formatStrengthMetric(
                   isDammamBlock
                     ? blockStrengthSummary.minimum
@@ -1115,7 +1159,7 @@ export default function RecordDetail() {
                 ),
               ],
               [
-                `Maximum ${isDammamBlock ? "Net" : "Air-dry"} Strength (N/mm²)`,
+                    `Maximum ${isDammamBlock && !isDammamSandwich ? "Net" : "Air-dry"} Strength (N/mm²)`,
                 formatStrengthMetric(
                   isDammamBlock
                     ? blockStrengthSummary.maximum
@@ -1256,7 +1300,7 @@ export default function RecordDetail() {
               value={strengthEvaluationForDisplay}
                 strengthName={
                   record.testType === "Blocks"
-                  ? isDammamBlock
+                  ? isDammamBlock && !isDammamSandwich
                     ? "net strength"
                     : "air-dry strength"
                     : record.testType === "Paving Blocks"

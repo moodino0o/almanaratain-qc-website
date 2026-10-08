@@ -507,6 +507,78 @@ test("adds missing Dammam result columns to saved structured Block tables", () =
   assert.match(markup, /data-report-cell="block-body-netStrength">12\.3<\/td>/);
 });
 
+test("uses sandwich result columns in saved structured Dammam Block tables", () => {
+  const object = templateObject({
+    id: "table",
+    tableKey: "blockCompression",
+    name: "Sandwich Block results",
+  });
+  const savedColumns = [
+    { key: "no", label: "No.", width: 15, visible: true, order: 0 },
+    { key: "length", label: "Length (mm)", width: 15, visible: true, order: 1 },
+    { key: "width", label: "Width (mm)", width: 15, visible: true, order: 2 },
+    { key: "height", label: "Height (mm)", width: 15, visible: true, order: 3 },
+    { key: "load", label: "Load (kN)", width: 15, visible: true, order: 4 },
+    { key: "faceThickness", label: "Face Thickness (mm)", width: 10, visible: true, order: 5 },
+    { key: "webThickness", label: "Web Thickness (mm)", width: 10, visible: true, order: 6 },
+    { key: "netArea", label: "Net Area (mm²)", width: 10, visible: true, order: 7 },
+    { key: "netStrength", label: "Net Strength (N/mm²)", width: 10, visible: true, order: 8 },
+  ];
+  const headerCells = [
+    cell("head-no", "block-header", 0, { content: "No." }),
+    cell("head-length", "block-header", 1, { content: "Length (mm)" }),
+    cell("head-width", "block-header", 2, { content: "Width (mm)" }),
+    cell("head-height", "block-header", 3, { content: "Height (mm)" }),
+    cell("head-load", "block-header", 4, { content: "Load (kN)" }),
+  ];
+  const bodyCells = [
+    cell("body-no", "block-body", 0, { fieldKey: "details.no" }),
+    cell("body-length", "block-body", 1, { fieldKey: "details.length" }),
+    cell("body-width", "block-body", 2, { fieldKey: "details.width" }),
+    cell("body-height", "block-body", 3, { fieldKey: "details.height" }),
+    cell("body-load", "block-body", 4, { fieldKey: "details.load" }),
+  ];
+  const design = {
+    layout: { title: "Saved Sandwich Blocks", columns: { blockCompression: savedColumns } },
+    objects: [
+      object,
+      ...row("block-header", "header", 0, headerCells),
+      ...row("block-body", "dynamic", 8, bodyCells),
+    ],
+  } as ReportTemplateDesign;
+  const record = {
+    ...reportFixture(),
+    testType: "Blocks",
+    location: "Dammam Plant",
+    details: {
+      blockType: "12 inch XL Sandwich Block",
+      blockSize: '12"',
+      shapeFactor: "1.1",
+      testRows: [{
+        rowNo: 1,
+        length: 400,
+        width: 300,
+        height: 200,
+        load: 1500,
+        netArea: 120_000,
+        netStrength: 88,
+      }],
+    },
+  } as QcRecord;
+
+  const markup = renderTable(design, object, record);
+  assert.match(markup, /Gross Area \(mm²\)/);
+  assert.match(markup, /Air-dry Strength \(N\/mm²\)/);
+  assert.match(markup, /Normalized Strength \(N\/mm²\)/);
+  assert.match(markup, /120,000/);
+  assert.match(markup, /12\.5/);
+  assert.match(markup, /13\.8/);
+  assert.doesNotMatch(
+    markup,
+    /Face Thickness|Web Thickness|Net Area|Net Strength|Gross Strength|Number of Holes/,
+  );
+});
+
 test("omits Dammam thickness and hole count from saved Block Test Details tables", () => {
   const object = templateObject({
     id: "details-table",
@@ -651,6 +723,76 @@ test("renders Blocks remarks between Test Details and SPECIMEN RESULTS", () => {
   assert.ok(testDetailsIndex >= 0, "Test Details should appear in the Blocks report");
   assert.ok(remarksIndex > testDetailsIndex, "Remarks should follow Test Details");
   assert.ok(resultsIndex > remarksIndex, "SPECIMEN RESULTS should follow Remarks");
+});
+
+test("prints Dammam Sandwich Blocks with gross-area and Air-dry results only", () => {
+  const record = {
+    ...reportFixture(),
+    testType: "Blocks",
+    location: "Dammam Plant",
+    material: "12 inch XL Sandwich Block",
+    details: {
+      blockType: "12 inch XL Sandwich Block",
+      blockSize: '12"',
+      shapeFactor: "1.1",
+      testRows: [{
+        rowNo: 1,
+        length: 400,
+        width: 300,
+        height: 200,
+        load: 1500,
+        faceThickness: 30,
+        webThickness: 30,
+        netArea: 80_000,
+        netStrength: 18.75,
+      }],
+    },
+  } as QcRecord;
+  const savedLayout = {
+    id: 2,
+    testType: "Blocks",
+    name: "Sandwich Blocks",
+    config: {
+      title: "Sandwich Blocks",
+      fontFamily: "Arial",
+      fontSize: 13,
+      textColor: "#20252b",
+      accentColor: "#9b1739",
+      paperPadding: 13,
+      sections: [
+        { key: "header", visible: true, order: 0 },
+        { key: "standard", visible: true, order: 1 },
+        { key: "context", visible: true, order: 2 },
+        { key: "remarks", visible: true, order: 3 },
+        { key: "results", visible: true, order: 4 },
+        { key: "signatures", visible: true, order: 5 },
+      ],
+      columns: {
+        blockCompression: [
+          { key: "faceThickness", label: "Face Thickness (mm)", width: 15, visible: true, order: 0 },
+          { key: "webThickness", label: "Web Thickness (mm)", width: 15, visible: true, order: 1 },
+          { key: "numberOfHoles", label: "Number of Holes", width: 15, visible: true, order: 2 },
+          { key: "netArea", label: "Net Area (mm²)", width: 15, visible: true, order: 3 },
+          { key: "netStrength", label: "Net Strength (N/mm²)", width: 15, visible: true, order: 4 },
+        ],
+      },
+      elements: [],
+    },
+  } as NonNullable<ReportDocumentProps["report"]["layout"]>;
+
+  for (const markup of [renderDocument(record), renderDocument(record, undefined, savedLayout)]) {
+    assert.match(markup, /Dammam Sandwich: Air-dry Strength compliance basis/);
+    assert.match(markup, /Gross Area/);
+    assert.match(markup, /120,000/);
+    assert.match(markup, /Air-dry Strength/);
+    assert.match(markup, /12\.5/);
+    assert.match(markup, /Normalized Strength/);
+    assert.match(markup, /13\.8/);
+    assert.doesNotMatch(
+      markup,
+      /Net Area|Net Strength|Web Thickness|Face Thickness|Number of Holes|Gross Strength/,
+    );
+  }
 });
 
 test("keeps legacy Blocks remarks below Test Details even when saved section order puts results first", () => {

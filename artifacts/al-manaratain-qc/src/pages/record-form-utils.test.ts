@@ -41,6 +41,7 @@ import {
 } from "./record-form-utils";
 import {
   dammamBlockDisplayResults,
+  summarizeDammamBlockAirDryStrengths,
   summarizeDammamBlockNetStrengths,
 } from "./record-detail-utils";
 
@@ -480,6 +481,53 @@ test("calculates Dammam Block gross and net results from saved inputs", () => {
       "30",
     ),
     null,
+  );
+});
+
+test("uses Gross Area and Air-dry strength for Dammam Sandwich Blocks", () => {
+  assert.deepEqual(
+    calculateBlockStrengths(
+      { length: "400", width: "200", load: "1500" },
+      "1.1",
+      "Dammam Plant",
+      "Sandwich Insulation Block",
+    ),
+    {
+      waterStrength: "15.63",
+      airDryStrength: "18.8",
+      normalizedStrength: "20.7",
+    },
+  );
+
+  const displayed = dammamBlockDisplayResults(
+    { length: 400, width: 300, load: 1500 },
+    '12"',
+    { blockType: "XL Sandwich Block", shapeFactor: "1.1" },
+  );
+  assert.equal(displayed.airDryStrength, 12.5);
+  assert.equal(displayed.normalizedStrength, 13.8);
+
+  const sandwichGeometry = calculateDammamBlockResults(
+    { length: "400", width: "300", load: "1500" },
+    '12"',
+    "",
+    "",
+    "XL Sandwich Block",
+  );
+  assert.equal(sandwichGeometry?.grossArea, 120_000);
+  assert.equal(sandwichGeometry?.grossStrength, 12.5);
+  assert.equal(sandwichGeometry?.netArea, null);
+  assert.equal(sandwichGeometry?.netStrength, null);
+
+  const rows = [
+    { length: 400, width: 200, load: 1200 },
+    { length: 400, width: 200, load: 1500 },
+  ];
+  assert.deepEqual(
+    summarizeDammamBlockAirDryStrengths(rows, "400*200*200", {
+      blockType: "Sandwich Insulation Block",
+    }),
+    { average: 16.9, minimum: 15, maximum: 18.8 },
   );
 });
 

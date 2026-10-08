@@ -30,6 +30,7 @@ import {
   getDammamBlockHoleCount,
   getDammamBlockThicknessDefaults,
   isDammamBlockLocation,
+  isDammamSandwichBlock,
   calculateCubeDensity,
   integerIdentifierValue,
   cubeWeightInGrams,
@@ -360,6 +361,9 @@ export default function RecordForm() {
   const blockDimensions = blockDimensionsFromSize(details.blockSize);
   const isDammamBlock =
     testType === TestType.Blocks && isDammamBlockLocation(locationValue);
+  const isDammamSandwich =
+    testType === TestType.Blocks &&
+    isDammamSandwichBlock(locationValue, details.blockType);
   const dammamHoleCount = getDammamBlockHoleCount(details.blockSize);
   const dammamThicknessDefaults = getDammamBlockThicknessDefaults(details.blockSize);
   const calculatedMoistureContent = calculateMoistureContent(
@@ -877,7 +881,7 @@ export default function RecordForm() {
   ]);
 
   const calculateStrength = (row: Pick<TestRow, "length" | "width" | "load">) =>
-    calculateBlockStrengths(row, details.shapeFactor, locationValue);
+    calculateBlockStrengths(row, details.shapeFactor, locationValue, details.blockType);
   const calculateDammamRow = (
     row: Pick<
       TestRow,
@@ -893,6 +897,7 @@ export default function RecordForm() {
       details.blockSize,
       row.faceThickness ?? dammamThicknessDefaults.faceThickness,
       row.webThickness ?? dammamThicknessDefaults.webThickness,
+      details.blockType,
     );
   const formatDammamArea = (value: number | null | undefined) =>
     value === null || value === undefined ? "—" : Math.round(value).toLocaleString("en-US");
@@ -995,11 +1000,11 @@ export default function RecordForm() {
       return;
     }
     if (isDammamBlock) {
-      if (dammamHoleCount === null) {
+      if (!isDammamSandwich && dammamHoleCount === null) {
         toast.error("Dammam Block calculations support 4, 6, and 8 inch sizes.");
         return;
       }
-      if (testRows.some((row) => {
+      if (!isDammamSandwich && testRows.some((row) => {
         const faceThickness = Number(
           String(row.faceThickness ?? dammamThicknessDefaults.faceThickness).trim(),
         );
@@ -1033,6 +1038,7 @@ export default function RecordForm() {
           details.blockSize,
           row.faceThickness ?? dammamThicknessDefaults.faceThickness,
           row.webThickness ?? dammamThicknessDefaults.webThickness,
+          details.blockType,
         ),
       )) {
         toast.error("Face/Web thickness leaves no valid hole dimensions for this specimen.");
@@ -1150,11 +1156,17 @@ export default function RecordForm() {
     if (testType === TestType.Blocks) {
       payloadDetails.machine = machine;
       if (isDammamBlock) {
-        payloadDetails.faceThickness =
-          testRows[0]?.faceThickness ?? dammamThicknessDefaults.faceThickness;
-        payloadDetails.webThickness =
-          testRows[0]?.webThickness ?? dammamThicknessDefaults.webThickness;
-        payloadDetails.numberOfHoles = dammamHoleCount;
+        if (isDammamSandwich) {
+          delete payloadDetails.faceThickness;
+          delete payloadDetails.webThickness;
+          delete payloadDetails.numberOfHoles;
+        } else {
+          payloadDetails.faceThickness =
+            testRows[0]?.faceThickness ?? dammamThicknessDefaults.faceThickness;
+          payloadDetails.webThickness =
+            testRows[0]?.webThickness ?? dammamThicknessDefaults.webThickness;
+          payloadDetails.numberOfHoles = dammamHoleCount;
+        }
       } else {
         delete payloadDetails.faceThickness;
         delete payloadDetails.webThickness;
@@ -1184,6 +1196,7 @@ export default function RecordForm() {
               details.blockSize,
               row.faceThickness ?? dammamThicknessDefaults.faceThickness,
               row.webThickness ?? dammamThicknessDefaults.webThickness,
+              details.blockType,
             )
           : null;
         return ({
@@ -1244,7 +1257,14 @@ export default function RecordForm() {
                 row.wetWeight,
               ),
             }),
-          ...(isDammamBlock
+          ...(isDammamBlock && isDammamSandwich
+            ? {
+                failureLoad: row.load,
+                failureLoadN: dammamResults?.failureLoadN ?? null,
+                grossArea: dammamResults?.grossArea ?? null,
+                grossStrength: dammamResults?.grossStrength ?? null,
+              }
+            : isDammamBlock
             ? {
                 faceThickness:
                   row.faceThickness ?? dammamThicknessDefaults.faceThickness,
@@ -1890,7 +1910,7 @@ export default function RecordForm() {
                       onCreateOption={createReferenceOption("blockSizes")}
                     />
                   </div>
-                  {isDammamBlock && (
+                  {isDammamBlock && !isDammamSandwich && (
                     <div className="space-y-2">
                       <Label htmlFor="dammam-number-of-holes">Number of Holes</Label>
                       <Input
@@ -2400,7 +2420,7 @@ export default function RecordForm() {
                                <th className={`${isCompactBlockTable ? isDammamBlock ? "w-[8%] px-1 py-2 text-[10px]" : "w-[12%] px-1 py-2 text-[10px]" : "px-3 py-3"} text-left font-semibold`}>Length (mm)</th>
                                <th className={`${isCompactBlockTable ? isDammamBlock ? "w-[8%] px-1 py-2 text-[10px]" : "w-[12%] px-1 py-2 text-[10px]" : "px-3 py-3"} text-left font-semibold`}>Width (mm)</th>
                                <th className={`${isCompactBlockTable ? isDammamBlock ? "w-[8%] px-1 py-2 text-[10px]" : "w-[12%] px-1 py-2 text-[10px]" : "px-3 py-3"} text-left font-semibold`}>Height (mm)</th>
-                               {isDammamBlock && (
+                                {isDammamBlock && !isDammamSandwich && (
                                  <>
                                     <th className="w-[5.5%] px-1 py-2 text-left text-[10px] font-semibold">Web Thickness (mm)</th>
                                     <th className="w-[5.5%] px-1 py-2 text-left text-[10px] font-semibold">Face Thickness (mm)</th>
@@ -2453,16 +2473,22 @@ export default function RecordForm() {
                                     </th>
                                   </>
                                 )}
-                               {testType === TestType.Blocks && (
-                                 <>
-                                    {isDammamBlock && (
+                                {testType === TestType.Blocks && (
+                                  <>
+                                     {isDammamSandwich ? (
+                                       <>
+                                         <th className="w-[8%] px-1 py-2 text-left text-[10px] font-semibold">Gross Area (mm²)</th>
+                                         <th className="w-[8%] px-1 py-2 text-left text-[10px] font-semibold">Air-dry Strength (N/mm²)</th>
+                                         <th className="w-[8%] px-1 py-2 text-left text-[10px] font-semibold">Normalized Strength (N/mm²)</th>
+                                       </>
+                                     ) : isDammamBlock ? (
                                       <>
                                         <th className="w-[6%] px-1 py-2 text-left text-[10px] font-semibold">Gross Area (mm²)</th>
                                         <th className="w-[6%] px-1 py-2 text-left text-[10px] font-semibold">Net Area (mm²)</th>
                                         <th className="w-[7%] px-1 py-2 text-left text-[10px] font-semibold">Gross Strength (N/mm²)</th>
                                         <th className="w-[7%] px-1 py-2 text-left text-[10px] font-semibold">Net Strength (N/mm²)</th>
                                       </>
-                                    )}
+                                     ) : null}
                                     {!isDammamBlock && <th className="w-[16%] px-1 py-2 text-left text-[10px] font-semibold">Air Dry Strength (N/mm²)</th>}
                                     <th className={`${isDammamBlock ? "w-[9%]" : "w-[14%]"} px-1 py-2 text-left text-[10px] font-semibold`}>Density (kg/m³)</th>
                                  </>
@@ -2689,7 +2715,7 @@ export default function RecordForm() {
                                 />
                               </td>
                             ))}
-                             {isDammamBlock && (
+                             {isDammamBlock && !isDammamSandwich && (
                                <>
                                  <td className={compactBlockCellClass}>
                                    <Input
@@ -2800,7 +2826,29 @@ export default function RecordForm() {
                                  )}
                                 {testType === TestType.Blocks && (
                                   <>
-                                    {isDammamBlock && (
+                                    {isDammamSandwich ? (
+                                      <>
+                                        <td className={compactBlockCellClass}>
+                                          <div className="flex h-8 items-center rounded-md border bg-muted/40 px-1.5 text-[11px] font-semibold leading-tight text-foreground">
+                                            {formatDammamArea(calculateDammamRow(row)?.grossArea)}
+                                          </div>
+                                        </td>
+                                        <td className={compactBlockCellClass}>
+                                          <div className="flex h-8 items-center rounded-md border bg-muted/40 px-1.5 text-[11px] font-semibold leading-tight text-foreground">
+                                            {calculateStrength(row).airDryStrength
+                                              ? `${calculateStrength(row).airDryStrength} N/mm²`
+                                              : "—"}
+                                          </div>
+                                        </td>
+                                        <td className={compactBlockCellClass}>
+                                          <div className="flex h-8 items-center rounded-md border bg-muted/40 px-1.5 text-[11px] font-semibold leading-tight text-foreground">
+                                            {calculateStrength(row).normalizedStrength
+                                              ? `${calculateStrength(row).normalizedStrength} N/mm²`
+                                              : "—"}
+                                          </div>
+                                        </td>
+                                      </>
+                                    ) : isDammamBlock ? (
                                       <>
                                         <td className={compactBlockCellClass}>
                                           <div className="flex h-8 items-center rounded-md border bg-muted/40 px-1.5 text-[11px] font-semibold leading-tight text-foreground">
@@ -2823,7 +2871,7 @@ export default function RecordForm() {
                                           </div>
                                         </td>
                                       </>
-                                    )}
+                                    ) : null}
                                  {!isDammamBlock && <td className={compactBlockCellClass}>
                                     <div
                                       className="flex h-8 items-center rounded-md border bg-muted/40 px-1.5 text-[11px] font-semibold leading-tight text-foreground"

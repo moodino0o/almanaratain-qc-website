@@ -476,6 +476,7 @@ export const calculateBlockStrengths = (
   row: Pick<TestRow, "length" | "width" | "load">,
   shapeFactorValue: unknown,
   locationValue?: unknown,
+  blockTypeValue?: unknown,
 ) => {
   const length = Number(numericInputValue(row.length));
   const width = Number(numericInputValue(row.width));
@@ -492,10 +493,13 @@ export const calculateBlockStrengths = (
     return { waterStrength: "", airDryStrength: "", normalizedStrength: "" };
   }
 
-  const waterStrength = (load * 1000) / (length * width);
+  const grossStrength = (load * 1000) / (length * width);
+  const isDammamSandwich = isDammamSandwichBlock(locationValue, blockTypeValue);
+  const waterStrength = isDammamSandwich ? grossStrength / 1.2 : grossStrength;
   const airDryFactor = isDammamBlockLocation(locationValue) ? 1 : 1.2;
+  const airDryBasis = isDammamSandwich ? grossStrength : waterStrength;
   const airDryStrength =
-    Math.round((waterStrength * airDryFactor + Number.EPSILON) * 10) / 10;
+    Math.round((airDryBasis * airDryFactor + Number.EPSILON) * 10) / 10;
   const shapeFactorText = numericInputValue(shapeFactorValue);
   const shapeFactor = Number(shapeFactorText);
   const normalizedStrength =
@@ -513,6 +517,7 @@ export const calculateBlockStrengths = (
 export const blockAirDryRowStrength = (
   row: unknown,
   locationValue?: unknown,
+  blockTypeValue?: unknown,
 ): number | null => {
   const values = typeof row === "object" && row !== null
     ? row as Record<string, unknown>
@@ -530,13 +535,18 @@ export const blockAirDryRowStrength = (
     "strength",
     "compressiveStrength",
   ]);
-  if (isDammamBlockLocation(locationValue)) return firstNumericValue(["netStrength"]);
+  if (isDammamBlockLocation(locationValue) && !isSandwichBlockType(blockTypeValue)) {
+    return firstNumericValue(["netStrength"]);
+  }
 
   const storedAirDryStrength = firstNumericValue([
     "airDryStrength",
     "dryAirStrength",
   ]);
   if (storedAirDryStrength !== null) return storedAirDryStrength;
+  if (isDammamSandwichBlock(locationValue, blockTypeValue)) {
+    return firstNumericValue(["grossStrength"]);
+  }
   if (waterStrength === null) return null;
   return Math.round((waterStrength * 1.2 + Number.EPSILON) * 10) / 10;
 };
@@ -700,6 +710,12 @@ export const isDammamBlockLocation = (value: unknown) => {
   return location === "dammam" || location === "dammam plant";
 };
 
+export const isSandwichBlockType = (value: unknown) =>
+  String(value ?? "").toLocaleLowerCase().includes("sandwich");
+
+export const isDammamSandwichBlock = (location: unknown, blockType: unknown) =>
+  isDammamBlockLocation(location) && isSandwichBlockType(blockType);
+
 export const getDammamBlockHoleCount = (blockSize: unknown): number | null => {
   const width = Number(blockDimensionsFromSize(blockSize)?.width);
   if (width === 100 || width === 150) return 2;
@@ -726,6 +742,7 @@ export const calculateDammamBlockResults = (
   blockSize: unknown,
   faceThicknessValue: unknown,
   webThicknessValue: unknown,
+  blockTypeValue?: unknown,
 ) => {
   const length = Number(String(row.length ?? "").trim());
   const width = Number(String(row.width ?? "").trim());
@@ -736,26 +753,41 @@ export const calculateDammamBlockResults = (
   const load = loadText ? Number(loadText) : null;
 
   if (
-    holes === null ||
-    ![length, width, face, web].every(Number.isFinite) ||
+    ![length, width].every(Number.isFinite) ||
     length <= 0 ||
     width <= 0 ||
-    face <= 0 ||
-    web <= 0 ||
     (load !== null && (!Number.isFinite(load) || load <= 0))
   ) {
     return null;
   }
 
+  const grossArea = width * length;
+  const failureLoadN = load === null ? null : load * 1000;
+  if (isSandwichBlockType(blockTypeValue)) {
+    return {
+      numberOfHoles: null,
+      failureLoadN,
+      grossArea,
+      netArea: null,
+      grossStrength: failureLoadN === null ? null : failureLoadN / grossArea,
+      netStrength: null,
+    };
+  }
+
+  if (
+    holes === null ||
+    ![face, web].every(Number.isFinite) ||
+    face <= 0 ||
+    web <= 0
+  ) return null;
+
   const holeWidth = width - (2 * face);
   const holeLength = (length - (2 * face) - ((holes - 1) * web)) / holes;
   if (holeWidth <= 0 || holeLength <= 0) return null;
 
-  const grossArea = width * length;
   const netArea = grossArea - (holes * holeWidth * holeLength);
   if (netArea <= 0 || netArea >= grossArea) return null;
 
-  const failureLoadN = load === null ? null : load * 1000;
   return {
     numberOfHoles: holes,
     failureLoadN,

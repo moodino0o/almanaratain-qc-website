@@ -64,6 +64,10 @@ export function isDammamLocation(value: unknown) {
   return location === "dammam" || location === "dammam plant";
 }
 
+function isSandwichBlockType(value: unknown) {
+  return textValue(value)?.toLocaleLowerCase().includes("sandwich") ?? false;
+}
+
 const AUTOMATED_TEST_TYPES = new Set([
   "Ready Mix",
   "Blocks",
@@ -114,6 +118,27 @@ export function calculateDammamBlockResults(
   const values = row as Record<string, unknown>;
   const length = numericValue(values.length);
   const width = numericValue(values.width);
+  const load = numericValue(values.load ?? values.failureLoad);
+  if (
+    length === null || width === null || length <= 0 || width <= 0 ||
+    (load !== null && load <= 0)
+  ) {
+    return null;
+  }
+
+  const grossArea = width * length;
+  const failureLoadN = load === null ? null : load * 1000;
+  if (isSandwichBlockType(details.blockType)) {
+    return {
+      numberOfHoles: null,
+      failureLoadN,
+      grossArea,
+      netArea: null,
+      grossStrength: failureLoadN === null ? null : failureLoadN / grossArea,
+      netStrength: null,
+    };
+  }
+
   const thicknessDefaults = dammamBlockThicknessDefaults(details.blockSize);
   const face = numericValue(
     values.faceThickness ?? details.faceThickness ?? thicknessDefaults.faceThickness,
@@ -122,7 +147,6 @@ export function calculateDammamBlockResults(
     values.webThickness ?? details.webThickness ?? thicknessDefaults.webThickness,
   );
   const holes = getDammamBlockHoleCount(details.blockSize);
-  const load = numericValue(values.load ?? values.failureLoad);
 
   if (
     length === null || width === null || face === null || web === null ||
@@ -136,11 +160,9 @@ export function calculateDammamBlockResults(
   const holeLength = (length - (2 * face) - ((holes - 1) * web)) / holes;
   if (holeWidth <= 0 || holeLength <= 0) return null;
 
-  const grossArea = width * length;
   const netArea = grossArea - (holes * holeWidth * holeLength);
   if (netArea <= 0 || netArea >= grossArea) return null;
 
-  const failureLoadN = load === null ? null : load * 1000;
   return {
     numberOfHoles: holes,
     failureLoadN,
@@ -152,35 +174,56 @@ export function calculateDammamBlockResults(
 }
 
 function normalizeDammamBlockDetails(details: Record<string, unknown>) {
+  const isSandwich = isSandwichBlockType(details.blockType);
   const thicknessDefaults = dammamBlockThicknessDefaults(details.blockSize);
-  const normalized: Record<string, unknown> = {
-    ...details,
-    faceThickness: details.faceThickness ?? thicknessDefaults.faceThickness,
-    webThickness: details.webThickness ?? thicknessDefaults.webThickness,
-  };
-  const numberOfHoles = getDammamBlockHoleCount(normalized.blockSize);
+  const normalized: Record<string, unknown> = { ...details };
+  if (isSandwich) {
+    delete normalized.faceThickness;
+    delete normalized.webThickness;
+    delete normalized.numberOfHoles;
+  } else {
+    normalized.faceThickness =
+      details.faceThickness ?? thicknessDefaults.faceThickness;
+    normalized.webThickness =
+      details.webThickness ?? thicknessDefaults.webThickness;
+  }
+  const numberOfHoles = isSandwich
+    ? null
+    : getDammamBlockHoleCount(normalized.blockSize);
   const rows: unknown[] = Array.isArray(normalized.testRows) ? normalized.testRows : [];
   return {
     ...normalized,
-    numberOfHoles,
+    ...(isSandwich ? {} : { numberOfHoles }),
     testRows: rows.map((row) => {
       if (typeof row !== "object" || row === null) return row;
       const values = row as Record<string, unknown>;
-      const normalizedRow = {
-        ...values,
-        faceThickness: values.faceThickness ?? normalized.faceThickness,
-        webThickness: values.webThickness ?? normalized.webThickness,
-      };
+      const normalizedRow: Record<string, unknown> = { ...values };
+      if (isSandwich) {
+        delete normalizedRow.faceThickness;
+        delete normalizedRow.webThickness;
+        delete normalizedRow.numberOfHoles;
+        delete normalizedRow.netArea;
+        delete normalizedRow.netStrength;
+      } else {
+        normalizedRow.faceThickness =
+          values.faceThickness ?? normalized.faceThickness;
+        normalizedRow.webThickness =
+          values.webThickness ?? normalized.webThickness;
+      }
       const results = calculateDammamBlockResults(normalizedRow, normalized);
       return {
         ...normalizedRow,
         failureLoad: values.load ?? values.failureLoad ?? "",
-        numberOfHoles,
         failureLoadN: results?.failureLoadN ?? null,
         grossArea: results?.grossArea ?? null,
-        netArea: results?.netArea ?? null,
         grossStrength: results?.grossStrength ?? null,
-        netStrength: results?.netStrength ?? null,
+        ...(isSandwich
+          ? {}
+          : {
+              numberOfHoles,
+              netArea: results?.netArea ?? null,
+              netStrength: results?.netStrength ?? null,
+            }),
       };
     }),
   };
@@ -479,6 +522,7 @@ function calculateRow(
   isDammam = false,
   isPrecast = false,
   precastWeightIsGrams = false,
+  isDammamSandwich = false,
 ) {
   if (typeof row !== "object" || row === null) {
     return { row, calculatedStrength: null, loadedFaceArea: null, complete: false };
@@ -592,7 +636,9 @@ function calculateRow(
       ...(!isPaving && calculatedStrength !== null
         ? {
             calculatedStrength,
-            waterStrength: calculatedStrength.toFixed(2),
+            waterStrength: (
+              isDammamSandwich ? calculatedStrength / 1.2 : calculatedStrength
+            ).toFixed(2),
             strength: calculatedStrength.toFixed(2),
           }
         : {}),
@@ -761,6 +807,10 @@ export function evaluateStrengthRecord(
     record.testType === "Blocks" && isDammamLocation(record.location)
       ? normalizeDammamBlockDetails(baseNormalizedDetails)
       : baseNormalizedDetails;
+  const isDammamSandwich =
+    record.testType === "Blocks" &&
+    isDammamLocation(record.location) &&
+    isSandwichBlockType(normalizedDetails.blockType);
   const normalizedRecord = { ...record, details: normalizedDetails };
   const standard = matchingStandard(normalizedRecord, standards);
   const requiredStrength =
@@ -778,6 +828,8 @@ export function evaluateStrengthRecord(
       record.testType === "Paving Blocks",
       record.testType === "Blocks" && isDammamLocation(record.location),
       record.testType === "Precast",
+      false,
+      isDammamSandwich,
     )
   );
   const evaluatedRows =
@@ -815,9 +867,11 @@ export function evaluateStrengthRecord(
           numericValue(values.correctedStrength);
       }
       if (record.testType === "Blocks") {
-        return isDammamLocation(record.location)
-          ? numericValue(values.netStrength)
-          : numericValue(values.airDryStrength ?? values.dryAirStrength);
+        return isDammamSandwich
+          ? numericValue(values.airDryStrength ?? values.dryAirStrength)
+          : isDammamLocation(record.location)
+            ? numericValue(values.netStrength)
+            : numericValue(values.airDryStrength ?? values.dryAirStrength);
       }
       return row.calculatedStrength;
     })
@@ -834,9 +888,11 @@ export function evaluateStrengthRecord(
         const values = typeof row.row === "object" && row.row !== null
           ? row.row as Record<string, unknown>
           : {};
-        return (isDammamLocation(record.location)
-          ? numericValue(values.netStrength)
-          : numericValue(values.airDryStrength ?? values.dryAirStrength)) === null;
+        return (isDammamSandwich
+          ? numericValue(values.airDryStrength ?? values.dryAirStrength)
+          : isDammamLocation(record.location)
+            ? numericValue(values.netStrength)
+            : numericValue(values.airDryStrength ?? values.dryAirStrength)) === null;
       }
       return !row.complete;
     }) ||
@@ -852,7 +908,7 @@ export function evaluateStrengthRecord(
     record.testType === "Ready Mix"
       ? "A complete 28-day cube result is required."
       : record.testType === "Blocks"
-          ? isDammamLocation(record.location)
+          ? isDammamLocation(record.location) && !isDammamSandwich
             ? "Complete specimen load, dimensions, net strength, and Block age are required."
             : "Complete specimen load, dimensions, air-dry strength, and Block age are required."
         : "Enter each paving specimen's dimensions, dry and wet weights, load, and correction factor.";
@@ -876,7 +932,7 @@ export function evaluateStrengthRecord(
     status = "Failed";
     reason =
       record.testType === "Blocks"
-          ? isDammamLocation(record.location)
+          ? isDammamLocation(record.location) && !isDammamSandwich
             ? "The average Block net strength is below the configured minimum."
             : "The average Block air-dry strength is below the configured minimum."
         : record.testType === "Paving Blocks"
