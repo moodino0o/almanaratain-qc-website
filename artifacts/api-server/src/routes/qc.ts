@@ -662,7 +662,7 @@ const defaultDammamStrengthCriteria = (blockType: string | null | undefined) =>
     ? { average: "4.14", minimum: null }
     : { average: "13.8", minimum: "12.4" };
 
-async function ensureDefaultStrengthStandards() {
+export async function ensureDefaultStrengthStandards() {
   if (!strengthSeedPromise) {
     strengthSeedPromise = (async () => {
       const existing = await db
