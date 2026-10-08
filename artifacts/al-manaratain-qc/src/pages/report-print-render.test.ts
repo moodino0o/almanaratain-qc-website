@@ -436,10 +436,10 @@ test("prints recalculated Dammam geometry and strength in saved Block report tab
   assert.doesNotMatch(markup, /Web Thickness|Face Thickness|Number of Holes/);
   assert.match(markup, /Gross Strength \(N\/mm²\)/);
   assert.match(markup, /Net Strength \(N\/mm²\)/);
-  assert.match(markup, /72,533/);
-  assert.match(markup, /73,700/);
+  assert.match(markup, /40,800/);
+  assert.match(markup, /47,600/);
   assert.match(markup, />6\.3<\/td>/);
-  assert.match(markup, />6\.9<\/td>/);
+  assert.match(markup, />10\.5<\/td>/);
   assert.doesNotMatch(markup, /Normalized/);
 
   const otherPlantMarkup = renderTable(design, object, {
@@ -502,9 +502,9 @@ test("adds missing Dammam result columns to saved structured Block tables", () =
   assert.match(markup, /Net Area \(mm²\)/);
   assert.doesNotMatch(markup, /Gross Area|Air Dry/);
   assert.match(markup, /Net Strength \(N\/mm²\)/);
-  assert.match(markup, /data-report-cell="block-body-netArea">72,533<\/td>/);
+  assert.match(markup, /data-report-cell="block-body-netArea">40,800<\/td>/);
   assert.match(markup, /data-report-cell="block-body-grossStrength">6\.3<\/td>/);
-  assert.match(markup, /data-report-cell="block-body-netStrength">6\.9<\/td>/);
+  assert.match(markup, /data-report-cell="block-body-netStrength">12\.3<\/td>/);
 });
 
 test("omits Dammam thickness and hole count from saved Block Test Details tables", () => {
@@ -577,17 +577,17 @@ test("prints Dammam net area and Net Strength summaries without Gross Area or Ai
   assert.match(markup, /Net Area/);
   assert.match(markup, /Gross Strength/);
   assert.match(markup, /Net Strength/);
-  assert.match(markup, /72,533/);
+  assert.match(markup, /40,800/);
   assert.doesNotMatch(markup, /Normalized/);
-  assert.match(markup, /Maximum<\/strong><span>Net Strength<\/span><b>6\.9<\/b>/);
+  assert.match(markup, /Maximum<\/strong><span>Net Strength<\/span><b>12\.3<\/b>/);
   const detailsStart = markup.indexOf("Test details");
   const detailsEnd = markup.indexOf("</section>", detailsStart);
   const testDetails = markup.slice(detailsStart, detailsEnd);
   assert.doesNotMatch(testDetails, /FACE THICKNESS|WEB THICKNESS|NUMBER OF HOLES/);
   assert.doesNotMatch(markup, /Web Thickness|Face Thickness|Gross Area|Air Dry/);
-  assert.match(markup, /block-report-average-row"><td colSpan="6">AVERAGE:<\/td><td>6\.3<\/td><td>6\.9<\/td>/);
-  assert.match(markup, /Maximum<\/strong><span>Net Strength<\/span><b>6\.9<\/b>/);
-  assert.match(markup, /Minimum<\/strong><span>Net Strength<\/span><b>6\.9<\/b>/);
+  assert.match(markup, /block-report-average-row"><td colSpan="6">AVERAGE:<\/td><td>6\.3<\/td><td>12\.3<\/td>/);
+  assert.match(markup, /Maximum<\/strong><span>Net Strength<\/span><b>12\.3<\/b>/);
+  assert.match(markup, /Minimum<\/strong><span>Net Strength<\/span><b>12\.3<\/b>/);
 
   const savedLayout = {
     id: 1,

@@ -601,7 +601,7 @@ test("Dammam register and daily summaries recalculate net strength using record 
       ],
     },
   });
-  const expected = [200_000 / 33_200, 300_000 / 33_200];
+  const expected = [200_000 / 19_600, 300_000 / 19_600];
   const summary = summarizeRecordStrengths(dammam)!;
   assert.equal(summary.minimumStrength, expected[0]);
   assert.equal(summary.maximumStrength, expected[1]);
