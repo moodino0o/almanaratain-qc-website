@@ -20,6 +20,7 @@ export const qcStrengthStandardsTable = pgTable("qc_strength_standards", {
   bsStandard: text("bs_standard").notNull(),
   requiredStrength: numeric("required_strength", { precision: 10, scale: 2 }).notNull(),
   minimumIndividualStrength: numeric("minimum_individual_strength", { precision: 10, scale: 2 }),
+  waterAbsorptionLimit: numeric("water_absorption_limit", { precision: 10, scale: 2 }),
   dammamAverageStrength: numeric("dammam_average_strength", { precision: 10, scale: 2 }),
   dammamMinimumStrength: numeric("dammam_minimum_strength", { precision: 10, scale: 2 }),
   strengthUnit: text("strength_unit").notNull().default("N/mm²"),

@@ -93,6 +93,7 @@ type StandardForm = {
   kerbClass: string;
   kerbMarking: string;
   minimumIndividualStrength: string;
+  waterAbsorptionLimit: string;
   bsStandard: string;
   requiredStrength: string;
   dammamAverageStrength: string;
@@ -137,6 +138,7 @@ const emptyForm: StandardForm = {
   kerbClass: "",
   kerbMarking: "",
   minimumIndividualStrength: "",
+  waterAbsorptionLimit: "",
   bsStandard: "",
   requiredStrength: "",
   dammamAverageStrength: "",
@@ -207,6 +209,9 @@ function formFromStandard(standard: StrengthStandard): StandardForm {
     minimumIndividualStrength: standard.minimumIndividualStrength == null
       ? ""
       : String(standard.minimumIndividualStrength),
+    waterAbsorptionLimit: standard.waterAbsorptionLimit == null
+      ? ""
+      : String(standard.waterAbsorptionLimit),
     bsStandard: standard.bsStandard,
     requiredStrength: String(standard.requiredStrength),
     dammamAverageStrength: String(
@@ -369,6 +374,12 @@ function StandardEditor({
                 kerbClass: "",
                 kerbMarking: "",
                 minimumIndividualStrength: "",
+                waterAbsorptionLimit: value === TestType.Kerb_Stone ? "6.5" : "",
+                bsStandard: value === TestType.Kerb_Stone
+                  ? "BS EN 1340 : 2003"
+                  : form.testType === TestType.Kerb_Stone
+                    ? ""
+                    : form.bsStandard,
                 strengthUnit: value === TestType.Kerb_Stone
                   ? "MPa"
                   : form.testType === TestType.Kerb_Stone
@@ -566,6 +577,11 @@ function StandardEditor({
               <Label>Minimum individual strength (MPa)</Label>
               <Input type="number" min="0" step="0.1" value={form.minimumIndividualStrength}
                 onChange={(event) => setForm({ ...form, minimumIndividualStrength: event.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Maximum water absorption (%)</Label>
+              <Input type="number" min="0" step="0.01" value={form.waterAbsorptionLimit}
+                onChange={(event) => setForm({ ...form, waterAbsorptionLimit: event.target.value })} />
             </div>
           </div>
         )}
@@ -1101,6 +1117,9 @@ function StrengthStandardsFolder({
                       </td>
                       {isKerbStone && <td className="px-4 py-3 font-semibold">
                         {standard.minimumIndividualStrength == null ? "—" : `${standard.minimumIndividualStrength} ${standard.strengthUnit}`}
+                      </td>}
+                      {isKerbStone && <td className="px-4 py-3 font-semibold">
+                        {standard.waterAbsorptionLimit == null ? "—" : `< ${standard.waterAbsorptionLimit}%`}
                       </td>}
                       {isBlocks && (
                         <td className="px-4 py-3">
@@ -2413,6 +2432,7 @@ export default function Standards() {
     const dammamMinimumStrength = Number(form.dammamMinimumStrength);
     const kerbClass = Number(form.kerbClass);
     const minimumIndividualStrength = Number(form.minimumIndividualStrength);
+    const waterAbsorptionLimit = Number(form.waterAbsorptionLimit);
     const isDammamSandwichStandard =
       form.testType === TestType.Blocks && isSandwichBlockType(form.blockType);
     if (
@@ -2434,7 +2454,10 @@ export default function Standards() {
             !form.kerbMarking.trim() ||
             form.minimumIndividualStrength.trim() === "" ||
             !Number.isFinite(minimumIndividualStrength) ||
-            minimumIndividualStrength < 0))) ||
+             minimumIndividualStrength < 0 ||
+             form.waterAbsorptionLimit.trim() === "" ||
+             !Number.isFinite(waterAbsorptionLimit) ||
+             waterAbsorptionLimit < 0))) ||
       (form.testType === TestType.Blocks &&
         (form.dammamAverageStrength.trim() === "" ||
           !Number.isFinite(dammamAverageStrength) ||
@@ -2477,6 +2500,8 @@ export default function Standards() {
       requiredStrength,
       minimumIndividualStrength:
         form.testType === TestType.Kerb_Stone ? minimumIndividualStrength : null,
+      waterAbsorptionLimit:
+        form.testType === TestType.Kerb_Stone ? waterAbsorptionLimit : null,
       dammamAverageStrength:
         form.testType === TestType.Blocks ? dammamAverageStrength : null,
       dammamMinimumStrength:

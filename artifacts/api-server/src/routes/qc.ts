@@ -774,12 +774,16 @@ export async function ensureDefaultStrengthStandards() {
             strengthUnit: existingKerbStandard.kerbClass === null
               ? "MPa"
               : existingKerbStandard.strengthUnit,
-            bsStandard: legacyDefault ? "Kerbstone flexural strength" : existingKerbStandard.bsStandard,
+          bsStandard: legacyDefault || existingKerbStandard.bsStandard === "Kerbstone flexural strength"
+            ? "BS EN 1340 : 2003"
+            : existingKerbStandard.bsStandard,
+          waterAbsorptionLimit: existingKerbStandard.waterAbsorptionLimit ?? "6.5",
           };
           if (
             existingKerbStandard.kerbClass !== nextKerbStandard.kerbClass ||
             existingKerbStandard.kerbMarking !== nextKerbStandard.kerbMarking ||
             existingKerbStandard.minimumIndividualStrength !== nextKerbStandard.minimumIndividualStrength ||
+            existingKerbStandard.waterAbsorptionLimit !== nextKerbStandard.waterAbsorptionLimit ||
             existingKerbStandard.strengthUnit !== nextKerbStandard.strengthUnit ||
             existingKerbStandard.bsStandard !== nextKerbStandard.bsStandard
           ) {
@@ -798,9 +802,10 @@ export async function ensureDefaultStrengthStandards() {
           blockSize: standard.blockSize,
           kerbClass: standard.kerbClass,
           kerbMarking: standard.kerbMarking,
-          bsStandard: "Kerbstone flexural strength",
+          bsStandard: "BS EN 1340 : 2003",
           requiredStrength: standard.requiredStrength,
           minimumIndividualStrength: standard.minimumIndividualStrength,
+          waterAbsorptionLimit: "6.5",
           strengthUnit: "MPa",
         });
         existingKeys.add(key);
@@ -1613,6 +1618,8 @@ const toStrengthStandard = (row: typeof qcStrengthStandardsTable.$inferSelect) =
   requiredStrength: Number(row.requiredStrength),
   minimumIndividualStrength:
     row.minimumIndividualStrength === null ? null : Number(row.minimumIndividualStrength),
+  waterAbsorptionLimit:
+    row.waterAbsorptionLimit === null ? null : Number(row.waterAbsorptionLimit),
   dammamAverageStrength:
     row.dammamAverageStrength === null ? null : Number(row.dammamAverageStrength),
   dammamMinimumStrength:
@@ -2047,6 +2054,9 @@ router.post("/strength-standards", requireAdministrator, async (req, res): Promi
       minimumIndividualStrength: body.data.minimumIndividualStrength == null
         ? null
         : String(body.data.minimumIndividualStrength),
+      waterAbsorptionLimit: body.data.waterAbsorptionLimit == null
+        ? null
+        : String(body.data.waterAbsorptionLimit),
       dammamAverageStrength: isBlockStandard
         ? String(body.data.dammamAverageStrength ?? dammamDefaults.average)
         : null,
@@ -2258,6 +2268,14 @@ router.patch("/shape-factors/:id", requireAdministrator, async (req, res): Promi
       ...(body.data.blockSize !== undefined
         ? { blockSize: body.data.blockSize.trim() }
         : {}),
+    ...(body.data.waterAbsorptionLimit !== undefined
+      ? {
+          waterAbsorptionLimit:
+            body.data.waterAbsorptionLimit == null
+              ? null
+              : String(body.data.waterAbsorptionLimit),
+        }
+      : {}),
       ...(body.data.shapeFactor !== undefined
         ? {
             shapeFactor:

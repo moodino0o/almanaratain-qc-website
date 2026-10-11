@@ -409,6 +409,23 @@ export const calculateWaterAbsorption = (dryWeight: unknown, wetWeight: unknown)
   return (((wet - dry) / dry) * 100).toFixed(2);
 };
 
+export const evaluateKerbWaterAbsorption = (
+  dryWeight: unknown,
+  wetWeight: unknown,
+  limit: unknown,
+) => {
+  if (!stringValue(wetWeight).trim()) return null;
+  const value = calculateWaterAbsorption(dryWeight, wetWeight);
+  const numericLimit = finiteNumericValue(limit);
+  if (!value || numericLimit === null || numericLimit < 0) {
+    return { value: "", status: "Review" as const };
+  }
+  return {
+    value,
+    status: Number(value) < numericLimit ? "Pass" as const : "Fail" as const,
+  };
+};
+
 export const calculateMoistureContent = (dryWeight: unknown, wetWeight: unknown) =>
   calculateWaterAbsorption(dryWeight, wetWeight);
 

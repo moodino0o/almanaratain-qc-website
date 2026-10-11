@@ -36,6 +36,7 @@ import {
   prepareRecordForForm,
   createDefaultTestRows,
   calculateKerbBendingStrength,
+  evaluateKerbWaterAbsorption,
   getReadyMixReferenceNumberError,
   filterSieveSizeItems,
   kerbDimensionsForType,
@@ -94,6 +95,22 @@ test("Kerbstone dimensions and bending strength use the selected type and provid
     }),
     "",
   );
+});
+
+test("Kerbstone water absorption passes strictly below the editable limit and skips blank wet weights", () => {
+  assert.deepEqual(evaluateKerbWaterAbsorption("100", "106.49", "6.5"), {
+    value: "6.49",
+    status: "Pass",
+  });
+  assert.deepEqual(evaluateKerbWaterAbsorption("100", "106.5", "6.5"), {
+    value: "6.50",
+    status: "Fail",
+  });
+  assert.equal(evaluateKerbWaterAbsorption("100", "", "6.5"), null);
+  assert.deepEqual(evaluateKerbWaterAbsorption("", "106", "6.5"), {
+    value: "",
+    status: "Review",
+  });
 });
 
 test("Dammam Block details display recalculated Net Area and Net Strength", () => {

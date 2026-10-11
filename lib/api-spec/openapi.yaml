@@ -1865,6 +1865,7 @@ components:
         - bsStandard
         - requiredStrength
         - minimumIndividualStrength
+        - waterAbsorptionLimit
         - dammamAverageStrength
         - dammamMinimumStrength
         - strengthUnit
@@ -1890,6 +1891,8 @@ components:
         requiredStrength:
           type: number
         minimumIndividualStrength:
+          type: ["number", "null"]
+        waterAbsorptionLimit:
           type: ["number", "null"]
         dammamAverageStrength:
           type: ["number", "null"]
@@ -1931,6 +1934,9 @@ components:
         minimumIndividualStrength:
           type: ["number", "null"]
           minimum: 0
+        waterAbsorptionLimit:
+          type: ["number", "null"]
+          minimum: 0
         dammamAverageStrength:
           type: ["number", "null"]
           minimum: 0
@@ -1967,6 +1973,9 @@ components:
           type: number
           minimum: 0
         minimumIndividualStrength:
+          type: ["number", "null"]
+          minimum: 0
+        waterAbsorptionLimit:
           type: ["number", "null"]
           minimum: 0
         dammamAverageStrength:
