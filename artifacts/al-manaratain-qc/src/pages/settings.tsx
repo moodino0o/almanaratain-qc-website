@@ -1098,9 +1098,78 @@ function sanitizeActivityValue(value: unknown, key?: string): unknown {
   return value;
 }
 
-function activityDetailsText(details: Record<string, unknown>) {
-  const safeDetails = sanitizeActivityValue(details);
-  return JSON.stringify(safeDetails, null, 2) ?? "No additional details recorded.";
+const activityFieldLabels: Record<string, string> = {
+  bsStandard: "BS standard",
+  blockSize: "Block size",
+  blockType: "Block type",
+  cubeAge: "Cube age",
+  employeeId: "Employee ID",
+  employeeName: "Employee name",
+  material: "Material",
+  requiredStrength: "Required strength",
+  strengthUnit: "Strength unit",
+  testType: "Test type",
+};
+
+function activityFieldLabel(key: string) {
+  return activityFieldLabels[key] ??
+    key
+      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+      .replace(/[_-]+/g, " ")
+      .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function activitySubmittedFields(details: Record<string, unknown>) {
+  const safeDetails = sanitizeActivityValue(details) as Record<string, unknown>;
+  const submitted = safeDetails.submitted;
+  if (submitted && typeof submitted === "object" && !Array.isArray(submitted)) {
+    return Object.entries(submitted as Record<string, unknown>);
+  }
+  if (submitted !== undefined && submitted !== null) {
+    return [["Submitted value", submitted] as [string, unknown]];
+  }
+  return [];
+}
+
+function ActivityValue({ value }: { value: unknown }) {
+  if (value === null || value === undefined) {
+    return <span className="text-muted-foreground">Not set</span>;
+  }
+  if (typeof value === "boolean") return <span>{value ? "Yes" : "No"}</span>;
+  if (Array.isArray(value)) {
+    if (!value.length) return <span className="text-muted-foreground">None</span>;
+    return (
+      <div className="space-y-2">
+        {value.map((entry, index) => (
+          <div key={index} className="rounded-md bg-muted/40 px-2.5 py-2">
+            {typeof entry === "object" && entry !== null ? (
+              <ActivityValue value={entry} />
+            ) : (
+              <div className="flex gap-2">
+                <span className="shrink-0 text-muted-foreground">Item {index + 1}</span>
+                <ActivityValue value={entry} />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  }
+  if (typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>);
+    if (!entries.length) return <span className="text-muted-foreground">No details</span>;
+    return (
+      <dl className="space-y-2">
+        {entries.map(([key, entry]) => (
+          <div key={key} className="grid gap-1 sm:grid-cols-[minmax(8rem,0.8fr)_minmax(0,1.5fr)] sm:gap-3">
+            <dt className="text-xs font-medium text-muted-foreground">{activityFieldLabel(key)}</dt>
+            <dd className="min-w-0 break-words text-sm"><ActivityValue value={entry} /></dd>
+          </div>
+        ))}
+      </dl>
+    );
+  }
+  return <span className="break-words">{String(value)}</span>;
 }
 
 function EmployeeActivitySection({ isAdmin }: { isAdmin: boolean }) {
@@ -1479,6 +1548,7 @@ function EmployeeActivitySection({ isAdmin }: { isAdmin: boolean }) {
 
 function ActivityChangeItem({ change }: { change: EmployeeActivityChange }) {
   const actionLabel = change.action.charAt(0).toUpperCase() + change.action.slice(1);
+  const submittedFields = activitySubmittedFields(change.details);
   return (
     <article className="rounded-lg border bg-muted/15 p-3" data-testid={`activity-change-${change.id}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -1494,12 +1564,28 @@ function ActivityChangeItem({ change }: { change: EmployeeActivityChange }) {
         <time className="shrink-0 text-xs text-muted-foreground">{formatActivityDate(change.occurredAt, true)}</time>
       </div>
       <div className="mt-3 rounded-md border border-dashed bg-background/70 p-2.5">
-        <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-          <FileJson className="h-3.5 w-3.5" /> Sanitized request / response details
+        <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+          <FileJson className="h-3.5 w-3.5" /> Fields submitted
         </div>
-        <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-muted-foreground">
-          {activityDetailsText(change.details)}
-        </pre>
+        {submittedFields.length ? (
+          <dl className="divide-y rounded-md border bg-background px-3">
+            {submittedFields.map(([key, value]) => (
+              <div key={key} className="grid gap-1 py-2.5 sm:grid-cols-[minmax(8rem,0.8fr)_minmax(0,1.5fr)] sm:gap-3">
+                <dt className="text-xs font-medium text-muted-foreground">{activityFieldLabel(key)}</dt>
+                <dd className="min-w-0 break-words text-sm"><ActivityValue value={value} /></dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No field values were included with this change. Use the item type and ID above to identify the affected entry.
+          </p>
+        )}
+        {change.details.truncated === true || typeof change.details.submittedPreview === "string" ? (
+          <p className="mt-2 text-xs text-muted-foreground">
+            This change contained more detail than the audit record can store; some submitted values were shortened.
+          </p>
+        ) : null}
       </div>
     </article>
   );

@@ -261,16 +261,9 @@ export function employeeActivityAuditMiddleware(
     ? req.user.id.slice("employee:".length).trim()
     : "";
   const path = req.path;
-  const isQcRecordCreate =
-    req.method === "POST" && /\/records\/?$/.test(path);
-  const isHistoricalAgeBackfillApply =
-    req.method === "POST" && /\/records\/age-backfill\/apply\/?$/.test(path);
-
   if (
     !action ||
     !employeeId ||
-    isQcRecordCreate ||
-    isHistoricalAgeBackfillApply ||
     /\/logout(?:\/|$)/i.test(path) ||
     /\/employee-activity(?:\/|$)/i.test(path)
   ) {
@@ -289,12 +282,6 @@ export function employeeActivityAuditMiddleware(
     if (res.statusCode < 200 || res.statusCode >= 300) return;
 
     const id = getPathEntityId(path) ?? responseEntityId;
-    const submitted = sanitizeAuditValue(req.body ?? {});
-    const serialized = JSON.stringify(submitted);
-    const boundedSubmitted =
-      serialized.length > 20000
-        ? { submittedPreview: serialized.slice(0, 19000), truncated: true }
-        : submitted;
 
     void recordEmployeeActivityChange({
       employeeId,
@@ -304,7 +291,7 @@ export function employeeActivityAuditMiddleware(
       entityType: getEntityType(path),
       entityId: id,
       path,
-      submitted: boundedSubmitted,
+      submitted: req.body ?? {},
     }).catch((error: unknown) => {
       console.error(
         "Could not persist employee activity event.",
