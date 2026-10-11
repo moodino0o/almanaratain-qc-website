@@ -414,7 +414,18 @@ export default function RecordForm() {
   };
 
   const sieveMassUnit = "g";
-  const kerbTestingDate = addDaysToDate(sampleDate, details.age);
+  const kerbStrengthValues = testType === TestType.Kerb_Stone
+    ? testRows
+        .map((row) => calculateKerbBendingStrength(row))
+        .filter((value): value is string => value !== null && value !== "")
+        .map(Number)
+        .filter(Number.isFinite)
+    : [];
+  const kerbStrengthAverage = kerbStrengthValues.length
+    ? kerbStrengthValues.reduce((sum, value) => sum + value, 0) / kerbStrengthValues.length
+    : null;
+  const kerbStrengthMinimum = kerbStrengthValues.length ? Math.min(...kerbStrengthValues) : null;
+  const kerbStrengthMaximum = kerbStrengthValues.length ? Math.max(...kerbStrengthValues) : null;
   const blockDimensions = blockDimensionsFromSize(details.blockSize);
   const isDammamBlock =
     testType === TestType.Blocks && isDammamBlockLocation(locationValue);
@@ -716,11 +727,7 @@ export default function RecordForm() {
           { key: "sulphate", label: "SO3", type: "number" },
         ];
       case TestType.Kerb_Stone:
-        return [
-          { key: "averageStrength", label: "Avg. Strength", type: "number" },
-          { key: "minimumStrength", label: "Min. Strength", type: "number" },
-          { key: "maximumStrength", label: "Max. Strength", type: "number" }
-        ];
+        return [];
       default:
         return [
           { key: "observation1", label: "Observation 1", type: "text" },
@@ -1212,7 +1219,10 @@ export default function RecordForm() {
       delete payloadDetails.strengthStandardAssignmentMode;
     }
     if (testType === TestType.Kerb_Stone) {
-      payloadDetails.testingDate = kerbTestingDate;
+      delete payloadDetails.testingDate;
+      delete payloadDetails.averageStrength;
+      delete payloadDetails.minimumStrength;
+      delete payloadDetails.maximumStrength;
       const kerbStandard = matchingStrengthStandards[0];
       if (kerbStandard) {
         payloadDetails.strengthStandardId = kerbStandard.id;

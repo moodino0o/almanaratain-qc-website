@@ -3046,6 +3046,7 @@ function KerbstoneResultsSummary({
     ? completeStrengths.reduce((sum, value) => sum + value, 0) / completeStrengths.length
     : null;
   const minimum = completeStrengths.length ? Math.min(...completeStrengths) : null;
+  const maximum = completeStrengths.length ? Math.max(...completeStrengths) : null;
   const requiredAverage = numericValue(standard?.requiredStrength);
   const requiredIndividual = numericValue(standard?.minimumIndividualStrength);
   const strengthStatus =
@@ -3074,23 +3075,31 @@ function KerbstoneResultsSummary({
       : absorptionResults.every((result) => result.status === "Pass")
         ? "Pass"
         : "Review";
+  const averageAbsorption = absorptionResults
+    .map((result) => numericValue(result.value))
+    .filter((value): value is number => value !== null)
+    .reduce((values, value, _, all) => {
+      values.sum += value;
+      values.count = all.length;
+      return values;
+    }, { sum: 0, count: 0 });
   const summaryRows = [
     {
       test: "Characteristic bending strength",
-      result: average === null ? "—" : `${formatNumber(average)} MPa average`,
+      result: average === null ? "—" : formatNumber(average),
       requirement: requiredAverage === null ? "Not configured" : `≥ ${formatNumber(requiredAverage)} MPa`,
       status: strengthStatus,
     },
     {
       test: "Minimum individual bending strength",
-      result: minimum === null ? "—" : `${formatNumber(minimum)} MPa minimum`,
+      result: minimum === null ? "—" : formatNumber(minimum),
       requirement: requiredIndividual === null ? "Not configured" : `≥ ${formatNumber(requiredIndividual)} MPa`,
       status: strengthStatus,
     },
     {
       test: "Water absorption",
-      result: absorptionResults.length
-        ? `${absorptionResults.filter((result) => result.status !== "Review").length} of ${absorptionResults.length} specimens assessed`
+      result: averageAbsorption.count
+        ? formatNumber(averageAbsorption.sum / averageAbsorption.count)
         : "Not entered",
       requirement: standard?.waterAbsorptionLimit == null
         ? "Not configured"
@@ -3118,6 +3127,12 @@ function KerbstoneResultsSummary({
           ))}
         </tbody>
       </table>
+      <div className="kerb-bending-stats" aria-label="Calculated bending strength statistics">
+        <strong>Bending strength</strong>
+        <span>Average: {average === null ? "—" : `${formatNumber(average)} MPa`}</span>
+        <span>Minimum: {minimum === null ? "—" : `${formatNumber(minimum)} MPa`}</span>
+        <span>Maximum: {maximum === null ? "—" : `${formatNumber(maximum)} MPa`}</span>
+      </div>
     </section>
   );
 }
@@ -3189,7 +3204,10 @@ function ConfiguredDetailsReport({
       "batterAngle",
     ]);
     const isDateField = field.key === "sampleDate" || field.key === "testingDate";
+    const kerbAge = isKerb ? numericValue(detailRawValue(record.details, ["age"], "")) : null;
     const rawValue = field.key === "sampleDate" ? record.sampleDate
+      : isKerb && field.key === "testingDate"
+        ? kerbAge === null ? "" : addDaysToDate(record.sampleDate, kerbAge)
       : field.key === "location" ? record.location
         : field.key === "material" ? record.material
           : field.key === "testedBy" ? record.testedBy
@@ -3207,8 +3225,14 @@ function ConfiguredDetailsReport({
       />
     );
   };
+  const kerbDateFields = ["sampleDate", "testingDate"]
+    .map((key) => columns.find((field) => field.key === key))
+    .filter((field): field is (typeof columns)[number] => field !== undefined);
   const kerbDetails = record.testType === "Kerb Stone"
-    ? columns.filter((field) => !standardFieldKeys.has(field.key))
+    ? columns.filter((field) =>
+        !standardFieldKeys.has(field.key) &&
+        field.key !== "sampleDate" &&
+        field.key !== "testingDate")
     : columns;
   const kerbStandardDetails = columns.filter((field) => standardFieldKeys.has(field.key));
   return <>
@@ -3216,6 +3240,7 @@ function ConfiguredDetailsReport({
       <div className="kerb-details-layout">
         <section className="kerb-report-details">
           <SectionHeading>Kerb Stone Details</SectionHeading>
+          <div className="kerb-date-fields">{kerbDateFields.map(renderField)}</div>
           <div className="report-fields">{kerbDetails.map(renderField)}</div>
         </section>
         <section className="kerb-report-standard">

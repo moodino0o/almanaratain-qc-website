@@ -595,6 +595,26 @@
   padding-left: 5mm;
 }
 
+.kerb-date-fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  margin-bottom: 2mm;
+}
+
+.kerb-bending-stats {
+  display: flex;
+  justify-content: center;
+  gap: 5mm;
+  padding-top: 1.5mm;
+  font-size: 7px;
+  text-align: center;
+}
+
+.kerb-bending-stats strong {
+  font-weight: 700;
+}
+
 .kerb-details-layout .report-section-heading {
   margin: 0 0 2mm;
   font-size: 10px;
