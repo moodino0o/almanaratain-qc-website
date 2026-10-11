@@ -742,11 +742,17 @@ export async function ensureDefaultStrengthStandards() {
           blockType: "Road kerb",
           blockSize: "915 × 125 × 225 mm",
           requiredStrength: "5",
+          kerbClass: "2",
+          kerbMarking: "T",
+          minimumIndividualStrength: "4",
         },
         {
           blockType: "Edge kerb",
           blockSize: "915 × 50 × 150 mm",
           requiredStrength: "3.5",
+          kerbClass: "1",
+          kerbMarking: "S",
+          minimumIndividualStrength: "2.8",
         },
       ]) {
         const key = strengthStandardKey({
@@ -755,15 +761,47 @@ export async function ensureDefaultStrengthStandards() {
           blockType: standard.blockType,
           blockSize: standard.blockSize,
         });
+        const existingKerbStandard = existing.find(
+          (row) => strengthStandardKey(row) === key,
+        );
+        if (existingKerbStandard) {
+          const legacyDefault = existingKerbStandard.bsStandard === "Kerbstone specific strength";
+          const nextKerbStandard = {
+            kerbClass: existingKerbStandard.kerbClass ?? standard.kerbClass,
+            kerbMarking: existingKerbStandard.kerbMarking ?? standard.kerbMarking,
+            minimumIndividualStrength:
+              existingKerbStandard.minimumIndividualStrength ?? standard.minimumIndividualStrength,
+            strengthUnit: existingKerbStandard.kerbClass === null
+              ? "MPa"
+              : existingKerbStandard.strengthUnit,
+            bsStandard: legacyDefault ? "Kerbstone flexural strength" : existingKerbStandard.bsStandard,
+          };
+          if (
+            existingKerbStandard.kerbClass !== nextKerbStandard.kerbClass ||
+            existingKerbStandard.kerbMarking !== nextKerbStandard.kerbMarking ||
+            existingKerbStandard.minimumIndividualStrength !== nextKerbStandard.minimumIndividualStrength ||
+            existingKerbStandard.strengthUnit !== nextKerbStandard.strengthUnit ||
+            existingKerbStandard.bsStandard !== nextKerbStandard.bsStandard
+          ) {
+            await db.update(qcStrengthStandardsTable)
+              .set(nextKerbStandard)
+              .where(eq(qcStrengthStandardsTable.id, existingKerbStandard.id));
+            insertedDefault = true;
+          }
+          continue;
+        }
         if (existingKeys.has(key)) continue;
         await db.insert(qcStrengthStandardsTable).values({
           testType: "Kerb Stone",
           material: "Kerbstone",
           blockType: standard.blockType,
           blockSize: standard.blockSize,
-          bsStandard: "Kerbstone specific strength",
+          kerbClass: standard.kerbClass,
+          kerbMarking: standard.kerbMarking,
+          bsStandard: "Kerbstone flexural strength",
           requiredStrength: standard.requiredStrength,
-          strengthUnit: "N/mm²",
+          minimumIndividualStrength: standard.minimumIndividualStrength,
+          strengthUnit: "MPa",
         });
         existingKeys.add(key);
         insertedDefault = true;
@@ -1569,8 +1607,12 @@ const toStrengthStandard = (row: typeof qcStrengthStandardsTable.$inferSelect) =
   blockType: row.blockType,
   blockSize: row.blockSize,
   cubeAge: row.cubeAge === null ? null : Number(row.cubeAge),
+  kerbClass: row.kerbClass === null ? null : Number(row.kerbClass),
+  kerbMarking: row.kerbMarking,
   bsStandard: row.bsStandard,
   requiredStrength: Number(row.requiredStrength),
+  minimumIndividualStrength:
+    row.minimumIndividualStrength === null ? null : Number(row.minimumIndividualStrength),
   dammamAverageStrength:
     row.dammamAverageStrength === null ? null : Number(row.dammamAverageStrength),
   dammamMinimumStrength:
@@ -1998,8 +2040,13 @@ router.post("/strength-standards", requireAdministrator, async (req, res): Promi
       blockType,
       blockSize: body.data.blockSize?.trim() || null,
       cubeAge: body.data.testType === "Precast" ? String(body.data.cubeAge) : null,
+      kerbClass: body.data.kerbClass == null ? null : String(body.data.kerbClass),
+      kerbMarking: body.data.kerbMarking?.trim() || null,
       bsStandard: body.data.bsStandard.trim(),
       requiredStrength: String(body.data.requiredStrength),
+      minimumIndividualStrength: body.data.minimumIndividualStrength == null
+        ? null
+        : String(body.data.minimumIndividualStrength),
       dammamAverageStrength: isBlockStandard
         ? String(body.data.dammamAverageStrength ?? dammamDefaults.average)
         : null,
@@ -2070,9 +2117,23 @@ router.patch("/strength-standards/:id", requireAdministrator, async (req, res): 
       ? { blockSize: body.data.blockSize?.trim() || null }
       : {}),
     cubeAge: nextTestType === "Precast" ? String(nextCubeAge) : null,
+    ...(body.data.kerbClass !== undefined
+      ? { kerbClass: body.data.kerbClass == null ? null : String(body.data.kerbClass) }
+      : {}),
+    ...(body.data.kerbMarking !== undefined
+      ? { kerbMarking: body.data.kerbMarking?.trim() || null }
+      : {}),
     ...(body.data.bsStandard !== undefined ? { bsStandard: body.data.bsStandard.trim() } : {}),
     ...(body.data.requiredStrength !== undefined
       ? { requiredStrength: String(body.data.requiredStrength) }
+      : {}),
+    ...(body.data.minimumIndividualStrength !== undefined
+      ? {
+          minimumIndividualStrength:
+            body.data.minimumIndividualStrength == null
+              ? null
+              : String(body.data.minimumIndividualStrength),
+        }
       : {}),
     dammamAverageStrength: nextTestType === "Blocks"
       ? String(

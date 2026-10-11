@@ -1194,10 +1194,20 @@ export default function RecordForm() {
     }
     if (testType === TestType.Kerb_Stone) {
       payloadDetails.testingDate = kerbTestingDate;
-      if (matchingStrengthStandards[0]) {
-        payloadDetails.strengthStandardId = matchingStrengthStandards[0].id;
+      const kerbStandard = matchingStrengthStandards[0];
+      if (kerbStandard) {
+        payloadDetails.strengthStandardId = kerbStandard.id;
+        payloadDetails.kerbClass = kerbStandard.kerbClass ?? "";
+        payloadDetails.kerbMarking = kerbStandard.kerbMarking ?? "";
+        payloadDetails.characteristicBendingStrength = kerbStandard.requiredStrength;
+        payloadDetails.minimumIndividualStrength =
+          kerbStandard.minimumIndividualStrength ?? "";
       } else {
         delete payloadDetails.strengthStandardId;
+        delete payloadDetails.kerbClass;
+        delete payloadDetails.kerbMarking;
+        delete payloadDetails.characteristicBendingStrength;
+        delete payloadDetails.minimumIndividualStrength;
       }
     }
     if (testType === TestType.Blocks) {

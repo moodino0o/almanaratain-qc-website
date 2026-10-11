@@ -3012,7 +3012,7 @@ function ConfiguredDetailsReport({
   const defaults = REPORT_LAYOUT_FIELD_GROUPS[record.testType]?.[tableKey] ?? [];
   const configured = layout?.config.columns[tableKey];
   const configuredWithNewPrecastFields =
-    record.testType === "Precast" && configured
+    (record.testType === "Precast" || record.testType === "Kerb Stone") && configured
       ? [
           ...configured,
           ...defaults

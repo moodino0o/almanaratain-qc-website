@@ -90,6 +90,9 @@ type StandardForm = {
   blockType: string;
   blockSize: string;
   cubeAge: string;
+  kerbClass: string;
+  kerbMarking: string;
+  minimumIndividualStrength: string;
   bsStandard: string;
   requiredStrength: string;
   dammamAverageStrength: string;
@@ -131,6 +134,9 @@ const emptyForm: StandardForm = {
   blockType: "",
   blockSize: "",
   cubeAge: "",
+  kerbClass: "",
+  kerbMarking: "",
+  minimumIndividualStrength: "",
   bsStandard: "",
   requiredStrength: "",
   dammamAverageStrength: "",
@@ -196,6 +202,11 @@ function formFromStandard(standard: StrengthStandard): StandardForm {
     blockType: standard.blockType ?? "",
     blockSize: standard.blockSize ?? "",
     cubeAge: standard.cubeAge == null ? "" : String(standard.cubeAge),
+    kerbClass: standard.kerbClass == null ? "" : String(standard.kerbClass),
+    kerbMarking: standard.kerbMarking ?? "",
+    minimumIndividualStrength: standard.minimumIndividualStrength == null
+      ? ""
+      : String(standard.minimumIndividualStrength),
     bsStandard: standard.bsStandard,
     requiredStrength: String(standard.requiredStrength),
     dammamAverageStrength: String(
@@ -355,6 +366,14 @@ function StandardEditor({
                 blockType: "",
                 blockSize: "",
                 cubeAge: "",
+                kerbClass: "",
+                kerbMarking: "",
+                minimumIndividualStrength: "",
+                strengthUnit: value === TestType.Kerb_Stone
+                  ? "MPa"
+                  : form.testType === TestType.Kerb_Stone
+                    ? "N/mm²"
+                    : form.strengthUnit,
                 dammamAverageStrength:
                   value === TestType.Blocks
                     ? defaultDammamCriteria("").dammamAverageStrength
@@ -501,7 +520,9 @@ function StandardEditor({
         <div className="grid grid-cols-[1fr_120px] gap-3">
           <div className="space-y-2">
             <Label>
-              {form.testType === TestType.Blocks
+              {form.testType === TestType.Kerb_Stone
+                ? "Characteristic bending strength"
+                : form.testType === TestType.Blocks
                 ? "Other-plant minimum average"
                 : form.testType === TestType.Precast
                   ? "Minimum average"
@@ -529,6 +550,25 @@ function StandardEditor({
             />
           </div>
         </div>
+        {form.testType === TestType.Kerb_Stone && (
+          <div className="grid grid-cols-1 gap-4 rounded-md border bg-muted/20 p-4 sm:grid-cols-3 md:col-span-2">
+            <div className="space-y-2">
+              <Label>Class</Label>
+              <Input type="number" min="1" step="1" value={form.kerbClass}
+                onChange={(event) => setForm({ ...form, kerbClass: event.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Marking</Label>
+              <Input value={form.kerbMarking}
+                onChange={(event) => setForm({ ...form, kerbMarking: event.target.value.toUpperCase() })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Minimum individual strength (MPa)</Label>
+              <Input type="number" min="0" step="0.1" value={form.minimumIndividualStrength}
+                onChange={(event) => setForm({ ...form, minimumIndividualStrength: event.target.value })} />
+            </div>
+          </div>
+        )}
         {form.testType === TestType.Blocks && (
           <div className="space-y-3 rounded-md border border-primary/20 bg-primary/[0.03] p-4 md:col-span-2">
             <div>
@@ -1021,10 +1061,12 @@ function StrengthStandardsFolder({
                     <th className={`px-4 py-3 font-semibold ${isPrecast ? "" : "hidden"}`}>Cube Age</th>
                     <th className={`px-4 py-3 font-semibold ${isPrecast ? "hidden" : ""}`}>{isKerbStone ? "Kerb Type" : "Block Type"}</th>
                     <th className={`px-4 py-3 font-semibold ${isPrecast ? "hidden" : ""}`}>{isKerbStone ? "Kerb Size" : "Block Size"}</th>
-                    <th className="px-4 py-3 font-semibold">{isBlocks ? "Reference (not Dammam limit)" : "BS Standard"}</th>
+                    {isKerbStone && <><th className="px-4 py-3 font-semibold">Class</th><th className="px-4 py-3 font-semibold">Marking</th></>}
+                    <th className="px-4 py-3 font-semibold">{isBlocks ? "Reference (not Dammam limit)" : isKerbStone ? "Strength type" : "BS Standard"}</th>
                     <th className="px-4 py-3 font-semibold">
-                      {isBlocks ? "Other-plant minimum average" : isPrecast ? "Minimum average" : "Minimum"}
+                      {isBlocks ? "Other-plant minimum average" : isPrecast ? "Minimum average" : isKerbStone ? "Characteristic bending" : "Minimum"}
                     </th>
+                    {isKerbStone && <th className="px-4 py-3 font-semibold">Minimum individual</th>}
                     {isBlocks && <th className="px-4 py-3 font-semibold">Dammam limits</th>}
                     <th className="px-4 py-3 text-right font-semibold">
                       Actions
@@ -1049,10 +1091,17 @@ function StrengthStandardsFolder({
                       <td className={`px-4 py-3 text-muted-foreground ${isPrecast ? "hidden" : ""}`}>
                         {standard.blockSize || "—"}
                       </td>
+                      {isKerbStone && <>
+                        <td className="px-4 py-3">{standard.kerbClass == null ? "—" : `Class ${standard.kerbClass}`}</td>
+                        <td className="px-4 py-3">{standard.kerbMarking || "—"}</td>
+                      </>}
                       <td className="px-4 py-3">{standard.bsStandard}</td>
                       <td className="px-4 py-3 font-semibold">
                         {standard.requiredStrength} {standard.strengthUnit}
                       </td>
+                      {isKerbStone && <td className="px-4 py-3 font-semibold">
+                        {standard.minimumIndividualStrength == null ? "—" : `${standard.minimumIndividualStrength} ${standard.strengthUnit}`}
+                      </td>}
                       {isBlocks && (
                         <td className="px-4 py-3">
                           {isSandwichBlockType(standard.blockType)
@@ -1096,6 +1145,11 @@ function StrengthStandardsFolder({
                 <Plus className="mr-2 h-4 w-4" /> Add standard
               </Button>
             </div>
+          )}
+          {isKerbStone && (
+            <p className="border-t px-4 py-3 text-xs text-muted-foreground">
+              Reference only: Class 3 · Marking U · characteristic bending strength 6.0 MPa · minimum individual strength 4.8 MPa. No product has been assigned to Class 3.
+            </p>
           )}
         </div>
       )}
@@ -2357,6 +2411,8 @@ export default function Standards() {
     const requiredStrength = Number(form.requiredStrength);
     const dammamAverageStrength = Number(form.dammamAverageStrength);
     const dammamMinimumStrength = Number(form.dammamMinimumStrength);
+    const kerbClass = Number(form.kerbClass);
+    const minimumIndividualStrength = Number(form.minimumIndividualStrength);
     const isDammamSandwichStandard =
       form.testType === TestType.Blocks && isSandwichBlockType(form.blockType);
     if (
@@ -2371,7 +2427,14 @@ export default function Standards() {
         (!form.blockType.trim() || !form.blockSize.trim())) ||
         (form.testType === TestType.Paving_Blocks && !form.blockSize.trim()) ||
         (form.testType === TestType.Kerb_Stone &&
-          (!form.blockType.trim() || !form.blockSize.trim()))) ||
+          (!form.blockType.trim() ||
+            !form.blockSize.trim() ||
+            !Number.isInteger(kerbClass) ||
+            kerbClass < 1 ||
+            !form.kerbMarking.trim() ||
+            form.minimumIndividualStrength.trim() === "" ||
+            !Number.isFinite(minimumIndividualStrength) ||
+            minimumIndividualStrength < 0))) ||
       (form.testType === TestType.Blocks &&
         (form.dammamAverageStrength.trim() === "" ||
           !Number.isFinite(dammamAverageStrength) ||
@@ -2406,8 +2469,14 @@ export default function Standards() {
         form.testType === TestType.Precast
           ? (Number(form.cubeAge) as 1 | 7 | 28)
           : null,
+      kerbClass:
+        form.testType === TestType.Kerb_Stone ? kerbClass : null,
+      kerbMarking:
+        form.testType === TestType.Kerb_Stone ? form.kerbMarking.trim().toUpperCase() : null,
       bsStandard: form.bsStandard.trim(),
       requiredStrength,
+      minimumIndividualStrength:
+        form.testType === TestType.Kerb_Stone ? minimumIndividualStrength : null,
       dammamAverageStrength:
         form.testType === TestType.Blocks ? dammamAverageStrength : null,
       dammamMinimumStrength:
@@ -2424,10 +2493,12 @@ export default function Standards() {
         setEditorOpen(false);
         setExpandedStrengthFolders((current) => ({
           ...current,
-           [data.testType === TestType.Blocks
-             ? "blocks"
-             : data.testType === TestType.Paving_Blocks
-               ? "paving"
+           [data.testType === TestType.Kerb_Stone
+             ? "kerbStone"
+             : data.testType === TestType.Blocks
+               ? "blocks"
+               : data.testType === TestType.Paving_Blocks
+                 ? "paving"
                  : data.testType === TestType.Precast
                    ? "precast"
                    : "readyMix"]: true,

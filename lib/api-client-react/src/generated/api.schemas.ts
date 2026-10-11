@@ -332,8 +332,14 @@ export interface StrengthStandard {
   blockSize: string | null;
   /** @nullable */
   cubeAge: number | null;
+  /** @nullable */
+  kerbClass: number | null;
+  /** @nullable */
+  kerbMarking: string | null;
   bsStandard: string;
   requiredStrength: number;
+  /** @nullable */
+  minimumIndividualStrength: number | null;
   /** @nullable */
   dammamAverageStrength: number | null;
   /** @nullable */
@@ -363,10 +369,22 @@ export interface StrengthStandardInput {
   blockSize?: string | null;
   /** @nullable */
   cubeAge?: StrengthStandardInputCubeAge;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  kerbClass?: number | null;
+  /** @nullable */
+  kerbMarking?: string | null;
   /** @minLength 1 */
   bsStandard: string;
   /** @minimum 0 */
   requiredStrength: number;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  minimumIndividualStrength?: number | null;
   /**
      * @minimum 0
      * @nullable
@@ -400,12 +418,24 @@ export interface StrengthStandardUpdate {
   blockType?: string | null;
   /** @nullable */
   blockSize?: string | null;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  kerbClass?: number | null;
+  /** @nullable */
+  kerbMarking?: string | null;
   /** @nullable */
   cubeAge?: StrengthStandardUpdateCubeAge;
   /** @minLength 1 */
   bsStandard?: string;
   /** @minimum 0 */
   requiredStrength?: number;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  minimumIndividualStrength?: number | null;
   /**
      * @minimum 0
      * @nullable

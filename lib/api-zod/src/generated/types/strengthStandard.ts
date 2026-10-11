@@ -17,8 +17,14 @@ export interface StrengthStandard {
   blockSize: string | null;
   /** @nullable */
   cubeAge: number | null;
+  /** @nullable */
+  kerbClass: number | null;
+  /** @nullable */
+  kerbMarking: string | null;
   bsStandard: string;
   requiredStrength: number;
+  /** @nullable */
+  minimumIndividualStrength: number | null;
   /** @nullable */
   dammamAverageStrength: number | null;
   /** @nullable */

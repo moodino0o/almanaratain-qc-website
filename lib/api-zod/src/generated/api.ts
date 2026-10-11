@@ -629,8 +629,11 @@ export const ListStrengthStandardsResponseItem = zod.object({
   "blockType": zod.string().nullable(),
   "blockSize": zod.string().nullable(),
   "cubeAge": zod.number().nullable(),
+  "kerbClass": zod.number().nullable(),
+  "kerbMarking": zod.string().nullable(),
   "bsStandard": zod.string(),
   "requiredStrength": zod.number(),
+  "minimumIndividualStrength": zod.number().nullable(),
   "dammamAverageStrength": zod.number().nullable(),
   "dammamMinimumStrength": zod.number().nullable(),
   "strengthUnit": zod.string()
@@ -643,7 +646,10 @@ export const ListStrengthStandardsResponse = zod.array(ListStrengthStandardsResp
  */
 
 
+
 export const createStrengthStandardBodyRequiredStrengthMin = 0;
+
+export const createStrengthStandardBodyMinimumIndividualStrengthMin = 0;
 
 export const createStrengthStandardBodyDammamAverageStrengthMin = 0;
 
@@ -657,8 +663,11 @@ export const CreateStrengthStandardBody = zod.object({
   "blockType": zod.string().nullish(),
   "blockSize": zod.string().nullish(),
   "cubeAge": zod.union([zod.literal(1),zod.literal(7),zod.literal(28),zod.literal(null)]).nullish(),
+  "kerbClass": zod.number().min(1).nullish(),
+  "kerbMarking": zod.string().nullish(),
   "bsStandard": zod.string().min(1),
   "requiredStrength": zod.number().min(createStrengthStandardBodyRequiredStrengthMin),
+  "minimumIndividualStrength": zod.number().min(createStrengthStandardBodyMinimumIndividualStrengthMin).nullish(),
   "dammamAverageStrength": zod.number().min(createStrengthStandardBodyDammamAverageStrengthMin).nullish(),
   "dammamMinimumStrength": zod.number().min(createStrengthStandardBodyDammamMinimumStrengthMin).nullish(),
   "strengthUnit": zod.string().default(createStrengthStandardBodyStrengthUnitDefault)
@@ -671,8 +680,11 @@ export const CreateStrengthStandardResponse = zod.object({
   "blockType": zod.string().nullable(),
   "blockSize": zod.string().nullable(),
   "cubeAge": zod.number().nullable(),
+  "kerbClass": zod.number().nullable(),
+  "kerbMarking": zod.string().nullable(),
   "bsStandard": zod.string(),
   "requiredStrength": zod.number(),
+  "minimumIndividualStrength": zod.number().nullable(),
   "dammamAverageStrength": zod.number().nullable(),
   "dammamMinimumStrength": zod.number().nullable(),
   "strengthUnit": zod.string()
@@ -688,7 +700,10 @@ export const UpdateStrengthStandardParams = zod.object({
 
 
 
+
 export const updateStrengthStandardBodyRequiredStrengthMin = 0;
+
+export const updateStrengthStandardBodyMinimumIndividualStrengthMin = 0;
 
 export const updateStrengthStandardBodyDammamAverageStrengthMin = 0;
 
@@ -701,9 +716,12 @@ export const UpdateStrengthStandardBody = zod.object({
   "material": zod.string().min(1).optional(),
   "blockType": zod.string().nullish(),
   "blockSize": zod.string().nullish(),
+  "kerbClass": zod.number().min(1).nullish(),
+  "kerbMarking": zod.string().nullish(),
   "cubeAge": zod.union([zod.literal(1),zod.literal(7),zod.literal(28),zod.literal(null)]).nullish(),
   "bsStandard": zod.string().min(1).optional(),
   "requiredStrength": zod.number().min(updateStrengthStandardBodyRequiredStrengthMin).optional(),
+  "minimumIndividualStrength": zod.number().min(updateStrengthStandardBodyMinimumIndividualStrengthMin).nullish(),
   "dammamAverageStrength": zod.number().min(updateStrengthStandardBodyDammamAverageStrengthMin).nullish(),
   "dammamMinimumStrength": zod.number().min(updateStrengthStandardBodyDammamMinimumStrengthMin).nullish(),
   "strengthUnit": zod.string().optional()
@@ -716,8 +734,11 @@ export const UpdateStrengthStandardResponse = zod.object({
   "blockType": zod.string().nullable(),
   "blockSize": zod.string().nullable(),
   "cubeAge": zod.number().nullable(),
+  "kerbClass": zod.number().nullable(),
+  "kerbMarking": zod.string().nullable(),
   "bsStandard": zod.string(),
   "requiredStrength": zod.number(),
+  "minimumIndividualStrength": zod.number().nullable(),
   "dammamAverageStrength": zod.number().nullable(),
   "dammamMinimumStrength": zod.number().nullable(),
   "strengthUnit": zod.string()

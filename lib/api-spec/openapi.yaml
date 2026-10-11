@@ -1860,8 +1860,11 @@ components:
         - blockType
         - blockSize
         - cubeAge
+        - kerbClass
+        - kerbMarking
         - bsStandard
         - requiredStrength
+        - minimumIndividualStrength
         - dammamAverageStrength
         - dammamMinimumStrength
         - strengthUnit
@@ -1878,10 +1881,16 @@ components:
           type: ["string", "null"]
         cubeAge:
           type: ["number", "null"]
+        kerbClass:
+          type: ["number", "null"]
+        kerbMarking:
+          type: ["string", "null"]
         bsStandard:
           type: string
         requiredStrength:
           type: number
+        minimumIndividualStrength:
+          type: ["number", "null"]
         dammamAverageStrength:
           type: ["number", "null"]
         dammamMinimumStrength:
@@ -1908,11 +1917,19 @@ components:
         cubeAge:
           type: ["number", "null"]
           enum: [1, 7, 28, null]
+        kerbClass:
+          type: ["number", "null"]
+          minimum: 1
+        kerbMarking:
+          type: ["string", "null"]
         bsStandard:
           type: string
           minLength: 1
         requiredStrength:
           type: number
+          minimum: 0
+        minimumIndividualStrength:
+          type: ["number", "null"]
           minimum: 0
         dammamAverageStrength:
           type: ["number", "null"]
@@ -1935,6 +1952,11 @@ components:
           type: ["string", "null"]
         blockSize:
           type: ["string", "null"]
+        kerbClass:
+          type: ["number", "null"]
+          minimum: 1
+        kerbMarking:
+          type: ["string", "null"]
         cubeAge:
           type: ["number", "null"]
           enum: [1, 7, 28, null]
@@ -1943,6 +1965,9 @@ components:
           minLength: 1
         requiredStrength:
           type: number
+          minimum: 0
+        minimumIndividualStrength:
+          type: ["number", "null"]
           minimum: 0
         dammamAverageStrength:
           type: ["number", "null"]

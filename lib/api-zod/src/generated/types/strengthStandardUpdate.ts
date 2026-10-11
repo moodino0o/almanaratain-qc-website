@@ -16,12 +16,24 @@ export interface StrengthStandardUpdate {
   blockType?: string | null;
   /** @nullable */
   blockSize?: string | null;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  kerbClass?: number | null;
+  /** @nullable */
+  kerbMarking?: string | null;
   /** @nullable */
   cubeAge?: StrengthStandardUpdateCubeAge;
   /** @minLength 1 */
   bsStandard?: string;
   /** @minimum 0 */
   requiredStrength?: number;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  minimumIndividualStrength?: number | null;
   /**
      * @minimum 0
      * @nullable
