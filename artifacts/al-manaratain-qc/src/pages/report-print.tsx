@@ -3199,7 +3199,13 @@ function ConfiguredDetailsReport({
       : isKerb && integerDetailKeys.has(field.key) && numericValue(rawValue) !== null
         ? formatWholeNumber(rawValue)
         : rawValue;
-    return <ReportField key={field.key} label={field.label} value={textValue(value)} />;
+    return (
+      <ReportField
+        key={field.key}
+        label={field.label}
+        value={isKerb ? rawTextValue(value) : textValue(value)}
+      />
+    );
   };
   const kerbDetails = record.testType === "Kerb Stone"
     ? columns.filter((field) => !standardFieldKeys.has(field.key))
@@ -3209,7 +3215,7 @@ function ConfiguredDetailsReport({
     {record.testType === "Kerb Stone" ? (
       <div className="kerb-details-layout">
         <section className="kerb-report-details">
-          <SectionHeading>Kerbstone Details</SectionHeading>
+          <SectionHeading>Kerb Stone Details</SectionHeading>
           <div className="report-fields">{kerbDetails.map(renderField)}</div>
         </section>
         <section className="kerb-report-standard">
@@ -3295,7 +3301,7 @@ function ConfiguredDetailsReport({
                           key={columnIndex}
                           style={{ border: "1px solid #9ca3af", padding: "4px" }}
                         >
-                          {textValue(value)}
+                          {rawTextValue(value, "")}
                         </td>
                       ))}
                     </tr>
