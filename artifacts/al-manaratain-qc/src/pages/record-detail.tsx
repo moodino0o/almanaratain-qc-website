@@ -1,5 +1,5 @@
 import { useParams, Link, useLocation } from "wouter";
-import { useGetRecord, useUpdateRecord, useDeleteRecord, RecordStatus } from "@workspace/api-client-react";
+import { useGetRecord, useListStrengthStandards, useUpdateRecord, useDeleteRecord, RecordStatus } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,8 +24,10 @@ import {
   calculateSieveSampleWeight,
   calculateChlorideContent,
   calculateMoistureContent,
+  calculateKerbBendingStrength,
   calculateSiltContent,
   calculateSulphateContent,
+  evaluateKerbWaterAbsorption,
   evaluateContentAgainstLimit,
   evaluateSiltContent,
   getDammamBlockThicknessDefaults,
@@ -155,6 +157,154 @@ function formatBlockNetArea(value: unknown) {
 function formatAverageStrength(value: number | null) {
   if (value === null) return "—";
   return Number.isInteger(value) ? String(value) : value.toFixed(2);
+}
+
+function numericOrNull(value: unknown) {
+  const text = String(value ?? "").trim();
+  if (!text) return null;
+  const number = Number(text);
+  return Number.isFinite(number) ? number : null;
+}
+
+function KerbstoneResultsTable({
+  rows,
+  requiredAverage,
+  requiredIndividual,
+  waterAbsorptionLimit,
+}: {
+  rows: unknown[];
+  requiredAverage: unknown;
+  requiredIndividual: unknown;
+  waterAbsorptionLimit: unknown;
+}) {
+  const strengths = rows.map((rawRow) => {
+    const row = typeof rawRow === "object" && rawRow !== null
+      ? rawRow as Record<string, unknown>
+      : {};
+    const value = calculateKerbBendingStrength({
+      failureLoad: String(row.failureLoad ?? row.load ?? ""),
+      spanLength: String(row.spanLength ?? ""),
+      width: String(row.width ?? ""),
+      batterDepth: String(row.batterDepth ?? ""),
+    });
+    return value ? Number(value) : null;
+  });
+  const completeStrengths = strengths.filter(
+    (value): value is number => value !== null && Number.isFinite(value),
+  );
+  const average = completeStrengths.length
+    ? completeStrengths.reduce((sum, value) => sum + value, 0) / completeStrengths.length
+    : null;
+  const minimum = completeStrengths.length ? Math.min(...completeStrengths) : null;
+  const maximum = completeStrengths.length ? Math.max(...completeStrengths) : null;
+  const avgLimit = numericOrNull(requiredAverage);
+  const minLimit = numericOrNull(requiredIndividual);
+  const dataComplete = rows.length > 0 && completeStrengths.length === rows.length;
+  const averageStatus = !dataComplete || average === null || avgLimit === null
+    ? "Review"
+    : average >= avgLimit ? "Pass" : "Fail";
+  const minimumStatus = !dataComplete || minimum === null || minLimit === null
+    ? "Review"
+    : minimum >= minLimit ? "Pass" : "Fail";
+  const absorptionResults = rows
+    .map((rawRow) => {
+      const row = typeof rawRow === "object" && rawRow !== null
+        ? rawRow as Record<string, unknown>
+        : {};
+      return evaluateKerbWaterAbsorption(
+        row.weight,
+        row.wetWeight,
+        waterAbsorptionLimit,
+      );
+    })
+    .filter((result): result is NonNullable<typeof result> => result !== null);
+  const absorptionValues = rows
+    .map((rawRow) => {
+      const row = typeof rawRow === "object" && rawRow !== null
+        ? rawRow as Record<string, unknown>
+        : {};
+      const dryWeight = numericOrNull(row.weight);
+      const wetWeight = numericOrNull(row.wetWeight);
+      return dryWeight !== null && wetWeight !== null && dryWeight > 0
+        ? ((wetWeight - dryWeight) / dryWeight) * 100
+        : null;
+    })
+    .filter((value): value is number => value !== null);
+  const averageAbsorption = absorptionValues.length
+    ? absorptionValues.reduce((sum, value) => sum + value, 0) / absorptionValues.length
+    : null;
+  const absorptionStatus = absorptionResults.some((result) => result.status === "Fail")
+    ? "Fail"
+    : absorptionResults.length > 0 && absorptionResults.every((result) => result.status === "Pass")
+      ? "Pass"
+      : "Review";
+  const results = [
+    {
+      test: "Average bending strength",
+      result: average === null ? "—" : `${formatStrengthMetric(average)} MPa`,
+      standard: avgLimit === null ? "Not configured" : `≥ ${formatStrengthMetric(avgLimit)} MPa`,
+      status: averageStatus,
+    },
+    {
+      test: "Minimum individual bending strength",
+      result: minimum === null ? "—" : `${formatStrengthMetric(minimum)} MPa`,
+      standard: minLimit === null ? "Not configured" : `≥ ${formatStrengthMetric(minLimit)} MPa`,
+      status: minimumStatus,
+    },
+    {
+      test: "Maximum individual bending strength",
+      result: maximum === null ? "—" : `${formatStrengthMetric(maximum)} MPa`,
+      standard: "Reported value",
+      status: "",
+    },
+    ...(absorptionResults.length > 0 ? [{
+      test: "Water absorption",
+      result: averageAbsorption === null ? "Review" : `${formatStrengthMetric(averageAbsorption)}%`,
+      standard: numericOrNull(waterAbsorptionLimit) === null
+        ? "Not configured"
+        : `< ${formatStrengthMetric(numericOrNull(waterAbsorptionLimit))}%`,
+      status: absorptionStatus,
+    }] : []),
+  ];
+
+  return (
+    <Card>
+      <CardHeader className="bg-muted/30 border-b">
+        <CardTitle>Kerbstone Results</CardTitle>
+        <CardDescription>Measured values compared with the saved kerb standard.</CardDescription>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[620px] text-sm">
+            <thead className="bg-muted/30">
+              <tr className="border-b text-left">
+                <th className="p-3">Test</th>
+                <th className="p-3">Result</th>
+                <th className="p-3">Standard</th>
+                <th className="p-3">Outcome</th>
+              </tr>
+            </thead>
+            <tbody>
+              {results.map((row) => (
+                <tr key={row.test} className="border-b last:border-b-0">
+                  <td className="p-3">{row.test}</td>
+                  <td className="p-3 font-medium tabular-nums">{row.result}</td>
+                  <td className="p-3">{row.standard}</td>
+                  <td className={`p-3 font-semibold ${
+                    row.status === "Pass" ? "text-green-700"
+                      : row.status === "Fail" ? "text-red-700"
+                        : row.status === "Review" ? "text-amber-700" : "text-muted-foreground"
+                  }`}>
+                    {row.status ? row.status.toUpperCase() : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 function CubeAgeAveragesTable({ rows }: { rows: unknown[] }) {
@@ -602,6 +752,7 @@ export default function RecordDetail() {
   const { data: record, isLoading, error } = useGetRecord(recordId);
   const updateRecord = useUpdateRecord();
   const deleteRecord = useDeleteRecord();
+  const { data: strengthStandards } = useListStrengthStandards();
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">Loading record details...</div>;
   if (error || !record) return <div className="p-8 text-center text-destructive">Failed to load record.</div>;
@@ -629,6 +780,10 @@ export default function RecordDetail() {
   const isStrengthEvaluated = record.testType === "Ready Mix" || record.testType === "Blocks";
   const isSieveEvaluated = record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve";
   const recordDetails = record.details as DetailMap;
+  const savedStrengthStandardId = numericOrNull(recordDetails.strengthStandardId);
+  const kerbStandard = strengthStandards?.find(
+    (standard) => standard.id === savedStrengthStandardId,
+  );
   const isSieveRecord = isSieveEvaluated;
   const ageKey = record.testType === "Blocks" || record.testType === "Paving Blocks"
     ? "blockAge"
@@ -816,6 +971,15 @@ export default function RecordDetail() {
           <DetailSummaryTable entries={summaryEntries} />
         </CardContent>
       </Card>
+
+      {record.testType === "Kerb Stone" && (
+        <KerbstoneResultsTable
+          rows={specimenRows}
+          requiredAverage={kerbStandard?.requiredStrength ?? recordDetails.characteristicBendingStrength}
+          requiredIndividual={kerbStandard?.minimumIndividualStrength ?? recordDetails.minimumIndividualStrength}
+          waterAbsorptionLimit={kerbStandard?.waterAbsorptionLimit ?? recordDetails.waterAbsorptionLimit}
+        />
+      )}
 
       {isSieveEvaluated && (() => {
         const dryWeight = recordDetails.dryWeight ?? recordDetails.drySample;

@@ -3047,16 +3047,17 @@ function KerbstoneResultsSummary({
     ? completeStrengths.reduce((sum, value) => sum + value, 0) / completeStrengths.length
     : null;
   const minimum = completeStrengths.length ? Math.min(...completeStrengths) : null;
-  const maximum = completeStrengths.length ? Math.max(...completeStrengths) : null;
   const requiredAverage = numericValue(standard?.requiredStrength);
   const requiredIndividual = numericValue(standard?.minimumIndividualStrength);
-  const completeStrengthData = rows.length > 0 && completeStrengths.length === rows.length;
-  const averageStatus = !completeStrengthData || average === null || requiredAverage === null
-    ? "Review"
-    : average < requiredAverage ? "Fail" : "Pass";
-  const minimumStatus = !completeStrengthData || minimum === null || requiredIndividual === null
-    ? "Review"
-    : minimum < requiredIndividual ? "Fail" : "Pass";
+  const strengthStatus =
+    average === null ||
+    completeStrengths.length !== rows.length ||
+    requiredAverage === null ||
+    requiredIndividual === null
+      ? "Review"
+      : average < requiredAverage || minimum! < requiredIndividual
+        ? "Fail"
+        : "Pass";
   const absorptionResults = rows
     .map((rawRow) => {
       const row = objectValue(rawRow) ?? {};
@@ -3067,7 +3068,9 @@ function KerbstoneResultsSummary({
       );
     })
     .filter((result): result is NonNullable<typeof result> => result !== null);
-  const absorptionStatus = absorptionResults.some((result) => result.status === "Fail")
+  const absorptionStatus = absorptionResults.length === 0
+    ? "Skipped"
+    : absorptionResults.some((result) => result.status === "Fail")
       ? "Fail"
       : absorptionResults.every((result) => result.status === "Pass")
         ? "Pass"
@@ -3090,30 +3093,24 @@ function KerbstoneResultsSummary({
       test: "Characteristic bending strength",
       result: average === null ? "—" : `${formatNumber(average)} MPa`,
       requirement: requiredAverage === null ? "Not configured" : `≥ ${formatNumber(requiredAverage)} MPa`,
-      status: averageStatus,
+      status: strengthStatus,
     },
     {
       test: "Minimum individual bending strength",
       result: minimum === null ? "—" : `${formatNumber(minimum)} MPa`,
       requirement: requiredIndividual === null ? "Not configured" : `≥ ${formatNumber(requiredIndividual)} MPa`,
-      status: minimumStatus,
+      status: strengthStatus,
     },
     {
-      test: "Maximum individual bending strength",
-      result: maximum === null ? "—" : `${formatNumber(maximum)} MPa`,
-      requirement: "Reported statistic",
-      status: "",
-    },
-    ...(absorptionResults.length > 0 ? [{
       test: "Water absorption",
       result: averageAbsorption !== null
         ? `${formatNumber(averageAbsorption)}%`
-        : "Review",
+        : "Not entered",
       requirement: standard?.waterAbsorptionLimit == null
         ? "Not configured"
         : `< ${standard.waterAbsorptionLimit}%`,
       status: absorptionStatus,
-    }] : []),
+    },
   ];
   return (
     <section className="kerb-results-summary">
@@ -3128,8 +3125,8 @@ function KerbstoneResultsSummary({
               <td>{row.test}</td>
               <td>{row.result}</td>
               <td>{row.requirement}</td>
-              <td className={`report-compliance-status${row.status ? ` ${row.status.toLocaleLowerCase()}` : ""}`}>
-                {row.status ? row.status.toLocaleUpperCase() : "—"}
+              <td className={`report-compliance-status ${row.status.toLocaleLowerCase()}`}>
+                {row.status.toLocaleUpperCase()}
               </td>
             </tr>
           ))}
@@ -3230,16 +3227,11 @@ function ConfiguredDetailsReport({
   const kerbDateFields = ["sampleDate", "testingDate"]
     .map((key) => columns.find((field) => field.key === key))
     .filter((field): field is (typeof columns)[number] => field !== undefined);
-  const kerbTopFields = ["kerbType", "age"]
-    .map((key) => columns.find((field) => field.key === key))
-    .filter((field): field is (typeof columns)[number] => field !== undefined);
   const kerbDetails = record.testType === "Kerb Stone"
     ? columns.filter((field) =>
         !standardFieldKeys.has(field.key) &&
         field.key !== "sampleDate" &&
-        field.key !== "testingDate" &&
-        field.key !== "kerbType" &&
-        field.key !== "age")
+        field.key !== "testingDate")
     : columns;
   const kerbStandardDetails = columns.filter((field) => standardFieldKeys.has(field.key));
   const kerbSize = record.testType === "Kerb Stone"
@@ -3253,7 +3245,6 @@ function ConfiguredDetailsReport({
       <div className="kerb-details-layout">
         <section className="kerb-report-details">
           <SectionHeading>Test Details</SectionHeading>
-          <div className="report-fields">{kerbTopFields.map(renderField)}</div>
           <div className="kerb-date-fields">{kerbDateFields.map(renderField)}</div>
           <div className="report-fields">
             {kerbDetails.map(renderField)}

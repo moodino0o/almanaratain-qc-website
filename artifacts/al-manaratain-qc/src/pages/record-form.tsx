@@ -1215,12 +1215,15 @@ export default function RecordForm() {
         payloadDetails.characteristicBendingStrength = kerbStandard.requiredStrength;
         payloadDetails.minimumIndividualStrength =
           kerbStandard.minimumIndividualStrength ?? "";
+        payloadDetails.waterAbsorptionLimit =
+          kerbStandard.waterAbsorptionLimit ?? "";
       } else {
         delete payloadDetails.strengthStandardId;
         delete payloadDetails.kerbClass;
         delete payloadDetails.kerbMarking;
         delete payloadDetails.characteristicBendingStrength;
         delete payloadDetails.minimumIndividualStrength;
+        delete payloadDetails.waterAbsorptionLimit;
       }
     }
     if (testType === TestType.Blocks) {
@@ -1565,6 +1568,44 @@ export default function RecordForm() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {testType === TestType.Kerb_Stone && (
+                <>
+                  <div className="space-y-2">
+                    <Label>Kerb Type <span className="text-destructive">*</span></Label>
+                    <Select
+                      value={String(details.kerbType ?? "")}
+                      onValueChange={(value) => {
+                        handleDetailChange("kerbType", value);
+                        const dimensions = kerbDimensionsForType(value);
+                        if (dimensions) {
+                          setTestRows((rows) =>
+                            rows.map((row) => ({ ...row, ...dimensions })),
+                          );
+                        }
+                      }}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Select kerb type..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Road kerb">Road kerb</SelectItem>
+                        <SelectItem value="Edge kerb">Edge kerb</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Age (days) <span className="text-destructive">*</span></Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={String(details.age ?? "")}
+                      onChange={(event) => handleDetailChange("age", event.target.value)}
+                      placeholder="e.g. 28"
+                      required
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="space-y-2">
                 <Label>
@@ -3179,39 +3220,6 @@ export default function RecordForm() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {testType === TestType.Kerb_Stone && (
                     <>
-                      <div className="space-y-2">
-                        <Label>Kerb Type <span className="text-destructive">*</span></Label>
-                        <Select
-                          value={String(details.kerbType ?? "")}
-                          onValueChange={(value) => {
-                            handleDetailChange("kerbType", value);
-                            const dimensions = kerbDimensionsForType(value);
-                            if (dimensions) {
-                              setTestRows((rows) =>
-                                rows.map((row) => ({ ...row, ...dimensions })),
-                              );
-                            }
-                          }}
-                        >
-                          <SelectTrigger><SelectValue placeholder="Select kerb type..." /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Road kerb">Road kerb</SelectItem>
-                            <SelectItem value="Edge kerb">Edge kerb</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Age (days) <span className="text-destructive">*</span></Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={String(details.age ?? "")}
-                          onChange={(event) => handleDetailChange("age", event.target.value)}
-                          placeholder="e.g. 28"
-                          required
-                        />
-                      </div>
                       <div className="rounded-md border bg-muted/20 p-3 text-sm md:col-span-2 lg:col-span-3">
                         <span className="text-muted-foreground">Matched strength standard: </span>
                         {matchingStrengthStandards[0] ? (
