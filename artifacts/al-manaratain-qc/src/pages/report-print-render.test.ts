@@ -230,6 +230,10 @@ test("prints Kerbstone specimen measurements and formula-calculated bending stre
 
   assert.match(markup, /Kerbstone Specimen Results/);
   assert.match(markup, /kerb-details-layout/);
+  assert.match(markup, /Kerb Size:/);
+  assert.match(markup, /915 × 100 × 225 mm/);
+  assert.match(markup, /Test Conducted:/);
+  assert.match(markup, /Bending-load test/);
   assert.match(markup, /Applicable Standard/);
   assert.match(markup, /11 - Oct - 2026/);
   assert.match(markup, /08 - Nov - 2026/);
@@ -239,9 +243,12 @@ test("prints Kerbstone specimen measurements and formula-calculated bending stre
   assert.doesNotMatch(markup, /Test Results Summary<\/h3>\s*<strong/);
   assert.match(markup, /Characteristic bending strength/);
   assert.match(markup, /Water absorption/);
-  assert.match(markup, /<td>28\.1<\/td>/);
-  assert.match(markup, /<td>4\.2<\/td>/);
-  assert.match(markup, /Maximum: 28\.1 MPa/);
+  assert.match(markup, /<td>28\.1 MPa<\/td>/);
+  assert.match(markup, /<td>4\.2%<\/td>/);
+  assert.doesNotMatch(markup, /Bending strength\s*<\/strong>|Average: 28\.1 MPa|Minimum: 28\.1 MPa|Maximum: 28\.1 MPa/);
+  assert.match(markup, /kerbstone-specimen-table/);
+  assert.match(markup, /kerbstone-specimen-section/);
+  assert.doesNotMatch(markup, /Weight \(kg\)|Wet Weight \(kg\)/);
   assert.doesNotMatch(markup, /specimens assessed|Avg\. Strength:|Min\. Strength:|Max\. Strength:/);
   assert.match(markup, /Batter Depth \(mm\)/);
   assert.match(markup, /Failure Load \(kN\)/);
@@ -974,7 +981,7 @@ test("places remarks after report details and before specimen results across eve
     { testType: "Water", detailsMarker: "Water Quality Details" },
     { testType: "Flakiness & Elongation", detailsMarker: "Elongation Details" },
     { testType: "RMX Trial", detailsMarker: "RMX Trial Details" },
-    { testType: "Kerb Stone", detailsMarker: "Kerb Stone Details" },
+    { testType: "Kerb Stone", detailsMarker: "Test Details" },
   ];
 
   for (const scenario of cases) {

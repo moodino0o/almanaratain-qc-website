@@ -3046,7 +3046,6 @@ function KerbstoneResultsSummary({
     ? completeStrengths.reduce((sum, value) => sum + value, 0) / completeStrengths.length
     : null;
   const minimum = completeStrengths.length ? Math.min(...completeStrengths) : null;
-  const maximum = completeStrengths.length ? Math.max(...completeStrengths) : null;
   const requiredAverage = numericValue(standard?.requiredStrength);
   const requiredIndividual = numericValue(standard?.minimumIndividualStrength);
   const strengthStatus =
@@ -3091,20 +3090,20 @@ function KerbstoneResultsSummary({
   const summaryRows = [
     {
       test: "Characteristic bending strength",
-      result: average === null ? "—" : formatNumber(average),
+      result: average === null ? "—" : `${formatNumber(average)} MPa`,
       requirement: requiredAverage === null ? "Not configured" : `≥ ${formatNumber(requiredAverage)} MPa`,
       status: strengthStatus,
     },
     {
       test: "Minimum individual bending strength",
-      result: minimum === null ? "—" : formatNumber(minimum),
+      result: minimum === null ? "—" : `${formatNumber(minimum)} MPa`,
       requirement: requiredIndividual === null ? "Not configured" : `≥ ${formatNumber(requiredIndividual)} MPa`,
       status: strengthStatus,
     },
     {
       test: "Water absorption",
       result: averageAbsorption !== null
-        ? formatNumber(averageAbsorption)
+        ? `${formatNumber(averageAbsorption)}%`
         : "Not entered",
       requirement: standard?.waterAbsorptionLimit == null
         ? "Not configured"
@@ -3132,12 +3131,6 @@ function KerbstoneResultsSummary({
           ))}
         </tbody>
       </table>
-      <div className="kerb-bending-stats" aria-label="Calculated bending strength statistics">
-        <strong>Bending strength</strong>
-        <span>Average: {average === null ? "—" : `${formatNumber(average)} MPa`}</span>
-        <span>Minimum: {minimum === null ? "—" : `${formatNumber(minimum)} MPa`}</span>
-        <span>Maximum: {maximum === null ? "—" : `${formatNumber(maximum)} MPa`}</span>
-      </div>
     </section>
   );
 }
@@ -3240,13 +3233,25 @@ function ConfiguredDetailsReport({
         field.key !== "testingDate")
     : columns;
   const kerbStandardDetails = columns.filter((field) => standardFieldKeys.has(field.key));
+  const kerbSizes = record.testType === "Kerb Stone" && Array.isArray(record.details.testRows)
+    ? Array.from(new Set(record.details.testRows.map((rawRow) => {
+        const row = objectValue(rawRow) ?? {};
+        const dimensions = [row.length, row.width, row.height].map(numericValue);
+        if (dimensions.some((dimension) => dimension === null)) return "";
+        return `${dimensions.map((dimension) => String(Math.round(dimension!))).join(" × ")} mm`;
+      }).filter(Boolean))).join(", ")
+    : "";
   return <>
     {record.testType === "Kerb Stone" ? (
       <div className="kerb-details-layout">
         <section className="kerb-report-details">
-          <SectionHeading>Kerb Stone Details</SectionHeading>
+          <SectionHeading>Test Details</SectionHeading>
           <div className="kerb-date-fields">{kerbDateFields.map(renderField)}</div>
-          <div className="report-fields">{kerbDetails.map(renderField)}</div>
+          <div className="report-fields">
+            {kerbDetails.map(renderField)}
+            <ReportField label="Kerb Size" value={kerbSizes || "-"} />
+            <ReportField label="Test Conducted" value="Bending-load test" />
+          </div>
         </section>
         <section className="kerb-report-standard">
           <SectionHeading>Applicable Standard</SectionHeading>
@@ -3265,10 +3270,10 @@ function ConfiguredDetailsReport({
     {record.testType === "Kerb Stone" &&
       Array.isArray(record.details.testRows) &&
       record.details.testRows.length > 0 && (
-        <section className="mt-4">
+        <section className="mt-4 kerbstone-specimen-section">
           <SectionHeading>Kerbstone Specimen Results</SectionHeading>
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "9px" }}>
+            <table className="report-table kerbstone-specimen-table">
               <thead>
                 <tr>
                   {[
@@ -3280,15 +3285,12 @@ function ConfiguredDetailsReport({
                     "Batter Angle (deg)",
                     "Span Length (mm)",
                     "Failure Load (kN)",
-                    "Weight (kg)",
-                    "Wet Weight (kg)",
                     "Bending Strength (MPa)",
                     "Water Absorption (%)",
                     "Absorption Result",
                   ].map((label) => (
                     <th
                       key={label}
-                      style={{ border: "1px solid #9ca3af", padding: "4px", textAlign: "left" }}
                     >
                       {label}
                     </th>
@@ -3318,8 +3320,6 @@ function ConfiguredDetailsReport({
                     formatWholeNumber(row.batterAngle),
                     formatWholeNumber(row.spanLength),
                     row.failureLoad ?? row.load,
-                    row.weight,
-                    row.wetWeight,
                     bendingStrength ? `${bendingStrength} MPa` : "",
                     absorption?.value ? `${absorption.value}%` : "",
                     absorption?.status ?? "",
@@ -3329,7 +3329,6 @@ function ConfiguredDetailsReport({
                       {values.map((value, columnIndex) => (
                         <td
                           key={columnIndex}
-                          style={{ border: "1px solid #9ca3af", padding: "4px" }}
                         >
                           {rawTextValue(value, "")}
                         </td>

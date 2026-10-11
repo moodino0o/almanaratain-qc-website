@@ -602,19 +602,6 @@
   margin-bottom: 2mm;
 }
 
-.kerb-bending-stats {
-  display: flex;
-  justify-content: center;
-  gap: 5mm;
-  padding-top: 1.5mm;
-  font-size: 7px;
-  text-align: center;
-}
-
-.kerb-bending-stats strong {
-  font-weight: 700;
-}
-
 .kerb-details-layout .report-section-heading {
   margin: 0 0 2mm;
   font-size: 10px;
@@ -635,7 +622,7 @@
 }
 
 .kerb-results-summary {
-  width: 82%;
+  width: 70%;
   margin: 3mm auto 0;
   text-align: center;
 }
@@ -643,17 +630,57 @@
 .kerb-results-summary .report-section-heading {
   margin: 0 0 1.5mm;
   text-align: center;
-  font-size: 9px;
+  font-size: 8px;
 }
 
 .kerb-results-summary .report-table th,
 .kerb-results-summary .report-table td {
-  padding: 1mm 1.2mm;
-  font-size: 7px;
+  padding: 0.8mm 1mm;
+  font-size: 6.5px;
 }
 
 .kerb-results-summary .report-table th {
+  font-size: 6px;
+}
+
+.kerbstone-specimen-table th,
+.kerbstone-specimen-table td {
+  padding: 2mm 1mm;
+  font-size: 10px;
+  text-align: center;
+}
+
+.kerbstone-specimen-table th {
+  font-size: 9.5px;
+  font-weight: 700;
+}
+
+.report-paper .kerb-results-summary .report-section-heading {
+  margin: 0 0 1.5mm;
+  font-size: 9px;
+  text-align: center;
+}
+
+.report-paper .kerb-results-summary .report-table th {
   font-size: 6.5px;
+  text-align: center;
+}
+
+.report-paper .kerb-results-summary .report-table td {
+  font-size: 7px;
+  text-align: center;
+}
+
+.report-paper .kerbstone-specimen-section > .report-section-heading {
+  margin: 0 0 2mm;
+  font-size: 15px;
+  text-align: center;
+}
+
+.report-paper .kerbstone-specimen-table th,
+.report-paper .kerbstone-specimen-table td {
+  font-size: 12px;
+  text-align: center;
 }
 
 .report-compliance-reason {
