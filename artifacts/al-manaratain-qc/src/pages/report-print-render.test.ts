@@ -207,16 +207,19 @@ test("prints Kerbstone specimen measurements and formula-calculated bending stre
   const record = {
     ...reportFixture(),
     testType: "Kerb Stone",
+    sampleDate: "2026-10-11T00:00:00.000Z",
     details: {
       kerbType: "Road kerb",
+      age: "28.0",
+      testingDate: "2026-10-12T00:00:00.000Z",
       testRows: [{
         rowNo: 1,
-        length: "915",
-        width: "100",
-        height: "225",
-        batterDepth: "40",
-        batterAngle: "15",
-        spanLength: "300",
+        length: "915.0",
+        width: "100.0",
+        height: "225.0",
+        batterDepth: "40.0",
+        batterAngle: "15.0",
+        spanLength: "300.0",
         failureLoad: "10",
         weight: "12",
         wetWeight: "12.5",
@@ -226,7 +229,13 @@ test("prints Kerbstone specimen measurements and formula-calculated bending stre
   const markup = renderDocument(record);
 
   assert.match(markup, /Kerbstone Specimen Results/);
+  assert.match(markup, /kerb-details-layout/);
+  assert.match(markup, /Applicable Standard/);
+  assert.match(markup, /11 - Oct - 2026/);
+  assert.match(markup, /12 - Oct - 2026/);
+  assert.doesNotMatch(markup, /915\.0|100\.0|225\.0|40\.0|15\.0|300\.0/);
   assert.match(markup, /Test Results Summary/);
+  assert.doesNotMatch(markup, /Test Results Summary<\/h3>\s*<strong/);
   assert.match(markup, /Characteristic bending strength/);
   assert.match(markup, /Water absorption/);
   assert.match(markup, /Batter Depth \(mm\)/);

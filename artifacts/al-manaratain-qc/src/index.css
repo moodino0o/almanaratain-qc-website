@@ -579,29 +579,61 @@
   color: #996515;
 }
 
+.kerb-details-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(62mm, 0.8fr);
+  gap: 6mm;
+  align-items: start;
+}
+
+.kerb-details-layout > section {
+  min-width: 0;
+}
+
+.kerb-report-standard {
+  border-left: 1px solid #9ca3af;
+  padding-left: 5mm;
+}
+
+.kerb-details-layout .report-section-heading {
+  margin: 0 0 2mm;
+  font-size: 10px;
+}
+
+.kerb-details-layout .report-field {
+  grid-template-columns: 31mm minmax(0, 1fr);
+  min-height: 4.5mm;
+}
+
+.kerb-details-layout .report-field span {
+  font-size: 8px;
+}
+
+.kerb-details-layout .report-field strong {
+  font-size: 9px;
+  font-weight: 400;
+}
+
 .kerb-results-summary {
-  margin-top: 3mm;
+  width: 82%;
+  margin: 3mm auto 0;
+  text-align: center;
 }
 
-.kerb-results-summary-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 4mm;
-}
-
-.kerb-results-summary-heading .report-section-heading {
-  margin-bottom: 1.5mm;
+.kerb-results-summary .report-section-heading {
+  margin: 0 0 1.5mm;
+  text-align: center;
+  font-size: 9px;
 }
 
 .kerb-results-summary .report-table th,
 .kerb-results-summary .report-table td {
-  padding: 1.4mm 1.6mm;
-  font-size: 8px;
+  padding: 1mm 1.2mm;
+  font-size: 7px;
 }
 
 .kerb-results-summary .report-table th {
-  font-size: 7.5px;
+  font-size: 6.5px;
 }
 
 .report-compliance-reason {

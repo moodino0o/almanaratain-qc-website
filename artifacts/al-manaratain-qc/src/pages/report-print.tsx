@@ -644,6 +644,21 @@ function formatReportDate(value: string | undefined | null) {
     .replace(/ /g, "-");
 }
 
+function formatKerbReportDate(value: string | undefined | null) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).formatToParts(date);
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((entry) => entry.type === type)?.value ?? "";
+  return `${part("day")} - ${part("month")} - ${part("year")}`;
+}
+
 function resolveReportTemplateDynamicField(
   record: QcRecord,
   fieldKey: string,
@@ -3059,13 +3074,6 @@ function KerbstoneResultsSummary({
       : absorptionResults.every((result) => result.status === "Pass")
         ? "Pass"
         : "Review";
-  const overallStatus =
-    strengthStatus === "Fail" || absorptionStatus === "Fail"
-      ? "Failed"
-      : strengthStatus === "Pass" &&
-          (absorptionStatus === "Pass" || absorptionStatus === "Skipped")
-        ? "Passed"
-        : "Review";
   const summaryRows = [
     {
       test: "Characteristic bending strength",
@@ -3090,15 +3098,9 @@ function KerbstoneResultsSummary({
       status: absorptionStatus,
     },
   ];
-  const statusClass = overallStatus.toLocaleLowerCase();
   return (
     <section className="kerb-results-summary">
-      <div className="kerb-results-summary-heading">
-        <SectionHeading>Test Results Summary</SectionHeading>
-        <strong className={`report-compliance-status ${statusClass}`}>
-          {overallStatus === "Passed" ? "PASS" : overallStatus === "Failed" ? "FAIL" : "REVIEW"}
-        </strong>
-      </div>
+      <SectionHeading>Test Results Summary</SectionHeading>
       <table className="report-table">
         <thead>
           <tr><th>Test</th><th>Result</th><th>Standard</th><th>Outcome</th></tr>
@@ -3154,30 +3156,73 @@ function ConfiguredDetailsReport({
     .filter((field) => field.visible)
     .filter((field) => defaults.some((candidate) => candidate.key === field.key))
     .sort((a, b) => a.order - b.order);
+  const standardFieldKeys = new Set([
+    "kerbClass",
+    "kerbMarking",
+    "characteristicBendingStrength",
+    "minimumIndividualStrength",
+    "waterAbsorptionLimit",
+  ]);
+  const renderField = (field: (typeof columns)[number]) => {
+    const detail = detailValue(record.details, [field.key]);
+    const standardValue = record.testType === "Kerb Stone"
+      ? field.key === "kerbType" ? strengthStandard?.blockType
+        : field.key === "kerbClass" ? strengthStandard?.kerbClass
+          : field.key === "kerbMarking" ? strengthStandard?.kerbMarking
+            : field.key === "characteristicBendingStrength" ? strengthStandard?.requiredStrength
+              : field.key === "minimumIndividualStrength" ? strengthStandard?.minimumIndividualStrength
+                : field.key === "waterAbsorptionLimit"
+                  ? strengthStandard?.waterAbsorptionLimit == null
+                    ? undefined
+                    : `< ${strengthStandard.waterAbsorptionLimit}%`
+                  : undefined
+      : undefined;
+    const isKerb = record.testType === "Kerb Stone";
+    const integerDetailKeys = new Set([
+      "age",
+      "kerbClass",
+      "spanLength",
+      "length",
+      "width",
+      "height",
+      "batterDepth",
+      "batterAngle",
+    ]);
+    const isDateField = field.key === "sampleDate" || field.key === "testingDate";
+    const rawValue = field.key === "sampleDate" ? record.sampleDate
+      : field.key === "location" ? record.location
+        : field.key === "material" ? record.material
+          : field.key === "testedBy" ? record.testedBy
+            : detail || standardValue == null ? detail : String(standardValue);
+    const value = isKerb && isDateField
+      ? formatKerbReportDate(String(rawValue || ""))
+      : isKerb && integerDetailKeys.has(field.key) && numericValue(rawValue) !== null
+        ? formatWholeNumber(rawValue)
+        : rawValue;
+    return <ReportField key={field.key} label={field.label} value={textValue(value)} />;
+  };
+  const kerbDetails = record.testType === "Kerb Stone"
+    ? columns.filter((field) => !standardFieldKeys.has(field.key))
+    : columns;
+  const kerbStandardDetails = columns.filter((field) => standardFieldKeys.has(field.key));
   return <>
-    <section><SectionHeading>{record.testType} Details</SectionHeading><div className="report-fields">
-      {columns.map((field) => {
-        const detail = detailValue(record.details, [field.key]);
-        const standardValue = record.testType === "Kerb Stone"
-          ? field.key === "kerbType" ? strengthStandard?.blockType
-            : field.key === "kerbClass" ? strengthStandard?.kerbClass
-              : field.key === "kerbMarking" ? strengthStandard?.kerbMarking
-                : field.key === "characteristicBendingStrength" ? strengthStandard?.requiredStrength
-                  : field.key === "minimumIndividualStrength" ? strengthStandard?.minimumIndividualStrength
-                    : field.key === "waterAbsorptionLimit"
-                      ? strengthStandard?.waterAbsorptionLimit == null
-                        ? undefined
-                        : `< ${strengthStandard.waterAbsorptionLimit}%`
-                    : undefined
-          : undefined;
-        const value = field.key === "sampleDate" ? formatReportDate(record.sampleDate)
-          : field.key === "location" ? record.location
-            : field.key === "material" ? record.material
-              : field.key === "testedBy" ? record.testedBy
-                : detail || standardValue == null ? detail : String(standardValue);
-        return <ReportField key={field.key} label={field.label} value={value} />;
-      })}
-    </div></section>
+    {record.testType === "Kerb Stone" ? (
+      <div className="kerb-details-layout">
+        <section className="kerb-report-details">
+          <SectionHeading>Kerbstone Details</SectionHeading>
+          <div className="report-fields">{kerbDetails.map(renderField)}</div>
+        </section>
+        <section className="kerb-report-standard">
+          <SectionHeading>Applicable Standard</SectionHeading>
+          <div className="report-fields">{kerbStandardDetails.map(renderField)}</div>
+        </section>
+      </div>
+    ) : (
+      <section>
+        <SectionHeading>{record.testType} Details</SectionHeading>
+        <div className="report-fields">{columns.map(renderField)}</div>
+      </section>
+    )}
     {record.testType === "Kerb Stone" && (
       <KerbstoneResultsSummary record={record} standard={strengthStandard} />
     )}
@@ -3229,13 +3274,13 @@ function ConfiguredDetailsReport({
                     strengthStandard?.waterAbsorptionLimit,
                   );
                   const values = [
-                    row.rowNo ?? index + 1,
+                    formatWholeNumber(row.rowNo ?? index + 1),
                     formatWholeNumber(row.length),
                     formatWholeNumber(row.width),
                     formatWholeNumber(row.height),
                     formatWholeNumber(row.batterDepth),
                     formatWholeNumber(row.batterAngle),
-                    row.spanLength,
+                    formatWholeNumber(row.spanLength),
                     row.failureLoad ?? row.load,
                     row.weight,
                     row.wetWeight,
