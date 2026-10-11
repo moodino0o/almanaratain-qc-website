@@ -234,6 +234,8 @@ test("prints Kerbstone specimen measurements and formula-calculated bending stre
   assert.match(markup, /915 × 125 × 225 mm/);
   assert.match(markup, /Test Conducted:/);
   assert.match(markup, /Bending-load test/);
+  assert.ok(markup.indexOf("Bending-load test") < markup.indexOf("Test Results Summary"));
+  assert.ok(markup.indexOf("Test Results Summary") < markup.indexOf("Applicable Standard"));
   assert.match(markup, /Applicable Standard/);
   assert.match(markup, /11 - Oct - 2026/);
   assert.match(markup, /08 - Nov - 2026/);
