@@ -103,22 +103,6 @@ function isValidAge(value: string) {
   return value.trim() !== "" && Number.isSafeInteger(age) && age >= 0;
 }
 
-function addDaysToDate(dateValue: string, daysValue: unknown) {
-  const date = String(dateValue ?? "").slice(0, 10);
-  if (String(daysValue ?? "").trim() === "") return "";
-  const days = Number(daysValue);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isSafeInteger(days) || days < 0) {
-    return "";
-  }
-  const timestamp = Date.parse(`${date}T00:00:00.000Z`);
-  if (!Number.isFinite(timestamp) || new Date(timestamp).toISOString().slice(0, 10) !== date) {
-    return "";
-  }
-  const result = new Date(timestamp);
-  result.setUTCDate(result.getUTCDate() + days);
-  return result.toISOString().slice(0, 10);
-}
-
 export default function RecordForm() {
   const { id } = useParams();
   const recordId = id ? Number(id) : 0;
@@ -2282,6 +2266,20 @@ export default function RecordForm() {
                       </tbody>
                     </table>
                   </div>
+                  <div className="grid grid-cols-1 gap-3 rounded-md border bg-muted/20 p-3 sm:grid-cols-3">
+                    {[
+                      ["Average bending strength", kerbStrengthAverage],
+                      ["Minimum bending strength", kerbStrengthMinimum],
+                      ["Maximum bending strength", kerbStrengthMaximum],
+                    ].map(([label, value]) => (
+                      <div key={String(label)} className="text-center">
+                        <div className="text-xs text-muted-foreground">{label}</div>
+                        <div className="font-semibold tabular-nums">
+                          {typeof value === "number" ? `${value.toFixed(2)} MPa` : "—"}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
               {!usesTestRows && testType !== TestType.Kerb_Stone && (
@@ -3213,10 +3211,6 @@ export default function RecordForm() {
                           placeholder="e.g. 28"
                           required
                         />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Testing Date</Label>
-                        <Input type="date" value={kerbTestingDate} readOnly />
                       </div>
                       <div className="rounded-md border bg-muted/20 p-3 text-sm md:col-span-2 lg:col-span-3">
                         <span className="text-muted-foreground">Matched strength standard: </span>

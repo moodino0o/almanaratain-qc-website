@@ -3075,14 +3075,19 @@ function KerbstoneResultsSummary({
       : absorptionResults.every((result) => result.status === "Pass")
         ? "Pass"
         : "Review";
-  const averageAbsorption = absorptionResults
-    .map((result) => numericValue(result.value))
-    .filter((value): value is number => value !== null)
-    .reduce((values, value, _, all) => {
-      values.sum += value;
-      values.count = all.length;
-      return values;
-    }, { sum: 0, count: 0 });
+  const absorptionValues = rows
+    .map((rawRow) => {
+      const row = objectValue(rawRow) ?? {};
+      const dryWeight = numericValue(row.weight);
+      const wetWeight = numericValue(row.wetWeight);
+      return dryWeight !== null && wetWeight !== null && dryWeight > 0
+        ? ((wetWeight - dryWeight) / dryWeight) * 100
+        : null;
+    })
+    .filter((value): value is number => value !== null);
+  const averageAbsorption = absorptionValues.length
+    ? absorptionValues.reduce((sum, value) => sum + value, 0) / absorptionValues.length
+    : null;
   const summaryRows = [
     {
       test: "Characteristic bending strength",
@@ -3098,8 +3103,8 @@ function KerbstoneResultsSummary({
     },
     {
       test: "Water absorption",
-      result: averageAbsorption.count
-        ? formatNumber(averageAbsorption.sum / averageAbsorption.count)
+      result: averageAbsorption !== null
+        ? formatNumber(averageAbsorption)
         : "Not entered",
       requirement: standard?.waterAbsorptionLimit == null
         ? "Not configured"
