@@ -565,6 +565,45 @@
   color: #996515;
 }
 
+.report-compliance-status.pass,
+.report-compliance-status.passed {
+  color: #16733b;
+}
+
+.report-compliance-status.fail,
+.report-compliance-status.failed {
+  color: #b42318;
+}
+
+.report-compliance-status.pending {
+  color: #996515;
+}
+
+.kerb-results-summary {
+  margin-top: 3mm;
+}
+
+.kerb-results-summary-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4mm;
+}
+
+.kerb-results-summary-heading .report-section-heading {
+  margin-bottom: 1.5mm;
+}
+
+.kerb-results-summary .report-table th,
+.kerb-results-summary .report-table td {
+  padding: 1.4mm 1.6mm;
+  font-size: 8px;
+}
+
+.kerb-results-summary .report-table th {
+  font-size: 7.5px;
+}
+
 .report-compliance-reason {
   margin: 2mm 0 0;
   color: #444;
@@ -1116,8 +1155,8 @@
 
 .precast-overview {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(55mm, 0.85fr);
-  gap: 10mm;
+  grid-template-columns: minmax(0, 1.1fr) minmax(65mm, 0.9fr);
+  gap: 6mm;
   align-items: start;
 }
 

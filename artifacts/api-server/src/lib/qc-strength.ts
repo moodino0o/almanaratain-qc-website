@@ -467,11 +467,7 @@ function standardMatchesRecord(
   if (record.testType === "Kerb Stone") {
     return (
       blockMaterialMatches(standard.material, record.material, blockType) &&
-      blockTypeMatches(standard.blockType, textValue(record.details.kerbType)) &&
-      blockSizeMatches(
-        standard.blockSize,
-        textValue(record.details.kerbSize ?? record.details.blockSize),
-      )
+      blockTypeMatches(standard.blockType, textValue(record.details.kerbType))
     );
   }
   if (!blockMaterialMatches(standard.material, record.material, blockType)) return false;

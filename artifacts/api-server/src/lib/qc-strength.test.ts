@@ -267,6 +267,62 @@ test("maps paving sizes ending in 60 and 80 to correction factors", () => {
   assert.equal(pavingCorrectionFactorFromSize("200 x 200 x 50"), null);
 });
 
+test("evaluates Kerbstone bending and optional water absorption against editable limits", () => {
+  const standard = readyMixStandard({
+    testType: "Kerb Stone",
+    material: "Kerbstone",
+    blockType: "Road kerb",
+    blockSize: "915",
+    requiredStrength: "28",
+    minimumIndividualStrength: "27",
+    waterAbsorptionLimit: "6.5",
+    strengthUnit: "MPa",
+  });
+  const record = {
+    testType: "Kerb Stone",
+    material: "Kerbstone",
+    details: {
+      kerbType: "Road kerb",
+      testRows: [{
+        rowNo: 1,
+        spanLength: "300",
+        width: "100",
+        batterDepth: "40",
+        failureLoad: "10",
+        weight: "100",
+        wetWeight: "106.49",
+      }],
+    },
+  };
+  const passed = evaluateStrengthRecord(record, [standard]);
+  const passedDetails = passed.details as Record<string, unknown>;
+  const passedRows = passedDetails.testRows as Array<Record<string, unknown>>;
+  assert.equal(passed.status, "Passed");
+  assert.equal(passedRows[0].bendingStrength, "28.13");
+  assert.equal(passedRows[0].waterAbsorptionStatus, "Pass");
+
+  const atLimit = evaluateStrengthRecord({
+    ...record,
+    details: {
+      ...record.details,
+      testRows: [{ ...record.details.testRows[0], wetWeight: "106.5" }],
+    },
+  }, [standard]);
+  assert.equal(atLimit.status, "Failed");
+
+  const skippedAbsorption = evaluateStrengthRecord({
+    ...record,
+    details: {
+      ...record.details,
+      testRows: [{ ...record.details.testRows[0], wetWeight: "" }],
+    },
+  }, [standard]);
+  const skippedRows = (skippedAbsorption.details as Record<string, unknown>)
+    .testRows as Array<Record<string, unknown>>;
+  assert.equal(skippedAbsorption.status, "Passed");
+  assert.equal(skippedRows[0].waterAbsorptionStatus, "");
+});
+
 test("evaluates Precast age thresholds and calculates cube density from weight", () => {
   const result = evaluateStrengthRecord(
     precastRecord([

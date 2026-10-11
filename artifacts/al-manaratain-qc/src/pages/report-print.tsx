@@ -3317,6 +3317,7 @@ function PrecastReport({
     return {
       age: criterion.age,
       minimumStrength,
+      strengthUnit: configuredStandard?.strengthUnit ?? "N/mm²",
       average: average === null
         ? legacyAverage
         : formatNumber(average),
@@ -3343,6 +3344,7 @@ function PrecastReport({
               <tr>
                 <th>Cube Age</th>
                 <th>Average Strength (N/mm²)</th>
+                <th>Required Strength</th>
                 <th>Outcome</th>
               </tr>
             </thead>
@@ -3351,6 +3353,7 @@ function PrecastReport({
                 <tr key={row.age}>
                   <td>{row.age} day{row.age === 1 ? "" : "s"}</td>
                   <td>{row.average}</td>
+                  <td>{formatNumber(row.minimumStrength)} {row.strengthUnit}</td>
                   <td className={`report-compliance-status ${row.outcome.toLocaleLowerCase()}`}>
                     {row.outcome.toLocaleUpperCase()}
                   </td>

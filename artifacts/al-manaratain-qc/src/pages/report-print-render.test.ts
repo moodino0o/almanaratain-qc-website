@@ -226,6 +226,9 @@ test("prints Kerbstone specimen measurements and formula-calculated bending stre
   const markup = renderDocument(record);
 
   assert.match(markup, /Kerbstone Specimen Results/);
+  assert.match(markup, /Test Results Summary/);
+  assert.match(markup, /Characteristic bending strength/);
+  assert.match(markup, /Water absorption/);
   assert.match(markup, /Batter Depth \(mm\)/);
   assert.match(markup, /Failure Load \(kN\)/);
   assert.match(markup, /28\.13 MPa/);
@@ -1004,7 +1007,7 @@ test("prints editable Precast standards for the matching product type", () => {
     ...reportFixture(),
     testType: "Precast",
     material: "150 mm slab",
-    details: { testRows: [] },
+    details: { testRows: [{ testAge: 7, strength: 60 }] },
   } as QcRecord;
   const standards = [
     {
@@ -1036,6 +1039,8 @@ test("prints editable Precast standards for the matching product type", () => {
   ] as StrengthStandard[];
   const markup = renderDocument(record, undefined, undefined, standards);
 
-  assert.match(markup, /7 DAYS<\/td>\s*<td>57\.0 N\/mm²<\/td>/);
+  assert.match(markup, /57\.0 N\/mm²/);
+  assert.match(markup, /Outcome/);
+  assert.match(markup, /7 days<\/td>\s*<td>60\.0<\/td>\s*<td>57\.0 N\/mm²<\/td>\s*<td class="report-compliance-status pass">PASS/);
   assert.doesNotMatch(markup, /77\.0 N\/mm²/);
 });
