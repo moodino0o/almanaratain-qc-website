@@ -759,7 +759,7 @@ function evaluatePrecastStrengthRecord(
     status,
     bsStandard:
       finalAgeStandard?.bsStandard ??
-      "Al Manaratain Precast age-based strength criteria",
+      "BS 1881 : PART 116 : 1983",
     requiredStrength: finalAgeEvaluation?.minimumStrength ?? 65,
     averageStrength: finalAgeEvaluation?.averageStrength ?? null,
     minimumStrength: finalAgeStrengths.length

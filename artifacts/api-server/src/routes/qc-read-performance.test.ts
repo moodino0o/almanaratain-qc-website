@@ -35,6 +35,7 @@ test("standard refreshes write saved evaluations in batches", () => {
   assert.match(refresh, /const batchSize = 250/);
   assert.match(refresh, /await db\.execute\(sql`/);
   assert.match(refresh, /UPDATE qc_records AS qc_record/);
+  assert.match(refresh, /\$\{id\}::integer,\s*\$\{status\}::text/);
   assert.match(refresh, /updated_at = NOW\(\)/);
   assert.doesNotMatch(refresh, /await db\.update\(qcRecordsTable\)/);
 });

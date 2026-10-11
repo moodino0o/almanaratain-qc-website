@@ -767,7 +767,7 @@ export async function ensureDefaultStrengthStandards() {
             blockType: null,
             blockSize: null,
             cubeAge: String(criterion.age),
-            bsStandard: "Al Manaratain Precast",
+            bsStandard: "BS 1881 : PART 116 : 1983",
             requiredStrength: String(criterion.minimumStrength),
             strengthUnit: "N/mm²",
           });
@@ -1463,7 +1463,7 @@ async function refreshRecordEvaluations(testTypes: string[]) {
   for (let offset = 0; offset < evaluationUpdates.length; offset += batchSize) {
     const batch = evaluationUpdates.slice(offset, offset + batchSize);
     const values = batch.map(({ id, status, details }) =>
-      sql`(${id}, ${status}, ${JSON.stringify(details)}::jsonb)`,
+      sql`(${id}::integer, ${status}::text, ${JSON.stringify(details)}::jsonb)`,
     );
     await db.execute(sql`
       UPDATE qc_records AS qc_record

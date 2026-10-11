@@ -23,3 +23,4 @@
 - [Dashboard month status](dashboard-month-status.md) — QC Test Status groups records by sample/test date for the selected calendar month.
 - [PowerPoint runtime compatibility](powerpoint-runtime-compatibility.md) — PptxGenJS ESM imports can behave differently in native Node and tsx; execute generators to verify compatibility.
 - [Data-entry keyboard behavior](entry-keyboard-behavior.md) — Enter advances through editable fields in visual order and selects existing values; skip hidden and non-editable fields and buttons.
+- [Batched SQL value typing](batched-sql-value-typing.md) — explicitly cast interpolated IDs in PostgreSQL `VALUES` updates to avoid `integer = text` failures.
