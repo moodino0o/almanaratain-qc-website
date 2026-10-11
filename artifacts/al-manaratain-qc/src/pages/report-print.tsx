@@ -3448,11 +3448,11 @@ function PrecastReport({
       <section>
         <SectionHeading>Precast Compression Results</SectionHeading>
         {rows.length ? (
-          <table className="report-table">
+          <table className="report-table precast-compression-results">
             <thead>
               <tr>
                 {columns.map((column) => (
-                  <th key={column.key} style={{ width: `${column.width}%` }}>
+                  <th key={column.key}>
                     {column.label}
                   </th>
                 ))}

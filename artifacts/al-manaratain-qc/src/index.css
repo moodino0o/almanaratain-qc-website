@@ -1643,6 +1643,17 @@
   font-size: 10px;
 }
 
+.report-paper .report-table.precast-compression-results {
+  width: 100%;
+  table-layout: auto;
+}
+
+.report-paper .report-table.precast-compression-results th,
+.report-paper .report-table.precast-compression-results td {
+  white-space: nowrap;
+  font-size: 10px;
+}
+
 @media print {
   @page {
     margin: 0;

@@ -752,7 +752,8 @@ export default function RecordDetail() {
   const { data: record, isLoading, error } = useGetRecord(recordId);
   const updateRecord = useUpdateRecord();
   const deleteRecord = useDeleteRecord();
-  const { data: strengthStandards } = useListStrengthStandards();
+  const { data: strengthStandards, isLoading: isStrengthStandardsLoading } =
+    useListStrengthStandards();
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">Loading record details...</div>;
   if (error || !record) return <div className="p-8 text-center text-destructive">Failed to load record.</div>;
@@ -783,6 +784,36 @@ export default function RecordDetail() {
   const savedStrengthStandardId = numericOrNull(recordDetails.strengthStandardId);
   const kerbStandard = strengthStandards?.find(
     (standard) => standard.id === savedStrengthStandardId,
+  );
+  const testRowsForStandard = Array.isArray(recordDetails.testRows)
+    ? recordDetails.testRows
+    : [];
+  const precastAges = new Set(
+    testRowsForStandard
+      .map((row) => {
+        const values = typeof row === "object" && row !== null
+          ? row as Record<string, unknown>
+          : {};
+        return numericOrNull(
+          values.testAge ?? values.sampleAge ?? values.cubeAge ?? values.age,
+        );
+      })
+      .filter((age): age is number => age !== null),
+  );
+  const hasLinkedStrengthStandard = Boolean(
+    strengthStandards?.some((standard) =>
+      standard.id === savedStrengthStandardId &&
+      standard.testType === record.testType,
+    ) ||
+    (record.testType === "Precast" &&
+      precastAges.size > 0 &&
+      strengthStandards?.some((standard) =>
+        standard.testType === "Precast" &&
+        standard.material.trim().toLocaleLowerCase() ===
+          record.material.trim().toLocaleLowerCase() &&
+        standard.cubeAge !== null &&
+        precastAges.has(Number(standard.cubeAge)),
+      )),
   );
   const isSieveRecord = isSieveEvaluated;
   const ageKey = record.testType === "Blocks" || record.testType === "Paving Blocks"
@@ -1504,7 +1535,11 @@ export default function RecordDetail() {
         </CardContent>
       </Card>
 
-       {canEditQc && !isStrengthEvaluated && !isSieveEvaluated && (
+       {canEditQc &&
+         !isStrengthEvaluated &&
+         !isSieveEvaluated &&
+         !isStrengthStandardsLoading &&
+         !hasLinkedStrengthStandard && (
         <Card>
           <CardHeader>
             <CardTitle>Quality Review</CardTitle>
