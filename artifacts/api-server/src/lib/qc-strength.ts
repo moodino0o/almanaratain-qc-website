@@ -880,8 +880,16 @@ function evaluateKerbStrengthRecord(
         ? "The average or minimum individual bending strength is below the configured Kerbstone standard."
         : "One or more specimens exceed the configured water absorption limit."
       : !standard
-        ? "No matching Kerbstone standard was configured."
-        : "Complete Kerbstone bending measurements and any entered absorption measurements.";
+        ? "No matching Kerbstone standard was configured for this Kerb Type."
+        : requiredStrength === null
+          ? "The matching Kerbstone standard has no average bending-strength limit."
+          : minimumRequiredStrength === null
+            ? "The matching Kerbstone standard has no minimum individual bending-strength limit."
+            : hasIncompleteStrength
+              ? "Enter each specimen's span, width, batter depth, and failure load."
+              : hasIncompleteAbsorption
+                ? "Water absorption was entered, but its dry weight, wet weight, or configured limit is missing."
+                : "Kerbstone results need review.";
   const strengthEvaluation: StrengthEvaluation = {
     status,
     bsStandard: standard?.bsStandard ?? null,

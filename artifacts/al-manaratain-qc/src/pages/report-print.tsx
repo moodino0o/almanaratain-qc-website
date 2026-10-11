@@ -511,15 +511,18 @@ function layoutColumns(
         ? (() => {
             const existingKeys = new Set(configured.map((column) => column.key));
             const lastOrder = Math.max(-1, ...configured.map((column) => column.order));
+            const ageOrder = configured.find((column) => column.key === "age")?.order;
             const addedColumns = fallback
               .filter(
                 (column) =>
                   !existingKeys.has(column.key) &&
-                  ["weight", "density"].includes(column.key),
+                  ["testingDate", "weight", "density"].includes(column.key),
               )
               .map((column, index) => ({
                 ...column,
-                order: lastOrder + index + 1,
+                order: column.key === "testingDate" && ageOrder !== undefined
+                  ? ageOrder + 0.5
+                  : lastOrder + index + 1,
               }));
             return [...configured, ...addedColumns];
           })()
@@ -3211,7 +3214,7 @@ function ConfiguredDetailsReport({
         : field.key === "material" ? record.material
           : field.key === "testedBy" ? record.testedBy
             : detail || standardValue == null ? detail : String(standardValue);
-    const value = isKerb && isDateField
+    const value = (isKerb || record.testType === "Precast") && isDateField
       ? formatKerbReportDate(String(rawValue || ""))
       : isKerb && integerDetailKeys.has(field.key) && numericValue(rawValue) !== null
         ? formatWholeNumber(rawValue)
@@ -3271,8 +3274,7 @@ function ConfiguredDetailsReport({
       record.details.testRows.length > 0 && (
         <section className="mt-4 kerbstone-specimen-section">
           <SectionHeading>Kerbstone Specimen Results</SectionHeading>
-          <div style={{ overflowX: "auto" }}>
-            <table className="report-table kerbstone-specimen-table">
+          <table className="report-table kerbstone-specimen-table">
               <thead>
                 <tr>
                   {[
@@ -3336,8 +3338,7 @@ function ConfiguredDetailsReport({
                   );
                 })}
               </tbody>
-            </table>
-          </div>
+          </table>
         </section>
       )}
     {includeRemarks && <ReportRemarks record={record} layout={layout} inFlow />}
@@ -3364,12 +3365,13 @@ function PrecastReport({
     Array.isArray(details.testRows) ? details.testRows : [],
   );
   const columns = layoutColumns(layout, "precastResults", [
-    { key: "age", label: "Cube Age (days)", visible: true, order: 0, width: 12 },
-    { key: "cubeSize", label: "Cube Size (mm)", visible: true, order: 1, width: 16 },
-    { key: "weight", label: "Weight (g)", visible: true, order: 2, width: 13 },
-    { key: "density", label: "Density (kg/m³)", visible: true, order: 3, width: 15 },
-    { key: "load", label: "Load (kN)", visible: true, order: 4, width: 15 },
-    { key: "strength", label: "Compressive Strength (N/mm²)", visible: true, order: 5, width: 29 },
+    { key: "age", label: "Cube Age (days)", visible: true, order: 0, width: 8 },
+    { key: "testingDate", label: "Testing Date", visible: true, order: 1, width: 16 },
+    { key: "cubeSize", label: "Cube Size (mm)", visible: true, order: 2, width: 14 },
+    { key: "weight", label: "Weight (g)", visible: true, order: 3, width: 11 },
+    { key: "density", label: "Density (kg/m³)", visible: true, order: 4, width: 14 },
+    { key: "load", label: "Load (kN)", visible: true, order: 5, width: 14 },
+    { key: "strength", label: "Compressive Strength (N/mm²)", visible: true, order: 6, width: 23 },
   ]);
   const cubeSize = detailValue(
     details,
@@ -3461,6 +3463,12 @@ function PrecastReport({
                 const values = objectValue(row) ?? {};
                 const rowAge =
                   values.testAge ?? values.sampleAge ?? values.cubeAge ?? values.age;
+                const numericAge = cubeRowAge(row);
+                const testingDate = numericAge === null
+                  ? "-"
+                  : formatKerbReportDate(
+                      addDaysToDate(record.sampleDate, numericAge),
+                    );
                 const strength = cubeRowStrength(row);
                 const hasSavedWeight =
                   values.weight !== undefined &&
@@ -3479,6 +3487,7 @@ function PrecastReport({
                 const densityNumber = Number(density);
                 const cells: Record<string, string> = {
                   age: rowAge == null || rowAge === "" ? "-" : String(rowAge),
+                  testingDate,
                   cubeSize,
                   weight: rawTextValue(cubeWeightInGrams(weight, weightUnit)),
                   density: Number.isFinite(densityNumber)

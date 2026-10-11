@@ -323,6 +323,39 @@ test("evaluates Kerbstone bending and optional water absorption against editable
   assert.equal(skippedRows[0].waterAbsorptionStatus, "");
 });
 
+test("explains Kerbstone review when a minimum individual limit is missing", () => {
+  const standard = readyMixStandard({
+    testType: "Kerb Stone",
+    material: "Kerbstone",
+    blockType: "Road kerb",
+    requiredStrength: "7.5",
+    minimumIndividualStrength: null,
+    waterAbsorptionLimit: "6.5",
+    strengthUnit: "MPa",
+  });
+  const result = evaluateStrengthRecord({
+    testType: "Kerb Stone",
+    material: "Kerbstone",
+    details: {
+      kerbType: "Road kerb",
+      testRows: [{
+        spanLength: "750",
+        width: "127",
+        batterDepth: "150",
+        failureLoad: "19.84",
+      }],
+    },
+  }, [standard]);
+  const evaluation = (result.details as Record<string, unknown>)
+    .strengthEvaluation as Record<string, unknown>;
+
+  assert.equal(result.status, "Review");
+  assert.equal(
+    evaluation.reason,
+    "The matching Kerbstone standard has no minimum individual bending-strength limit.",
+  );
+});
+
 test("evaluates Precast age thresholds and calculates cube density from weight", () => {
   const result = evaluateStrengthRecord(
     precastRecord([

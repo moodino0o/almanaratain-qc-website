@@ -55,9 +55,10 @@ export const REPORT_LAYOUT_FIELD_GROUPS: Record<string, Record<string, ReportLay
       ["compactionType", "Compaction", 16], ["testedBy", "Tested By", 14],
     ]),
     precastResults: fields([
-      ["age", "Cube Age (days)", 12], ["cubeSize", "Cube Size (mm)", 16],
-      ["weight", "Weight (g)", 13], ["density", "Density (kg/m³)", 15],
-      ["load", "Load (kN)", 15], ["strength", "Compressive Strength (N/mm²)", 29],
+      ["age", "Cube Age (days)", 8], ["testingDate", "Testing Date", 16],
+      ["cubeSize", "Cube Size (mm)", 14], ["weight", "Weight (g)", 11],
+      ["density", "Density (kg/m³)", 14], ["load", "Load (kN)", 14],
+      ["strength", "Compressive Strength (N/mm²)", 23],
     ]),
   },
   "Kerb Stone": { kerbStoneDetails: fields([["sampleDate", "Casting Date", 16], ["testingDate", "Testing Date", 16], ["age", "Age (days)", 10], ["kerbType", "Kerb Type", 14], ["kerbClass", "Class", 8], ["kerbMarking", "Marking", 8], ["characteristicBendingStrength", "Characteristic bending (MPa)", 18], ["minimumIndividualStrength", "Minimum individual (MPa)", 18], ["waterAbsorptionLimit", "Max. water absorption (%)", 18]]) },

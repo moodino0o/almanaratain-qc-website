@@ -45,6 +45,33 @@ function precastAverageStrength(record: QcRecord, age: number, legacyKeys: strin
     : average.toFixed(2);
 }
 
+function kerbStrengthValue(
+  record: QcRecord,
+  evaluationKey: "averageStrength" | "minimumStrength" | "maximumStrength",
+  legacyKeys: string[],
+) {
+  const details = record.details as Record<string, unknown>;
+  const evaluation = typeof details.strengthEvaluation === "object" &&
+    details.strengthEvaluation !== null
+    ? details.strengthEvaluation as Record<string, unknown>
+    : {};
+  const value = evaluation[evaluationKey];
+  if (value !== undefined && value !== null && value !== "") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed.toFixed(2) : String(value);
+  }
+  return detailValue(record, legacyKeys);
+}
+
+function strengthEvaluationReason(record: QcRecord) {
+  const details = record.details as Record<string, unknown>;
+  const evaluation = typeof details.strengthEvaluation === "object" &&
+    details.strengthEvaluation !== null
+    ? details.strengthEvaluation as Record<string, unknown>
+    : {};
+  return typeof evaluation.reason === "string" ? evaluation.reason : "";
+}
+
 function derivedAge(record: QcRecord) {
   const direct = detailValue(record, ["age"], "").trim();
   if (direct) return direct;
@@ -437,16 +464,16 @@ export default function Records() {
               <Table className="qc-register-table qc-table-readable w-full table-fixed text-[10px]">
                 <TableHeader className="sticky top-0 z-10 bg-card shadow-sm">
                   <TableRow>
-                    {["Record No.", "Sample No.", "Customer Name", "Product Type", "Cube Size", "Casting Date", "Avg. Strength (1 day)", "Avg. Strength (7 days)", "Avg. Strength (28 days)", "Actions"].map((label) => (
+                    {["Record No.", "Sample No.", "Customer Name", "Product Type", "Cube Size", "Casting Date", "Avg. Strength (1 day)", "Avg. Strength (7 days)", "Avg. Strength (28 days)", "Pass / Fail / Review", "Actions"].map((label) => (
                       <TableHead key={label} className="whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">{label}</TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
-                    <TableRow><TableCell colSpan={10} className="h-32 text-center text-muted-foreground">Loading register...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={11} className="h-32 text-center text-muted-foreground">Loading register...</TableCell></TableRow>
                   ) : sectionRecords.length === 0 ? (
-                    <TableRow><TableCell colSpan={10} className="h-32 text-center text-muted-foreground">No Precast records found.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={11} className="h-32 text-center text-muted-foreground">No Precast records found.</TableCell></TableRow>
                   ) : sectionRecords.map((record) => (
                     <TableRow key={record.id}>
                       <TableCell className="break-words px-2 py-2 font-semibold text-primary">{record.recordNo}</TableCell>
@@ -458,6 +485,7 @@ export default function Records() {
                       <TableCell className="px-2 py-2 text-right tabular-nums">{precastAverageStrength(record, 1, ["averageStrength1Day", "avgStrength1Day", "day1AverageStrength"])}</TableCell>
                       <TableCell className="px-2 py-2 text-right tabular-nums">{precastAverageStrength(record, 7, ["averageStrength7Days", "avgStrength7Days", "day7AverageStrength"])}</TableCell>
                       <TableCell className="px-2 py-2 text-right tabular-nums">{precastAverageStrength(record, 28, ["averageStrength28Days", "avgStrength28Days", "day28AverageStrength"])}</TableCell>
+                      <TableCell className="px-2 py-2 text-center" title={strengthEvaluationReason(record)}>{getWaterResultBadge(record.status)}</TableCell>
                       <TableCell className="px-2 py-2 text-right">
                          <div className="flex justify-center gap-1">
                            <Link href={`/records/${record.id}`} className="inline-flex h-5 items-center rounded-md bg-secondary px-1 text-[9px] font-medium text-secondary-foreground sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs">View</Link>
@@ -474,16 +502,16 @@ export default function Records() {
               <Table className="qc-register-table qc-table-readable w-full table-fixed text-[10px]">
                 <TableHeader className="sticky top-0 z-10 bg-card shadow-sm">
                   <TableRow>
-                    {["Record No.", "Casting Date", "Testing Date", "Age", "Kerb Type", "Factory", "Avg. Strength", "Min. Strength", "Max. Strength", "Actions"].map((label) => (
+                    {["Record No.", "Casting Date", "Testing Date", "Age", "Kerb Type", "Factory", "Avg. Strength", "Min. Strength", "Max. Strength", "Pass / Fail / Review", "Actions"].map((label) => (
                       <TableHead key={label} className="whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">{label}</TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
-                    <TableRow><TableCell colSpan={10} className="h-32 text-center text-muted-foreground">Loading register...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={11} className="h-32 text-center text-muted-foreground">Loading register...</TableCell></TableRow>
                   ) : sectionRecords.length === 0 ? (
-                    <TableRow><TableCell colSpan={10} className="h-32 text-center text-muted-foreground">No Kerb Stone records found.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={11} className="h-32 text-center text-muted-foreground">No Kerb Stone records found.</TableCell></TableRow>
                   ) : sectionRecords.map((record) => (
                     <TableRow key={record.id}>
                       <TableCell className="break-words px-2 py-2 font-semibold text-primary">{record.recordNo}</TableCell>
@@ -492,9 +520,10 @@ export default function Records() {
                       <TableCell className="px-2 py-2 text-center tabular-nums">{derivedAge(record)}</TableCell>
                       <TableCell className="break-words px-2 py-2">{detailValue(record, ["kerbType", "productType"], record.material || "—")}</TableCell>
                       <TableCell className="break-words px-2 py-2">{detailValue(record, ["factory"], record.location || "—")}</TableCell>
-                      <TableCell className="px-2 py-2 text-right tabular-nums">{detailValue(record, ["averageStrength", "avgStrength"])}</TableCell>
-                      <TableCell className="px-2 py-2 text-right tabular-nums">{detailValue(record, ["minimumStrength", "minStrength"])}</TableCell>
-                      <TableCell className="px-2 py-2 text-right tabular-nums">{detailValue(record, ["maximumStrength", "maxStrength"])}</TableCell>
+                      <TableCell className="px-2 py-2 text-right tabular-nums">{kerbStrengthValue(record, "averageStrength", ["averageStrength", "avgStrength"])}</TableCell>
+                      <TableCell className="px-2 py-2 text-right tabular-nums">{kerbStrengthValue(record, "minimumStrength", ["minimumStrength", "minStrength"])}</TableCell>
+                      <TableCell className="px-2 py-2 text-right tabular-nums">{kerbStrengthValue(record, "maximumStrength", ["maximumStrength", "maxStrength"])}</TableCell>
+                      <TableCell className="px-2 py-2 text-center" title={strengthEvaluationReason(record)}>{getWaterResultBadge(record.status)}</TableCell>
                       <TableCell className="px-2 py-2 text-right">
                          <div className="flex justify-center gap-1">
                            <Link href={`/records/${record.id}`} className="inline-flex h-5 items-center rounded-md bg-secondary px-1 text-[9px] font-medium text-secondary-foreground sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs">View</Link>

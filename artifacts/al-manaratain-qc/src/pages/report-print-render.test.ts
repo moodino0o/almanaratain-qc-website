@@ -1064,6 +1064,9 @@ test("prints editable Precast standards for the matching product type", () => {
   const markup = renderDocument(record, undefined, undefined, standards);
 
   assert.match(markup, /57\.0 N\/mm²/);
+  assert.match(markup, /20 - Sept - 2026/);
+  assert.match(markup, /<th[^>]*>Testing Date<\/th>/);
+  assert.match(markup, /<td>7<\/td>\s*<td>27 - Sept - 2026<\/td>/);
   assert.match(markup, /Outcome/);
   assert.match(markup, /7 days<\/td>\s*<td>60\.0<\/td>\s*<td>57\.0 N\/mm²<\/td>\s*<td class="report-compliance-status pass">PASS/);
   assert.doesNotMatch(markup, /77\.0 N\/mm²/);
