@@ -207,6 +207,7 @@ test("prints Kerbstone specimen measurements and formula-calculated bending stre
   const record = {
     ...reportFixture(),
     testType: "Kerb Stone",
+    material: "Kerbstone",
     sampleDate: "2026-10-11T00:00:00.000Z",
     details: {
       kerbType: "Road kerb",
@@ -226,7 +227,22 @@ test("prints Kerbstone specimen measurements and formula-calculated bending stre
       }],
     },
   } as QcRecord;
-  const markup = renderDocument(record);
+  const standard = {
+    id: 31,
+    testType: "Kerb Stone",
+    material: "Kerbstone",
+    blockType: "Road kerb",
+    blockSize: null,
+    cubeAge: null,
+    bsStandard: "BS 7263",
+    requiredStrength: 30,
+    minimumIndividualStrength: 25,
+    waterAbsorptionLimit: 6.5,
+    strengthUnit: "MPa",
+    createdAt: "2026-10-11T00:00:00.000Z",
+    updatedAt: "2026-10-11T00:00:00.000Z",
+  } as StrengthStandard;
+  const markup = renderDocument(record, undefined, undefined, [standard]);
 
   assert.match(markup, /Kerbstone Specimen Results/);
   assert.match(markup, /kerb-details-layout/);
@@ -234,6 +250,8 @@ test("prints Kerbstone specimen measurements and formula-calculated bending stre
   assert.match(markup, /915 × 125 × 225 mm/);
   assert.match(markup, /Test Conducted:/);
   assert.match(markup, /Bending-load test/);
+  assert.ok(markup.indexOf("Kerb Type") < markup.indexOf("Age (days)"));
+  assert.ok(markup.indexOf("Age (days)") < markup.indexOf("Casting Date"));
   assert.ok(markup.indexOf("Bending-load test") < markup.indexOf("Test Results Summary"));
   assert.ok(markup.indexOf("Applicable Standard") < markup.indexOf("Test Results Summary"));
   assert.ok(markup.indexOf("Test Results Summary") < markup.indexOf("Kerbstone Specimen Results"));
@@ -245,9 +263,25 @@ test("prints Kerbstone specimen measurements and formula-calculated bending stre
   assert.match(markup, /Test Results Summary/);
   assert.doesNotMatch(markup, /Test Results Summary<\/h3>\s*<strong/);
   assert.match(markup, /Characteristic bending strength/);
+  assert.match(markup, /<td>28\.1 MPa<\/td>\s*<td>≥ 30\.0 MPa<\/td>\s*<td class="report-compliance-status fail">FAIL/);
+  assert.match(markup, /Minimum individual bending strength<\/td>\s*<td>28\.1 MPa<\/td>\s*<td>≥ 25\.0 MPa<\/td>\s*<td class="report-compliance-status pass">PASS/);
+  assert.match(markup, /Maximum individual bending strength<\/td>\s*<td>28\.1 MPa<\/td>/);
   assert.match(markup, /Water absorption/);
+  assert.match(markup, /<td>4\.2%<\/td>\s*<td>&lt; 6\.5%<\/td>\s*<td class="report-compliance-status pass">PASS/);
   assert.match(markup, /<td>28\.1 MPa<\/td>/);
   assert.match(markup, /<td>4\.2%<\/td>/);
+  const noAbsorptionRecord = {
+    ...record,
+    details: {
+      ...record.details,
+      testRows: record.details.testRows.map((row) => ({
+        ...row,
+        weight: "",
+        wetWeight: "",
+      })),
+    },
+  } as QcRecord;
+  assert.doesNotMatch(renderDocument(noAbsorptionRecord), /<td>Water absorption<\/td>/);
   assert.doesNotMatch(markup, /Bending strength\s*<\/strong>|Average: 28\.1 MPa|Minimum: 28\.1 MPa|Maximum: 28\.1 MPa/);
   assert.match(markup, /kerbstone-specimen-table/);
   assert.match(markup, /kerbstone-specimen-section/);
