@@ -39,6 +39,7 @@ import {
   blockSizeMatches,
   blockTypeMatches,
   calculateKerbBendingStrength,
+  evaluateKerbWaterAbsorption,
   calculateChlorideContent,
   calculateCubeDensity,
   calculateDammamBlockResults,
@@ -2205,6 +2206,7 @@ function StrengthStandardsTable({
           bsStandard: textValue(evaluation.bsStandard),
           requiredStrength: Number(evaluation.requiredStrength),
           minimumIndividualStrength: null,
+          waterAbsorptionLimit: null,
           dammamAverageStrength: null,
           dammamMinimumStrength: null,
           strengthUnit: textValue(evaluation.strengthUnit, "N/mm²"),
@@ -3046,6 +3048,10 @@ function ConfiguredDetailsReport({
               : field.key === "kerbMarking" ? strengthStandard?.kerbMarking
                 : field.key === "characteristicBendingStrength" ? strengthStandard?.requiredStrength
                   : field.key === "minimumIndividualStrength" ? strengthStandard?.minimumIndividualStrength
+                    : field.key === "waterAbsorptionLimit"
+                      ? strengthStandard?.waterAbsorptionLimit == null
+                        ? undefined
+                        : `< ${strengthStandard.waterAbsorptionLimit}%`
                     : undefined
           : undefined;
         const value = field.key === "sampleDate" ? formatReportDate(record.sampleDate)
@@ -3077,6 +3083,8 @@ function ConfiguredDetailsReport({
                     "Weight (kg)",
                     "Wet Weight (kg)",
                     "Bending Strength (MPa)",
+                    "Water Absorption (%)",
+                    "Absorption Result",
                   ].map((label) => (
                     <th
                       key={label}
@@ -3096,18 +3104,25 @@ function ConfiguredDetailsReport({
                     width: String(row.width ?? ""),
                     batterDepth: String(row.batterDepth ?? ""),
                   });
+                  const absorption = evaluateKerbWaterAbsorption(
+                    row.weight,
+                    row.wetWeight,
+                    strengthStandard?.waterAbsorptionLimit,
+                  );
                   const values = [
                     row.rowNo ?? index + 1,
-                    row.length,
-                    row.width,
-                    row.height,
-                    row.batterDepth,
-                    row.batterAngle,
+                    formatWholeNumber(row.length),
+                    formatWholeNumber(row.width),
+                    formatWholeNumber(row.height),
+                    formatWholeNumber(row.batterDepth),
+                    formatWholeNumber(row.batterAngle),
                     row.spanLength,
                     row.failureLoad ?? row.load,
                     row.weight,
                     row.wetWeight,
                     bendingStrength ? `${bendingStrength} MPa` : "",
+                    absorption?.value ? `${absorption.value}%` : "",
+                    absorption?.status ?? "",
                   ];
                   return (
                     <tr key={index}>

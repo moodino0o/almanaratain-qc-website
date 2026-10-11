@@ -415,14 +415,16 @@ export const evaluateKerbWaterAbsorption = (
   limit: unknown,
 ) => {
   if (!stringValue(wetWeight).trim()) return null;
-  const value = calculateWaterAbsorption(dryWeight, wetWeight);
+  const dry = finiteNumericValue(dryWeight);
+  const wet = finiteNumericValue(wetWeight);
   const numericLimit = finiteNumericValue(limit);
-  if (!value || numericLimit === null || numericLimit < 0) {
+  if (dry === null || wet === null || dry <= 0 || numericLimit === null || numericLimit < 0) {
     return { value: "", status: "Review" as const };
   }
+  const rawValue = ((wet - dry) / dry) * 100;
   return {
-    value,
-    status: Number(value) < numericLimit ? "Pass" as const : "Fail" as const,
+    value: rawValue.toFixed(2),
+    status: rawValue < numericLimit ? "Pass" as const : "Fail" as const,
   };
 };
 

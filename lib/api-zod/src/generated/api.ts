@@ -634,6 +634,7 @@ export const ListStrengthStandardsResponseItem = zod.object({
   "bsStandard": zod.string(),
   "requiredStrength": zod.number(),
   "minimumIndividualStrength": zod.number().nullable(),
+  "waterAbsorptionLimit": zod.number().nullable(),
   "dammamAverageStrength": zod.number().nullable(),
   "dammamMinimumStrength": zod.number().nullable(),
   "strengthUnit": zod.string()
@@ -650,6 +651,8 @@ export const ListStrengthStandardsResponse = zod.array(ListStrengthStandardsResp
 export const createStrengthStandardBodyRequiredStrengthMin = 0;
 
 export const createStrengthStandardBodyMinimumIndividualStrengthMin = 0;
+
+export const createStrengthStandardBodyWaterAbsorptionLimitMin = 0;
 
 export const createStrengthStandardBodyDammamAverageStrengthMin = 0;
 
@@ -668,6 +671,7 @@ export const CreateStrengthStandardBody = zod.object({
   "bsStandard": zod.string().min(1),
   "requiredStrength": zod.number().min(createStrengthStandardBodyRequiredStrengthMin),
   "minimumIndividualStrength": zod.number().min(createStrengthStandardBodyMinimumIndividualStrengthMin).nullish(),
+  "waterAbsorptionLimit": zod.number().min(createStrengthStandardBodyWaterAbsorptionLimitMin).nullish(),
   "dammamAverageStrength": zod.number().min(createStrengthStandardBodyDammamAverageStrengthMin).nullish(),
   "dammamMinimumStrength": zod.number().min(createStrengthStandardBodyDammamMinimumStrengthMin).nullish(),
   "strengthUnit": zod.string().default(createStrengthStandardBodyStrengthUnitDefault)
@@ -685,6 +689,7 @@ export const CreateStrengthStandardResponse = zod.object({
   "bsStandard": zod.string(),
   "requiredStrength": zod.number(),
   "minimumIndividualStrength": zod.number().nullable(),
+  "waterAbsorptionLimit": zod.number().nullable(),
   "dammamAverageStrength": zod.number().nullable(),
   "dammamMinimumStrength": zod.number().nullable(),
   "strengthUnit": zod.string()
@@ -705,6 +710,8 @@ export const updateStrengthStandardBodyRequiredStrengthMin = 0;
 
 export const updateStrengthStandardBodyMinimumIndividualStrengthMin = 0;
 
+export const updateStrengthStandardBodyWaterAbsorptionLimitMin = 0;
+
 export const updateStrengthStandardBodyDammamAverageStrengthMin = 0;
 
 export const updateStrengthStandardBodyDammamMinimumStrengthMin = 0;
@@ -722,6 +729,7 @@ export const UpdateStrengthStandardBody = zod.object({
   "bsStandard": zod.string().min(1).optional(),
   "requiredStrength": zod.number().min(updateStrengthStandardBodyRequiredStrengthMin).optional(),
   "minimumIndividualStrength": zod.number().min(updateStrengthStandardBodyMinimumIndividualStrengthMin).nullish(),
+  "waterAbsorptionLimit": zod.number().min(updateStrengthStandardBodyWaterAbsorptionLimitMin).nullish(),
   "dammamAverageStrength": zod.number().min(updateStrengthStandardBodyDammamAverageStrengthMin).nullish(),
   "dammamMinimumStrength": zod.number().min(updateStrengthStandardBodyDammamMinimumStrengthMin).nullish(),
   "strengthUnit": zod.string().optional()
@@ -739,6 +747,7 @@ export const UpdateStrengthStandardResponse = zod.object({
   "bsStandard": zod.string(),
   "requiredStrength": zod.number(),
   "minimumIndividualStrength": zod.number().nullable(),
+  "waterAbsorptionLimit": zod.number().nullable(),
   "dammamAverageStrength": zod.number().nullable(),
   "dammamMinimumStrength": zod.number().nullable(),
   "strengthUnit": zod.string()

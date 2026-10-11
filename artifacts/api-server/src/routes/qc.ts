@@ -2145,6 +2145,14 @@ router.patch("/strength-standards/:id", requireAdministrator, async (req, res): 
               : String(body.data.minimumIndividualStrength),
         }
       : {}),
+    ...(body.data.waterAbsorptionLimit !== undefined
+      ? {
+          waterAbsorptionLimit:
+            body.data.waterAbsorptionLimit == null
+              ? null
+              : String(body.data.waterAbsorptionLimit),
+        }
+      : {}),
     dammamAverageStrength: nextTestType === "Blocks"
       ? String(
           body.data.dammamAverageStrength ??
@@ -2268,14 +2276,6 @@ router.patch("/shape-factors/:id", requireAdministrator, async (req, res): Promi
       ...(body.data.blockSize !== undefined
         ? { blockSize: body.data.blockSize.trim() }
         : {}),
-    ...(body.data.waterAbsorptionLimit !== undefined
-      ? {
-          waterAbsorptionLimit:
-            body.data.waterAbsorptionLimit == null
-              ? null
-              : String(body.data.waterAbsorptionLimit),
-        }
-      : {}),
       ...(body.data.shapeFactor !== undefined
         ? {
             shapeFactor:

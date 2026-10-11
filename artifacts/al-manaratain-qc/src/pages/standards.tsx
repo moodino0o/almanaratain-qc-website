@@ -1078,11 +1078,12 @@ function StrengthStandardsFolder({
                     <th className={`px-4 py-3 font-semibold ${isPrecast ? "hidden" : ""}`}>{isKerbStone ? "Kerb Type" : "Block Type"}</th>
                     <th className={`px-4 py-3 font-semibold ${isPrecast ? "hidden" : ""}`}>{isKerbStone ? "Kerb Size" : "Block Size"}</th>
                     {isKerbStone && <><th className="px-4 py-3 font-semibold">Class</th><th className="px-4 py-3 font-semibold">Marking</th></>}
-                    <th className="px-4 py-3 font-semibold">{isBlocks ? "Reference (not Dammam limit)" : isKerbStone ? "Strength type" : "BS Standard"}</th>
+                    <th className="px-4 py-3 font-semibold">{isBlocks ? "Reference (not Dammam limit)" : "BS Standard"}</th>
                     <th className="px-4 py-3 font-semibold">
                       {isBlocks ? "Other-plant minimum average" : isPrecast ? "Minimum average" : isKerbStone ? "Characteristic bending" : "Minimum"}
                     </th>
                     {isKerbStone && <th className="px-4 py-3 font-semibold">Minimum individual</th>}
+                    {isKerbStone && <th className="px-4 py-3 font-semibold">Maximum water absorption (%)</th>}
                     {isBlocks && <th className="px-4 py-3 font-semibold">Dammam limits</th>}
                     <th className="px-4 py-3 text-right font-semibold">
                       Actions

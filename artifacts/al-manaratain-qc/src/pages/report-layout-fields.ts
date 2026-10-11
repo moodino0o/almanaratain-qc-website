@@ -60,7 +60,7 @@ export const REPORT_LAYOUT_FIELD_GROUPS: Record<string, Record<string, ReportLay
       ["load", "Load (kN)", 15], ["strength", "Compressive Strength (N/mm²)", 29],
     ]),
   },
-  "Kerb Stone": { kerbStoneDetails: fields([["sampleDate", "Casting Date", 16], ["testingDate", "Testing Date", 16], ["age", "Age (days)", 10], ["kerbType", "Kerb Type", 14], ["kerbClass", "Class", 8], ["kerbMarking", "Marking", 8], ["characteristicBendingStrength", "Characteristic bending (MPa)", 18], ["minimumIndividualStrength", "Minimum individual (MPa)", 18], ["averageStrength", "Avg. Strength", 14], ["minimumStrength", "Min. Strength", 12], ["maximumStrength", "Max. Strength", 12]]) },
+  "Kerb Stone": { kerbStoneDetails: fields([["sampleDate", "Casting Date", 16], ["testingDate", "Testing Date", 16], ["age", "Age (days)", 10], ["kerbType", "Kerb Type", 14], ["kerbClass", "Class", 8], ["kerbMarking", "Marking", 8], ["characteristicBendingStrength", "Characteristic bending (MPa)", 18], ["minimumIndividualStrength", "Minimum individual (MPa)", 18], ["waterAbsorptionLimit", "Max. water absorption (%)", 18], ["averageStrength", "Avg. Strength", 14], ["minimumStrength", "Min. Strength", 12], ["maximumStrength", "Max. Strength", 12]]) },
 };
 
 const genericContext = fields([

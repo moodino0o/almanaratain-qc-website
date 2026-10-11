@@ -43,6 +43,7 @@ import {
   createDefaultTestRows,
   calculateKerbBendingStrength,
   kerbDimensionsForType,
+  evaluateKerbWaterAbsorption,
   DEFAULT_PRECAST_COMPACTION,
   DEFAULT_PRECAST_CUBE_SIZE,
   PRECAST_CUBE_AGES,
@@ -2193,8 +2194,8 @@ export default function RecordForm() {
                 <div className="mb-6 space-y-3">
                   <div>
                     <h3 className="font-semibold text-foreground">Kerbstone Specimen Results</h3>
-                    <p className="text-xs text-muted-foreground">
-                      Enter measurements for each specimen. Length, width, and height default from the kerb type and are skipped by Enter.
+                      <p className="text-xs text-muted-foreground">
+                      Enter measurements for each specimen. Length, width, height, batter depth, and batter angle are whole numbers. Water absorption is skipped until Wet Weight is entered.
                     </p>
                   </div>
                   <div className="overflow-x-auto rounded-md border">
@@ -2212,6 +2213,8 @@ export default function RecordForm() {
                           <th className="px-2 py-2">Weight (kg)</th>
                           <th className="px-2 py-2">Wet Weight (kg)</th>
                           <th className="px-2 py-2">Bending Strength (MPa)</th>
+                          <th className="px-2 py-2">Water Absorption (%)</th>
+                          <th className="px-2 py-2">Absorption Result</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -2231,8 +2234,10 @@ export default function RecordForm() {
                             ] as const).map(({ key, label, skip }) => (
                               <td key={key} className="px-2 py-2">
                                 <Input
-                                  type="text"
-                                  inputMode="decimal"
+                                  type={["length", "width", "height", "batterDepth", "batterAngle"].includes(key) ? "number" : "text"}
+                                  {...(["length", "width", "height", "batterDepth", "batterAngle"].includes(key)
+                                    ? { step: "1", inputMode: "numeric" as const }
+                                    : { inputMode: "decimal" as const })}
                                   value={row[key] ?? ""}
                                   data-enter-skip={skip ? "true" : undefined}
                                   onChange={(event) =>
@@ -2247,6 +2252,21 @@ export default function RecordForm() {
                                 ? `${calculateKerbBendingStrength(row)} MPa`
                                 : "—"}
                             </td>
+                            {(() => {
+                              const absorption = evaluateKerbWaterAbsorption(
+                                row.weight,
+                                row.wetWeight,
+                                applicableStandard?.waterAbsorptionLimit,
+                              );
+                              return <>
+                                <td className="px-2 py-2 tabular-nums">
+                                  {absorption?.value ? `${absorption.value}%` : ""}
+                                </td>
+                                <td className="px-2 py-2 font-medium">
+                                  {absorption?.status ?? ""}
+                                </td>
+                              </>;
+                            })()}
                           </tr>
                         ))}
                       </tbody>

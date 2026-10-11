@@ -106,6 +106,10 @@ test("Kerbstone water absorption passes strictly below the editable limit and sk
     value: "6.50",
     status: "Fail",
   });
+  assert.deepEqual(evaluateKerbWaterAbsorption("1000", "1064.99", "6.5"), {
+    value: "6.50",
+    status: "Pass",
+  });
   assert.equal(evaluateKerbWaterAbsorption("100", "", "6.5"), null);
   assert.deepEqual(evaluateKerbWaterAbsorption("", "106", "6.5"), {
     value: "",

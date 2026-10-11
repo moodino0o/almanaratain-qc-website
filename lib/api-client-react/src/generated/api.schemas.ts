@@ -341,6 +341,8 @@ export interface StrengthStandard {
   /** @nullable */
   minimumIndividualStrength: number | null;
   /** @nullable */
+  waterAbsorptionLimit: number | null;
+  /** @nullable */
   dammamAverageStrength: number | null;
   /** @nullable */
   dammamMinimumStrength: number | null;
@@ -385,6 +387,11 @@ export interface StrengthStandardInput {
      * @nullable
      */
   minimumIndividualStrength?: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  waterAbsorptionLimit?: number | null;
   /**
      * @minimum 0
      * @nullable
@@ -436,6 +443,11 @@ export interface StrengthStandardUpdate {
      * @nullable
      */
   minimumIndividualStrength?: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  waterAbsorptionLimit?: number | null;
   /**
      * @minimum 0
      * @nullable

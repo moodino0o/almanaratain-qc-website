@@ -26,6 +26,8 @@ export interface StrengthStandard {
   /** @nullable */
   minimumIndividualStrength: number | null;
   /** @nullable */
+  waterAbsorptionLimit: number | null;
+  /** @nullable */
   dammamAverageStrength: number | null;
   /** @nullable */
   dammamMinimumStrength: number | null;

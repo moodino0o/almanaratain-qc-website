@@ -38,6 +38,11 @@ export interface StrengthStandardUpdate {
      * @minimum 0
      * @nullable
      */
+  waterAbsorptionLimit?: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
   dammamAverageStrength?: number | null;
   /**
      * @minimum 0
