@@ -210,6 +210,36 @@ function formFromStandard(standard: StrengthStandard): StandardForm {
   };
 }
 
+function strengthStandardApiErrorMessage(
+  error: unknown,
+  fallback: string,
+): string {
+  if (!(error instanceof Error) || error.name !== "ApiError") return fallback;
+
+  const apiError = error as Error & { status?: unknown; data?: unknown };
+  if (
+    typeof apiError.status !== "number" ||
+    apiError.status < 400 ||
+    apiError.status >= 600 ||
+    !apiError.data ||
+    typeof apiError.data !== "object"
+  ) {
+    return fallback;
+  }
+
+  const message = (apiError.data as Record<string, unknown>).error;
+  if (typeof message !== "string") return fallback;
+
+  const safeMessage = message
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!safeMessage) return fallback;
+  return safeMessage.length > 200
+    ? `${safeMessage.slice(0, 199)}…`
+    : safeMessage;
+}
+
 function formFromSieveStandards(standards: SieveStandard[]): SieveForm {
   const standard = standards[0];
   return {
@@ -2356,7 +2386,13 @@ export default function Standards() {
         }));
         invalidateStandards();
       },
-      onError: () => toast.error("Unable to save the strength standard."),
+      onError: (error: unknown) =>
+        toast.error(
+          strengthStandardApiErrorMessage(
+            error,
+            "Unable to save the strength standard.",
+          ),
+        ),
     };
     if (editing) updateStandard.mutate({ id: editing.id, data }, options);
     else createStandard.mutate({ data }, options);
@@ -2409,8 +2445,13 @@ export default function Standards() {
       toast.success(`${standard.bsStandard} linked to ${blockType} / ${blockSize}.`);
       setExpandedStrengthFolders((current) => ({ ...current, blocks: true }));
       invalidateStandards();
-    } catch {
-      toast.error("Unable to link the Block standard.");
+    } catch (error) {
+      toast.error(
+        strengthStandardApiErrorMessage(
+          error,
+          "Unable to link the Block standard.",
+        ),
+      );
     }
   };
 
@@ -2469,8 +2510,13 @@ export default function Standards() {
             : "precast"]: true,
       }));
       invalidateStandards();
-    } catch {
-      toast.error("Unable to link the strength standard to this product.");
+    } catch (error) {
+      toast.error(
+        strengthStandardApiErrorMessage(
+          error,
+          "Unable to link the strength standard to this product.",
+        ),
+      );
     }
   };
 
@@ -2614,7 +2660,13 @@ export default function Standards() {
           toast.success("Strength standard deleted.");
           invalidateStandards();
         },
-        onError: () => toast.error("Unable to delete the strength standard."),
+        onError: (error) =>
+          toast.error(
+            strengthStandardApiErrorMessage(
+              error,
+              "Unable to delete the strength standard.",
+            ),
+          ),
       },
     );
   };
