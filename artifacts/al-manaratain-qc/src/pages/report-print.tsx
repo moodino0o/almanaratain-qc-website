@@ -3251,7 +3251,6 @@ function ConfiguredDetailsReport({
             <ReportField label="Kerb Size" value={kerbSizeLabel} />
             <ReportField label="Test Conducted" value="Bending-load test" />
           </div>
-          <KerbstoneResultsSummary record={record} standard={strengthStandard} />
         </section>
         <section className="kerb-report-standard">
           <SectionHeading>Applicable Standard</SectionHeading>
@@ -3263,6 +3262,9 @@ function ConfiguredDetailsReport({
         <SectionHeading>{record.testType} Details</SectionHeading>
         <div className="report-fields">{columns.map(renderField)}</div>
       </section>
+    )}
+    {record.testType === "Kerb Stone" && (
+      <KerbstoneResultsSummary record={record} standard={strengthStandard} />
     )}
     {record.testType === "Kerb Stone" &&
       Array.isArray(record.details.testRows) &&

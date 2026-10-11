@@ -235,7 +235,8 @@ test("prints Kerbstone specimen measurements and formula-calculated bending stre
   assert.match(markup, /Test Conducted:/);
   assert.match(markup, /Bending-load test/);
   assert.ok(markup.indexOf("Bending-load test") < markup.indexOf("Test Results Summary"));
-  assert.ok(markup.indexOf("Test Results Summary") < markup.indexOf("Applicable Standard"));
+  assert.ok(markup.indexOf("Applicable Standard") < markup.indexOf("Test Results Summary"));
+  assert.ok(markup.indexOf("Test Results Summary") < markup.indexOf("Kerbstone Specimen Results"));
   assert.match(markup, /Applicable Standard/);
   assert.match(markup, /11 - Oct - 2026/);
   assert.match(markup, /08 - Nov - 2026/);
