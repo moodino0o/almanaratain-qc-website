@@ -74,6 +74,7 @@ const AUTOMATED_TEST_TYPES = new Set([
   "Blocks",
   "Paving Blocks",
   "Precast",
+  "Kerb Stone",
 ]);
 const DEFAULT_STRENGTH_UNIT = "N/mm²";
 export const PRECAST_AGE_STRENGTH_CRITERIA = [
@@ -463,6 +464,16 @@ function standardMatchesRecord(
       blockSizeMatches(standard.blockSize, blockSize)
     );
   }
+  if (record.testType === "Kerb Stone") {
+    return (
+      blockMaterialMatches(standard.material, record.material, blockType) &&
+      blockTypeMatches(standard.blockType, textValue(record.details.kerbType)) &&
+      blockSizeMatches(
+        standard.blockSize,
+        textValue(record.details.kerbSize ?? record.details.blockSize),
+      )
+    );
+  }
   if (!blockMaterialMatches(standard.material, record.material, blockType)) return false;
   if (record.testType === "Paving Blocks") {
     const pavingBlockSize = textValue(
@@ -781,6 +792,119 @@ function evaluatePrecastStrengthRecord(
   return { details, status, evaluation: strengthEvaluation };
 }
 
+function evaluateKerbStrengthRecord(
+  record: RecordForStrength,
+  standards: QcStrengthStandardRow[],
+) {
+  const standard = matchingStandard(record, standards);
+  const sourceRows = Array.isArray(record.details.testRows) ? record.details.testRows : [];
+  const limit = numericValue(standard?.waterAbsorptionLimit);
+  let hasIncompleteStrength = sourceRows.length === 0;
+  let hasIncompleteAbsorption = false;
+  let strengthFailed = false;
+  let absorptionFailed = false;
+  const strengths: number[] = [];
+  const calculatedRows = sourceRows.map((row) => {
+    if (typeof row !== "object" || row === null) {
+      hasIncompleteStrength = true;
+      return row;
+    }
+    const values = row as Record<string, unknown>;
+    const load = numericValue(values.failureLoad ?? values.load);
+    const span = numericValue(values.spanLength);
+    const width = numericValue(values.width);
+    const batterDepth = numericValue(values.batterDepth);
+    const completeStrength =
+      load !== null && load >= 0 &&
+      span !== null && span > 0 &&
+      width !== null && width > 0 &&
+      batterDepth !== null && batterDepth > 0;
+    const rawStrength = completeStrength
+      ? (3 * load! * 1_000 * span!) / (2 * width! * batterDepth! ** 2)
+      : null;
+    const bendingStrength = rawStrength === null ? null : rounded(rawStrength);
+    if (bendingStrength === null) hasIncompleteStrength = true;
+    else strengths.push(bendingStrength);
+    const wetWeight = values.wetWeight;
+    const hasWetWeight = wetWeight !== undefined && wetWeight !== null &&
+      String(wetWeight).trim() !== "";
+    let waterAbsorption: number | null = null;
+    let waterAbsorptionStatus: "Pass" | "Fail" | "Review" | "" = "";
+    if (hasWetWeight) {
+      const dry = numericValue(values.weight);
+      const wet = numericValue(wetWeight);
+      if (dry === null || dry <= 0 || wet === null || limit === null || limit < 0) {
+        hasIncompleteAbsorption = true;
+        waterAbsorptionStatus = "Review";
+      } else {
+        waterAbsorption = ((wet - dry) / dry) * 100;
+        waterAbsorptionStatus = waterAbsorption < limit ? "Pass" : "Fail";
+        if (waterAbsorptionStatus === "Fail") absorptionFailed = true;
+      }
+    }
+    return {
+      ...values,
+      bendingStrength: bendingStrength === null ? "" : bendingStrength.toFixed(2),
+      waterAbsorption: waterAbsorption === null ? "" : waterAbsorption.toFixed(2),
+      waterAbsorptionStatus,
+    };
+  });
+  const averageStrength = strengths.length
+    ? rounded(strengths.reduce((sum, strength) => sum + strength, 0) / strengths.length)
+    : null;
+  const minimumStrength = strengths.length ? Math.min(...strengths) : null;
+  const maximumStrength = strengths.length ? Math.max(...strengths) : null;
+  const requiredStrength = numericValue(standard?.requiredStrength);
+  const minimumRequiredStrength = numericValue(standard?.minimumIndividualStrength);
+  if (
+    requiredStrength !== null &&
+    averageStrength !== null &&
+    averageStrength < requiredStrength
+  ) strengthFailed = true;
+  if (
+    minimumRequiredStrength !== null &&
+    minimumStrength !== null &&
+    minimumStrength < minimumRequiredStrength
+  ) strengthFailed = true;
+
+  const status: StrengthEvaluationStatus =
+    strengthFailed || absorptionFailed
+      ? "Failed"
+      : !standard ||
+          requiredStrength === null ||
+          minimumRequiredStrength === null ||
+          hasIncompleteStrength ||
+          hasIncompleteAbsorption
+        ? "Review"
+        : "Passed";
+  const reason = status === "Passed"
+    ? null
+    : status === "Failed"
+      ? strengthFailed
+        ? "The average or minimum individual bending strength is below the configured Kerbstone standard."
+        : "One or more specimens exceed the configured water absorption limit."
+      : !standard
+        ? "No matching Kerbstone standard was configured."
+        : "Complete Kerbstone bending measurements and any entered absorption measurements.";
+  const strengthEvaluation: StrengthEvaluation = {
+    status,
+    bsStandard: standard?.bsStandard ?? null,
+    requiredStrength,
+    minimumRequiredStrength,
+    averageStrength,
+    minimumStrength,
+    maximumStrength,
+    strengthUnit: standard?.strengthUnit || "MPa",
+    reason,
+  };
+  const details = {
+    ...record.details,
+    testRows: calculatedRows,
+    strengthEvaluation,
+  };
+  return { details, status, evaluation: strengthEvaluation };
+}
+
 export function evaluateStrengthRecord(
   record: RecordForStrength,
   standards: QcStrengthStandardRow[],
@@ -796,6 +920,9 @@ export function evaluateStrengthRecord(
 
   if (record.testType === "Precast") {
     return evaluatePrecastStrengthRecord(record, standards);
+  }
+  if (record.testType === "Kerb Stone") {
+    return evaluateKerbStrengthRecord(record, standards);
   }
 
   const baseNormalizedDetails: Record<string, unknown> =

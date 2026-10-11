@@ -3004,6 +3004,122 @@ function PavingBlocksReport({ record, standards, layout }: {
   );
 }
 
+function KerbstoneResultsSummary({
+  record,
+  standard,
+}: {
+  record: QcRecord;
+  standard?: StrengthStandard;
+}) {
+  const rows = Array.isArray(record.details.testRows)
+    ? record.details.testRows
+    : [];
+  const measuredStrengths = rows.map((rawRow) => {
+    const row = objectValue(rawRow) ?? {};
+    const value = calculateKerbBendingStrength({
+      failureLoad: String(row.failureLoad ?? row.load ?? ""),
+      spanLength: String(row.spanLength ?? ""),
+      width: String(row.width ?? ""),
+      batterDepth: String(row.batterDepth ?? ""),
+    });
+    return value ? Number(value) : null;
+  });
+  const completeStrengths = measuredStrengths.filter(
+    (value): value is number => value !== null && Number.isFinite(value),
+  );
+  const average = completeStrengths.length
+    ? completeStrengths.reduce((sum, value) => sum + value, 0) / completeStrengths.length
+    : null;
+  const minimum = completeStrengths.length ? Math.min(...completeStrengths) : null;
+  const requiredAverage = numericValue(standard?.requiredStrength);
+  const requiredIndividual = numericValue(standard?.minimumIndividualStrength);
+  const strengthStatus =
+    average === null ||
+    completeStrengths.length !== rows.length ||
+    requiredAverage === null ||
+    requiredIndividual === null
+      ? "Review"
+      : average < requiredAverage || minimum! < requiredIndividual
+        ? "Fail"
+        : "Pass";
+  const absorptionResults = rows
+    .map((rawRow) => {
+      const row = objectValue(rawRow) ?? {};
+      return evaluateKerbWaterAbsorption(
+        row.weight,
+        row.wetWeight,
+        standard?.waterAbsorptionLimit,
+      );
+    })
+    .filter((result): result is NonNullable<typeof result> => result !== null);
+  const absorptionStatus = absorptionResults.length === 0
+    ? "Skipped"
+    : absorptionResults.some((result) => result.status === "Fail")
+      ? "Fail"
+      : absorptionResults.every((result) => result.status === "Pass")
+        ? "Pass"
+        : "Review";
+  const overallStatus =
+    strengthStatus === "Fail" || absorptionStatus === "Fail"
+      ? "Failed"
+      : strengthStatus === "Pass" &&
+          (absorptionStatus === "Pass" || absorptionStatus === "Skipped")
+        ? "Passed"
+        : "Review";
+  const summaryRows = [
+    {
+      test: "Characteristic bending strength",
+      result: average === null ? "—" : `${formatNumber(average)} MPa average`,
+      requirement: requiredAverage === null ? "Not configured" : `≥ ${formatNumber(requiredAverage)} MPa`,
+      status: strengthStatus,
+    },
+    {
+      test: "Minimum individual bending strength",
+      result: minimum === null ? "—" : `${formatNumber(minimum)} MPa minimum`,
+      requirement: requiredIndividual === null ? "Not configured" : `≥ ${formatNumber(requiredIndividual)} MPa`,
+      status: strengthStatus,
+    },
+    {
+      test: "Water absorption",
+      result: absorptionResults.length
+        ? `${absorptionResults.filter((result) => result.status !== "Review").length} of ${absorptionResults.length} specimens assessed`
+        : "Not entered",
+      requirement: standard?.waterAbsorptionLimit == null
+        ? "Not configured"
+        : `< ${standard.waterAbsorptionLimit}%`,
+      status: absorptionStatus,
+    },
+  ];
+  const statusClass = overallStatus.toLocaleLowerCase();
+  return (
+    <section className="kerb-results-summary">
+      <div className="kerb-results-summary-heading">
+        <SectionHeading>Test Results Summary</SectionHeading>
+        <strong className={`report-compliance-status ${statusClass}`}>
+          {overallStatus === "Passed" ? "PASS" : overallStatus === "Failed" ? "FAIL" : "REVIEW"}
+        </strong>
+      </div>
+      <table className="report-table">
+        <thead>
+          <tr><th>Test</th><th>Result</th><th>Standard</th><th>Outcome</th></tr>
+        </thead>
+        <tbody>
+          {summaryRows.map((row) => (
+            <tr key={row.test}>
+              <td>{row.test}</td>
+              <td>{row.result}</td>
+              <td>{row.requirement}</td>
+              <td className={`report-compliance-status ${row.status.toLocaleLowerCase()}`}>
+                {row.status.toLocaleUpperCase()}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
 function ConfiguredDetailsReport({
   record,
   tableKey,
@@ -3062,6 +3178,9 @@ function ConfiguredDetailsReport({
         return <ReportField key={field.key} label={field.label} value={value} />;
       })}
     </div></section>
+    {record.testType === "Kerb Stone" && (
+      <KerbstoneResultsSummary record={record} standard={strengthStandard} />
+    )}
     {record.testType === "Kerb Stone" &&
       Array.isArray(record.details.testRows) &&
       record.details.testRows.length > 0 && (
@@ -3189,11 +3308,23 @@ function PrecastReport({
     const legacyNumber = Number(legacyAverage);
     const average = summary.averageStrength ??
       (Number.isFinite(legacyNumber) ? legacyNumber : null);
+    const configuredStandard = matchingPrecastStandards.find(
+      (standard) => Number(standard.cubeAge) === criterion.age,
+    );
+    const minimumStrength =
+      numericValue(configuredStandard?.requiredStrength) ??
+      criterion.minimumStrength;
     return {
       age: criterion.age,
+      minimumStrength,
       average: average === null
         ? legacyAverage
         : formatNumber(average),
+      outcome: average === null
+        ? "Pending"
+        : average >= minimumStrength
+          ? "Pass"
+          : "Fail",
     };
   });
   return (
@@ -3212,6 +3343,7 @@ function PrecastReport({
               <tr>
                 <th>Cube Age</th>
                 <th>Average Strength (N/mm²)</th>
+                <th>Outcome</th>
               </tr>
             </thead>
             <tbody>
@@ -3219,6 +3351,9 @@ function PrecastReport({
                 <tr key={row.age}>
                   <td>{row.age} day{row.age === 1 ? "" : "s"}</td>
                   <td>{row.average}</td>
+                  <td className={`report-compliance-status ${row.outcome.toLocaleLowerCase()}`}>
+                    {row.outcome.toLocaleUpperCase()}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -3284,36 +3419,6 @@ function PrecastReport({
           <p className="report-precast-empty">No specimen results entered.</p>
         )}
       </section>
-      <div className="report-standard-block precast-standard-block">
-        <p className="report-centered-title">Standard Required Strength:</p>
-        <table className="report-table report-strength-table precast-strength-table">
-          <thead>
-            <tr>
-              <th>CUBE AGE</th>
-              <th>INTENDED STRENGTH</th>
-            </tr>
-          </thead>
-          <tbody>
-            {PRECAST_AGE_STRENGTH_CRITERIA.map((criterion) => {
-              const configuredStandard = matchingPrecastStandards.find(
-                (standard) => standard.cubeAge === criterion.age,
-              );
-              return (
-                <tr key={criterion.age}>
-                  <td>{criterion.age} DAY{criterion.age === 1 ? "" : "S"}</td>
-                  <td>
-                    {formatNumber(
-                      configuredStandard?.requiredStrength ??
-                        criterion.minimumStrength,
-                    )}{" "}
-                    {configuredStandard?.strengthUnit ?? "N/mm²"}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
     </>
   );
 }
