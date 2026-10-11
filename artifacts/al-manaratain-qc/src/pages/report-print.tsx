@@ -2199,8 +2199,11 @@ function StrengthStandardsTable({
           blockType: typeof evaluation.blockType === "string" ? evaluation.blockType : null,
           blockSize: typeof evaluation.blockSize === "string" ? evaluation.blockSize : null,
           cubeAge: null,
+          kerbClass: null,
+          kerbMarking: null,
           bsStandard: textValue(evaluation.bsStandard),
           requiredStrength: Number(evaluation.requiredStrength),
+          minimumIndividualStrength: null,
           dammamAverageStrength: null,
           dammamMinimumStrength: null,
           strengthUnit: textValue(evaluation.strengthUnit, "N/mm²"),
@@ -3002,11 +3005,13 @@ function ConfiguredDetailsReport({
   record,
   tableKey,
   layout,
+  strengthStandard,
   includeRemarks = true,
 }: {
   record: QcRecord;
   tableKey: string;
   layout?: ReportLayout;
+  strengthStandard?: StrengthStandard;
   includeRemarks?: boolean;
 }) {
   const defaults = REPORT_LAYOUT_FIELD_GROUPS[record.testType]?.[tableKey] ?? [];
@@ -3032,13 +3037,23 @@ function ConfiguredDetailsReport({
     .sort((a, b) => a.order - b.order);
   return <>
     <section><SectionHeading>{record.testType} Details</SectionHeading><div className="report-fields">
-      {columns.map((field) => <ReportField key={field.key} label={field.label} value={
-        field.key === "sampleDate" ? formatReportDate(record.sampleDate) :
-        field.key === "location" ? record.location :
-        field.key === "material" ? record.material :
-        field.key === "testedBy" ? record.testedBy :
-        detailValue(record.details, [field.key])
-      } />)}
+      {columns.map((field) => {
+        const detail = detailValue(record.details, [field.key]);
+        const standardValue = record.testType === "Kerb Stone"
+          ? field.key === "kerbType" ? strengthStandard?.blockType
+            : field.key === "kerbClass" ? strengthStandard?.kerbClass
+              : field.key === "kerbMarking" ? strengthStandard?.kerbMarking
+                : field.key === "characteristicBendingStrength" ? strengthStandard?.requiredStrength
+                  : field.key === "minimumIndividualStrength" ? strengthStandard?.minimumIndividualStrength
+                    : undefined
+          : undefined;
+        const value = field.key === "sampleDate" ? formatReportDate(record.sampleDate)
+          : field.key === "location" ? record.location
+            : field.key === "material" ? record.material
+              : field.key === "testedBy" ? record.testedBy
+                : detail || standardValue == null ? detail : String(standardValue);
+        return <ReportField key={field.key} label={field.label} value={value} />;
+      })}
     </div></section>
     {includeRemarks && <ReportRemarks record={record} layout={layout} inFlow />}
   </>;
@@ -3350,7 +3365,7 @@ export function ReportDocument({ report, strengthStandards = [], sieveStandards 
             record.testType === "Water" ? <WaterReport record={record} layout={layout} /> :
             record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve" ? <SieveReport record={record} layout={layout} /> :
             record.testType === "Paving Blocks" ? <PavingBlocksReport record={record} standards={strengthStandards} layout={layout} /> :
-             <ConfiguredDetailsReport record={record} layout={layout} tableKey={record.testType === "Kerb Stone" ? "kerbStoneDetails" : record.testType === "RMX Trial" ? "rmxTrialDetails" : "flakinessDetails"} />}
+              <ConfiguredDetailsReport record={record} layout={layout} strengthStandard={selectedStrengthStandard} tableKey={record.testType === "Kerb Stone" ? "kerbStoneDetails" : record.testType === "RMX Trial" ? "rmxTrialDetails" : "flakinessDetails"} />}
         </div>
         <LayoutElements layout={layout} sectionKey="results" placement="after" />
       </>
