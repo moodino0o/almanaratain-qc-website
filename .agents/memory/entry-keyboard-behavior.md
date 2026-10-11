@@ -9,6 +9,6 @@ Across data-entry forms and tables, Enter moves to the next editable input in no
 
 **How to apply:** Preserve this behavior when adding or revising entry screens. Do not make Enter from an entry field insert rows, focus action buttons or implicitly save the record. Keep explicit save actions and existing calculations intact.
 
-Skip Length, Width and Height during Enter navigation in the “Enter Ready Mix cube results” dialog and the Block specimen results-entry table. These dimensions stay editable through mouse and Tab.
+Skip Length, Width and Height during Enter navigation in the “Enter Ready Mix cube results” dialog and the Block and Kerbstone specimen results-entry tables. These dimensions stay editable through mouse and Tab.
 
 **Why:** The user specifically requested this exception for these two entry tables.

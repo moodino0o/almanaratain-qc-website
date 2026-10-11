@@ -21,6 +21,10 @@ export type TestRow = {
   length: string;
   width: string;
   height: string;
+  batterDepth?: string;
+  batterAngle?: string;
+  spanLength?: string;
+  failureLoad?: string;
   faceThickness?: string;
   webThickness?: string;
   dryWeight: string;
@@ -65,6 +69,43 @@ export type BlockDimensions = {
   length: string;
   width: string;
   height: string;
+};
+
+export const kerbDimensionsForType = (kerbType: unknown): BlockDimensions | null => {
+  const normalized = String(kerbType ?? "").trim().toLocaleLowerCase();
+  if (normalized === "road kerb") {
+    return { length: "915", width: "125", height: "225" };
+  }
+  if (normalized === "edge kerb") {
+    return { length: "915", width: "50", height: "150" };
+  }
+  return null;
+};
+
+export const calculateKerbBendingStrength = (
+  row: Partial<Pick<TestRow, "failureLoad" | "spanLength" | "width" | "batterDepth">>,
+) => {
+  const values = [
+    row.failureLoad,
+    row.spanLength,
+    row.width,
+    row.batterDepth,
+  ].map((value) => String(value ?? "").trim());
+  if (values.some((value) => !value)) return "";
+  const [failureLoad, spanLength, width, batterDepth] = values.map(Number);
+  if (
+    ![failureLoad, spanLength, width, batterDepth].every(Number.isFinite) ||
+    failureLoad <= 0 ||
+    spanLength <= 0 ||
+    width <= 0 ||
+    batterDepth <= 0
+  ) {
+    return "";
+  }
+  const strength =
+    (3 * failureLoad * 1000 * spanLength) /
+    (2 * width * batterDepth ** 2);
+  return Number.isFinite(strength) ? strength.toFixed(2) : "";
 };
 
 export const PRECAST_CUBE_AGES = ["1", "7", "7", "28", "28"] as const;
@@ -148,7 +189,11 @@ export const createDefaultTestRows = (
     : null;
   const precastAges = testType === TestType.Precast ? PRECAST_CUBE_AGES : null;
   const rowCount = readyMixAges?.length ?? precastAges?.length ??
-    (testType === TestType.Blocks || testType === TestType.Paving_Blocks ? 5 : 1);
+    (testType === TestType.Blocks || testType === TestType.Paving_Blocks
+      ? 5
+      : testType === TestType.Kerb_Stone
+        ? 3
+        : 1);
 
   return Array.from({ length: rowCount }, (_, index) => ({
     ...createEmptyRow(firstId + index),
@@ -903,6 +948,18 @@ export const toFormRow = (row: unknown, id: number): TestRow => {
     length: numericInputValue(values.length),
     width: numericInputValue(values.width),
     height: numericInputValue(values.height),
+    ...(values.batterDepth != null
+      ? { batterDepth: numericInputValue(values.batterDepth) }
+      : {}),
+    ...(values.batterAngle != null
+      ? { batterAngle: numericInputValue(values.batterAngle) }
+      : {}),
+    ...(values.spanLength != null
+      ? { spanLength: numericInputValue(values.spanLength) }
+      : {}),
+    ...(values.failureLoad != null
+      ? { failureLoad: numericInputValue(values.failureLoad) }
+      : {}),
     ...(values.faceThickness != null
       ? { faceThickness: numericInputValue(values.faceThickness) }
       : {}),

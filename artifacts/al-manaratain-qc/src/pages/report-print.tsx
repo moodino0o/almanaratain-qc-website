@@ -38,6 +38,7 @@ import {
   blockMaterialMatches,
   blockSizeMatches,
   blockTypeMatches,
+  calculateKerbBendingStrength,
   calculateChlorideContent,
   calculateCubeDensity,
   calculateDammamBlockResults,
@@ -3055,6 +3056,77 @@ function ConfiguredDetailsReport({
         return <ReportField key={field.key} label={field.label} value={value} />;
       })}
     </div></section>
+    {record.testType === "Kerb Stone" &&
+      Array.isArray(record.details.testRows) &&
+      record.details.testRows.length > 0 && (
+        <section className="mt-4">
+          <SectionHeading>Kerbstone Specimen Results</SectionHeading>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "9px" }}>
+              <thead>
+                <tr>
+                  {[
+                    "No.",
+                    "Length (mm)",
+                    "Width (mm)",
+                    "Height (mm)",
+                    "Batter Depth (mm)",
+                    "Batter Angle (deg)",
+                    "Span Length (mm)",
+                    "Failure Load (kN)",
+                    "Weight (kg)",
+                    "Wet Weight (kg)",
+                    "Bending Strength (MPa)",
+                  ].map((label) => (
+                    <th
+                      key={label}
+                      style={{ border: "1px solid #9ca3af", padding: "4px", textAlign: "left" }}
+                    >
+                      {label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {record.details.testRows.map((rawRow, index) => {
+                  const row = objectValue(rawRow) ?? {};
+                  const bendingStrength = calculateKerbBendingStrength({
+                    failureLoad: String(row.failureLoad ?? row.load ?? ""),
+                    spanLength: String(row.spanLength ?? ""),
+                    width: String(row.width ?? ""),
+                    batterDepth: String(row.batterDepth ?? ""),
+                  });
+                  const values = [
+                    row.rowNo ?? index + 1,
+                    row.length,
+                    row.width,
+                    row.height,
+                    row.batterDepth,
+                    row.batterAngle,
+                    row.spanLength,
+                    row.failureLoad ?? row.load,
+                    row.weight,
+                    row.wetWeight,
+                    bendingStrength ? `${bendingStrength} MPa` : "",
+                  ];
+                  return (
+                    <tr key={index}>
+                      {values.map((value, columnIndex) => (
+                        <td
+                          key={columnIndex}
+                          style={{ border: "1px solid #9ca3af", padding: "4px" }}
+                        >
+                          {textValue(value)}
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
     {includeRemarks && <ReportRemarks record={record} layout={layout} inFlow />}
   </>;
 }

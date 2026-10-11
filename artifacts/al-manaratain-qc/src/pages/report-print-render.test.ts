@@ -203,6 +203,34 @@ function renderDocument(
   return renderToStaticMarkup(createElement(ReportDocument, props));
 }
 
+test("prints Kerbstone specimen measurements and formula-calculated bending strengths", () => {
+  const record = {
+    ...reportFixture(),
+    testType: "Kerb Stone",
+    details: {
+      kerbType: "Road kerb",
+      testRows: [{
+        rowNo: 1,
+        length: "915",
+        width: "100",
+        height: "225",
+        batterDepth: "40",
+        batterAngle: "15",
+        spanLength: "300",
+        failureLoad: "10",
+        weight: "12",
+        wetWeight: "12.5",
+      }],
+    },
+  } as QcRecord;
+  const markup = renderDocument(record);
+
+  assert.match(markup, /Kerbstone Specimen Results/);
+  assert.match(markup, /Batter Depth \(mm\)/);
+  assert.match(markup, /Failure Load \(kN\)/);
+  assert.match(markup, /28\.13 MPa/);
+});
+
 test("prints structured table headings, every data row, formulas, and visibility rules", () => {
   const design = structuredDesign();
   const markup = renderTable(design, design.objects[0]);

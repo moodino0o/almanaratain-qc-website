@@ -41,6 +41,8 @@ import {
   blockTypeMatches,
   createEmptyRow,
   createDefaultTestRows,
+  calculateKerbBendingStrength,
+  kerbDimensionsForType,
   DEFAULT_PRECAST_COMPACTION,
   DEFAULT_PRECAST_CUBE_SIZE,
   PRECAST_CUBE_AGES,
@@ -337,7 +339,7 @@ export default function RecordForm() {
         : existingRecord.testType === TestType.Paving_Blocks
           ? [savedDetails]
           : [];
-    const loadedRows = loadedSourceRows.length
+    let loadedRows = loadedSourceRows.length
       ? loadedSourceRows.map((row, index) => {
           const formRow = toFormRow(row, index + 1);
           const blockThicknessDefaults = getDammamBlockThicknessDefaults(
@@ -370,6 +372,22 @@ export default function RecordForm() {
             : dammamFormRow;
         })
       : createDefaultTestRows(existingRecord.testType);
+    if (existingRecord.testType === TestType.Kerb_Stone) {
+      const dimensions = kerbDimensionsForType(savedDetails.kerbType);
+      if (dimensions) {
+        loadedRows = [
+          ...loadedRows.map((row) => ({
+            ...row,
+            length: row.length || dimensions.length,
+            width: row.width || dimensions.width,
+            height: row.height || dimensions.height,
+          })),
+          ...createDefaultTestRows(TestType.Kerb_Stone, loadedRows.length + 1)
+            .slice(0, Math.max(0, 3 - loadedRows.length))
+            .map((row) => ({ ...row, ...dimensions })),
+        ];
+      }
+    }
     const calculatedRows = existingRecord.testType === TestType.Sand_Sieve ||
       existingRecord.testType === TestType.Aggregate_Sieve
       ? calculateSieveResults(loadedRows)
@@ -1351,6 +1369,13 @@ export default function RecordForm() {
         });
       });
     }
+    if (testType === TestType.Kerb_Stone) {
+      payloadDetails.testRows = testRows.map(({ id: _id, ...row }, index) => ({
+        ...row,
+        rowNo: index + 1,
+        bendingStrength: calculateKerbBendingStrength(row),
+      }));
+    }
 
     const payload: QcRecordInput = {
       testType,
@@ -2136,7 +2161,7 @@ export default function RecordForm() {
             <CardHeader className="bg-muted/30 border-b">
               <CardTitle>Measurement Details: {testType}</CardTitle>
               <CardDescription>
-                {usesTestRows || usesSieveRows
+                {usesTestRows || usesSieveRows || testType === TestType.Kerb_Stone
                   ? "Enter one specimen per row. Press Enter to move to the next editable field."
                   : "Enter the specific readings obtained during the test."}
               </CardDescription>
@@ -2164,7 +2189,72 @@ export default function RecordForm() {
                   </div>
                 </div>
               )}
-              {!usesTestRows && (
+              {testType === TestType.Kerb_Stone && (
+                <div className="mb-6 space-y-3">
+                  <div>
+                    <h3 className="font-semibold text-foreground">Kerbstone Specimen Results</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Enter measurements for each specimen. Length, width, and height default from the kerb type and are skipped by Enter.
+                    </p>
+                  </div>
+                  <div className="overflow-x-auto rounded-md border">
+                    <table className="w-full min-w-[1460px] text-sm">
+                      <thead className="bg-muted/50">
+                        <tr className="border-b text-left">
+                          <th className="px-2 py-2">No.</th>
+                          <th className="px-2 py-2">Length (mm)</th>
+                          <th className="px-2 py-2">Width (mm)</th>
+                          <th className="px-2 py-2">Height (mm)</th>
+                          <th className="px-2 py-2">Batter Depth (mm)</th>
+                          <th className="px-2 py-2">Batter Angle (deg)</th>
+                          <th className="px-2 py-2">Span Length (mm)</th>
+                          <th className="px-2 py-2">Failure Load (kN)</th>
+                          <th className="px-2 py-2">Weight (kg)</th>
+                          <th className="px-2 py-2">Wet Weight (kg)</th>
+                          <th className="px-2 py-2">Bending Strength (MPa)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {testRows.map((row, rowIndex) => (
+                          <tr key={row.id} className="border-b last:border-b-0">
+                            <td className="px-2 py-2 font-medium">{rowIndex + 1}</td>
+                            {([
+                              { key: "length", label: "Length", skip: true },
+                              { key: "width", label: "Width", skip: true },
+                              { key: "height", label: "Height", skip: true },
+                              { key: "batterDepth", label: "Batter depth", skip: false },
+                              { key: "batterAngle", label: "Batter angle", skip: false },
+                              { key: "spanLength", label: "Span length", skip: false },
+                              { key: "failureLoad", label: "Failure load", skip: false },
+                              { key: "weight", label: "Weight", skip: false },
+                              { key: "wetWeight", label: "Wet weight", skip: false },
+                            ] as const).map(({ key, label, skip }) => (
+                              <td key={key} className="px-2 py-2">
+                                <Input
+                                  type="text"
+                                  inputMode="decimal"
+                                  value={row[key] ?? ""}
+                                  data-enter-skip={skip ? "true" : undefined}
+                                  onChange={(event) =>
+                                    updateTestRow(rowIndex, key, event.target.value)
+                                  }
+                                  aria-label={`${label} for specimen ${rowIndex + 1}`}
+                                />
+                              </td>
+                            ))}
+                            <td className="px-2 py-2 font-semibold tabular-nums">
+                              {calculateKerbBendingStrength(row)
+                                ? `${calculateKerbBendingStrength(row)} MPa`
+                                : "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+              {!usesTestRows && testType !== TestType.Kerb_Stone && (
                 <div className="mb-6 rounded-md border border-sky-500/25 bg-sky-500/[0.04] p-4">
                   <div className="mb-3">
                     <h3 className="font-semibold text-foreground">Sample Weights</h3>
@@ -3065,7 +3155,15 @@ export default function RecordForm() {
                         <Label>Kerb Type <span className="text-destructive">*</span></Label>
                         <Select
                           value={String(details.kerbType ?? "")}
-                          onValueChange={(value) => handleDetailChange("kerbType", value)}
+                          onValueChange={(value) => {
+                            handleDetailChange("kerbType", value);
+                            const dimensions = kerbDimensionsForType(value);
+                            if (dimensions) {
+                              setTestRows((rows) =>
+                                rows.map((row) => ({ ...row, ...dimensions })),
+                              );
+                            }
+                          }}
                         >
                           <SelectTrigger><SelectValue placeholder="Select kerb type..." /></SelectTrigger>
                           <SelectContent>

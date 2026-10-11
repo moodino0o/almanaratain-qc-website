@@ -35,8 +35,10 @@ import {
   evaluateSiltContent,
   prepareRecordForForm,
   createDefaultTestRows,
+  calculateKerbBendingStrength,
   getReadyMixReferenceNumberError,
   filterSieveSizeItems,
+  kerbDimensionsForType,
   sieveSizeNumber,
 } from "./record-form-utils";
 import {
@@ -52,12 +54,45 @@ test("defaults Ready Mix and Masonry entry rows to the requested ages and counts
 
   assert.equal(createDefaultTestRows(TestType.Blocks).length, 5);
   assert.equal(createDefaultTestRows(TestType.Paving_Blocks).length, 5);
+  assert.equal(createDefaultTestRows(TestType.Kerb_Stone).length, 3);
   const precastRows = createDefaultTestRows(TestType.Precast);
   assert.equal(precastRows.length, 5);
   assert.deepEqual(precastRows.map((row) => row.testAge), ["1", "7", "7", "28", "28"]);
   assert.deepEqual(
     createDefaultTestRows(TestType.Ready_Mix, 10).map((row) => row.id),
     [10, 11, 12, 13],
+  );
+});
+
+test("Kerbstone dimensions and bending strength use the selected type and provided formula", () => {
+  assert.deepEqual(kerbDimensionsForType("Road kerb"), {
+    length: "915",
+    width: "125",
+    height: "225",
+  });
+  assert.deepEqual(kerbDimensionsForType("Edge kerb"), {
+    length: "915",
+    width: "50",
+    height: "150",
+  });
+  assert.equal(kerbDimensionsForType("Unknown"), null);
+  assert.equal(
+    calculateKerbBendingStrength({
+      failureLoad: "10",
+      spanLength: "300",
+      width: "100",
+      batterDepth: "40",
+    }),
+    "28.13",
+  );
+  assert.equal(
+    calculateKerbBendingStrength({
+      failureLoad: "",
+      spanLength: "300",
+      width: "100",
+      batterDepth: "40",
+    }),
+    "",
   );
 });
 
