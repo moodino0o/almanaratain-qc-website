@@ -100,6 +100,22 @@ function isValidAge(value: string) {
   return value.trim() !== "" && Number.isSafeInteger(age) && age >= 0;
 }
 
+function addDaysToDate(dateValue: string, daysValue: unknown) {
+  const date = String(dateValue ?? "").slice(0, 10);
+  if (String(daysValue ?? "").trim() === "") return "";
+  const days = Number(daysValue);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isSafeInteger(days) || days < 0) {
+    return "";
+  }
+  const timestamp = Date.parse(`${date}T00:00:00.000Z`);
+  if (!Number.isFinite(timestamp) || new Date(timestamp).toISOString().slice(0, 10) !== date) {
+    return "";
+  }
+  const result = new Date(timestamp);
+  result.setUTCDate(result.getUTCDate() + days);
+  return result.toISOString().slice(0, 10);
+}
+
 export default function RecordForm() {
   const { id } = useParams();
   const recordId = id ? Number(id) : 0;
@@ -157,7 +173,9 @@ export default function RecordForm() {
   );
   const [sampleDate, setSampleDate] = useState(new Date().toISOString().slice(0, 10));
   const [locationValue, setLocationValue] = useState("");
-  const [material, setMaterial] = useState("");
+  const [material, setMaterial] = useState(
+    testType === TestType.Kerb_Stone ? "Kerbstone" : "",
+  );
   const [testedBy, setTestedBy] = useState("");
   const [reviewedBy, setReviewedBy] = useState(DEFAULT_APPROVED_BY);
   const [machine, setMachine] = useState("");
@@ -377,6 +395,7 @@ export default function RecordForm() {
   };
 
   const sieveMassUnit = "g";
+  const kerbTestingDate = addDaysToDate(sampleDate, details.age);
   const blockDimensions = blockDimensionsFromSize(details.blockSize);
   const isDammamBlock =
     testType === TestType.Blocks && isDammamBlockLocation(locationValue);
@@ -679,9 +698,6 @@ export default function RecordForm() {
         ];
       case TestType.Kerb_Stone:
         return [
-          { key: "testingDate", label: "Testing Date", type: "date" },
-          { key: "age", label: "Age (days)", type: "number" },
-          { key: "kerbType", label: "Kerb Type", type: "text" },
           { key: "averageStrength", label: "Avg. Strength", type: "number" },
           { key: "minimumStrength", label: "Min. Strength", type: "number" },
           { key: "maximumStrength", label: "Max. Strength", type: "number" }
@@ -698,9 +714,11 @@ export default function RecordForm() {
     if (
       testType !== TestType.Ready_Mix &&
       testType !== TestType.Blocks &&
-      testType !== TestType.Paving_Blocks
+      testType !== TestType.Paving_Blocks &&
+      testType !== TestType.Kerb_Stone
     ) return [];
-    const normalizedMaterial = material.trim().toLocaleLowerCase();
+    const normalizedMaterial =
+      testType === TestType.Kerb_Stone ? "kerbstone" : material.trim().toLocaleLowerCase();
     const selectedPavingSize = String(details.pavingBlockSize ?? "").trim();
     return (strengthStandards ?? [])
       .filter((standard) => {
@@ -712,6 +730,11 @@ export default function RecordForm() {
         if (standard.material.trim().toLocaleLowerCase() !== normalizedMaterial) {
           return false;
         }
+        if (
+          testType === TestType.Kerb_Stone &&
+          standard.blockType?.trim().toLocaleLowerCase() !==
+            String(details.kerbType ?? "").trim().toLocaleLowerCase()
+        ) return false;
         return testType !== TestType.Paving_Blocks ||
           !standard.blockSize ||
           blockSizeMatches(standard.blockSize, selectedPavingSize);
@@ -721,6 +744,7 @@ export default function RecordForm() {
     details.blockSize,
     details.blockType,
     details.pavingBlockSize,
+    details.kerbType,
     material,
     strengthStandards,
     testType,
@@ -1078,6 +1102,14 @@ export default function RecordForm() {
       toast.error("Please enter a valid Age in days.");
       return;
     }
+    if (
+      testType === TestType.Kerb_Stone &&
+      (!isValidAge(String(details.age ?? "")) ||
+        !["Road kerb", "Edge kerb"].includes(String(details.kerbType ?? "")))
+    ) {
+      toast.error("Select a kerb type and enter a valid age in days.");
+      return;
+    }
     if (usesSieveRows && !isValidAge(sampleAge)) {
       toast.error("Please enter a valid Age in days.");
       return;
@@ -1159,6 +1191,14 @@ export default function RecordForm() {
       if (applicableStandard) payloadDetails.strengthStandardId = applicableStandard.id;
       else delete payloadDetails.strengthStandardId;
       delete payloadDetails.strengthStandardAssignmentMode;
+    }
+    if (testType === TestType.Kerb_Stone) {
+      payloadDetails.testingDate = kerbTestingDate;
+      if (matchingStrengthStandards[0]) {
+        payloadDetails.strengthStandardId = matchingStrengthStandards[0].id;
+      } else {
+        delete payloadDetails.strengthStandardId;
+      }
     }
     if (testType === TestType.Blocks) {
       if (strengthStandardMode === "manual" && applicableStandard) {
@@ -1308,7 +1348,9 @@ export default function RecordForm() {
       location: locationValue,
       material: testType === TestType.Blocks
         ? material.trim() || BLOCK_RECORD_MATERIAL
-        : material.trim(),
+        : testType === TestType.Kerb_Stone
+          ? "Kerbstone"
+          : material.trim(),
       status: RecordStatus.Review, 
       testedBy,
       ...(canEditApprovedBy ? { reviewedBy: reviewedBy.trim() } : {}),
@@ -1455,9 +1497,11 @@ export default function RecordForm() {
                     val === TestType.Blocks ||
                     testType === TestType.Blocks ||
                     val === TestType.Precast ||
-                    testType === TestType.Precast
+                    testType === TestType.Precast ||
+                    val === TestType.Kerb_Stone ||
+                    testType === TestType.Kerb_Stone
                   ) {
-                    setMaterial("");
+                    setMaterial(val === TestType.Kerb_Stone ? "Kerbstone" : "");
                   }
                   setReferenceNumberTouched(false);
                   setDetails(
@@ -1468,7 +1512,9 @@ export default function RecordForm() {
                         }
                       : val === TestType.Ready_Mix
                         ? { compactionType: compactionTypeOptions[0] ?? "" }
-                      : {},
+                      : val === TestType.Kerb_Stone
+                        ? { kerbType: "", age: "" }
+                        : {},
                   );
                   setSelectedStrengthStandardId("");
                   setStrengthStandardMode("automatic");
@@ -1494,7 +1540,7 @@ export default function RecordForm() {
                 <Label>
                   {usesSieveRows
                     ? "Sampling Date"
-                    : testType === TestType.Precast || testType === TestType.Blocks || testType === TestType.Paving_Blocks
+                    : testType === TestType.Precast || testType === TestType.Blocks || testType === TestType.Paving_Blocks || testType === TestType.Kerb_Stone
                     ? "Casting Date"
                     : "Sample Date"}{" "}
                   <span className="text-destructive">*</span>
@@ -1533,11 +1579,13 @@ export default function RecordForm() {
                       : testType === TestType.Precast
                         ? "Product Type"
                       : testType === TestType.Kerb_Stone
-                        ? "Kerb Type"
+                        ? "Material"
                         : "Material / Product"}{" "}
                     <span className="text-destructive">*</span>
                   </Label>
-                  {testType === TestType.Precast ? (
+                  {testType === TestType.Kerb_Stone ? (
+                    <Input value="Kerbstone" readOnly aria-label="Material" />
+                  ) : testType === TestType.Precast ? (
                     <Select value={material} onValueChange={setMaterial}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select product type..." />
@@ -3001,6 +3049,50 @@ export default function RecordForm() {
                     </div>
                   )}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {testType === TestType.Kerb_Stone && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Kerb Type <span className="text-destructive">*</span></Label>
+                        <Select
+                          value={String(details.kerbType ?? "")}
+                          onValueChange={(value) => handleDetailChange("kerbType", value)}
+                        >
+                          <SelectTrigger><SelectValue placeholder="Select kerb type..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Road kerb">Road kerb</SelectItem>
+                            <SelectItem value="Edge kerb">Edge kerb</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Age (days) <span className="text-destructive">*</span></Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={String(details.age ?? "")}
+                          onChange={(event) => handleDetailChange("age", event.target.value)}
+                          placeholder="e.g. 28"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Testing Date</Label>
+                        <Input type="date" value={kerbTestingDate} readOnly />
+                      </div>
+                      <div className="rounded-md border bg-muted/20 p-3 text-sm md:col-span-2 lg:col-span-3">
+                        <span className="text-muted-foreground">Matched strength standard: </span>
+                        {matchingStrengthStandards[0] ? (
+                          <strong>
+                            {matchingStrengthStandards[0].blockType} · {matchingStrengthStandards[0].blockSize} · Minimum{" "}
+                            {matchingStrengthStandards[0].requiredStrength} {matchingStrengthStandards[0].strengthUnit}
+                          </strong>
+                        ) : (
+                          <span>No strength standard matches this kerb type yet.</span>
+                        )}
+                      </div>
+                    </>
+                  )}
                   {getDynamicFields().map(field => (
                     <div key={field.key} className="space-y-2">
                       <Label>{field.label}</Label>

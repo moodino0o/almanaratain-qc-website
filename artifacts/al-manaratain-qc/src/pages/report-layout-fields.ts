@@ -60,7 +60,7 @@ export const REPORT_LAYOUT_FIELD_GROUPS: Record<string, Record<string, ReportLay
       ["load", "Load (kN)", 15], ["strength", "Compressive Strength (N/mm²)", 29],
     ]),
   },
-  "Kerb Stone": { kerbStoneDetails: fields([["testingDate", "Testing Date", 20], ["age", "Age (days)", 16], ["kerbType", "Kerb Type", 20], ["averageStrength", "Avg. Strength", 16], ["minimumStrength", "Min. Strength", 14], ["maximumStrength", "Max. Strength", 14]]) },
+  "Kerb Stone": { kerbStoneDetails: fields([["sampleDate", "Casting Date", 20], ["testingDate", "Testing Date", 20], ["age", "Age (days)", 16], ["kerbType", "Kerb Type", 20], ["averageStrength", "Avg. Strength", 16], ["minimumStrength", "Min. Strength", 14], ["maximumStrength", "Max. Strength", 14]]) },
 };
 
 const genericContext = fields([

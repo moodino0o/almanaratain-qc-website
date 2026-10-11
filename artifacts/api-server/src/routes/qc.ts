@@ -670,7 +670,7 @@ export async function ensureDefaultStrengthStandards() {
       const existing = await db
         .select()
         .from(qcStrengthStandardsTable)
-        .where(inArray(qcStrengthStandardsTable.testType, ["Ready Mix", "Blocks", "Precast"]));
+        .where(inArray(qcStrengthStandardsTable.testType, ["Ready Mix", "Blocks", "Precast", "Kerb Stone"]));
       const existingMaterials = new Set(
         existing
           .filter((row) => row.testType === "Ready Mix")
@@ -737,6 +737,37 @@ export async function ensureDefaultStrengthStandards() {
         existingKeys.add(key);
         insertedDefault = true;
       }
+      for (const standard of [
+        {
+          blockType: "Road kerb",
+          blockSize: "915 × 125 × 225 mm",
+          requiredStrength: "5",
+        },
+        {
+          blockType: "Edge kerb",
+          blockSize: "915 × 50 × 150 mm",
+          requiredStrength: "3.5",
+        },
+      ]) {
+        const key = strengthStandardKey({
+          testType: "Kerb Stone",
+          material: "Kerbstone",
+          blockType: standard.blockType,
+          blockSize: standard.blockSize,
+        });
+        if (existingKeys.has(key)) continue;
+        await db.insert(qcStrengthStandardsTable).values({
+          testType: "Kerb Stone",
+          material: "Kerbstone",
+          blockType: standard.blockType,
+          blockSize: standard.blockSize,
+          bsStandard: "Kerbstone specific strength",
+          requiredStrength: standard.requiredStrength,
+          strengthUnit: "N/mm²",
+        });
+        existingKeys.add(key);
+        insertedDefault = true;
+      }
       const [precastCategory] = await db
         .select()
         .from(qcReferenceCategoriesTable)
@@ -776,7 +807,7 @@ export async function ensureDefaultStrengthStandards() {
         }
       }
       if (insertedDefault) {
-        await refreshRecordEvaluations(["Ready Mix", "Blocks", "Precast"]);
+        await refreshRecordEvaluations(["Ready Mix", "Blocks", "Precast", "Kerb Stone"]);
       }
     })().catch((error) => {
       strengthSeedPromise = null;

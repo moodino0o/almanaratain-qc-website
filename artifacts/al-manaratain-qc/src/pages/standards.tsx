@@ -75,7 +75,7 @@ import {
   PRECAST_AGE_STRENGTH_CRITERIA,
 } from "./record-form-utils";
 
-type AutomatedTestType = "Ready Mix" | "Blocks" | "Paving Blocks" | "Precast";
+type AutomatedTestType = "Ready Mix" | "Blocks" | "Paving Blocks" | "Precast" | "Kerb Stone";
 type SieveTestType = "Sand Sieve" | "Aggregate Sieve";
 
 type ShapeFactorForm = {
@@ -307,6 +307,7 @@ function StandardEditor({
           ...(form.testType === TestType.Paving_Blocks
             ? (lookups?.blockTypes ?? [])
             : []),
+          ...(form.testType === TestType.Kerb_Stone ? ["Kerbstone"] : []),
         ]),
       ),
     [form.testType, lookups],
@@ -346,6 +347,8 @@ function StandardEditor({
                 material:
                   value === TestType.Blocks
                     ? BLOCK_RECORD_MATERIAL
+                    : value === TestType.Kerb_Stone
+                      ? "Kerbstone"
                     : form.testType === TestType.Blocks || value !== form.testType
                       ? ""
                       : form.material,
@@ -371,6 +374,7 @@ function StandardEditor({
               <SelectItem value={TestType.Blocks}>Blocks</SelectItem>
               <SelectItem value={TestType.Paving_Blocks}>Paving Blocks</SelectItem>
               <SelectItem value={TestType.Precast}>Precast</SelectItem>
+              <SelectItem value={TestType.Kerb_Stone}>Kerb Stone</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -383,7 +387,9 @@ function StandardEditor({
                   ? "Precast type"
                   : "Material or mix design"}
             </Label>
-            <TypeaheadInput
+            {form.testType === TestType.Kerb_Stone ? (
+              <Input value="Kerbstone" readOnly />
+            ) : <TypeaheadInput
               value={form.material}
               onChange={(value) => setForm({ ...form, material: value })}
               options={materialOptions}
@@ -404,8 +410,33 @@ function StandardEditor({
                   value,
                 )
               }
-            />
+            />}
           </div>
+        )}
+        {form.testType === TestType.Kerb_Stone && (
+          <>
+            <div className="space-y-2">
+              <Label>Kerb Type</Label>
+              <Select
+                value={form.blockType}
+                onValueChange={(value) => setForm({ ...form, blockType: value })}
+              >
+                <SelectTrigger><SelectValue placeholder="Select kerb type..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Road kerb">Road kerb</SelectItem>
+                  <SelectItem value="Edge kerb">Edge kerb</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Kerb Size</Label>
+              <Input
+                value={form.blockSize}
+                onChange={(event) => setForm({ ...form, blockSize: event.target.value })}
+                placeholder="Enter kerb dimensions"
+              />
+            </div>
+          </>
         )}
         {form.testType === TestType.Precast && (
           <div className="space-y-2">
@@ -427,7 +458,7 @@ function StandardEditor({
         )}
         {(form.testType === TestType.Blocks || form.testType === TestType.Paving_Blocks) && (
           <>
-            {form.testType === TestType.Blocks && <div className="space-y-2">
+        {form.testType === TestType.Blocks && <div className="space-y-2">
               <Label>Block Type</Label>
               <TypeaheadInput
                 value={form.blockType}
@@ -924,7 +955,7 @@ function SieveEditor({
   );
 }
 
-type StrengthFolderKey = "readyMix" | "blocks" | "paving" | "precast";
+type StrengthFolderKey = "readyMix" | "blocks" | "paving" | "precast" | "kerbstone";
 
 function StrengthStandardsFolder({
   label,
@@ -946,6 +977,7 @@ function StrengthStandardsFolder({
   onDelete: (standard: StrengthStandard) => void;
 }) {
   const isBlocks = standards[0]?.testType === TestType.Blocks;
+  const isKerbStone = standards[0]?.testType === TestType.Kerb_Stone;
   return (
     <Card className="border-border shadow-sm">
       <button
@@ -987,8 +1019,8 @@ function StrengthStandardsFolder({
                     <th className="px-4 py-3 font-semibold">Test Type</th>
                     <th className="px-4 py-3 font-semibold">{isPrecast ? "Precast Type" : "Material / Mix"}</th>
                     <th className={`px-4 py-3 font-semibold ${isPrecast ? "" : "hidden"}`}>Cube Age</th>
-                    <th className={`px-4 py-3 font-semibold ${isPrecast ? "hidden" : ""}`}>Block Type</th>
-                    <th className={`px-4 py-3 font-semibold ${isPrecast ? "hidden" : ""}`}>Block Size</th>
+                    <th className={`px-4 py-3 font-semibold ${isPrecast ? "hidden" : ""}`}>{isKerbStone ? "Kerb Type" : "Block Type"}</th>
+                    <th className={`px-4 py-3 font-semibold ${isPrecast ? "hidden" : ""}`}>{isKerbStone ? "Kerb Size" : "Block Size"}</th>
                     <th className="px-4 py-3 font-semibold">{isBlocks ? "Reference (not Dammam limit)" : "BS Standard"}</th>
                     <th className="px-4 py-3 font-semibold">
                       {isBlocks ? "Other-plant minimum average" : isPrecast ? "Minimum average" : "Minimum"}
@@ -2004,7 +2036,7 @@ export default function Standards() {
   );
   const [expandedStrengthFolders, setExpandedStrengthFolders] = useState<
     Record<StrengthFolderKey, boolean>
-  >({ readyMix: false, blocks: false, paving: false, precast: true });
+  >({ readyMix: false, blocks: false, paving: false, precast: true, kerbstone: true });
   const [shapeFactorsExpanded, setShapeFactorsExpanded] = useState(true);
 
   const materialItems = useMemo(
@@ -2074,6 +2106,14 @@ export default function Standards() {
         standards:
           strengthStandards?.filter(
             (standard) => standard.testType === TestType.Precast,
+          ) ?? [],
+      },
+      {
+        key: "kerbstone" as const,
+        label: "Kerbstone standards",
+        standards:
+          strengthStandards?.filter(
+            (standard) => standard.testType === TestType.Kerb_Stone,
           ) ?? [],
       },
     ],
@@ -2329,7 +2369,9 @@ export default function Standards() {
         !["1", "7", "28"].includes(form.cubeAge)) ||
       ((form.testType === TestType.Blocks &&
         (!form.blockType.trim() || !form.blockSize.trim())) ||
-        (form.testType === TestType.Paving_Blocks && !form.blockSize.trim())) ||
+        (form.testType === TestType.Paving_Blocks && !form.blockSize.trim()) ||
+        (form.testType === TestType.Kerb_Stone &&
+          (!form.blockType.trim() || !form.blockSize.trim()))) ||
       (form.testType === TestType.Blocks &&
         (form.dammamAverageStrength.trim() === "" ||
           !Number.isFinite(dammamAverageStrength) ||
@@ -2347,11 +2389,17 @@ export default function Standards() {
       material:
         form.testType === TestType.Blocks
           ? BLOCK_RECORD_MATERIAL
+          : form.testType === TestType.Kerb_Stone
+            ? "Kerbstone"
           : form.material.trim(),
       blockType:
-        form.testType === TestType.Blocks ? form.blockType.trim() : null,
+        form.testType === TestType.Blocks || form.testType === TestType.Kerb_Stone
+          ? form.blockType.trim()
+          : null,
       blockSize:
-        form.testType === TestType.Blocks || form.testType === TestType.Paving_Blocks
+        form.testType === TestType.Blocks ||
+        form.testType === TestType.Paving_Blocks ||
+        form.testType === TestType.Kerb_Stone
           ? form.blockSize.trim()
           : null,
       cubeAge:
@@ -2918,6 +2966,8 @@ export default function Standards() {
                           ? TestType.Paving_Blocks
                           : folder.key === "precast"
                             ? TestType.Precast
+                            : folder.key === "kerbstone"
+                              ? TestType.Kerb_Stone
                             : TestType.Ready_Mix,
                   });
                   setEditorOpen(true);
