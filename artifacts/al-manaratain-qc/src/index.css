@@ -657,18 +657,27 @@
 
 .report-paper .kerb-results-summary .report-section-heading {
   margin: 0 0 1.5mm;
-  font-size: 9px;
+  font-size: 11px;
   text-align: center;
+}
+
+.report-paper .kerb-results-summary .report-table {
+  width: max-content;
+  max-width: 100%;
+  margin: 0 auto;
+  table-layout: auto;
 }
 
 .report-paper .kerb-results-summary .report-table th {
-  font-size: 6.5px;
+  font-size: 8.5px;
   text-align: center;
+  white-space: nowrap;
 }
 
 .report-paper .kerb-results-summary .report-table td {
-  font-size: 7px;
+  font-size: 9px;
   text-align: center;
+  white-space: nowrap;
 }
 
 .report-paper .kerbstone-specimen-section > .report-section-heading {

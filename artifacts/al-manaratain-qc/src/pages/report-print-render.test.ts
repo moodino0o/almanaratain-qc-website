@@ -231,7 +231,7 @@ test("prints Kerbstone specimen measurements and formula-calculated bending stre
   assert.match(markup, /Kerbstone Specimen Results/);
   assert.match(markup, /kerb-details-layout/);
   assert.match(markup, /Kerb Size:/);
-  assert.match(markup, /915 × 100 × 225 mm/);
+  assert.match(markup, /915 × 125 × 225 mm/);
   assert.match(markup, /Test Conducted:/);
   assert.match(markup, /Bending-load test/);
   assert.match(markup, /Applicable Standard/);

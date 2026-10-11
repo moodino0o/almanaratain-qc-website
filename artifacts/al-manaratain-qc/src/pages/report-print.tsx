@@ -54,6 +54,7 @@ import {
   getDammamBlockHoleCount,
   getDammamBlockThicknessDefaults,
   isSandwichBlockType,
+  kerbDimensionsForType,
   PRECAST_AGE_STRENGTH_CRITERIA,
   precastAgeStrengthSummary,
   SIEVE_SILT_LIMIT_PERCENT,
@@ -3233,14 +3234,12 @@ function ConfiguredDetailsReport({
         field.key !== "testingDate")
     : columns;
   const kerbStandardDetails = columns.filter((field) => standardFieldKeys.has(field.key));
-  const kerbSizes = record.testType === "Kerb Stone" && Array.isArray(record.details.testRows)
-    ? Array.from(new Set(record.details.testRows.map((rawRow) => {
-        const row = objectValue(rawRow) ?? {};
-        const dimensions = [row.length, row.width, row.height].map(numericValue);
-        if (dimensions.some((dimension) => dimension === null)) return "";
-        return `${dimensions.map((dimension) => String(Math.round(dimension!))).join(" × ")} mm`;
-      }).filter(Boolean))).join(", ")
-    : "";
+  const kerbSize = record.testType === "Kerb Stone"
+    ? kerbDimensionsForType(record.details.kerbType)
+    : null;
+  const kerbSizeLabel = kerbSize
+    ? `${kerbSize.length} × ${kerbSize.width} × ${kerbSize.height} mm`
+    : "-";
   return <>
     {record.testType === "Kerb Stone" ? (
       <div className="kerb-details-layout">
@@ -3249,7 +3248,7 @@ function ConfiguredDetailsReport({
           <div className="kerb-date-fields">{kerbDateFields.map(renderField)}</div>
           <div className="report-fields">
             {kerbDetails.map(renderField)}
-            <ReportField label="Kerb Size" value={kerbSizes || "-"} />
+            <ReportField label="Kerb Size" value={kerbSizeLabel} />
             <ReportField label="Test Conducted" value="Bending-load test" />
           </div>
         </section>
