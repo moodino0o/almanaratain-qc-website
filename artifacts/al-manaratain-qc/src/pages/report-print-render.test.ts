@@ -203,7 +203,7 @@ function renderDocument(
   return renderToStaticMarkup(createElement(ReportDocument, props));
 }
 
-test("prints Kerbstone specimen measurements and formula-calculated bending strengths", () => {
+test("prints Kerbstone specimen measurements without unconfigured section-factor strengths", () => {
   const record = {
     ...reportFixture(),
     testType: "Kerb Stone",
@@ -246,16 +246,15 @@ test("prints Kerbstone specimen measurements and formula-calculated bending stre
   assert.doesNotMatch(markup, /Test Results Summary<\/h3>\s*<strong/);
   assert.match(markup, /Characteristic bending strength/);
   assert.match(markup, /Water absorption/);
-  assert.match(markup, /<td>28\.1 MPa<\/td>/);
+  assert.match(markup, /<td>—<\/td>/);
   assert.match(markup, /<td>4\.2%<\/td>/);
-  assert.doesNotMatch(markup, /Bending strength\s*<\/strong>|Average: 28\.1 MPa|Minimum: 28\.1 MPa|Maximum: 28\.1 MPa/);
+  assert.doesNotMatch(markup, /Bending strength\s*<\/strong>|Average: 28\.1 MPa|Minimum: 28\.1 MPa|Maximum: 28\.1 MPa|28\.13 MPa/);
   assert.match(markup, /kerbstone-specimen-table/);
   assert.match(markup, /kerbstone-specimen-section/);
   assert.doesNotMatch(markup, /Weight \(kg\)|Wet Weight \(kg\)/);
   assert.doesNotMatch(markup, /specimens assessed|Avg\. Strength:|Min\. Strength:|Max\. Strength:/);
   assert.match(markup, /Batter Depth \(mm\)/);
   assert.match(markup, /Failure Load \(kN\)/);
-  assert.match(markup, /28\.13 MPa/);
 });
 
 test("prints structured table headings, every data row, formulas, and visibility rules", () => {

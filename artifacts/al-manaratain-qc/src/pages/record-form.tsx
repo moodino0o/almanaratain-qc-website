@@ -2233,7 +2233,7 @@ export default function RecordForm() {
                       <p className="text-xs text-muted-foreground">
                       Enter measurements for each specimen. Length, width, height, batter depth, and batter angle are whole numbers. Water absorption is skipped until Wet Weight is entered.
                     </p>
-                    {details.kerbType && !kerbBendingFactorsForType(details.kerbType) && (
+                    {Boolean(details.kerbType) && !kerbBendingFactorsForType(details.kerbType) && (
                       <p className="mt-2 text-xs font-medium text-amber-700" role="status">
                         Bending strength for {String(details.kerbType)} is pending its y and I section factors. Strength is not calculated until these are configured.
                       </p>
