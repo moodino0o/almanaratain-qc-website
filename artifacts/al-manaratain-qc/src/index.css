@@ -166,6 +166,35 @@
   white-space: normal;
 }
 
+.daily-results-row-passed > td {
+  background-color: #dcfce7 !important;
+  color: #14532d;
+}
+
+.daily-results-row-failed > td {
+  background-color: #fee2e2 !important;
+  color: #7f1d1d;
+}
+
+.daily-results-row-neutral > td {
+  background-color: #ffffff !important;
+}
+
+.dark .daily-results-row-passed > td {
+  background-color: rgb(20 83 45 / 0.45) !important;
+  color: #dcfce7;
+}
+
+.dark .daily-results-row-failed > td {
+  background-color: rgb(127 29 29 / 0.45) !important;
+  color: #fee2e2;
+}
+
+.dark .daily-results-row-neutral > td {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground));
+}
+
 .employee-activity-table {
   border-collapse: collapse;
   table-layout: fixed;

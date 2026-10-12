@@ -473,13 +473,11 @@ export default function Reports() {
                          {dailyReportRows.map((row) => (
                                <TableRow
                                  key={`${row.date}-${row.castingDate}-${row.testingDate}-${row.category}-${row.plant}-${row.machineType}-${row.product}-${row.cubeAge ?? "none"}`}
-                                 className={
-                                   row.status === "Passed"
-                                     ? "bg-green-100 text-green-950 hover:bg-green-100 dark:bg-green-950/40 dark:text-green-100 dark:hover:bg-green-950/40"
-                                     : row.status === "Failed"
-                                       ? "bg-red-100 text-red-950 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-100 dark:hover:bg-red-950/40"
-                                       : "bg-white text-foreground hover:bg-white dark:bg-background dark:hover:bg-background"
-                                 }
+                                 className={row.status === "Passed"
+                                   ? "daily-results-row-passed"
+                                   : row.status === "Failed"
+                                     ? "daily-results-row-failed"
+                                     : "daily-results-row-neutral"}
                                >
                              <TableCell className="whitespace-normal break-words px-1.5 py-2 text-[10px] leading-tight font-medium">{row.category}</TableCell>
                              <TableCell className="whitespace-normal break-words px-1 py-2 text-center text-[10px] leading-tight">{row.cubeAge === null ? "—" : row.cubeAge}</TableCell>

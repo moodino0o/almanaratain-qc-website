@@ -75,8 +75,29 @@ type StrengthGroup = {
   product: string;
   cubeAge: number | null;
   strengths: number[];
-  statuses: QcRecord["status"][];
+  statuses: ("Passed" | "Failed" | null)[];
   strengthUnit: string;
+};
+
+type DailyResultStatus = "Passed" | "Failed" | null;
+
+const recordResultStatus = (
+  record: QcRecord,
+  details: Record<string, unknown>,
+): DailyResultStatus => {
+  const strengthEvaluation =
+    typeof details.strengthEvaluation === "object" && details.strengthEvaluation !== null
+      ? details.strengthEvaluation as Record<string, unknown>
+      : {};
+  const sieveEvaluation =
+    typeof details.sieveEvaluation === "object" && details.sieveEvaluation !== null
+      ? details.sieveEvaluation as Record<string, unknown>
+      : {};
+  const rawStatus = strengthEvaluation.status ?? sieveEvaluation.status ?? record.status;
+  const normalizedStatus = String(rawStatus).trim().toLocaleLowerCase();
+  if (normalizedStatus === "passed") return "Passed";
+  if (normalizedStatus === "failed") return "Failed";
+  return null;
 };
 
 const numericValue = (value: unknown) => {
@@ -339,7 +360,7 @@ export function buildDailyReportRows(
       strengthUnit: "N/mm²",
     };
     current.strengths.push(...strengths);
-    current.statuses.push(record.status);
+    current.statuses.push(recordResultStatus(record, details));
     groups.set(key, current);
   };
 

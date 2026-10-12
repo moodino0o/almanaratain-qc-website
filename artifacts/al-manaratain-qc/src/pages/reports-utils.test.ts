@@ -622,6 +622,19 @@ test("daily result rows are green only when all records passed and red if any fa
     summarize([makeRecord(125, "Passed"), makeRecord(126, "Review")])[0]?.status,
     null,
   );
+  const evaluationPassed = makeRecord(127, "Review");
+  evaluationPassed.details = {
+    ...evaluationPassed.details,
+    strengthEvaluation: { status: "Passed" },
+  };
+  assert.equal(summarize([evaluationPassed])[0]?.status, "Passed");
+
+  const evaluationFailed = makeRecord(128, "Passed");
+  evaluationFailed.details = {
+    ...evaluationFailed.details,
+    strengthEvaluation: { status: "Failed" },
+  };
+  assert.equal(summarize([evaluationFailed])[0]?.status, "Failed");
 });
 
 test("Block daily report uses Dammam net strength and other plants' air-dry strength", () => {
