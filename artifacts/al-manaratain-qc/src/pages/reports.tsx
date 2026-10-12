@@ -417,7 +417,7 @@ export default function Reports() {
                   <CalendarDays className="mb-4 h-10 w-10 text-primary/60" />
                   <h2 className="text-lg font-semibold">Start with a daily result search</h2>
                   <p className="mt-2 max-w-md text-sm text-muted-foreground">
-                    Select an inclusive testing-date range and optionally choose multiple products. Results are summarized by testing date, category, plant, and product group.
+                    Select an inclusive testing-date range and optionally choose multiple products. Results are summarized by date, category, plant, machine type, and product group.
                   </p>
                   <Button className="mt-5" onClick={openFilters}>Choose dates and products</Button>
                 </div>
@@ -443,7 +443,7 @@ export default function Reports() {
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <h3 className="text-sm font-semibold text-foreground">
-                        By category, plant, product, and date
+                         By category, plant, machine type, product, and date
                       </h3>
                       <p className="mt-1 text-xs text-muted-foreground">
                         Dammam Blocks: Net Strength. Other Blocks: Air-dry Strength.
@@ -460,7 +460,7 @@ export default function Reports() {
                            <TableHead className="w-[8%] px-1.5 py-2 text-[10px] leading-tight">Category</TableHead>
                            <TableHead className="w-[5%] px-1 py-2 text-center text-[10px] leading-tight">Age</TableHead>
                            <TableHead className="w-[8%] px-1 py-2 text-[10px] leading-tight">Casting Date</TableHead>
-                           <TableHead className="w-[8%] px-1 py-2 text-[10px] leading-tight">Testing Date</TableHead>
+                            <TableHead className="w-[8%] px-1 py-2 text-[10px] leading-tight">Machine Type</TableHead>
                            <TableHead className="w-[9%] px-1.5 py-2 text-[10px] leading-tight">Plant</TableHead>
                            <TableHead className="w-[12%] px-1.5 py-2 text-[10px] leading-tight">Type / Mix Design</TableHead>
                            <TableHead className="w-[12%] border-l bg-emerald-50 px-1 py-2 text-right text-[10px] leading-tight text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">Average</TableHead>
@@ -471,11 +471,11 @@ export default function Reports() {
                       </TableHeader>
                       <TableBody>
                         {dailyReportRows.map((row) => (
-                             <TableRow key={`${row.date}-${row.castingDate}-${row.testingDate}-${row.category}-${row.plant}-${row.product}-${row.cubeAge ?? "none"}`}>
+                              <TableRow key={`${row.date}-${row.castingDate}-${row.testingDate}-${row.category}-${row.plant}-${row.machineType}-${row.product}-${row.cubeAge ?? "none"}`}>
                              <TableCell className="whitespace-normal break-words px-1.5 py-2 text-[10px] leading-tight font-medium">{row.category}</TableCell>
                              <TableCell className="whitespace-normal break-words px-1 py-2 text-center text-[10px] leading-tight">{row.cubeAge === null ? "—" : row.cubeAge}</TableCell>
                              <TableCell className="whitespace-normal break-words px-1 py-2 text-[10px] leading-tight">{formatDate(row.castingDate)}</TableCell>
-                             <TableCell className="whitespace-normal break-words px-1 py-2 text-[10px] leading-tight">{formatDate(row.testingDate)}</TableCell>
+                              <TableCell className="whitespace-normal break-words px-1 py-2 text-[10px] leading-tight">{row.machineType || "—"}</TableCell>
                              <TableCell className="whitespace-normal break-words px-1.5 py-2 text-[10px] leading-tight">{row.plant}</TableCell>
                              <TableCell className="whitespace-normal break-words px-1.5 py-2 text-[10px] leading-tight">{row.product}</TableCell>
                              <TableCell className="whitespace-normal break-words border-l bg-emerald-50/50 px-1 py-2 text-right text-[10px] leading-tight font-semibold tabular-nums text-emerald-900 dark:bg-emerald-950/10 dark:text-emerald-200">{formatStrength(row.averageStrength, row.strengthUnit)}</TableCell>

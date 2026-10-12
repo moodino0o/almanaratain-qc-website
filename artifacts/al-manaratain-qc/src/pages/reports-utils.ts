@@ -40,6 +40,7 @@ export type DailyReportRow = {
   testingDate: string;
   category: string;
   plant: string;
+  machineType: string;
   product: string;
   cubeAge: number | null;
   averageStrength: number;
@@ -69,6 +70,7 @@ type StrengthGroup = {
   testingDate: string;
   category: string;
   plant: string;
+  machineType: string;
   product: string;
   cubeAge: number | null;
   strengths: number[];
@@ -131,6 +133,12 @@ const dateOnly = (value: unknown) => {
 const recordProduct = (record: QcRecord, details: Record<string, unknown>) => {
   if (record.testType === "Ready Mix") {
     return firstWords(detailsValue(details, ["designStrength", "mixStrength", "mixType"]) || record.material, 3);
+  }
+  if (record.testType === "Blocks") {
+    return detailsValue(details, ["productName", "blockType"]) || String(record.material ?? "").trim() || "Unspecified";
+  }
+  if (record.testType === "Paving Blocks") {
+    return detailsValue(details, ["productName", "product"]) || String(record.material ?? "").trim() || "Unspecified";
   }
   return firstWords(
     detailsValue(details, ["blockType", "blockSize", "sampleType", "sieveSize", "materialCondition"])
@@ -308,7 +316,12 @@ export function buildDailyReportRows(
     if (!date || !testingDate || !inRange(date) || !strengths.length) return;
     const castingDate = record.sampleDate.slice(0, 10);
     const category = record.testType;
-    const key = `${date}\u0000${castingDate}\u0000${testingDate}\u0000${category}\u0000${record.location}\u0000${product}\u0000${cubeAge ?? ""}`;
+    const details = record.details as Record<string, unknown>;
+    const machineType =
+      record.testType === "Blocks" || record.testType === "Paving Blocks"
+        ? detailsValue(details, ["machineType", "machine"])
+        : "";
+    const key = `${date}\u0000${castingDate}\u0000${testingDate}\u0000${category}\u0000${record.location}\u0000${machineType}\u0000${product}\u0000${cubeAge ?? ""}`;
     if (selected.size && !selected.has(`${category}\u0000${product}`)) return;
     const current = groups.get(key) ?? {
       date,
@@ -316,6 +329,7 @@ export function buildDailyReportRows(
       testingDate,
       category,
       plant: record.location,
+      machineType,
       product,
       cubeAge,
       strengths: [],
@@ -393,6 +407,7 @@ export function buildDailyReportRows(
       testingDate: group.testingDate,
       category: group.category,
       plant: group.plant,
+      machineType: group.machineType,
       product: group.product,
       cubeAge: group.cubeAge,
       averageStrength: group.strengths.reduce((sum, value) => sum + value, 0) / group.strengths.length,
@@ -528,7 +543,7 @@ const createZip = (files: Array<{ name: string; content: string }>) => {
 
 export function downloadDailyReportWorkbook(rows: DailyReportRow[]) {
   if (!rows.length) return;
-  const headers = ["Category", "Age (days)", "Casting Date", "Testing Date", "Plant", "Type / Mix Design", "Average", "Minimum", "Maximum", "Std. Dev."];
+  const headers = ["Category", "Age (days)", "Casting Date", "Machine Type", "Plant", "Type / Mix Design", "Average", "Minimum", "Maximum", "Std. Dev."];
   const columns = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
   const sheetRows = [
     `<row r="1">${inlineStringCell("A1", "Al Manaratain Daily QC Results", 1)}</row>`,
@@ -542,7 +557,7 @@ export function downloadDailyReportWorkbook(rows: DailyReportRow[]) {
           ? inlineStringCell(`B${rowNumber}`, "—")
           : numberCell(`B${rowNumber}`, row.cubeAge, 0)) +
         inlineStringCell(`C${rowNumber}`, row.castingDate) +
-        inlineStringCell(`D${rowNumber}`, row.testingDate) +
+        inlineStringCell(`D${rowNumber}`, row.machineType || "—") +
         inlineStringCell(`E${rowNumber}`, row.plant) +
         inlineStringCell(`F${rowNumber}`, row.product) +
         numberCell(`G${rowNumber}`, row.averageStrength) +

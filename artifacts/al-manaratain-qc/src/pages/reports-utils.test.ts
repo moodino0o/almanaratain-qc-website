@@ -354,6 +354,7 @@ test("groups Ready Mix products by their first three words and summarizes each d
       testingDate: "2026-09-29",
       category: "Ready Mix",
       plant: "Plant A",
+      machineType: "",
       product: "25 N OPC",
       cubeAge: 28,
       averageStrength: 42,
@@ -502,6 +503,7 @@ test("includes non-Ready Mix categories, date ranges, and selected product group
       material: "4 inch Block",
       details: {
         blockType: "Hollow Concrete Block",
+        machine: "MASA FRIMA 1",
         blockAge: "28",
         testRows: [{ load: 800, calculatedStrength: 8 }, { load: 1000, calculatedStrength: 10 }],
       },
@@ -517,14 +519,15 @@ test("includes non-Ready Mix categories, date ranges, and selected product group
   ];
 
   assert.deepEqual(
-    buildDailyReportRows(records, "2026-10-08", "2026-10-08", ["Blocks\u0000Hollow Concrete"]),
+    buildDailyReportRows(records, "2026-10-08", "2026-10-08", ["Blocks\u0000Hollow Concrete Block"]),
     [{
       date: "2026-10-08",
       castingDate: "2026-09-10",
       testingDate: "2026-10-08",
       category: "Blocks",
       plant: "Plant B",
-      product: "Hollow Concrete",
+      machineType: "MASA FRIMA 1",
+      product: "Hollow Concrete Block",
       cubeAge: 28,
       averageStrength: 10.8,
       minimumStrength: 9.6,
@@ -532,6 +535,56 @@ test("includes non-Ready Mix categories, date ranges, and selected product group
       standardDeviation: Math.sqrt(((9.6 - 10.8) ** 2 + (12 - 10.8) ** 2) / 2),
       strengthUnit: "N/mm²",
     }],
+  );
+});
+
+test("daily results show full Block and Paving product names and machine types", () => {
+  const rows = buildDailyReportRows(
+    [
+      qcRecord({
+        id: 110,
+        testType: "Blocks",
+        sampleDate: "2026-09-01",
+        location: "Plant B",
+        material: "Concrete Block",
+        details: {
+          blockType: "Hollow Concrete Block",
+          blockAge: 28,
+          machine: "MASA FRIMA 1",
+          testRows: [{ load: 800, airDryStrength: 12 }],
+        },
+      }),
+      qcRecord({
+        id: 111,
+        testType: "Paving Blocks",
+        sampleDate: "2026-09-01",
+        location: "Plant C",
+        material: "Paving Block Premium Grey 80mm",
+        details: {
+          blockAge: 28,
+          machine: "MASA FRIMA 2",
+          testRows: [{ load: 600, tensileStrength: 8 }],
+        },
+      }),
+    ],
+    "2026-09-29",
+    "2026-09-29",
+  );
+
+  assert.deepEqual(
+    rows.map(({ category, machineType, product }) => ({ category, machineType, product })),
+    [
+      {
+        category: "Blocks",
+        machineType: "MASA FRIMA 1",
+        product: "Hollow Concrete Block",
+      },
+      {
+        category: "Paving Blocks",
+        machineType: "MASA FRIMA 2",
+        product: "Paving Block Premium Grey 80mm",
+      },
+    ],
   );
 });
 
