@@ -2253,13 +2253,26 @@ export default function RecordForm() {
                           <th className="px-2 py-2">Failure Load (kN)</th>
                           <th className="px-2 py-2">Weight (kg)</th>
                           <th className="px-2 py-2">Wet Weight (kg)</th>
+                          <th className="px-2 py-2">y (mm)</th>
+                          <th className="px-2 py-2">I (mm⁴)</th>
                           <th className="px-2 py-2">Bending Strength (MPa)</th>
+                          <th className="px-2 py-2">Strength Outcome</th>
                           <th className="px-2 py-2">Water Absorption (%)</th>
                           <th className="px-2 py-2">Absorption Result</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {testRows.map((row, rowIndex) => (
+                        {testRows.map((row, rowIndex) => {
+                          const factors = kerbBendingFactorsForType(details.kerbType);
+                          const bendingStrength = calculateKerbBendingStrength(details.kerbType, row);
+                          const individualLimitText = applicableStandard?.minimumIndividualStrength ?? details.minimumIndividualStrength;
+                          const individualLimit = individualLimitText == null || String(individualLimitText).trim() === ""
+                            ? null
+                            : Number(individualLimitText);
+                          const bendingOutcome = !bendingStrength || individualLimit === null || !Number.isFinite(individualLimit)
+                            ? "Review"
+                            : Number(bendingStrength) >= individualLimit ? "Pass" : "Fail";
+                          return (
                           <tr key={row.id} className="border-b last:border-b-0">
                             <td className="px-2 py-2 font-medium">{rowIndex + 1}</td>
                             {([
@@ -2288,11 +2301,14 @@ export default function RecordForm() {
                                 />
                               </td>
                             ))}
+                            <td className="px-2 py-2 tabular-nums">{factors?.y ?? ""}</td>
+                            <td className="px-2 py-2 tabular-nums">{factors?.secondMoment.toLocaleString() ?? ""}</td>
                             <td className="px-2 py-2 font-semibold tabular-nums">
-                              {calculateKerbBendingStrength(details.kerbType, row)
-                                ? `${calculateKerbBendingStrength(details.kerbType, row)} MPa`
+                              {bendingStrength
+                                ? `${bendingStrength} MPa`
                                 : "—"}
                             </td>
+                            <td className="px-2 py-2 font-medium">{bendingOutcome}</td>
                             {(() => {
                               const absorption = evaluateKerbWaterAbsorption(
                                 row.weight,
@@ -2309,7 +2325,8 @@ export default function RecordForm() {
                               </>;
                             })()}
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

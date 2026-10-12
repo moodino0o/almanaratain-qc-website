@@ -39,6 +39,7 @@ import {
   blockSizeMatches,
   blockTypeMatches,
   calculateKerbBendingStrength,
+  kerbBendingFactorsForType,
   evaluateKerbWaterAbsorption,
   calculateChlorideContent,
   calculateCubeDensity,
@@ -3272,6 +3273,11 @@ function ConfiguredDetailsReport({
       record.details.testRows.length > 0 && (
         <section className="mt-4 kerbstone-specimen-section">
           <SectionHeading>Kerbstone Specimen Results</SectionHeading>
+          {kerbBendingFactorsForType(record.details.kerbType) && (
+            <p className="text-xs">
+              Formula: (failure load × 1,000 × span × y) ÷ (4 × I); y = {kerbBendingFactorsForType(record.details.kerbType)!.y} mm, I = {kerbBendingFactorsForType(record.details.kerbType)!.secondMoment.toLocaleString()} mm⁴.
+            </p>
+          )}
           <table className="report-table kerbstone-specimen-table">
               <thead>
                 <tr>
@@ -3284,7 +3290,10 @@ function ConfiguredDetailsReport({
                     "Batter Angle (deg)",
                     "Span Length (mm)",
                     "Failure Load (kN)",
+                    "y (mm)",
+                    "I (mm⁴)",
                     "Bending Strength (MPa)",
+                    "Strength Outcome",
                     "Water Absorption (%)",
                     "Absorption Result",
                   ].map((label) => (
@@ -3303,6 +3312,12 @@ function ConfiguredDetailsReport({
                     failureLoad: String(row.failureLoad ?? row.load ?? ""),
                     spanLength: String(row.spanLength ?? ""),
                   });
+                  const factors = kerbBendingFactorsForType(record.details.kerbType);
+                  const numericStrength = numericValue(bendingStrength);
+                  const individualLimit = numericValue(strengthStandard?.minimumIndividualStrength);
+                  const bendingOutcome = numericStrength === null || individualLimit === null
+                    ? "Review"
+                    : numericStrength >= individualLimit ? "Pass" : "Fail";
                   const absorption = evaluateKerbWaterAbsorption(
                     row.weight,
                     row.wetWeight,
@@ -3317,7 +3332,10 @@ function ConfiguredDetailsReport({
                     formatWholeNumber(row.batterAngle),
                     formatWholeNumber(row.spanLength),
                     row.failureLoad ?? row.load,
+                    factors?.y ?? "",
+                    factors?.secondMoment ?? "",
                     bendingStrength ? `${bendingStrength} MPa` : "",
+                    bendingOutcome,
                     absorption?.value ? `${absorption.value}%` : "",
                     absorption?.status ?? "",
                   ];

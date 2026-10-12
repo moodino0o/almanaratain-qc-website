@@ -273,8 +273,8 @@ test("evaluates Kerbstone bending and optional water absorption against editable
     material: "Kerbstone",
     blockType: "Road kerb",
     blockSize: "915",
-    requiredStrength: "28",
-    minimumIndividualStrength: "27",
+    requiredStrength: "1",
+    minimumIndividualStrength: "1",
     waterAbsorptionLimit: "6.5",
     strengthUnit: "MPa",
   });
@@ -298,7 +298,7 @@ test("evaluates Kerbstone bending and optional water absorption against editable
   const passedDetails = passed.details as Record<string, unknown>;
   const passedRows = passedDetails.testRows as Array<Record<string, unknown>>;
   assert.equal(passed.status, "Passed");
-  assert.equal(passedRows[0].bendingStrength, "28.13");
+  assert.equal(passedRows[0].bendingStrength, "1.21");
   assert.equal(passedRows[0].waterAbsorptionStatus, "Pass");
 
   const atLimit = evaluateStrengthRecord({
@@ -321,6 +321,19 @@ test("evaluates Kerbstone bending and optional water absorption against editable
     .testRows as Array<Record<string, unknown>>;
   assert.equal(skippedAbsorption.status, "Passed");
   assert.equal(skippedRows[0].waterAbsorptionStatus, "");
+
+  const edgeStandard = { ...standard, blockType: "Edge kerb", requiredStrength: "3.5", minimumIndividualStrength: "2.8" };
+  const edge = evaluateStrengthRecord({
+    ...record,
+    details: {
+      ...record.details,
+      kerbType: "Edge kerb",
+      testRows: [{ ...record.details.testRows[0], spanLength: "300", failureLoad: "10" }],
+    },
+  }, [edgeStandard]);
+  const edgeRows = (edge.details as Record<string, unknown>).testRows as Array<Record<string, unknown>>;
+  assert.equal(edgeRows[0].bendingStrength, "7.21");
+  assert.equal(edge.status, "Passed");
 });
 
 test("explains Kerbstone review when a minimum individual limit is missing", () => {
@@ -328,7 +341,7 @@ test("explains Kerbstone review when a minimum individual limit is missing", () 
     testType: "Kerb Stone",
     material: "Kerbstone",
     blockType: "Road kerb",
-    requiredStrength: "7.5",
+    requiredStrength: "5",
     minimumIndividualStrength: null,
     waterAbsorptionLimit: "6.5",
     strengthUnit: "MPa",

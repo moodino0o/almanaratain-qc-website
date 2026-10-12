@@ -800,6 +800,13 @@ function evaluateKerbStrengthRecord(
   let strengthFailed = false;
   let absorptionFailed = false;
   const strengths: number[] = [];
+  const requiredStrength = numericValue(standard?.requiredStrength);
+  const minimumRequiredStrength = numericValue(standard?.minimumIndividualStrength);
+  const kerbFactors: Record<string, { y: number; secondMoment: number }> = {
+    "road kerb": { y: 60.3, secondMoment: 37_300_000 },
+    "edge kerb": { y: 25, secondMoment: 2_600_000 },
+  };
+  const factors = kerbFactors[String(record.details.kerbType ?? "").trim().toLocaleLowerCase()];
   const calculatedRows = sourceRows.map((row) => {
     if (typeof row !== "object" || row === null) {
       hasIncompleteStrength = true;
@@ -808,15 +815,13 @@ function evaluateKerbStrengthRecord(
     const values = row as Record<string, unknown>;
     const load = numericValue(values.failureLoad ?? values.load);
     const span = numericValue(values.spanLength);
-    const width = numericValue(values.width);
-    const batterDepth = numericValue(values.batterDepth);
+    const y = factors?.y;
+    const secondMoment = factors?.secondMoment;
     const completeStrength =
-      load !== null && load >= 0 &&
-      span !== null && span > 0 &&
-      width !== null && width > 0 &&
-      batterDepth !== null && batterDepth > 0;
+      load !== null && load > 0 &&
+      span !== null && span > 0 && y !== undefined && secondMoment !== undefined;
     const rawStrength = completeStrength
-      ? (3 * load! * 1_000 * span!) / (2 * width! * batterDepth! ** 2)
+      ? (load! * 1_000 * span! * y!) / (4 * secondMoment!)
       : null;
     const bendingStrength = rawStrength === null ? null : rounded(rawStrength);
     if (bendingStrength === null) hasIncompleteStrength = true;
@@ -841,6 +846,9 @@ function evaluateKerbStrengthRecord(
     return {
       ...values,
       bendingStrength: bendingStrength === null ? "" : bendingStrength.toFixed(2),
+      bendingStrengthOutcome: bendingStrength === null || minimumRequiredStrength === null
+        ? "Review"
+        : bendingStrength >= minimumRequiredStrength ? "Pass" : "Fail",
       waterAbsorption: waterAbsorption === null ? "" : waterAbsorption.toFixed(2),
       waterAbsorptionStatus,
     };
@@ -850,8 +858,6 @@ function evaluateKerbStrengthRecord(
     : null;
   const minimumStrength = strengths.length ? Math.min(...strengths) : null;
   const maximumStrength = strengths.length ? Math.max(...strengths) : null;
-  const requiredStrength = numericValue(standard?.requiredStrength);
-  const minimumRequiredStrength = numericValue(standard?.minimumIndividualStrength);
   if (
     requiredStrength !== null &&
     averageStrength !== null &&
@@ -886,7 +892,7 @@ function evaluateKerbStrengthRecord(
           : minimumRequiredStrength === null
             ? "The matching Kerbstone standard has no minimum individual bending-strength limit."
             : hasIncompleteStrength
-              ? "Enter each specimen's span, width, batter depth, and failure load."
+                ? "Enter each specimen's span length and failure load."
               : hasIncompleteAbsorption
                 ? "Water absorption was entered, but its dry weight, wet weight, or configured limit is missing."
                 : "Kerbstone results need review.";

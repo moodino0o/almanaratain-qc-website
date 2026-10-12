@@ -25,6 +25,7 @@ import {
   calculateChlorideContent,
   calculateMoistureContent,
   calculateKerbBendingStrength,
+  kerbBendingFactorsForType,
   calculateSiltContent,
   calculateSulphateContent,
   evaluateKerbWaterAbsorption,
@@ -238,7 +239,23 @@ function KerbstoneResultsTable({
     : absorptionResults.length > 0 && absorptionResults.every((result) => result.status === "Pass")
       ? "Pass"
       : "Review";
+  const factors = kerbBendingFactorsForType(kerbType);
   const results = [
+    ...rows.map((rawRow, index) => {
+      const specimen = typeof rawRow === "object" && rawRow !== null
+        ? rawRow as Record<string, unknown>
+        : {};
+      const value = strengths[index];
+      const outcome = value === null || minLimit === null
+        ? "Review"
+        : value >= minLimit ? "Pass" : "Fail";
+      return {
+        test: `Specimen ${index + 1} (${String(specimen.failureLoad ?? specimen.load ?? "—")} kN × ${String(specimen.spanLength ?? "—")} mm)`,
+        result: value === null ? "—" : `${formatStrengthMetric(value)} MPa`,
+        standard: minLimit === null ? "Not configured" : `≥ ${formatStrengthMetric(minLimit)} MPa`,
+        status: outcome,
+      };
+    }),
     {
       test: "Average bending strength",
       result: average === null ? "—" : `${formatStrengthMetric(average)} MPa`,
@@ -274,6 +291,11 @@ function KerbstoneResultsTable({
         <CardDescription>Measured values compared with the saved kerb standard.</CardDescription>
       </CardHeader>
       <CardContent className="p-0">
+        {factors && (
+          <p className="border-b px-3 py-2 text-xs text-muted-foreground">
+            Bending formula: (failure load × 1,000 × span × y) ÷ (4 × I); y = {factors.y} mm, I = {factors.secondMoment.toLocaleString()} mm⁴.
+          </p>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full min-w-[620px] text-sm">
             <thead className="bg-muted/30">
