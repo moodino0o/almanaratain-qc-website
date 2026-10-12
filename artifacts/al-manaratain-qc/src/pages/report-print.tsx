@@ -635,6 +635,10 @@ function formatNumber(value: number) {
   return value.toFixed(1);
 }
 
+function formatKerbResult(value: number) {
+  return value.toFixed(2);
+}
+
 function formatReportDate(value: string | undefined | null) {
   if (!value) return "-";
   const date = new Date(value);
@@ -3093,20 +3097,20 @@ function KerbstoneResultsSummary({
   const summaryRows = [
     {
       test: "Characteristic bending strength",
-      result: average === null ? "—" : `${formatNumber(average)} MPa`,
-      requirement: requiredAverage === null ? "Not configured" : `≥ ${formatNumber(requiredAverage)} MPa`,
+      result: average === null ? "—" : `${formatKerbResult(average)} MPa`,
+      requirement: requiredAverage === null ? "Not configured" : `≥ ${formatKerbResult(requiredAverage)} MPa`,
       status: strengthStatus,
     },
     {
       test: "Minimum individual bending strength",
-      result: minimum === null ? "—" : `${formatNumber(minimum)} MPa`,
-      requirement: requiredIndividual === null ? "Not configured" : `≥ ${formatNumber(requiredIndividual)} MPa`,
+      result: minimum === null ? "—" : `${formatKerbResult(minimum)} MPa`,
+      requirement: requiredIndividual === null ? "Not configured" : `≥ ${formatKerbResult(requiredIndividual)} MPa`,
       status: strengthStatus,
     },
     {
       test: "Water absorption",
       result: averageAbsorption !== null
-        ? `${formatNumber(averageAbsorption)}%`
+        ? `${formatKerbResult(averageAbsorption)}%`
         : "Not entered",
       requirement: standard?.waterAbsorptionLimit == null
         ? "Not configured"
@@ -3290,8 +3294,6 @@ function ConfiguredDetailsReport({
                     "Batter Angle (deg)",
                     "Span Length (mm)",
                     "Failure Load (kN)",
-                    "y (mm)",
-                    "I (mm⁴)",
                     "Bending Strength (MPa)",
                     "Strength Outcome",
                     "Water Absorption (%)",
@@ -3312,7 +3314,6 @@ function ConfiguredDetailsReport({
                     failureLoad: String(row.failureLoad ?? row.load ?? ""),
                     spanLength: String(row.spanLength ?? ""),
                   });
-                  const factors = kerbBendingFactorsForType(record.details.kerbType);
                   const numericStrength = numericValue(bendingStrength);
                   const individualLimit = numericValue(strengthStandard?.minimumIndividualStrength);
                   const bendingOutcome = numericStrength === null || individualLimit === null
@@ -3332,8 +3333,6 @@ function ConfiguredDetailsReport({
                     formatWholeNumber(row.batterAngle),
                     formatWholeNumber(row.spanLength),
                     row.failureLoad ?? row.load,
-                    factors?.y ?? "",
-                    factors?.secondMoment ?? "",
                     bendingStrength ? `${bendingStrength} MPa` : "",
                     bendingOutcome,
                     absorption?.value ? `${absorption.value}%` : "",

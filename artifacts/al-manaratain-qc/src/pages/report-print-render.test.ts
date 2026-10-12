@@ -246,11 +246,12 @@ test("prints Kerbstone specimen measurements and per-type formula-calculated ben
   assert.doesNotMatch(markup, /Test Results Summary<\/h3>\s*<strong/);
   assert.match(markup, /Characteristic bending strength/);
   assert.match(markup, /Water absorption/);
-  assert.match(markup, /<td>1\.2 MPa<\/td>/);
-  assert.match(markup, /<td>4\.2%<\/td>/);
+  assert.match(markup, /<td>1\.21 MPa<\/td>/);
+  assert.match(markup, /<td>4\.17%<\/td>/);
   assert.doesNotMatch(markup, /Bending strength\s*<\/strong>|Average: 1\.2 MPa|Minimum: 1\.2 MPa|Maximum: 1\.2 MPa|28\.13 MPa/);
   assert.match(markup, /kerbstone-specimen-table/);
   assert.match(markup, /kerbstone-specimen-section/);
+  assert.doesNotMatch(markup, /<th>y \(mm\)<\/th>|<th>I \(mm⁴\)<\/th>/);
   assert.doesNotMatch(markup, /Weight \(kg\)|Wet Weight \(kg\)/);
   assert.doesNotMatch(markup, /specimens assessed|Avg\. Strength:|Min\. Strength:|Max\. Strength:/);
   assert.match(markup, /Batter Depth \(mm\)/);
