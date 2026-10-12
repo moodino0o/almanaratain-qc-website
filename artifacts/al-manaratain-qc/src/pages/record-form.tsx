@@ -77,6 +77,53 @@ const REFERENCE_NUMBER_MAX_LENGTH = 32;
 const REFERENCE_DATA_REFRESH_INTERVAL_MS = 15_000;
 const DEFAULT_APPROVED_BY = "ADEL ABBAS EBRAHIM";
 const MATERIAL_CONDITIONS = ["Single Washed", "Unwashed", "Double Washed"] as const;
+const GENERAL_INFO_FIELD_ORDER: Partial<Record<TestType, Record<string, number>>> = {
+  [TestType.Ready_Mix]: {
+    testType: 1,
+    sampleDate: 2,
+    referenceNumber: 3,
+    location: 4,
+    material: 5,
+    customerName: 6,
+    customerLocation: 7,
+    testedBy: 8,
+    compactionType: 9,
+    truckNumber: 10,
+    strengthStandard: 11,
+    approvedBy: 12,
+  },
+  [TestType.Blocks]: {
+    testType: 1,
+    sampleDate: 2,
+    blockAge: 3,
+    location: 4,
+    machine: 5,
+    blockType: 6,
+    blockSize: 7,
+    numberOfHoles: 8,
+    testedBy: 9,
+    approvedBy: 10,
+    blockStandardAssignment: 11,
+    sampleType: 12,
+    conditioningMethod: 13,
+    preparationMethod: 14,
+    shapeFactor: 15,
+  },
+  [TestType.Paving_Blocks]: {
+    testType: 1,
+    sampleDate: 2,
+    blockAge: 3,
+    location: 4,
+    machineType: 5,
+    material: 6,
+    pavingBlockSize: 7,
+    testedBy: 8,
+    approvedBy: 9,
+    sampleType: 10,
+    strengthStandard: 11,
+    correctionFactor: 12,
+  },
+};
 
 function ageFromDates(sampleDate: string, testingDate: unknown) {
   const sampleDay = String(sampleDate).slice(0, 10);
@@ -116,6 +163,10 @@ export default function RecordForm() {
   const canEditQc = role === "technician" || role === "managerial" || role === "administrator";
   const canEditApprovedBy = role === "administrator";
   const canEditReferenceData = role === "administrator";
+  const generalInfoFieldStyle = (field: string) => {
+    const order = GENERAL_INFO_FIELD_ORDER[testType]?.[field];
+    return order === undefined ? undefined : { order };
+  };
   const queryClient = useQueryClient();
   
   const { data: lookups, isLoading: lookupsLoading } = useGetLookups({
@@ -1523,7 +1574,7 @@ export default function RecordForm() {
               <CardDescription>Basic details about the sample and test context.</CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
+              <div className="space-y-2" style={generalInfoFieldStyle("testType")}>
                   <Label>Test Type <span className="text-destructive">*</span></Label>
                 <Select value={testType} onValueChange={(val: TestType) => {
                   setTestType(val);
@@ -1608,7 +1659,7 @@ export default function RecordForm() {
                 </>
               )}
 
-              <div className="space-y-2">
+              <div className="space-y-2" style={generalInfoFieldStyle("sampleDate")}>
                 <Label>
                   {usesSieveRows
                     ? "Sampling Date"
@@ -1625,7 +1676,7 @@ export default function RecordForm() {
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2" style={generalInfoFieldStyle("location")}>
                 <Label>
                     {testType === TestType.Precast
                       ? "Testing Location"
@@ -1644,7 +1695,7 @@ export default function RecordForm() {
               </div>
 
               {testType !== TestType.Blocks && (
-                <div className="space-y-2">
+                <div className="space-y-2" style={generalInfoFieldStyle("material")}>
                   <Label>
                     {usesSieveRows
                       ? "Material Type"
@@ -1708,7 +1759,7 @@ export default function RecordForm() {
               )}
 
       {testType === TestType.Blocks ? (
-        <div className="space-y-3 md:col-span-2">
+        <div className="space-y-3 md:col-span-2" style={generalInfoFieldStyle("blockStandardAssignment")}>
           <Label>Block standard assignment</Label>
           <div
             role="radiogroup"
@@ -1819,7 +1870,7 @@ export default function RecordForm() {
         </div>
       ) : (
         (testType === TestType.Ready_Mix || testType === TestType.Paving_Blocks) && (
-          <div className="space-y-2">
+          <div className="space-y-2" style={generalInfoFieldStyle("strengthStandard")}>
             <Label>Evaluation / Report Standard</Label>
             <select
               value={selectedStrengthStandardId}
@@ -1843,7 +1894,7 @@ export default function RecordForm() {
         )
       )}
 
-              <div className="space-y-2">
+              <div className="space-y-2" style={generalInfoFieldStyle("testedBy")}>
                 <Label>
                   {usesSieveRows ? "Sampled-Tested By" : "Tested By (Technician)"}{" "}
                   <span className="text-destructive">*</span>
@@ -1857,13 +1908,14 @@ export default function RecordForm() {
                 />
               </div>
 
-              {canEditApprovedBy && (
-                <div className="space-y-2">
+              {(canEditApprovedBy || (testType === TestType.Ready_Mix && !isEditing)) && (
+                <div className="space-y-2" style={generalInfoFieldStyle("approvedBy")}>
                   <Label>Approved By</Label>
                   <Input
                     value={reviewedBy}
                     onChange={(event) => setReviewedBy(event.target.value)}
                     placeholder="Enter approving person"
+                    readOnly={!canEditApprovedBy}
                   />
                   <p className="text-xs text-muted-foreground">
                     This approval name is shown on the report.
@@ -1902,7 +1954,7 @@ export default function RecordForm() {
               )}
 
               {(testType === TestType.Ready_Mix || testType === TestType.Precast) && (
-                <div className="space-y-2">
+                <div className="space-y-2" style={generalInfoFieldStyle("compactionType")}>
                   <Label>Compaction Type</Label>
                   <TypeaheadInput
                     value={String(details.compactionType ?? "")}
@@ -1916,7 +1968,7 @@ export default function RecordForm() {
 
               {testType === TestType.Ready_Mix && (
                 <>
-                  <div className="space-y-2">
+                  <div className="space-y-2" style={generalInfoFieldStyle("referenceNumber")}>
                     <Label>
                       Reference Number <span className="text-destructive">*</span>
                     </Label>
@@ -1950,7 +2002,7 @@ export default function RecordForm() {
                       </p>
                     )}
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2" style={generalInfoFieldStyle("truckNumber")}>
                     <Label>Truck Number</Label>
                     <Input
                       value={truckNumber}
@@ -1958,7 +2010,7 @@ export default function RecordForm() {
                       placeholder="Enter truck number"
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2" style={generalInfoFieldStyle("customerName")}>
                     <Label>Ready Mix Customer Name</Label>
                     <TypeaheadInput
                       value={customerName}
@@ -1968,7 +2020,7 @@ export default function RecordForm() {
                       onCreateOption={createReferenceOption("customers")}
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2" style={generalInfoFieldStyle("customerLocation")}>
                     <Label>Customer Location</Label>
                     <TypeaheadInput
                       value={customerLocation}
@@ -2031,7 +2083,7 @@ export default function RecordForm() {
 
       {testType === TestType.Blocks && (
                 <>
-                  <div className="space-y-2">
+                  <div className="space-y-2" style={generalInfoFieldStyle("blockType")}>
                     <Label>Block Type <span className="text-destructive">*</span></Label>
                     <TypeaheadInput
                       value={String(details.blockType ?? "")}
@@ -2041,7 +2093,7 @@ export default function RecordForm() {
                       onCreateOption={createReferenceOption("blockTypes")}
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2" style={generalInfoFieldStyle("blockSize")}>
                     <Label>Block Size <span className="text-destructive">*</span></Label>
                     <TypeaheadInput
                       value={String(details.blockSize ?? "")}
@@ -2052,7 +2104,7 @@ export default function RecordForm() {
                     />
                   </div>
                   {isDammamBlock && !isDammamSandwich && (
-                    <div className="space-y-2">
+                    <div className="space-y-2" style={generalInfoFieldStyle("numberOfHoles")}>
                       <Label htmlFor="dammam-number-of-holes">Number of Holes</Label>
                       <Input
                         id="dammam-number-of-holes"
@@ -2065,7 +2117,7 @@ export default function RecordForm() {
                       </p>
                     </div>
                   )}
-                  <div className="space-y-2">
+                  <div className="space-y-2" style={generalInfoFieldStyle("machine")}>
                     <Label>Machine</Label>
                     <TypeaheadInput
                       value={machine}
@@ -2075,7 +2127,7 @@ export default function RecordForm() {
                       onCreateOption={createReferenceOption("machines")}
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2" style={generalInfoFieldStyle("blockAge")}>
                     <Label>Block Age (days) <span className="text-destructive">*</span></Label>
                     <Input
                       type="text"
@@ -2085,7 +2137,7 @@ export default function RecordForm() {
                       placeholder="e.g. 28"
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2" style={generalInfoFieldStyle("sampleType")}>
                     <Label>Sample Type</Label>
                     <TypeaheadInput
                       value={String(details.sampleType ?? "")}
@@ -2095,7 +2147,7 @@ export default function RecordForm() {
                       onCreateOption={createReferenceOption("sampleTypes")}
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2" style={generalInfoFieldStyle("conditioningMethod")}>
                     <Label>Method of Conditioning</Label>
                     <TypeaheadInput
                       value={String(details.conditioningMethod ?? "")}
@@ -2105,7 +2157,7 @@ export default function RecordForm() {
                       onCreateOption={createReferenceOption("conditioningMethods")}
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2" style={generalInfoFieldStyle("preparationMethod")}>
                     <Label>Method of Preparation</Label>
                     <TypeaheadInput
                       value={String(details.preparationMethod ?? "")}
@@ -2115,7 +2167,7 @@ export default function RecordForm() {
                       onCreateOption={createReferenceOption("preparationMethods")}
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2" style={generalInfoFieldStyle("shapeFactor")}>
                     <Label>
                       Shape Factor
                       <span className="ml-1 text-xs font-normal text-muted-foreground">
@@ -2134,7 +2186,7 @@ export default function RecordForm() {
               )}
       {testType === TestType.Paving_Blocks && (
         <>
-          <div className="space-y-2">
+          <div className="space-y-2" style={generalInfoFieldStyle("machineType")}>
             <Label>Machine Type</Label>
             <TypeaheadInput
               value={String(details.machine ?? "")}
@@ -2144,7 +2196,7 @@ export default function RecordForm() {
               onCreateOption={createReferenceOption("machines")}
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2" style={generalInfoFieldStyle("sampleType")}>
             <Label>Sample Type</Label>
             <TypeaheadInput
               value={String(details.sampleType ?? "")}
@@ -2154,7 +2206,7 @@ export default function RecordForm() {
               onCreateOption={createReferenceOption("sampleTypes")}
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2" style={generalInfoFieldStyle("blockAge")}>
             <Label>Age (days) <span className="text-destructive">*</span></Label>
             <Input
               type="text"
@@ -2164,7 +2216,7 @@ export default function RecordForm() {
               placeholder="e.g. 28"
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2" style={generalInfoFieldStyle("pavingBlockSize")}>
             <Label>Paving Block Size <span className="text-destructive">*</span></Label>
             <TypeaheadInput
               value={String(details.pavingBlockSize ?? "")}
@@ -2174,7 +2226,7 @@ export default function RecordForm() {
               onCreateOption={createReferenceOption("blockSizes")}
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2" style={generalInfoFieldStyle("correctionFactor")}>
             <Label>
               Correction Factor
               <span className="ml-1 text-xs font-normal text-muted-foreground">
@@ -2716,9 +2768,6 @@ export default function RecordForm() {
                                   Wet Weight (kg)
                                 </th>
                               )}
-                               {testType === TestType.Ready_Mix && (
-                                 <th className="px-3 py-3 text-left font-semibold">Water Absorption</th>
-                               )}
                             </>
                           )}
                             {(testType === TestType.Ready_Mix ||
@@ -2739,6 +2788,9 @@ export default function RecordForm() {
                                          ? "Compressive Strength (N/mm²)"
                                       : "Calculated Strength"}
                                   </th>
+                                {testType === TestType.Ready_Mix && (
+                                  <th className="px-3 py-3 text-left font-semibold">Water Absorption</th>
+                                )}
                                )}
                                 {testType === TestType.Paving_Blocks && (
                                   <>
@@ -3026,16 +3078,6 @@ export default function RecordForm() {
                                  </td>
                                </>
                              )}
-                             {testType === TestType.Ready_Mix && (
-                               <td className="px-2 py-2">
-                                  <div
-                                    className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground"
-                                    aria-label={`Calculated water absorption for row ${rowIndex + 1}`}
-                                  >
-                                    {row.waterAbsorption ? `${row.waterAbsorption}%` : "—"}
-                                  </div>
-                               </td>
-                             )}
                             </>
                             )}
                               {(testType === TestType.Ready_Mix ||
@@ -3054,6 +3096,16 @@ export default function RecordForm() {
                                     className={compactBlockInputClass}
                                   />
                                 </td>
+                                {testType === TestType.Ready_Mix && (
+                                  <td className="px-2 py-2">
+                                    <div
+                                      className="flex h-10 items-center rounded-md border bg-muted/40 px-3 font-semibold text-foreground"
+                                      aria-label={`Calculated water absorption for row ${rowIndex + 1}`}
+                                    >
+                                      {row.waterAbsorption ? `${row.waterAbsorption}%` : "—"}
+                                    </div>
+                                  </td>
+                                )}
                                 {testType === TestType.Blocks && (
                                   <td className={compactBlockCellClass}>
                                     <Input

@@ -36,7 +36,12 @@ export function handleEntryEnter(event: KeyboardEvent) {
     current.closest("main");
   if (!scope) return;
   const fields = Array.from(scope.querySelectorAll("input, textarea"))
-    .filter(isEditableEntryField);
+    .filter(isEditableEntryField)
+    .sort((left, right) => {
+      const leftRect = left.getBoundingClientRect();
+      const rightRect = right.getBoundingClientRect();
+      return leftRect.top - rightRect.top || leftRect.left - rightRect.left;
+    });
   const index = fields.indexOf(current);
   if (index === -1) return;
 
