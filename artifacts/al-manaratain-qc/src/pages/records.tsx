@@ -464,7 +464,7 @@ export default function Records() {
               <Table className="qc-register-table qc-table-readable w-full table-fixed text-[10px]">
                 <TableHeader className="sticky top-0 z-10 bg-card shadow-sm">
                   <TableRow>
-                    {["Record No.", "Sample No.", "Customer Name", "Product Type", "Cube Size", "Casting Date", "Avg. Strength (1 day)", "Avg. Strength (7 days)", "Avg. Strength (28 days)", "Pass / Fail / Review", "Actions"].map((label) => (
+                    {["Record No.", "Sample No.", "Customer Name", "Product Type", "Cube Size", "Casting Date", "Avg. Strength (1 day)", "Avg. Strength (7 days)", "Avg. Strength (28 days)", "Status", "Actions"].map((label) => (
                       <TableHead key={label} className="whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">{label}</TableHead>
                     ))}
                   </TableRow>
@@ -502,7 +502,7 @@ export default function Records() {
               <Table className="qc-register-table qc-table-readable w-full table-fixed text-[10px]">
                 <TableHeader className="sticky top-0 z-10 bg-card shadow-sm">
                   <TableRow>
-                    {["Record No.", "Casting Date", "Testing Date", "Age", "Kerb Type", "Factory", "Avg. Strength", "Min. Strength", "Max. Strength", "Pass / Fail / Review", "Actions"].map((label) => (
+                    {["Record No.", "Casting Date", "Testing Date", "Age", "Kerb Type", "Factory", "Avg. Strength", "Min. Strength", "Max. Strength", "Status", "Actions"].map((label) => (
                       <TableHead key={label} className="whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">{label}</TableHead>
                     ))}
                   </TableRow>
