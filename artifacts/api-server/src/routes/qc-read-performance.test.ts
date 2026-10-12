@@ -40,6 +40,22 @@ test("standard refreshes write saved evaluations in batches", () => {
   assert.doesNotMatch(refresh, /await db\.update\(qcRecordsTable\)/);
 });
 
+test("historical Kerb Stone refresh is admin-only, bounded, optimistic, and audited", () => {
+  const route = routeDefinition("post", "/records/kerbstone-strength-refresh");
+
+  assert.match(route, /requireAdministrator/);
+  assert.match(route, /Number\.isSafeInteger\(afterId\)/);
+  assert.match(route, /db\.transaction\(async \(tx\)/);
+  assert.match(route, /KERB_STRENGTH_REFRESH_PAGE_SIZE \+ 1/);
+  assert.match(route, /kerbType !== "road kerb" && kerbType !== "edge kerb"/);
+  assert.match(route, /evaluateStrengthRecord\(/);
+  assert.match(route, /\.set\(\{ status: evaluated\.status, details: evaluated\.details \}\)/);
+  assert.match(route, /eq\(qcRecordsTable\.details, record\.details\)/);
+  assert.match(route, /recordEmployeeActivityChange\(/);
+  assert.match(route, /operation: "historical Kerb Stone strength refresh"/);
+  assert.match(route, /newStrengthEvaluation: newDetails\.strengthEvaluation/);
+});
+
 test("lookups avoid loading the full reference-data payload", () => {
   const route = routeDefinition("get", "/lookups");
   assert.match(route, /listLookupValues\(\)/);

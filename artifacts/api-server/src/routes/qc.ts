@@ -5,6 +5,7 @@ import {
   desc,
   eq,
   asc,
+  gt,
   inArray,
   ilike,
   or,
@@ -3372,6 +3373,135 @@ router.post(
     });
 
     res.json(ApplyRecordAgeBackfillResponse.parse(result));
+  },
+);
+
+const KERB_STRENGTH_REFRESH_PAGE_SIZE = 250;
+
+router.post("/records/kerbstone-strength-refresh",
+  requireAdministrator,
+  async (req, res): Promise<void> => {
+    const afterId = req.body?.afterId ?? 0;
+    if (!Number.isSafeInteger(afterId) || afterId < 0) {
+      res.status(400).json({ error: "afterId must be a non-negative whole record ID." });
+      return;
+    }
+
+    const actorEmployeeId = req.user?.id?.startsWith("employee:")
+      ? req.user.id.slice("employee:".length).trim()
+      : "";
+    if (!actorEmployeeId) {
+      res.status(403).json({
+        error: "An employee identity is required to audit historical strength corrections.",
+      });
+      return;
+    }
+    const actorEmployeeName = getActivityEmployeeName(req.user, actorEmployeeId);
+    const sessionId = getEmployeeActivityRequestSessionId(req);
+
+    const result = await db.transaction(async (tx) => {
+      const page = await tx
+        .select()
+        .from(qcRecordsTable)
+        .where(
+          and(
+            eq(qcRecordsTable.testType, "Kerb Stone"),
+            gt(qcRecordsTable.id, afterId),
+          ),
+        )
+        .orderBy(asc(qcRecordsTable.id))
+        .limit(KERB_STRENGTH_REFRESH_PAGE_SIZE + 1);
+      const records = page.slice(0, KERB_STRENGTH_REFRESH_PAGE_SIZE);
+      const hasMore = page.length > KERB_STRENGTH_REFRESH_PAGE_SIZE;
+      const strengthStandards = await tx.select().from(qcStrengthStandardsTable);
+      let refreshed = 0;
+      let ignored = 0;
+      let skipped = 0;
+
+      for (const record of records) {
+        const details = typeof record.details === "object" && record.details !== null
+          ? record.details as Record<string, unknown>
+          : {};
+        const kerbType = String(details.kerbType ?? "").trim().toLocaleLowerCase();
+        if (kerbType !== "road kerb" && kerbType !== "edge kerb") {
+          ignored += 1;
+          continue;
+        }
+
+        const evaluated = evaluateStrengthRecord(
+          {
+            testType: record.testType,
+            material: record.material,
+            location: record.location,
+            details,
+          },
+          strengthStandards,
+        );
+        if (evaluated.status === undefined) {
+          ignored += 1;
+          continue;
+        }
+
+        const [updated] = await tx
+          .update(qcRecordsTable)
+          .set({ status: evaluated.status, details: evaluated.details })
+          .where(
+            and(
+              eq(qcRecordsTable.id, record.id),
+              eq(qcRecordsTable.testType, "Kerb Stone"),
+              eq(qcRecordsTable.status, record.status),
+              eq(qcRecordsTable.details, record.details),
+            ),
+          )
+          .returning({ id: qcRecordsTable.id });
+        if (!updated) {
+          skipped += 1;
+          continue;
+        }
+
+        const oldEvaluation =
+          typeof details.strengthEvaluation === "object" &&
+            details.strengthEvaluation !== null
+            ? details.strengthEvaluation
+            : null;
+        const newDetails = evaluated.details as Record<string, unknown>;
+        await recordEmployeeActivityChange(
+          {
+            employeeId: actorEmployeeId,
+            employeeName: actorEmployeeName,
+            sessionId,
+            action: "updated",
+            entityType: "QC record",
+            entityId: String(record.id),
+            summary: `Recalculated Kerb Stone strength for QC record #${record.id} (${record.recordNo})`,
+            path: req.path,
+            submitted: {
+              operation: "historical Kerb Stone strength refresh",
+              recordId: record.id,
+              recordNo: record.recordNo,
+              kerbType: details.kerbType,
+              oldStatus: record.status,
+              newStatus: evaluated.status,
+              oldStrengthEvaluation: oldEvaluation,
+              newStrengthEvaluation: newDetails.strengthEvaluation ?? null,
+            },
+          },
+          tx,
+        );
+        refreshed += 1;
+      }
+
+      return {
+        scanned: records.length,
+        refreshed,
+        ignored,
+        skipped,
+        hasMore,
+        nextAfterId: hasMore ? records.at(-1)?.id ?? afterId : null,
+      };
+    });
+
+    res.json(result);
   },
 );
 

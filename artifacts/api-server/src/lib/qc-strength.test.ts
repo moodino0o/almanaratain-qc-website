@@ -321,7 +321,6 @@ test("evaluates Kerbstone bending and optional water absorption against editable
     .testRows as Array<Record<string, unknown>>;
   assert.equal(skippedAbsorption.status, "Passed");
   assert.equal(skippedRows[0].waterAbsorptionStatus, "");
-
   const edgeStandard = { ...standard, blockType: "Edge kerb", requiredStrength: "3.5", minimumIndividualStrength: "2.8" };
   const edge = evaluateStrengthRecord({
     ...record,
@@ -334,6 +333,83 @@ test("evaluates Kerbstone bending and optional water absorption against editable
   const edgeRows = (edge.details as Record<string, unknown>).testRows as Array<Record<string, unknown>>;
   assert.equal(edgeRows[0].bendingStrength, "7.21");
   assert.equal(edge.status, "Passed");
+});
+
+test("recalculates Road and Edge kerb strengths and reasons without changing measured inputs", () => {
+  const roadAndEdge = [
+    {
+      kerbType: "Road kerb",
+      expectedStrength: "1.21",
+      width: "127",
+      batterDepth: "150",
+      weight: "100",
+      wetWeight: "105",
+    },
+    {
+      kerbType: "Edge kerb",
+      expectedStrength: "7.21",
+      width: "100",
+      batterDepth: "40",
+      weight: "90",
+      wetWeight: "96",
+    },
+  ];
+
+  for (const specimen of roadAndEdge) {
+    const sourceRow = {
+      rowNo: 1,
+      spanLength: "300",
+      failureLoad: "10",
+      width: specimen.width,
+      batterDepth: specimen.batterDepth,
+      weight: specimen.weight,
+      wetWeight: specimen.wetWeight,
+      bendingStrength: "999.00",
+    };
+    const result = evaluateStrengthRecord(
+      {
+        testType: "Kerb Stone",
+        material: "Kerbstone",
+        details: {
+          kerbType: specimen.kerbType,
+          testRows: [sourceRow],
+          strengthEvaluation: { status: "Passed", reason: null },
+        },
+      },
+      [
+        readyMixStandard({
+          testType: "Kerb Stone",
+          material: "Kerbstone",
+          blockType: specimen.kerbType,
+          requiredStrength: "10",
+          minimumIndividualStrength: "10",
+          waterAbsorptionLimit: "6.5",
+          strengthUnit: "MPa",
+        }),
+      ],
+    );
+    const details = result.details as Record<string, unknown>;
+    const rows = details.testRows as Array<Record<string, unknown>>;
+    const evaluation = details.strengthEvaluation as Record<string, unknown>;
+
+    assert.equal(result.status, "Failed");
+    assert.equal(rows[0].bendingStrength, specimen.expectedStrength);
+    assert.equal(evaluation.status, "Failed");
+    assert.equal(
+      evaluation.reason,
+      "The average or minimum individual bending strength is below the configured Kerbstone standard.",
+    );
+    for (const field of [
+      "spanLength",
+      "failureLoad",
+      "width",
+      "batterDepth",
+      "weight",
+      "wetWeight",
+    ]) {
+      assert.equal(rows[0][field], sourceRow[field as keyof typeof sourceRow]);
+    }
+  }
 });
 
 test("explains Kerbstone review when a minimum individual limit is missing", () => {
