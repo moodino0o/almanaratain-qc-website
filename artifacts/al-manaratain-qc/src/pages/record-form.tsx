@@ -2781,16 +2781,18 @@ export default function RecordForm() {
                                {testType === TestType.Blocks ? (
                                  <th className={`${isDammamBlock ? "w-[6%]" : "w-[12%]"} px-1 py-2 text-left text-[10px] font-semibold`}>{isDammamBlock ? "Weight" : "Wet Weight (kg)"}</th>
                                ) : (
-                                  <th className="px-3 py-3 text-left font-semibold">
-                                     {testType === TestType.Paving_Blocks
-                                      ? "Tensile Strength (N/mm²)"
-                                       : testType === TestType.Precast
-                                         ? "Compressive Strength (N/mm²)"
-                                      : "Calculated Strength"}
-                                  </th>
-                                {testType === TestType.Ready_Mix && (
-                                  <th className="px-3 py-3 text-left font-semibold">Water Absorption</th>
-                                )}
+                                  <>
+                                    {testType === TestType.Ready_Mix && (
+                                      <th className="px-3 py-3 text-left font-semibold">Water Absorption</th>
+                                    )}
+                                    <th className="px-3 py-3 text-left font-semibold">
+                                      {testType === TestType.Paving_Blocks
+                                        ? "Tensile Strength (N/mm²)"
+                                        : testType === TestType.Precast
+                                          ? "Compressive Strength (N/mm²)"
+                                          : "Calculated Strength"}
+                                    </th>
+                                  </>
                                )}
                                 {testType === TestType.Paving_Blocks && (
                                   <>
