@@ -184,6 +184,8 @@ function KerbstoneResultsTable({
     const row = typeof rawRow === "object" && rawRow !== null
       ? rawRow as Record<string, unknown>
       : {};
+    const evaluatedStrength = numericOrNull(row.bendingStrength);
+    if (evaluatedStrength !== null) return evaluatedStrength;
     const value = calculateKerbBendingStrength(kerbType, {
       failureLoad: String(row.failureLoad ?? row.load ?? ""),
       spanLength: String(row.spanLength ?? ""),

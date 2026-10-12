@@ -1478,12 +1478,40 @@ async function getRecordCreatorNames(
   return creatorNames;
 }
 
+function evaluateKerbRecordForResponse(
+  row: typeof qcRecordsTable.$inferSelect,
+  strengthStandards: typeof qcStrengthStandardsTable.$inferSelect[],
+) {
+  if (row.testType !== "Kerb Stone") return row;
+  const evaluated = evaluateStrengthRecord(
+    {
+      testType: row.testType,
+      material: row.material,
+      location: row.location,
+      details: row.details as Record<string, unknown>,
+    },
+    strengthStandards,
+  );
+  if (evaluated.status === undefined) return row;
+  return {
+    ...row,
+    status: evaluated.status,
+    details: evaluated.details as typeof row.details,
+  };
+}
+
 async function toRecords(
   rows: Array<typeof qcRecordsTable.$inferSelect>,
 ) {
   const creatorNames = await getRecordCreatorNames(rows);
+  const strengthStandards = rows.some((row) => row.testType === "Kerb Stone")
+    ? await db.select().from(qcStrengthStandardsTable)
+    : [];
   return rows.map((row) =>
-    toRecord(row, creatorNames.get(String(row.id)) ?? null),
+    toRecord(
+      evaluateKerbRecordForResponse(row, strengthStandards),
+      creatorNames.get(String(row.id)) ?? null,
+    ),
   );
 }
 

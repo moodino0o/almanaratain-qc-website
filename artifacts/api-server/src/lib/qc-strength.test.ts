@@ -412,6 +412,48 @@ test("recalculates Road and Edge kerb strengths and reasons without changing mea
   }
 });
 
+test("recalculates stale Edge kerb summaries from specimen rows using the current standard", () => {
+  const record = {
+    testType: "Kerb Stone",
+    material: "Kerbstone",
+    status: "Failed",
+    details: {
+      kerbType: "Edge kerb",
+      strengthEvaluation: {
+        status: "Failed",
+        averageStrength: 2.33,
+        minimumStrength: 2.29,
+        maximumStrength: 2.38,
+      },
+      testRows: [
+        { spanLength: "250", failureLoad: "7.14", bendingStrength: "2.38" },
+        { spanLength: "250", failureLoad: "6.94", bendingStrength: "2.29" },
+        { spanLength: "250", failureLoad: "6.88", bendingStrength: "2.32" },
+      ],
+    },
+  };
+  const standard = readyMixStandard({
+    testType: "Kerb Stone",
+    material: "Kerbstone",
+    blockType: "Edge kerb",
+    requiredStrength: "3.5",
+    minimumIndividualStrength: "2.8",
+    waterAbsorptionLimit: "6.5",
+    strengthUnit: "MPa",
+  });
+
+  const result = evaluateStrengthRecord(record, [standard]);
+  const details = result.details as Record<string, unknown>;
+  const evaluation = details.strengthEvaluation as Record<string, unknown>;
+  const rows = details.testRows as Array<Record<string, unknown>>;
+
+  assert.equal(result.status, "Passed");
+  assert.deepEqual(rows.map((row) => row.bendingStrength), ["4.29", "4.17", "4.13"]);
+  assert.equal(evaluation.averageStrength, 4.2);
+  assert.equal(evaluation.minimumStrength, 4.13);
+  assert.equal(evaluation.maximumStrength, 4.29);
+});
+
 test("explains Kerbstone review when a minimum individual limit is missing", () => {
   const standard = readyMixStandard({
     testType: "Kerb Stone",

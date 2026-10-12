@@ -56,6 +56,24 @@ test("historical Kerb Stone refresh is admin-only, bounded, optimistic, and audi
   assert.match(route, /newStrengthEvaluation: newDetails\.strengthEvaluation/);
 });
 
+test("Kerb Stone list, detail, and report responses use freshly evaluated strength values", () => {
+  const start = routeSource.indexOf("function evaluateKerbRecordForResponse(");
+  const end = routeSource.indexOf("\nasync function toRecords(", start);
+  assert.notEqual(start, -1, "Expected the Kerb Stone response evaluator");
+  assert.notEqual(end, -1, "Expected the response evaluator boundary");
+  const evaluator = routeSource.slice(start, end);
+
+  assert.match(evaluator, /row\.testType !== "Kerb Stone"/);
+  assert.match(evaluator, /evaluateStrengthRecord\(/);
+  assert.match(evaluator, /status: evaluated\.status/);
+  assert.match(evaluator, /details: evaluated\.details/);
+
+  const serializerEnd = routeSource.indexOf("\nasync function toRecordWithCreator(", end);
+  const serializer = routeSource.slice(end, serializerEnd);
+  assert.match(serializer, /evaluateKerbRecordForResponse\(row, strengthStandards\)/);
+  assert.match(serializer, /db\.select\(\)\.from\(qcStrengthStandardsTable\)/);
+});
+
 test("lookups avoid loading the full reference-data payload", () => {
   const route = routeDefinition("get", "/lookups");
   assert.match(route, /listLookupValues\(\)/);

@@ -24,3 +24,4 @@
 - [PowerPoint runtime compatibility](powerpoint-runtime-compatibility.md) — PptxGenJS ESM imports can behave differently in native Node and tsx; execute generators to verify compatibility.
 - [Data-entry keyboard behavior](entry-keyboard-behavior.md) — Enter advances through editable fields in visual order and selects existing values; skip hidden and non-editable fields and buttons.
 - [Batched SQL value typing](batched-sql-value-typing.md) — explicitly cast interpolated IDs in PostgreSQL `VALUES` updates to avoid `integer = text` failures.
+- [Kerbstone read evaluation](kerbstone-read-evaluation.md) — recompute Kerbstone results for read responses so list, detail, and report views cannot display stale saved summaries.
