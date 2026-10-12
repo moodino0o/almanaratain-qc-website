@@ -78,27 +78,40 @@ test("Kerbstone dimensions and bending strength use per-type section factors", (
     height: "150",
   });
   assert.equal(kerbDimensionsForType("Unknown"), null);
-  assert.equal(kerbBendingFactorsForType("Road kerb"), null);
-  assert.equal(kerbBendingFactorsForType("Edge kerb"), null);
+  assert.deepEqual(kerbBendingFactorsForType("Road kerb"), {
+    y: 60.3,
+    secondMoment: 37_300_000,
+  });
+  assert.deepEqual(kerbBendingFactorsForType("Edge kerb"), {
+    y: 25,
+    secondMoment: 2_600_000,
+  });
   assert.equal(
     calculateKerbBendingStrength("Road kerb", {
+      failureLoad: "10",
+      spanLength: "300",
+    }),
+    "1.21",
+  );
+  assert.equal(
+    calculateKerbBendingStrength("Edge kerb", {
+      failureLoad: "10",
+      spanLength: "300",
+    }),
+    "7.21",
+  );
+  assert.equal(
+    calculateKerbBendingStrength("Unknown", {
       failureLoad: "10",
       spanLength: "300",
     }),
     "",
   );
   assert.equal(
-    calculateKerbBendingStrength("Road kerb", {
-      failureLoad: "10",
-      spanLength: "300",
-    }, { y: 40, secondMoment: 1_000_000 }),
-    "30.00",
-  );
-  assert.equal(
     calculateKerbBendingStrength("Edge kerb", {
       failureLoad: "",
       spanLength: "300",
-    }, { y: 40, secondMoment: 1_000_000 }),
+    }),
     "",
   );
 });

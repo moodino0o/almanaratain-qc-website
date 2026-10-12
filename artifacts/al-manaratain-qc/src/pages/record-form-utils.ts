@@ -91,8 +91,8 @@ const KERB_BENDING_FACTOR_CONFIG: Record<
   string,
   { y: number | null; secondMoment: number | null }
 > = {
-  "road kerb": { y: null, secondMoment: null },
-  "edge kerb": { y: null, secondMoment: null },
+  "road kerb": { y: 60.3, secondMoment: 37_300_000 },
+  "edge kerb": { y: 25, secondMoment: 2_600_000 },
 };
 
 export const kerbBendingFactorsForType = (
