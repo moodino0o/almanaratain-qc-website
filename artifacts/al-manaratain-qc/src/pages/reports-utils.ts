@@ -39,6 +39,7 @@ export type DailyReportRow = {
   castingDate: string;
   testingDate: string;
   category: string;
+  status: "Passed" | "Failed" | null;
   plant: string;
   machineType: string;
   product: string;
@@ -74,6 +75,7 @@ type StrengthGroup = {
   product: string;
   cubeAge: number | null;
   strengths: number[];
+  statuses: QcRecord["status"][];
   strengthUnit: string;
 };
 
@@ -333,9 +335,11 @@ export function buildDailyReportRows(
       product,
       cubeAge,
       strengths: [],
+      statuses: [],
       strengthUnit: "N/mm²",
     };
     current.strengths.push(...strengths);
+    current.statuses.push(record.status);
     groups.set(key, current);
   };
 
@@ -406,6 +410,11 @@ export function buildDailyReportRows(
       castingDate: group.castingDate,
       testingDate: group.testingDate,
       category: group.category,
+      status: group.statuses.includes("Failed")
+        ? "Failed" as const
+        : group.statuses.length > 0 && group.statuses.every((status) => status === "Passed")
+          ? "Passed" as const
+          : null,
       plant: group.plant,
       machineType: group.machineType,
       product: group.product,

@@ -203,6 +203,7 @@ const qcRecord = ({
   location,
   material,
   details,
+  status = "Passed",
 }: {
   id: number;
   testType: QcRecord["testType"];
@@ -210,6 +211,7 @@ const qcRecord = ({
   location: string;
   material: string;
   details: Record<string, unknown>;
+  status?: QcRecord["status"];
 }): QcRecord => ({
   id,
   recordNo: `QC-${id}`,
@@ -217,7 +219,7 @@ const qcRecord = ({
   sampleDate,
   location,
   material,
-  status: "Passed",
+  status,
   testedBy: "Tester",
   details,
 });
@@ -353,6 +355,7 @@ test("groups Ready Mix products by their first three words and summarizes each d
       castingDate: "2026-09-01",
       testingDate: "2026-09-29",
       category: "Ready Mix",
+      status: "Passed",
       plant: "Plant A",
       machineType: "",
       product: "25 N OPC",
@@ -525,6 +528,7 @@ test("includes non-Ready Mix categories, date ranges, and selected product group
       castingDate: "2026-09-10",
       testingDate: "2026-10-08",
       category: "Blocks",
+      status: "Passed",
       plant: "Plant B",
       machineType: "MASA FRIMA 1",
       product: "Hollow Concrete Block",
@@ -585,6 +589,38 @@ test("daily results show full Block and Paving product names and machine types",
         product: "Paving Block Premium Grey 80mm",
       },
     ],
+  );
+});
+
+test("daily result rows are green only when all records passed and red if any failed", () => {
+  const makeRecord = (id: number, status: QcRecord["status"], product = "4 inch Block") =>
+    qcRecord({
+      id,
+      testType: "Blocks",
+      sampleDate: "2026-09-01",
+      location: "Plant B",
+      material: product,
+      status,
+      details: {
+        blockType: product,
+        blockAge: 28,
+        testRows: [{ load: 800, airDryStrength: 12 }],
+      },
+    });
+
+  const summarize = (records: QcRecord[]) =>
+    buildDailyReportRows(records, "2026-09-29", "2026-09-29");
+
+  assert.equal(summarize([makeRecord(120, "Passed")])[0]?.status, "Passed");
+  assert.equal(summarize([makeRecord(121, "Failed")])[0]?.status, "Failed");
+  assert.equal(summarize([makeRecord(122, "Review")])[0]?.status, null);
+  assert.equal(
+    summarize([makeRecord(123, "Passed"), makeRecord(124, "Failed")])[0]?.status,
+    "Failed",
+  );
+  assert.equal(
+    summarize([makeRecord(125, "Passed"), makeRecord(126, "Review")])[0]?.status,
+    null,
   );
 });
 

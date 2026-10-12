@@ -470,18 +470,27 @@ export default function Reports() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {dailyReportRows.map((row) => (
-                              <TableRow key={`${row.date}-${row.castingDate}-${row.testingDate}-${row.category}-${row.plant}-${row.machineType}-${row.product}-${row.cubeAge ?? "none"}`}>
+                         {dailyReportRows.map((row) => (
+                               <TableRow
+                                 key={`${row.date}-${row.castingDate}-${row.testingDate}-${row.category}-${row.plant}-${row.machineType}-${row.product}-${row.cubeAge ?? "none"}`}
+                                 className={
+                                   row.status === "Passed"
+                                     ? "bg-green-100 text-green-950 hover:bg-green-100 dark:bg-green-950/40 dark:text-green-100 dark:hover:bg-green-950/40"
+                                     : row.status === "Failed"
+                                       ? "bg-red-100 text-red-950 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-100 dark:hover:bg-red-950/40"
+                                       : "bg-white text-foreground hover:bg-white dark:bg-background dark:hover:bg-background"
+                                 }
+                               >
                              <TableCell className="whitespace-normal break-words px-1.5 py-2 text-[10px] leading-tight font-medium">{row.category}</TableCell>
                              <TableCell className="whitespace-normal break-words px-1 py-2 text-center text-[10px] leading-tight">{row.cubeAge === null ? "—" : row.cubeAge}</TableCell>
                              <TableCell className="whitespace-normal break-words px-1 py-2 text-[10px] leading-tight">{formatDate(row.castingDate)}</TableCell>
                               <TableCell className="whitespace-normal break-words px-1 py-2 text-[10px] leading-tight">{row.machineType || "—"}</TableCell>
                              <TableCell className="whitespace-normal break-words px-1.5 py-2 text-[10px] leading-tight">{row.plant}</TableCell>
                              <TableCell className="whitespace-normal break-words px-1.5 py-2 text-[10px] leading-tight">{row.product}</TableCell>
-                             <TableCell className="whitespace-normal break-words border-l bg-emerald-50/50 px-1 py-2 text-right text-[10px] leading-tight font-semibold tabular-nums text-emerald-900 dark:bg-emerald-950/10 dark:text-emerald-200">{formatStrength(row.averageStrength, row.strengthUnit)}</TableCell>
-                             <TableCell className="whitespace-normal break-words bg-amber-50/50 px-1 py-2 text-right text-[10px] leading-tight tabular-nums text-amber-900 dark:bg-amber-950/10 dark:text-amber-200">{formatStrength(row.minimumStrength, row.strengthUnit)}</TableCell>
-                             <TableCell className="whitespace-normal break-words bg-sky-50/50 px-1 py-2 text-right text-[10px] leading-tight tabular-nums text-sky-900 dark:bg-sky-950/10 dark:text-sky-200">{formatStrength(row.maximumStrength, row.strengthUnit)}</TableCell>
-                             <TableCell className="whitespace-normal break-words bg-violet-50/50 px-1 py-2 text-right text-[10px] leading-tight tabular-nums text-violet-900 dark:bg-violet-950/10 dark:text-violet-200">{formatStrength(row.standardDeviation, row.strengthUnit)}</TableCell>
+                              <TableCell className="whitespace-normal break-words border-l px-1 py-2 text-right text-[10px] leading-tight font-semibold tabular-nums">{formatStrength(row.averageStrength, row.strengthUnit)}</TableCell>
+                              <TableCell className="whitespace-normal break-words px-1 py-2 text-right text-[10px] leading-tight tabular-nums">{formatStrength(row.minimumStrength, row.strengthUnit)}</TableCell>
+                              <TableCell className="whitespace-normal break-words px-1 py-2 text-right text-[10px] leading-tight tabular-nums">{formatStrength(row.maximumStrength, row.strengthUnit)}</TableCell>
+                              <TableCell className="whitespace-normal break-words px-1 py-2 text-right text-[10px] leading-tight tabular-nums">{formatStrength(row.standardDeviation, row.strengthUnit)}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
