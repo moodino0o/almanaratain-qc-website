@@ -42,6 +42,7 @@ import {
   createEmptyRow,
   createDefaultTestRows,
   calculateKerbBendingStrength,
+  kerbBendingFactorsForType,
   kerbDimensionsForType,
   evaluateKerbWaterAbsorption,
   DEFAULT_PRECAST_COMPACTION,
@@ -400,7 +401,7 @@ export default function RecordForm() {
   const sieveMassUnit = "g";
   const kerbStrengthValues = testType === TestType.Kerb_Stone
     ? testRows
-        .map((row) => calculateKerbBendingStrength(row))
+        .map((row) => calculateKerbBendingStrength(details.kerbType, row))
         .filter((value): value is string => value !== null && value !== "")
         .map(Number)
         .filter(Number.isFinite)
@@ -1371,7 +1372,7 @@ export default function RecordForm() {
       payloadDetails.testRows = testRows.map(({ id: _id, ...row }, index) => ({
         ...row,
         rowNo: index + 1,
-        bendingStrength: calculateKerbBendingStrength(row),
+        bendingStrength: calculateKerbBendingStrength(details.kerbType, row),
       }));
     }
 
@@ -2232,6 +2233,11 @@ export default function RecordForm() {
                       <p className="text-xs text-muted-foreground">
                       Enter measurements for each specimen. Length, width, height, batter depth, and batter angle are whole numbers. Water absorption is skipped until Wet Weight is entered.
                     </p>
+                    {details.kerbType && !kerbBendingFactorsForType(details.kerbType) && (
+                      <p className="mt-2 text-xs font-medium text-amber-700" role="status">
+                        Bending strength for {String(details.kerbType)} is pending its y and I section factors. Strength is not calculated until these are configured.
+                      </p>
+                    )}
                   </div>
                   <div className="overflow-x-auto rounded-md border">
                     <table className="w-full min-w-[1460px] text-sm">
@@ -2283,8 +2289,8 @@ export default function RecordForm() {
                               </td>
                             ))}
                             <td className="px-2 py-2 font-semibold tabular-nums">
-                              {calculateKerbBendingStrength(row)
-                                ? `${calculateKerbBendingStrength(row)} MPa`
+                              {calculateKerbBendingStrength(details.kerbType, row)
+                                ? `${calculateKerbBendingStrength(details.kerbType, row)} MPa`
                                 : "—"}
                             </td>
                             {(() => {

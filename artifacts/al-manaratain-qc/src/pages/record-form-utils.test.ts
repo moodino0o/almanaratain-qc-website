@@ -36,6 +36,7 @@ import {
   prepareRecordForForm,
   createDefaultTestRows,
   calculateKerbBendingStrength,
+  kerbBendingFactorsForType,
   evaluateKerbWaterAbsorption,
   getReadyMixReferenceNumberError,
   filterSieveSizeItems,
@@ -65,7 +66,7 @@ test("defaults Ready Mix and Masonry entry rows to the requested ages and counts
   );
 });
 
-test("Kerbstone dimensions and bending strength use the selected type and provided formula", () => {
+test("Kerbstone dimensions and bending strength use per-type section factors", () => {
   assert.deepEqual(kerbDimensionsForType("Road kerb"), {
     length: "915",
     width: "125",
@@ -77,22 +78,27 @@ test("Kerbstone dimensions and bending strength use the selected type and provid
     height: "150",
   });
   assert.equal(kerbDimensionsForType("Unknown"), null);
+  assert.equal(kerbBendingFactorsForType("Road kerb"), null);
+  assert.equal(kerbBendingFactorsForType("Edge kerb"), null);
   assert.equal(
-    calculateKerbBendingStrength({
+    calculateKerbBendingStrength("Road kerb", {
       failureLoad: "10",
       spanLength: "300",
-      width: "100",
-      batterDepth: "40",
     }),
-    "28.13",
+    "",
   );
   assert.equal(
-    calculateKerbBendingStrength({
+    calculateKerbBendingStrength("Road kerb", {
+      failureLoad: "10",
+      spanLength: "300",
+    }, { y: 40, secondMoment: 1_000_000 }),
+    "30.00",
+  );
+  assert.equal(
+    calculateKerbBendingStrength("Edge kerb", {
       failureLoad: "",
       spanLength: "300",
-      width: "100",
-      batterDepth: "40",
-    }),
+    }, { y: 40, secondMoment: 1_000_000 }),
     "",
   );
 });

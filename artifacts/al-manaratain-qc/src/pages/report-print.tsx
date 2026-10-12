@@ -3035,11 +3035,9 @@ function KerbstoneResultsSummary({
     : [];
   const measuredStrengths = rows.map((rawRow) => {
     const row = objectValue(rawRow) ?? {};
-    const value = calculateKerbBendingStrength({
+    const value = calculateKerbBendingStrength(record.details.kerbType, {
       failureLoad: String(row.failureLoad ?? row.load ?? ""),
       spanLength: String(row.spanLength ?? ""),
-      width: String(row.width ?? ""),
-      batterDepth: String(row.batterDepth ?? ""),
     });
     return value ? Number(value) : null;
   });
@@ -3301,11 +3299,9 @@ function ConfiguredDetailsReport({
               <tbody>
                 {record.details.testRows.map((rawRow, index) => {
                   const row = objectValue(rawRow) ?? {};
-                  const bendingStrength = calculateKerbBendingStrength({
+                  const bendingStrength = calculateKerbBendingStrength(record.details.kerbType, {
                     failureLoad: String(row.failureLoad ?? row.load ?? ""),
                     spanLength: String(row.spanLength ?? ""),
-                    width: String(row.width ?? ""),
-                    batterDepth: String(row.batterDepth ?? ""),
                   });
                   const absorption = evaluateKerbWaterAbsorption(
                     row.weight,

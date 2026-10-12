@@ -82,29 +82,60 @@ export const kerbDimensionsForType = (kerbType: unknown): BlockDimensions | null
   return null;
 };
 
-export const calculateKerbBendingStrength = (
-  row: Partial<Pick<TestRow, "failureLoad" | "spanLength" | "width" | "batterDepth">>,
-) => {
-  const values = [
-    row.failureLoad,
-    row.spanLength,
-    row.width,
-    row.batterDepth,
-  ].map((value) => String(value ?? "").trim());
-  if (values.some((value) => !value)) return "";
-  const [failureLoad, spanLength, width, batterDepth] = values.map(Number);
+export type KerbBendingFactors = {
+  y: number;
+  secondMoment: number;
+};
+
+const KERB_BENDING_FACTOR_CONFIG: Record<
+  string,
+  { y: number | null; secondMoment: number | null }
+> = {
+  "road kerb": { y: null, secondMoment: null },
+  "edge kerb": { y: null, secondMoment: null },
+};
+
+export const kerbBendingFactorsForType = (
+  kerbType: unknown,
+): KerbBendingFactors | null => {
+  const normalized = String(kerbType ?? "").trim().toLocaleLowerCase();
+  const factors = KERB_BENDING_FACTOR_CONFIG[normalized];
   if (
-    ![failureLoad, spanLength, width, batterDepth].every(Number.isFinite) ||
+    !factors ||
+    factors.y === null ||
+    factors.secondMoment === null ||
+    !Number.isFinite(factors.y) ||
+    !Number.isFinite(factors.secondMoment) ||
+    factors.y <= 0 ||
+    factors.secondMoment <= 0
+  ) {
+    return null;
+  }
+  return { y: factors.y, secondMoment: factors.secondMoment };
+};
+
+export const calculateKerbBendingStrength = (
+  kerbType: unknown,
+  row: Partial<Pick<TestRow, "failureLoad" | "spanLength">>,
+  factors: KerbBendingFactors | null = kerbBendingFactorsForType(kerbType),
+) => {
+  if (!factors) return "";
+  const values = [row.failureLoad, row.spanLength].map((value) =>
+    String(value ?? "").trim(),
+  );
+  if (values.some((value) => !value)) return "";
+  const [failureLoad, spanLength] = values.map(Number);
+  if (
+    ![failureLoad, spanLength, factors.y, factors.secondMoment].every(Number.isFinite) ||
     failureLoad <= 0 ||
     spanLength <= 0 ||
-    width <= 0 ||
-    batterDepth <= 0
+    factors.y <= 0 ||
+    factors.secondMoment <= 0
   ) {
     return "";
   }
-  const strength =
-    (3 * failureLoad * 1000 * spanLength) /
-    (2 * width * batterDepth ** 2);
+  const strength = (failureLoad * 1000 * spanLength * factors.y) /
+    (4 * factors.secondMoment);
   return Number.isFinite(strength) ? strength.toFixed(2) : "";
 };
 

@@ -168,11 +168,13 @@ function numericOrNull(value: unknown) {
 
 function KerbstoneResultsTable({
   rows,
+  kerbType,
   requiredAverage,
   requiredIndividual,
   waterAbsorptionLimit,
 }: {
   rows: unknown[];
+  kerbType: unknown;
   requiredAverage: unknown;
   requiredIndividual: unknown;
   waterAbsorptionLimit: unknown;
@@ -181,11 +183,9 @@ function KerbstoneResultsTable({
     const row = typeof rawRow === "object" && rawRow !== null
       ? rawRow as Record<string, unknown>
       : {};
-    const value = calculateKerbBendingStrength({
+    const value = calculateKerbBendingStrength(kerbType, {
       failureLoad: String(row.failureLoad ?? row.load ?? ""),
       spanLength: String(row.spanLength ?? ""),
-      width: String(row.width ?? ""),
-      batterDepth: String(row.batterDepth ?? ""),
     });
     return value ? Number(value) : null;
   });
@@ -1006,6 +1006,7 @@ export default function RecordDetail() {
       {record.testType === "Kerb Stone" && (
         <KerbstoneResultsTable
           rows={specimenRows}
+          kerbType={recordDetails.kerbType}
           requiredAverage={kerbStandard?.requiredStrength ?? recordDetails.characteristicBendingStrength}
           requiredIndividual={kerbStandard?.minimumIndividualStrength ?? recordDetails.minimumIndividualStrength}
           waterAbsorptionLimit={kerbStandard?.waterAbsorptionLimit ?? recordDetails.waterAbsorptionLimit}
