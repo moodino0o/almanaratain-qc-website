@@ -39,7 +39,6 @@ import {
   blockSizeMatches,
   blockTypeMatches,
   calculateKerbBendingStrength,
-  kerbBendingFactorsForType,
   evaluateKerbWaterAbsorption,
   calculateChlorideContent,
   calculateCubeDensity,
@@ -3277,11 +3276,6 @@ function ConfiguredDetailsReport({
       record.details.testRows.length > 0 && (
         <section className="mt-4 kerbstone-specimen-section">
           <SectionHeading>Kerbstone Specimen Results</SectionHeading>
-          {kerbBendingFactorsForType(record.details.kerbType) && (
-            <p className="text-xs">
-              Formula: (failure load × 1,000 × span × y) ÷ (4 × I); y = {kerbBendingFactorsForType(record.details.kerbType)!.y} mm, I = {kerbBendingFactorsForType(record.details.kerbType)!.secondMoment.toLocaleString()} mm⁴.
-            </p>
-          )}
           <table className="report-table kerbstone-specimen-table">
               <thead>
                 <tr>
@@ -3290,8 +3284,6 @@ function ConfiguredDetailsReport({
                     "Length (mm)",
                     "Width (mm)",
                     "Height (mm)",
-                    "Batter Depth (mm)",
-                    "Batter Angle (deg)",
                     "Span Length (mm)",
                     "Failure Load (kN)",
                     "Bending Strength (MPa)",
@@ -3329,8 +3321,6 @@ function ConfiguredDetailsReport({
                     formatWholeNumber(row.length),
                     formatWholeNumber(row.width),
                     formatWholeNumber(row.height),
-                    formatWholeNumber(row.batterDepth),
-                    formatWholeNumber(row.batterAngle),
                     formatWholeNumber(row.spanLength),
                     row.failureLoad ?? row.load,
                     bendingStrength ? `${bendingStrength} MPa` : "",

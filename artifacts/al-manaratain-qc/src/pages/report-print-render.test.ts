@@ -254,7 +254,7 @@ test("prints Kerbstone specimen measurements and per-type formula-calculated ben
   assert.doesNotMatch(markup, /<th>y \(mm\)<\/th>|<th>I \(mm⁴\)<\/th>/);
   assert.doesNotMatch(markup, /Weight \(kg\)|Wet Weight \(kg\)/);
   assert.doesNotMatch(markup, /specimens assessed|Avg\. Strength:|Min\. Strength:|Max\. Strength:/);
-  assert.match(markup, /Batter Depth \(mm\)/);
+  assert.doesNotMatch(markup, /Batter Depth \(mm\)|Batter Angle \(deg\)|Formula: \(failure load/);
   assert.match(markup, /Failure Load \(kN\)/);
   assert.match(markup, /1\.21 MPa/);
 });
