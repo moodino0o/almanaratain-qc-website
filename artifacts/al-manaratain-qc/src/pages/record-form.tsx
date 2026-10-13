@@ -405,6 +405,10 @@ export default function RecordForm() {
                   dammamFormRow.sampleAge ||
                   PRECAST_CUBE_AGES[index] ||
                   "",
+                cubeSize:
+                  dammamFormRow.cubeSize ||
+                  stringValue(savedDetails.cubeSize) ||
+                  DEFAULT_PRECAST_CUBE_SIZE,
               }
             : dammamFormRow;
         })
@@ -724,6 +728,9 @@ export default function RecordForm() {
   const insertTestRow = (rowIndex: number) => {
     const newRow = {
       ...createEmptyRow(nextRowId.current++),
+      ...(testType === TestType.Precast
+        ? { cubeSize: DEFAULT_PRECAST_CUBE_SIZE }
+        : {}),
       ...(isDammamBlock ? dammamThicknessDefaults : {}),
     };
     setTestRows(prev => {
@@ -1008,8 +1015,10 @@ export default function RecordForm() {
     value === null || value === undefined ? "—" : Math.round(value).toLocaleString("en-US");
   const formatDammamStrength = (value: number | null | undefined) =>
     value === null || value === undefined ? "—" : value.toFixed(1);
-  const calculatePrecastStrength = (row: Pick<TestRow, "load">) => {
-    const dimensions = blockDimensionsFromSize(details.cubeSize);
+  const calculatePrecastStrength = (row: Pick<TestRow, "load" | "cubeSize">) => {
+    const dimensions = blockDimensionsFromSize(
+      row.cubeSize || DEFAULT_PRECAST_CUBE_SIZE,
+    );
     return dimensions
       ? calculateCubeCompressiveStrength({ ...dimensions, load: row.load })
       : "";
@@ -1312,7 +1321,9 @@ export default function RecordForm() {
     }
     if (testType === TestType.Precast) {
       payloadDetails.cubeSize = String(
-        details.cubeSize || DEFAULT_PRECAST_CUBE_SIZE,
+        testRows.find((row) => row.cubeSize.trim())?.cubeSize ||
+          details.cubeSize ||
+          DEFAULT_PRECAST_CUBE_SIZE,
       ).trim();
       payloadDetails.cubeWeightUnit = "g";
       payloadDetails.sampleNo = integerIdentifierValue(details.sampleNo);
@@ -1336,26 +1347,28 @@ export default function RecordForm() {
               details.blockType,
             )
           : null;
+        const rowCubeSize =
+          row.cubeSize || String(payloadDetails.cubeSize || DEFAULT_PRECAST_CUBE_SIZE);
         return ({
         rowNo: index + 1,
         ...(testType === TestType.Ready_Mix || testType === TestType.Precast
           ? { testAge: row.testAge }
           : {}),
+        ...(testType === TestType.Precast ? { cubeSize: rowCubeSize } : {}),
         length: row.length ||
           (testType === TestType.Blocks ? blockDimensions?.length :
-            testType === TestType.Precast ? blockDimensionsFromSize(payloadDetails.cubeSize)?.length : ""),
+            testType === TestType.Precast ? blockDimensionsFromSize(rowCubeSize)?.length : ""),
         width: row.width ||
           (testType === TestType.Blocks ? blockDimensions?.width :
-            testType === TestType.Precast ? blockDimensionsFromSize(payloadDetails.cubeSize)?.width : ""),
+            testType === TestType.Precast ? blockDimensionsFromSize(rowCubeSize)?.width : ""),
         height: row.height ||
           (testType === TestType.Blocks ? blockDimensions?.height :
-            testType === TestType.Precast ? blockDimensionsFromSize(payloadDetails.cubeSize)?.height : ""),
         dryWeight: row.dryWeight,
         wetWeight: row.wetWeight,
         ...(testType === TestType.Precast
           ? {
               weight: row.weight,
-              density: calculateCubeDensity(payloadDetails.cubeSize, row.weight),
+              density: calculateCubeDensity(rowCubeSize, row.weight),
             }
           : {}),
         ...(testType === TestType.Ready_Mix
@@ -2070,20 +2083,6 @@ export default function RecordForm() {
                       onCreateOption={createReferenceOption("customers")}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Cube Size</Label>
-                    <Input
-                      type="text"
-                      value={String(details.cubeSize ?? DEFAULT_PRECAST_CUBE_SIZE)}
-                      onChange={(event) => handleDetailChange("cubeSize", event.target.value)}
-                      placeholder="100*100*100"
-                      data-enter-skip="true"
-                      aria-describedby="precast-cube-size-help"
-                    />
-                    <p id="precast-cube-size-help" className="text-xs text-muted-foreground">
-                      Default: 100*100*100. Press Enter to skip this field, or edit it manually.
-                    </p>
-                  </div>
                 </>
               )}
 
@@ -2652,8 +2651,8 @@ export default function RecordForm() {
                     <>
                       <section className="space-y-3 rounded-md border border-primary/20 bg-primary/[0.02] p-4">
                         <div>
-                          <h3 className="font-semibold text-white">Precast Strength Criteria</h3>
-                          <p className="text-sm text-white/90">
+                          <h3 className="font-semibold text-primary-foreground">Precast Strength Criteria</h3>
+                          <p className="text-sm text-primary-foreground/90">
                             Decisions use the average strength of all entered specimens at each age.
                           </p>
                         </div>
@@ -3000,8 +2999,17 @@ export default function RecordForm() {
                             </td>
                             )}
                             {testType === TestType.Precast && (
-                              <td className="px-2 py-2 font-medium tabular-nums">
-                                {String(details.cubeSize ?? DEFAULT_PRECAST_CUBE_SIZE).replace(/\*/g, " × ")}
+                              <td className="px-2 py-2">
+                                <Input
+                                  type="text"
+                                  value={row.cubeSize || DEFAULT_PRECAST_CUBE_SIZE}
+                                  onChange={(event) =>
+                                    updateTestRow(rowIndex, "cubeSize", event.target.value)
+                                  }
+                                  placeholder={DEFAULT_PRECAST_CUBE_SIZE}
+                                  data-enter-skip="true"
+                                  aria-label={`Cube size for specimen ${rowIndex + 1}`}
+                                />
                               </td>
                             )}
                             {testType === TestType.Precast && (
@@ -3020,11 +3028,11 @@ export default function RecordForm() {
                                 </td>
                                 <td className="px-3 py-2 font-semibold">
                                   {calculateCubeDensity(
-                                    details.cubeSize || DEFAULT_PRECAST_CUBE_SIZE,
+                                    row.cubeSize || DEFAULT_PRECAST_CUBE_SIZE,
                                     row.weight,
                                   )
                                     ? `${calculateCubeDensity(
-                                        details.cubeSize || DEFAULT_PRECAST_CUBE_SIZE,
+                                        row.cubeSize || DEFAULT_PRECAST_CUBE_SIZE,
                                         row.weight,
                                       )} kg/m³`
                                     : "Enter weight and a valid cube size"}

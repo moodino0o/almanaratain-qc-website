@@ -21,6 +21,7 @@ export type TestRow = {
   length: string;
   width: string;
   height: string;
+  cubeSize: string;
   batterDepth?: string;
   batterAngle?: string;
   spanLength?: string;
@@ -189,6 +190,7 @@ export const createEmptyRow = (id: number): TestRow => ({
   length: "",
   width: "",
   height: "",
+  cubeSize: "",
   dryWeight: "",
   wetWeight: "",
   weight: "",
@@ -229,7 +231,9 @@ export const createDefaultTestRows = (
   return Array.from({ length: rowCount }, (_, index) => ({
     ...createEmptyRow(firstId + index),
     ...(readyMixAges ? { testAge: readyMixAges[index] } : {}),
-    ...(precastAges ? { testAge: precastAges[index] } : {}),
+    ...(precastAges
+      ? { testAge: precastAges[index], cubeSize: DEFAULT_PRECAST_CUBE_SIZE }
+      : {}),
   }));
 };
 
@@ -998,6 +1002,7 @@ export const toFormRow = (row: unknown, id: number): TestRow => {
     length: numericInputValue(values.length),
     width: numericInputValue(values.width),
     height: numericInputValue(values.height),
+    cubeSize: stringValue(values.cubeSize),
     ...(values.batterDepth != null
       ? { batterDepth: numericInputValue(values.batterDepth) }
       : {}),
