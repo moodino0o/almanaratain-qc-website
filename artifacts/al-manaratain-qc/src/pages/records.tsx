@@ -483,12 +483,12 @@ export default function Records() {
               </Table>
             </div>
           ) : isKerbStoneSection ? (
-            <div className="qc-register-table-container w-full min-w-0">
-              <Table className="qc-register-table qc-table-readable w-full table-fixed text-[10px]">
+            <div className="qc-register-table-container kerbstone-register-table-container w-full min-w-0">
+              <Table className="qc-register-table qc-kerbstone-register-table qc-table-readable w-full table-fixed">
                 <TableHeader className="sticky top-0 z-10 bg-card shadow-sm">
                   <TableRow>
-                    {["Record No.", "Casting Date", "Testing Date", "Age", "Kerb Type", "Factory", "Avg. Strength", "Min. Strength", "Max. Strength", "Status", "Actions"].map((label) => (
-                      <TableHead key={label} className="whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">{label}</TableHead>
+                    {["Record No.", "Casting Date", "Testing Date", "Age", "Kerb Type", "Factory", "Avg.", "Min.", "Max.", "Status", "Actions"].map((label) => (
+                      <TableHead key={label} className="whitespace-normal break-words px-1 py-1.5 leading-tight">{label}</TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
@@ -499,23 +499,23 @@ export default function Records() {
                     <TableRow><TableCell colSpan={11} className="h-32 text-center text-muted-foreground">No Kerb Stone records found.</TableCell></TableRow>
                   ) : sectionRecords.map((record) => (
                     <TableRow key={record.id}>
-                      <TableCell className="break-words px-2 py-2 font-semibold text-primary">{record.recordNo}</TableCell>
-                      <TableCell className="break-words px-2 py-2 tabular-nums">{formatRegisterDate(record.sampleDate)}</TableCell>
-                      <TableCell className="break-words px-2 py-2 tabular-nums">{formatRegisterDate(registerTestingDate(record))}</TableCell>
-                      <TableCell className="px-2 py-2 text-center tabular-nums">{derivedAge(record)}</TableCell>
-                      <TableCell className="break-words px-2 py-2">{detailValue(record, ["kerbType", "productType"], record.material || "—")}</TableCell>
-                      <TableCell className="break-words px-2 py-2">{detailValue(record, ["factory"], record.location || "—")}</TableCell>
-                      <TableCell className="px-2 py-2 text-right tabular-nums">{kerbStrengthValue(record, "averageStrength", ["averageStrength", "avgStrength"])}</TableCell>
-                      <TableCell className="px-2 py-2 text-right tabular-nums">{kerbStrengthValue(record, "minimumStrength", ["minimumStrength", "minStrength"])}</TableCell>
-                      <TableCell className="px-2 py-2 text-right tabular-nums">{kerbStrengthValue(record, "maximumStrength", ["maximumStrength", "maxStrength"])}</TableCell>
-                      <TableCell className="px-2 py-2 text-center" title={strengthEvaluationReason(record)}>{getWaterResultBadge(record.status)}</TableCell>
-                      <TableCell className="px-2 py-2 text-right">
-                         <div className="flex justify-center gap-1">
-                           <Link href={`/records/${record.id}`} className="inline-flex h-5 items-center rounded-md bg-secondary px-1 text-[9px] font-medium text-secondary-foreground sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs">View</Link>
-                            <Link href={`/reports/${record.id}`} className="inline-flex h-5 items-center rounded-md border px-1 text-[9px] font-medium sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs">
-                              <Printer className="mr-0.5 h-2.5 w-2.5 shrink-0 sm:mr-1 sm:h-3 sm:w-3" />
-                              Print
-                            </Link>
+                      <TableCell className="break-words px-1 py-1.5 font-semibold text-primary">{record.recordNo}</TableCell>
+                      <TableCell className="break-words px-1 py-1.5 tabular-nums">{formatRegisterDate(record.sampleDate)}</TableCell>
+                      <TableCell className="break-words px-1 py-1.5 tabular-nums">{formatRegisterDate(registerTestingDate(record))}</TableCell>
+                      <TableCell className="px-1 py-1.5 text-center tabular-nums">{derivedAge(record)}</TableCell>
+                      <TableCell className="break-words px-1 py-1.5">{detailValue(record, ["kerbType", "productType"], record.material || "—")}</TableCell>
+                      <TableCell className="break-words px-1 py-1.5">{detailValue(record, ["factory"], record.location || "—")}</TableCell>
+                      <TableCell className="px-1 py-1.5 text-right tabular-nums">{kerbStrengthValue(record, "averageStrength", ["averageStrength", "avgStrength"])}</TableCell>
+                      <TableCell className="px-1 py-1.5 text-right tabular-nums">{kerbStrengthValue(record, "minimumStrength", ["minimumStrength", "minStrength"])}</TableCell>
+                      <TableCell className="px-1 py-1.5 text-right tabular-nums">{kerbStrengthValue(record, "maximumStrength", ["maximumStrength", "maxStrength"])}</TableCell>
+                      <TableCell className="px-1 py-1.5 text-center" title={strengthEvaluationReason(record)}>{getWaterResultBadge(record.status)}</TableCell>
+                      <TableCell className="px-1 py-1.5">
+                        <div className="flex flex-wrap justify-center gap-0.5">
+                          <Link href={`/records/${record.id}`} className="inline-flex h-5 items-center justify-center rounded-md bg-secondary px-1 text-[8px] font-medium text-secondary-foreground">View</Link>
+                          <Link href={`/reports/${record.id}`} className="inline-flex h-5 items-center justify-center whitespace-nowrap rounded-md border px-1 text-[8px] font-medium">
+                            <Printer className="mr-0.5 h-2.5 w-2.5 shrink-0" />
+                            Print
+                          </Link>
                         </div>
                       </TableCell>
                     </TableRow>

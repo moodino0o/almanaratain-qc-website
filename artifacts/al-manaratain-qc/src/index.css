@@ -357,6 +357,32 @@
   line-height: 1.25;
 }
 
+.kerbstone-register-table-container {
+  overflow-x: hidden;
+}
+
+.qc-register-table.qc-kerbstone-register-table {
+  width: 100%;
+  min-width: 0;
+}
+
+.qc-table-readable.qc-kerbstone-register-table thead th,
+.qc-table-readable.qc-kerbstone-register-table tbody td {
+  overflow-wrap: anywhere;
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+}
+
+.qc-table-readable.qc-kerbstone-register-table thead th {
+  font-size: 9px;
+  line-height: 1.15;
+}
+
+.qc-table-readable.qc-kerbstone-register-table tbody td {
+  font-size: 10px;
+  line-height: 1.25;
+}
+
 .qc-table-readable thead th {
   color: #000;
   font-size: 12px;
