@@ -1399,6 +1399,8 @@ export async function ensureReferenceData() {
   await ensureReportLayouts();
 }
 
+const HIDDEN_REFERENCE_CATEGORY_KEYS = new Set(["factories", "plants"]);
+
 async function listReferenceData() {
   await ensureReferenceData();
   const [categories, items] = await Promise.all([
@@ -1411,10 +1413,12 @@ async function listReferenceData() {
     categoryItems.push(item);
     itemsByCategory.set(item.categoryId, categoryItems);
   }
-  return categories.map((category) => ({
-    ...category,
-    items: itemsByCategory.get(category.id) ?? [],
-  }));
+  return categories
+    .filter((category) => !HIDDEN_REFERENCE_CATEGORY_KEYS.has(category.key))
+    .map((category) => ({
+      ...category,
+      items: itemsByCategory.get(category.id) ?? [],
+    }));
 }
 
 const LOOKUP_CATEGORY_KEYS = [
@@ -1451,6 +1455,7 @@ async function listLookupValues() {
     LOOKUP_CATEGORY_KEYS.map((key) => [key, []]),
   );
   for (const row of rows) {
+    if (HIDDEN_REFERENCE_CATEGORY_KEYS.has(row.categoryKey)) continue;
     valuesByCategory.get(row.categoryKey)?.push(row.value);
   }
   return valuesByCategory;
