@@ -27,4 +27,4 @@ The destination is a standalone Laravel 12 application requiring PHP 8.2 or late
 
 ## Current state
 
-The standalone Laravel project includes the foundation and `/api/healthz`, plus QC database models/migrations, reference/standards/records/dashboard/backfill/report APIs, and calculation tests. Employee sign-in/access, complaints, archive/object storage, and the React pages remain to be ported. Do not treat this conversion as production-ready or complete until those assigned phases and a separate-database integration verification are finished.
+The standalone Laravel project includes `/api/healthz`, QC and employee access APIs, complaint and archive APIs, the object-storage bridge, and a separately buildable copy of the original React/Vite client. Build/test the React client from `laravel-conversion`; configure an isolated PostgreSQL database and App Storage environment before deployment. External-provider and deployment verification still requires an environment with the Laravel runtime and storage sidecar configured.

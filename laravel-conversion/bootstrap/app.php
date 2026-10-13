@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'employee.session' => App\Http\Middleware\EmployeeSessionMiddleware::class,
             'employee.auth' => App\Http\Middleware\EmployeeAuthMiddleware::class,
             'qc.role' => App\Http\Middleware\QcRoleMiddleware::class,
+            'complaint.editor' => App\Http\Middleware\ComplaintEditorMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

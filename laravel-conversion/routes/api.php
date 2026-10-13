@@ -2,11 +2,14 @@
 
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ArchiveController;
+use App\Http\Controllers\ComplaintController;
 use App\Http\Controllers\EmployeesController;
 use App\Http\Controllers\QcController;
 use App\Http\Controllers\QcReferenceController;
 use App\Http\Controllers\QcReportController;
 use App\Http\Controllers\QcStandardsController;
+use App\Http\Controllers\StorageController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/healthz', HealthController::class);
@@ -15,6 +18,35 @@ Route::post('/employee-login', [AuthController::class, 'login']);
 Route::get('/auth/user', [AuthController::class, 'user'])->middleware('employee.session');
 Route::get('/logout', [AuthController::class, 'logout'])->middleware('employee.session');
 Route::post('/mobile-auth/logout', [AuthController::class, 'logout'])->middleware('employee.session');
+
+Route::middleware(['employee.session', 'employee.auth'])->group(function (): void {
+    Route::get('/complaints', [ComplaintController::class, 'index']);
+    Route::get('/complaints/{id}', [ComplaintController::class, 'show'])->whereNumber('id');
+    Route::get('/archive', [ArchiveController::class, 'index']);
+    Route::get('/archive/documents/{id}', [ArchiveController::class, 'show'])->whereNumber('id');
+    Route::get('/archive/documents/{id}/content', [ArchiveController::class, 'content'])->whereNumber('id');
+    Route::get('/archive/documents/{id}/download', [ArchiveController::class, 'download'])->whereNumber('id');
+    Route::get('/storage/objects/{objectPath}', [StorageController::class, 'privateObject'])->where('objectPath', '.*');
+});
+
+Route::middleware(['employee.session', 'employee.auth', 'complaint.editor'])->group(function (): void {
+    Route::post('/complaints', [ComplaintController::class, 'store']);
+    Route::patch('/complaints/{id}', [ComplaintController::class, 'update'])->whereNumber('id');
+    Route::delete('/complaints/{id}', [ComplaintController::class, 'destroy'])->whereNumber('id');
+});
+
+Route::middleware(['employee.session', 'employee.auth', 'qc.role:administrator'])->group(function (): void {
+    Route::post('/archive/documents', [ArchiveController::class, 'store']);
+    Route::patch('/archive/documents/{id}', [ArchiveController::class, 'update'])->whereNumber('id');
+});
+
+Route::delete('/archive/documents/{id}', [ArchiveController::class, 'destroy'])
+    ->middleware(['employee.session', 'employee.auth'])
+    ->whereNumber('id');
+Route::post('/storage/uploads/request-url', [StorageController::class, 'requestUploadUrl'])
+    ->middleware(['employee.session', 'employee.auth']);
+Route::get('/storage/public-objects/{filePath}', [StorageController::class, 'publicObject'])
+    ->where('filePath', '.*');
 
 Route::prefix('auth/employee-access')
     ->middleware(['employee.session', 'employee.auth', 'qc.role:administrator'])
