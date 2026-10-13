@@ -1321,7 +1321,7 @@ export default function RecordForm() {
     }
     if (testType === TestType.Precast) {
       payloadDetails.cubeSize = String(
-        testRows.find((row) => row.cubeSize.trim())?.cubeSize ||
+        testRows.find((row) => row.cubeSize?.trim())?.cubeSize ||
           details.cubeSize ||
           DEFAULT_PRECAST_CUBE_SIZE,
       ).trim();
@@ -1363,6 +1363,7 @@ export default function RecordForm() {
             testType === TestType.Precast ? blockDimensionsFromSize(rowCubeSize)?.width : ""),
         height: row.height ||
           (testType === TestType.Blocks ? blockDimensions?.height :
+            testType === TestType.Precast ? blockDimensionsFromSize(rowCubeSize)?.height : ""),
         dryWeight: row.dryWeight,
         wetWeight: row.wetWeight,
         ...(testType === TestType.Precast
@@ -1786,12 +1787,18 @@ export default function RecordForm() {
               onClick={() => setStrengthStandardMode("automatic")}
               className={`rounded-lg border p-3 text-left transition-colors ${
                 strengthStandardMode === "automatic"
-                  ? "border-primary bg-primary/5"
+                  ? "border-primary bg-primary text-primary-foreground"
                   : "border-border hover:bg-muted/40"
               }`}
             >
               <span className="block text-sm font-semibold">Automatic match</span>
-              <span className="mt-1 block text-xs text-muted-foreground">
+              <span
+                className={`mt-1 block text-xs ${
+                  strengthStandardMode === "automatic"
+                    ? "text-primary-foreground/85"
+                    : "text-muted-foreground"
+                }`}
+              >
                 Use the standard linked to this Block Type and Block Size.
               </span>
             </button>
@@ -1807,12 +1814,18 @@ export default function RecordForm() {
               }}
               className={`rounded-lg border p-3 text-left transition-colors ${
                 strengthStandardMode === "manual"
-                  ? "border-primary bg-primary/5"
+                  ? "border-primary bg-primary text-primary-foreground"
                   : "border-border hover:bg-muted/40"
               }`}
             >
               <span className="block text-sm font-semibold">Choose manually</span>
-              <span className="mt-1 block text-xs text-muted-foreground">
+              <span
+                className={`mt-1 block text-xs ${
+                  strengthStandardMode === "manual"
+                    ? "text-primary-foreground/85"
+                    : "text-muted-foreground"
+                }`}
+              >
                 Select a different standard linked to this Block Type and Size.
               </span>
             </button>
@@ -2576,7 +2589,7 @@ export default function RecordForm() {
               {usesTestRows || usesSieveRows ? (
                 <div className="space-y-3">
                   {(testType === TestType.Ready_Mix || testType === TestType.Blocks) && (
-                    <div className="rounded-md border border-primary/20 bg-primary/[0.04] px-4 py-3 text-sm">
+                    <div className="rounded-md border border-primary bg-primary px-4 py-3 text-sm text-primary-foreground">
                       {applicableStandard ? (
                         isDammamBlock ? (
                           <span>
@@ -2600,7 +2613,7 @@ export default function RecordForm() {
                           </span>
                         )
                       ) : (
-                        <span className="text-muted-foreground">
+                        <span className="text-primary-foreground/85">
                           {isDammamBlock
                             ? "Dammam evaluation will remain in Review until a linked Block standard with Dammam limits is configured."
                             : "Automatic evaluation will remain in Review until a matching strength standard is configured."}
@@ -2609,7 +2622,7 @@ export default function RecordForm() {
                     </div>
                   )}
                   {testType === TestType.Paving_Blocks && (
-                    <div className="rounded-md border border-primary/20 bg-primary/[0.04] px-4 py-3 text-sm">
+                    <div className="rounded-md border border-primary bg-primary px-4 py-3 text-sm text-primary-foreground">
                       {applicableStandard ? (
                         <span>
                           Average tensile strength is compared with{" "}
@@ -2622,7 +2635,7 @@ export default function RecordForm() {
                           specimen height, and the correction factor.
                         </span>
                       ) : (
-                        <span className="text-muted-foreground">
+                        <span className="text-primary-foreground/85">
                           A matching strength standard and a correction factor
                           are required for automatic Pass/Fail evaluation.
                         </span>
@@ -2649,7 +2662,7 @@ export default function RecordForm() {
                   )}
                   {testType === TestType.Precast && (
                     <>
-                      <section className="space-y-3 rounded-md border border-primary/20 bg-primary/[0.02] p-4">
+                      <section className="space-y-3 rounded-md border border-primary bg-primary p-4 text-primary-foreground">
                         <div>
                           <h3 className="font-semibold text-primary-foreground">Precast Strength Criteria</h3>
                           <p className="text-sm text-primary-foreground/90">
@@ -2747,7 +2760,6 @@ export default function RecordForm() {
                             <>
                               <th className="px-3 py-3 text-left font-semibold">Cube Size (mm)</th>
                               <th className="px-3 py-3 text-left font-semibold">Weight (g)</th>
-                              <th className="px-3 py-3 text-left font-semibold">Density (kg/m³)</th>
                             </>
                           ) : (
                             <>
@@ -3026,17 +3038,6 @@ export default function RecordForm() {
                                     aria-label={`Cube weight in grams for specimen ${rowIndex + 1}`}
                                   />
                                 </td>
-                                <td className="px-3 py-2 font-semibold">
-                                  {calculateCubeDensity(
-                                    row.cubeSize || DEFAULT_PRECAST_CUBE_SIZE,
-                                    row.weight,
-                                  )
-                                    ? `${calculateCubeDensity(
-                                        row.cubeSize || DEFAULT_PRECAST_CUBE_SIZE,
-                                        row.weight,
-                                      )} kg/m³`
-                                    : "Enter weight and a valid cube size"}
-                                </td>
                               </>
                             )}
                             {measurementKeys.map(key => (
@@ -3154,6 +3155,19 @@ export default function RecordForm() {
                                          : "Enter load and dimensions"}
                                    </div>
                                 </td>
+                                )}
+                                {testType === TestType.Precast && (
+                                  <td className="px-3 py-2 font-semibold">
+                                    {calculateCubeDensity(
+                                      row.cubeSize || DEFAULT_PRECAST_CUBE_SIZE,
+                                      row.weight,
+                                    )
+                                      ? `${calculateCubeDensity(
+                                          row.cubeSize || DEFAULT_PRECAST_CUBE_SIZE,
+                                          row.weight,
+                                        )} kg/m³`
+                                      : "Enter weight and a valid cube size"}
+                                  </td>
                                 )}
                                  {testType === TestType.Paving_Blocks && (
                                    <>

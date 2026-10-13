@@ -42,6 +42,17 @@ test("Block compression layouts cannot expose Wet Weight", () => {
   );
 });
 
+test("Precast cube size is shown in specimen results, not Precast Details", () => {
+  assert.equal(
+    fieldsForReport("Precast", "precastDetails").some((field) => field.key === "cubeSize"),
+    false,
+  );
+  assert.equal(
+    fieldsForReport("Precast", "precastResults").some((field) => field.key === "cubeSize"),
+    true,
+  );
+});
+
 test("calculates Block net area from width and length and handles missing dimensions", () => {
   assert.equal(calculateBlockNetArea("250", "400"), 100_000);
   assert.equal(formatBlockNetArea(250, 400), "100000");

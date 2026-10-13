@@ -51,7 +51,7 @@ export const REPORT_LAYOUT_FIELD_GROUPS: Record<string, Record<string, ReportLay
       ["sampleDate", "Casting Date", 14], ["sampleNo", "Sample No.", 14],
       ["precastMouldNo", "Precast Mould No.", 14], ["jobNo", "Job No.", 12],
       ["customerName", "Customer Name", 18], ["material", "Product Type", 12],
-      ["cubeSize", "Cube Size (mm)", 14], ["location", "Testing Location", 16],
+      ["location", "Testing Location", 16],
       ["compactionType", "Compaction", 16],
     ]),
     precastResults: fields([

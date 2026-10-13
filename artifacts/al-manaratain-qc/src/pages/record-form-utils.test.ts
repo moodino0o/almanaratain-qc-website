@@ -61,6 +61,10 @@ test("defaults Ready Mix and Masonry entry rows to the requested ages and counts
   assert.equal(precastRows.length, 5);
   assert.deepEqual(precastRows.map((row) => row.testAge), ["1", "7", "7", "28", "28"]);
   assert.deepEqual(
+    precastRows.map((row) => row.cubeSize),
+    Array(5).fill("100*100*100"),
+  );
+  assert.deepEqual(
     createDefaultTestRows(TestType.Ready_Mix, 10).map((row) => row.id),
     [10, 11, 12, 13],
   );

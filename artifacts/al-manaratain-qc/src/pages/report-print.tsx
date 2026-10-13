@@ -792,7 +792,11 @@ function reportTemplateTableRows(record: QcRecord, tableKey: string): ValueMap[]
             };
           }
           return tableKey === "precastResults"
-            ? { ...row, cubeSize: details.cubeSize ?? "100*100*100" }
+            ? {
+                ...row,
+                cubeSize:
+                  row.cubeSize ?? details.cubeSize ?? "100*100*100",
+              }
             : row;
         });
     }
@@ -3376,11 +3380,11 @@ function PrecastReport({
     { key: "load", label: "Load (kN)", visible: true, order: 5, width: 14 },
     { key: "strength", label: "Compressive Strength (N/mm²)", visible: true, order: 6, width: 23 },
   ]);
-  const cubeSize = detailValue(
+  const defaultCubeSize = detailValue(
     details,
     ["cubeSize"],
     "100*100*100",
-  ).replace(/\*/g, " × ");
+  );
   const legacyAverageKeys: Record<number, string[]> = {
     1: ["averageStrength1Day", "avgStrength1Day", "day1AverageStrength"],
     7: ["averageStrength7Days", "avgStrength7Days", "day7AverageStrength"],
@@ -3480,10 +3484,11 @@ function PrecastReport({
                 const weight = hasSavedWeight ? values.weight : values.wetWeight;
                 const weightUnit =
                   hasSavedWeight && details.cubeWeightUnit === "g" ? "g" : "kg";
+                const rowCubeSize = String(values.cubeSize || defaultCubeSize);
                 const density =
                   values.density ||
                   calculateCubeDensity(
-                    detailValue(details, ["cubeSize"], "100*100*100"),
+                    rowCubeSize,
                     weight,
                     weightUnit,
                   );
@@ -3491,7 +3496,7 @@ function PrecastReport({
                 const cells: Record<string, string> = {
                   age: rowAge == null || rowAge === "" ? "-" : String(rowAge),
                   testingDate,
-                  cubeSize,
+                  cubeSize: rowCubeSize.replace(/\*/g, " × "),
                   weight: rawTextValue(cubeWeightInGrams(weight, weightUnit)),
                   density: Number.isFinite(densityNumber)
                     ? `${formatNumber(densityNumber)} kg/m³`
