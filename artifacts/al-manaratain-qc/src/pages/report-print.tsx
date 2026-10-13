@@ -3590,8 +3590,8 @@ function WaterReport({ record, layout }: { record: QcRecord; layout?: ReportLayo
   const standardRows = [
     { key: "ph", parameter: "pH:", criterion: "pH", result: details.ph, min: 4.5, max: 8, unit: "" },
     { key: "tds", parameter: "TDS:", criterion: "TDS", result: details.tds, min: 0, max: 2000, unit: "ppm" },
-    { key: "chloride", parameter: "Cl Cont.:", criterion: "Chloride (Cl)", result: chloride, min: 0, max: 350, unit: "ppm" },
-    { key: "sulphate", parameter: "SO₄ Cont.:", criterion: "SO3", result: details.sulphate ?? details.sulfate, min: 400, max: 1000, unit: "ppm" },
+    { key: "chloride", parameter: "Cl Content:", criterion: "Chloride (Cl)", result: chloride, min: 0, max: 350, unit: "ppm" },
+    { key: "sulphate", parameter: "SO₄ Content:", criterion: "SO3", result: details.sulphate ?? details.sulfate, min: 400, max: 1000, unit: "ppm" },
   ].filter((row) => visibleKeys.has(row.key));
   const statusText = (criterion: ValueMap | undefined) => {
     if (criterion?.withinLimits === true) return "PASS";
@@ -3632,7 +3632,7 @@ function WaterReport({ record, layout }: { record: QcRecord; layout?: ReportLayo
             })}
             <tr>
               <td className="water-result-parameter">
-                <strong><u>Conduct.:</u></strong>
+                <strong><u>Conductivity:</u></strong>
               </td>
               <td>{conductivity === null ? "—" : conductivity.toFixed(2)}</td>
               <td>Non</td>

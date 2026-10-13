@@ -236,7 +236,9 @@ test("prints Water reports with dates, limits, exact SO3 choice, chloride, and d
   assert.match(markup, /38\.29/);
   assert.match(markup, /273\.90/);
   assert.match(markup, /0\.41/);
-  assert.match(markup, /Conduct\.:/);
+  assert.match(markup, /Cl Content:/);
+  assert.match(markup, /SO₄ Content:/);
+  assert.match(markup, /Conductivity:/);
   assert.match(markup, /Non/);
   assert.match(markup, /PASS/);
   assert.doesNotMatch(markup, /Water Quality Details/);
