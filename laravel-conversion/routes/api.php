@@ -11,6 +11,7 @@ Route::get('/healthz', HealthController::class);
 
 Route::prefix('qc')->middleware('auth')->group(function (): void {
     Route::get('/dashboard', [QcController::class, 'dashboard']);
+    Route::get('/daily-ready-mix-results', [QcController::class, 'dailyReadyMixResults']);
     Route::get('/lookups', [QcReferenceController::class, 'lookups']);
     Route::get('/reference-data', [QcReferenceController::class, 'index']);
     Route::get('/records', [QcController::class, 'index']);
@@ -33,6 +34,7 @@ Route::prefix('qc')->middleware('auth')->group(function (): void {
     Route::post('/reference-data/categories/{categoryId}/items', [QcReferenceController::class, 'createItem'])->whereNumber('categoryId');
 
     Route::middleware('qc.role:administrator')->group(function (): void {
+        Route::post('/records/kerbstone-strength-refresh', [QcController::class, 'refreshKerbstoneStrength']);
         Route::post('/records/age-backfill/preview', [QcController::class, 'previewAgeBackfill']);
         Route::post('/records/age-backfill/apply', [QcController::class, 'applyAgeBackfill']);
         Route::post('/reference-data/categories', [QcReferenceController::class, 'createCategory']);

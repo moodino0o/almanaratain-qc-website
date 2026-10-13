@@ -20,6 +20,7 @@ class QcController extends Controller
 {
     private const TYPES = ['Ready Mix', 'Blocks', 'Paving Blocks', 'Sand Sieve', 'Aggregate Sieve', 'Water', 'Flakiness & Elongation', 'RMX Trial', 'Precast', 'Kerb Stone'];
     private const STATUSES = ['Passed', 'Review', 'Failed', 'Waiting for results'];
+    private const KERB_STRENGTH_REFRESH_PAGE_SIZE = 250;
 
     public function dashboard(Request $request, \App\Services\QcDefaultDataService $defaults): JsonResponse
     {
@@ -48,6 +49,205 @@ class QcController extends Controller
             'byType' => $byType,
             'recentRecords' => $this->serializeRecords($base->latest('created_at')->limit(6)->get()),
         ]);
+    }
+
+    public function dailyReadyMixResults(Request $request): JsonResponse
+    {
+        $testingDate = $request->query('testingDate');
+        $mixDesign = $request->query('mixDesign');
+        $referenceType = $request->query('referenceType');
+        if (! is_string($testingDate) || ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $testingDate)
+            || ! CarbonImmutable::canBeCreatedFromFormat($testingDate, 'Y-m-d')
+            || CarbonImmutable::parse($testingDate)->format('Y-m-d') !== $testingDate) {
+            return response()->json(['error' => 'testingDate must be a valid YYYY-MM-DD date'], 400);
+        }
+        if (! in_array($referenceType, ['site', 'plant'], true)) {
+            return response()->json(['error' => 'referenceType must be site or plant'], 400);
+        }
+        if ($mixDesign !== null && ! is_string($mixDesign)) {
+            return response()->json(['error' => 'mixDesign must be a string'], 400);
+        }
+
+        $normalizedMixDesign = $mixDesign === null ? null : mb_strtolower(trim($mixDesign));
+        $prefix = $referenceType === 'site' ? 'S' : 'H';
+        $records = [];
+        foreach (QcRecord::where('test_type', 'Ready Mix')
+            ->orderBy('sample_date')->orderBy('location')->orderBy('id')->get() as $row) {
+            $details = is_array($row->details) ? $row->details : [];
+            $reference = trim((string) ($this->detailsValue($details, ['referenceNumber']) ?? ''));
+            $design = trim((string) ($this->detailsValue($details, ['designStrength', 'mixStrength', 'mixType']) ?? $row->material));
+            if (! str_starts_with(strtoupper($reference), $prefix)
+                || ($normalizedMixDesign !== null && $normalizedMixDesign !== '' && mb_strtolower($design) !== $normalizedMixDesign)) {
+                continue;
+            }
+
+            $sevenDayStrengths = $this->readyMixStrengthsForAge($details, 7);
+            $twentyEightDayStrengths = $this->readyMixStrengthsForAge($details, 28);
+            $sevenDay = $this->summarizeStrengths($sevenDayStrengths);
+            $twentyEightDay = $this->summarizeStrengths($twentyEightDayStrengths);
+            $sampleDate = $row->sample_date->toDateString();
+            $cubeAge = null;
+            foreach ([7, 28] as $age) {
+                $summary = $age === 7 ? $sevenDay : $twentyEightDay;
+                if (CarbonImmutable::parse($sampleDate)->addDays($age)->toDateString() === $testingDate
+                    && $summary['averageStrength'] !== null) {
+                    $cubeAge = $age;
+                    break;
+                }
+            }
+            if ($cubeAge === null) continue;
+
+            $strengths = $cubeAge === 7 ? $sevenDayStrengths : $twentyEightDayStrengths;
+            $recordStrength = array_sum($strengths) / count($strengths);
+            $records[] = [
+                'recordId' => $row->id,
+                'recordNo' => $row->record_no,
+                'sampleDate' => $this->isoDate($sampleDate),
+                'location' => $row->location,
+                'mixDesign' => $design,
+                'referenceNumber' => $reference,
+                'referenceType' => $referenceType,
+                'cubeAge' => $cubeAge,
+                'strengths' => $strengths,
+                'averageStrength' => $recordStrength,
+                'minimumStrength' => $recordStrength,
+                'maximumStrength' => $recordStrength,
+                'sevenDay' => $sevenDay,
+                'twentyEightDay' => $twentyEightDay,
+                'strengthUnit' => 'N/mm²',
+            ];
+        }
+
+        $mixGroups = [];
+        $locationGroups = [];
+        foreach ($records as $record) {
+            $design = $record['mixDesign'];
+            $mixGroups[$design] ??= ['recordCount' => 0, 'strengths' => [], 'sevenDay' => [], 'twentyEightDay' => []];
+            $mixGroups[$design]['recordCount']++;
+            $mixGroups[$design]['strengths'][] = $record['averageStrength'];
+            if ($record['sevenDay']['averageStrength'] !== null) $mixGroups[$design]['sevenDay'][] = $record['sevenDay'];
+            if ($record['twentyEightDay']['averageStrength'] !== null) $mixGroups[$design]['twentyEightDay'][] = $record['twentyEightDay'];
+
+            $location = $this->canonicalPlantLocation($record['location']);
+            $locationGroups[$location] ??= ['recordCount' => 0, 'sevenDay' => [], 'twentyEightDay' => []];
+            $locationGroups[$location]['recordCount']++;
+            if ($record['sevenDay']['averageStrength'] !== null) $locationGroups[$location]['sevenDay'][] = $record['sevenDay'];
+            if ($record['twentyEightDay']['averageStrength'] !== null) $locationGroups[$location]['twentyEightDay'][] = $record['twentyEightDay'];
+        }
+
+        ksort($mixGroups, SORT_STRING);
+        ksort($locationGroups, SORT_STRING);
+        $mixes = [];
+        foreach ($mixGroups as $design => $group) {
+            $strengths = $group['strengths'];
+            $mixes[] = [
+                'mixDesign' => $design, 'recordCount' => $group['recordCount'],
+                'averageStrength' => array_sum($strengths) / count($strengths),
+                'minimumStrength' => min($strengths), 'maximumStrength' => max($strengths),
+                'sevenDay' => $this->summarizeStrengthSummaries($group['sevenDay']),
+                'twentyEightDay' => $this->summarizeStrengthSummaries($group['twentyEightDay']),
+                'strengthUnit' => 'N/mm²',
+            ];
+        }
+        $locations = [];
+        foreach ($locationGroups as $location => $group) {
+            $locations[] = [
+                'location' => $location, 'recordCount' => $group['recordCount'],
+                'sevenDay' => $this->summarizeStrengthSummaries($group['sevenDay']),
+                'twentyEightDay' => $this->summarizeStrengthSummaries($group['twentyEightDay']),
+                'strengthUnit' => 'N/mm²',
+            ];
+        }
+        $strengths = array_column($records, 'averageStrength');
+        return response()->json([
+            'testingDate' => $this->isoDate($testingDate),
+            'mixDesign' => trim((string) $mixDesign) ?: null,
+            'referenceType' => $referenceType,
+            'mixes' => $mixes,
+            'locations' => $locations,
+            'records' => $records,
+            'averageStrength' => $strengths ? array_sum($strengths) / count($strengths) : null,
+            'minimumStrength' => $strengths ? min($strengths) : null,
+            'maximumStrength' => $strengths ? max($strengths) : null,
+            'strengthUnit' => 'N/mm²',
+        ]);
+    }
+
+    public function refreshKerbstoneStrength(Request $request, QcCalculationService $calculator): JsonResponse
+    {
+        $afterId = $request->input('afterId', 0);
+        if ((! is_int($afterId) && ! is_float($afterId)) || ! is_finite((float) $afterId)
+            || floor((float) $afterId) !== (float) $afterId || $afterId < 0 || $afterId > 9007199254740991) {
+            return response()->json(['error' => 'afterId must be a non-negative whole record ID.'], 400);
+        }
+        $afterId = (int) $afterId;
+        $user = $request->user();
+        $userId = (string) ($user?->getAuthIdentifier() ?? $user?->id ?? '');
+        if (! str_starts_with($userId, 'employee:') || trim(substr($userId, strlen('employee:'))) === '') {
+            return response()->json(['error' => 'An employee identity is required to audit historical strength corrections.'], 403);
+        }
+        $employeeId = trim(substr($userId, strlen('employee:')));
+        $employeeName = $this->employeeActivityName($user, $employeeId);
+        $sessionFingerprint = $request->hasSession() ? hash('sha256', $request->session()->getId()) : null;
+
+        $result = DB::transaction(function () use ($afterId, $calculator, $request, $employeeId, $employeeName, $sessionFingerprint): array {
+            $page = QcRecord::where('test_type', 'Kerb Stone')->where('id', '>', $afterId)
+                ->orderBy('id')->limit(self::KERB_STRENGTH_REFRESH_PAGE_SIZE + 1)->get();
+            $records = $page->take(self::KERB_STRENGTH_REFRESH_PAGE_SIZE);
+            $hasMore = $page->count() > self::KERB_STRENGTH_REFRESH_PAGE_SIZE;
+            $standards = QcStrengthStandard::orderBy('id')->get();
+            $shapeFactors = QcShapeFactor::all();
+            $refreshed = 0;
+            $ignored = 0;
+            $skipped = 0;
+
+            foreach ($records as $record) {
+                $details = is_array($record->details) ? $record->details : [];
+                $kerbType = mb_strtolower(trim((string) ($details['kerbType'] ?? '')));
+                if (! in_array($kerbType, ['road kerb', 'edge kerb'], true)) {
+                    $ignored++;
+                    continue;
+                }
+                $evaluated = $calculator->evaluateStrength('Kerb Stone', $record->material, $record->location, $details, $standards, $shapeFactors);
+                if ($evaluated['status'] === null) {
+                    $ignored++;
+                    continue;
+                }
+                $oldEvaluation = is_array($details['strengthEvaluation'] ?? null) ? $details['strengthEvaluation'] : null;
+                $currentRecord = QcRecord::query()->whereKey($record->id)->lockForUpdate()->first();
+                if (! $currentRecord || $currentRecord->test_type !== 'Kerb Stone'
+                    || $currentRecord->status !== $record->status || $currentRecord->details !== $record->details) {
+                    $skipped++;
+                    continue;
+                }
+                $currentRecord->status = $evaluated['status'];
+                $currentRecord->details = $evaluated['details'];
+                $currentRecord->save();
+                $newDetails = $evaluated['details'];
+                EmployeeActivityEvent::create([
+                    'employee_id' => $employeeId, 'employee_name' => $employeeName,
+                    'session_fingerprint' => $sessionFingerprint, 'action' => 'updated',
+                    'entity_type' => 'QC record', 'entity_id' => (string) $record->id,
+                    'summary' => "Recalculated Kerb Stone strength for QC record #{$record->id} ({$record->record_no})",
+                    'details' => ['submitted' => [
+                        'operation' => 'historical Kerb Stone strength refresh',
+                        'recordId' => $record->id, 'recordNo' => $record->record_no,
+                        'kerbType' => $details['kerbType'] ?? null,
+                        'oldStatus' => $record->status, 'newStatus' => $evaluated['status'],
+                        'oldStrengthEvaluation' => $oldEvaluation,
+                        'newStrengthEvaluation' => $newDetails['strengthEvaluation'] ?? null,
+                    ], 'path' => $request->path()],
+                ]);
+                $refreshed++;
+            }
+
+            return [
+                'scanned' => $records->count(), 'refreshed' => $refreshed, 'ignored' => $ignored,
+                'skipped' => $skipped, 'hasMore' => $hasMore,
+                'nextAfterId' => $hasMore ? ($records->last()?->id ?? $afterId) : null,
+            ];
+        });
+        return response()->json($result);
     }
 
     public function index(Request $request, \App\Services\QcDefaultDataService $defaults): JsonResponse
@@ -330,6 +530,86 @@ class QcController extends Controller
         $status = $bad ? 'Failed' : ($incomplete ? 'Review' : 'Passed');
         $details['sieveEvaluation'] = ['type' => 'sieve', 'status' => $status, 'standardReference' => $applicable->pluck('standard_reference')->unique()->implode(', ') ?: null, 'reason' => $incomplete ? ($applicable->isEmpty() ? 'No matching sieve standards were configured for this material.' : 'Complete measurements are required for every configured sieve.') : ($bad ? 'At least one sieve measurement is outside the configured acceptance limit.' : null), 'criteria' => $criteria];
         return ['details' => $details, 'status' => $status];
+    }
+
+    private function detailsValue(array $details, array $keys): mixed
+    {
+        foreach ($keys as $key) {
+            foreach ($details as $candidate => $value) {
+                if (is_string($candidate) && strcasecmp($candidate, $key) === 0
+                    && $value !== null && $value !== '') {
+                    return $value;
+                }
+            }
+        }
+        return null;
+    }
+
+    private function numericValue(mixed $value): ?float
+    {
+        if (is_int($value) || is_float($value)) {
+            return is_finite((float) $value) ? (float) $value : null;
+        }
+        if (! is_string($value)) return null;
+        $normalized = str_replace(',', '', $value);
+        if (! preg_match('/^[\s]*[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/', $normalized, $matches)) {
+            return null;
+        }
+        $number = (float) $matches[0];
+        return is_finite($number) ? $number : null;
+    }
+
+    private function readyMixStrengthsForAge(array $details, int $age): array
+    {
+        $rows = $details['testRows'] ?? null;
+        if (is_array($rows)) {
+            $rowStrengths = [];
+            foreach ($rows as $row) {
+                $row = is_array($row) ? $row : [];
+                if ($this->numericValue($this->detailsValue($row, ['testAge', 'cubeAge', 'age'])) !== (float) $age) continue;
+                $strength = $this->numericValue($this->detailsValue($row, ['calculatedStrength', 'strength', 'compressiveStrength']));
+                if ($strength !== null) $rowStrengths[] = $strength;
+            }
+            if ($rowStrengths || count($rows) > 0) return $rowStrengths;
+        }
+
+        $keys = $age === 7
+            ? ['avg7Days', 'average7Days', 'sevenDayStrength', 'strength7Days']
+            : ['avg28To29Days', 'average28To29Days', 'twentyEightDayStrength', 'strength28Days', 'averageStrength', 'compressiveStrength', 'strength'];
+        $strength = $this->numericValue($this->detailsValue($details, $keys));
+        return $strength === null ? [] : [$strength];
+    }
+
+    private function summarizeStrengths(array $values): array
+    {
+        return [
+            'averageStrength' => $values ? array_sum($values) / count($values) : null,
+            'minimumStrength' => $values ? min($values) : null,
+            'maximumStrength' => $values ? max($values) : null,
+        ];
+    }
+
+    private function summarizeStrengthSummaries(array $values): array
+    {
+        if (! $values) return ['averageStrength' => null, 'minimumStrength' => null, 'maximumStrength' => null];
+        return [
+            'averageStrength' => array_sum(array_column($values, 'averageStrength')) / count($values),
+            'minimumStrength' => min(array_column($values, 'minimumStrength')),
+            'maximumStrength' => max(array_column($values, 'maximumStrength')),
+        ];
+    }
+
+    private function canonicalPlantLocation(string $location): string
+    {
+        $normalized = preg_replace('/\s+/', ' ', mb_strtolower(trim($location)));
+        return in_array($normalized, ['eastern', 'eastern hidd', 'eastern aker', 'eastern system'], true)
+            ? 'EASTERN'
+            : $location;
+    }
+
+    private function isoDate(string $date): string
+    {
+        return CarbonImmutable::parse($date)->format('Y-m-d\T00:00:00.000\Z');
     }
 
     private function isAdministrator(Request $request): bool
