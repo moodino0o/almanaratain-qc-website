@@ -213,7 +213,11 @@ export default function RecordForm() {
   const [sampleDate, setSampleDate] = useState(new Date().toISOString().slice(0, 10));
   const [locationValue, setLocationValue] = useState("");
   const [material, setMaterial] = useState(
-    testType === TestType.Kerb_Stone ? "Kerbstone" : "",
+    testType === TestType.Kerb_Stone
+      ? "Kerbstone"
+      : testType === TestType.Water
+        ? "Water"
+        : "",
   );
   const [testedBy, setTestedBy] = useState("");
   const [reviewedBy, setReviewedBy] = useState(DEFAULT_APPROVED_BY);
@@ -763,11 +767,13 @@ export default function RecordForm() {
         return [];
       case TestType.Water:
         return [
-          { key: "testingDate", label: "Testing Date", type: "date" },
+          { key: "testingAge", label: "Testing Age", type: "number" },
           { key: "ph", label: "pH", type: "number" },
-          { key: "chloride", label: "Chloride (Cl)", type: "number" },
-          { key: "tds", label: "TDS", type: "number" },
-          { key: "sulphate", label: "SO3", type: "number" },
+          { key: "tds", label: "TDS (ppm)", type: "number" },
+          { key: "firstChlorideTitrationPoint", label: "1st Cl point (ml)", type: "number" },
+          { key: "secondChlorideTitrationPoint", label: "2nd Cl point (ml)", type: "number" },
+          { key: "sulphate", label: "Sulfate Content (ppm)", type: "number" },
+          { key: "source", label: "Sample Source", type: "text" },
         ];
       case TestType.Kerb_Stone:
         return [];
@@ -1094,7 +1100,13 @@ export default function RecordForm() {
         return;
       }
     }
-    if (!locationValue || (testType !== TestType.Blocks && !material) || !testedBy) {
+    if (
+      !locationValue ||
+      (testType !== TestType.Blocks &&
+        testType !== TestType.Water &&
+        !material) ||
+      !testedBy
+    ) {
       toast.error("Please fill in all required fields.");
       return;
     }
@@ -1449,6 +1461,8 @@ export default function RecordForm() {
         ? material.trim() || BLOCK_RECORD_MATERIAL
         : testType === TestType.Kerb_Stone
           ? "Kerbstone"
+          : testType === TestType.Water
+            ? "Water"
           : material.trim(),
       status: RecordStatus.Review, 
       testedBy,
@@ -1598,9 +1612,17 @@ export default function RecordForm() {
                     val === TestType.Precast ||
                     testType === TestType.Precast ||
                     val === TestType.Kerb_Stone ||
-                    testType === TestType.Kerb_Stone
+                    testType === TestType.Kerb_Stone ||
+                    val === TestType.Water ||
+                    testType === TestType.Water
                   ) {
-                    setMaterial(val === TestType.Kerb_Stone ? "Kerbstone" : "");
+                    setMaterial(
+                      val === TestType.Kerb_Stone
+                        ? "Kerbstone"
+                        : val === TestType.Water
+                          ? "Water"
+                          : "",
+                    );
                   }
                   setReferenceNumberTouched(false);
                   setDetails(
@@ -1679,7 +1701,9 @@ export default function RecordForm() {
                     ? "Sampling Date"
                     : testType === TestType.Precast || testType === TestType.Blocks || testType === TestType.Paving_Blocks || testType === TestType.Kerb_Stone
                     ? "Casting Date"
-                    : "Sample Date"}{" "}
+                    : testType === TestType.Water
+                      ? "Sampling Date"
+                      : "Sample Date"}{" "}
                   <span className="text-destructive">*</span>
                 </Label>
                 <Input 
@@ -1694,9 +1718,9 @@ export default function RecordForm() {
                 <Label>
                     {testType === TestType.Precast
                       ? "Testing Location"
-                      : usesSieveRows || testType === TestType.Kerb_Stone
-                      ? "Factory"
-                      : "Plant / Production Location"}{" "}
+                      : testType === TestType.Water || usesSieveRows || testType === TestType.Kerb_Stone
+                        ? "Factory"
+                        : "Plant / Production Location"}{" "}
                   <span className="text-destructive">*</span>
                 </Label>
                 <TypeaheadInput
@@ -1708,7 +1732,7 @@ export default function RecordForm() {
                 />
               </div>
 
-              {testType !== TestType.Blocks && (
+              {testType !== TestType.Blocks && testType !== TestType.Water && (
                 <div className="space-y-2" style={generalInfoFieldStyle("material")}>
                   <Label>
                     {usesSieveRows
@@ -3348,6 +3372,8 @@ export default function RecordForm() {
                       <Label>{field.label}</Label>
                       <Input
                         type={field.type}
+                        min={field.key === "testingAge" ? 0 : undefined}
+                        step={field.key === "testingAge" ? 1 : undefined}
                         value={String(details[field.key] ?? "")}
                         onChange={e => handleDetailChange(field.key, e.target.value)}
                         placeholder={`Enter ${field.label.toLowerCase()}`}
@@ -3363,9 +3389,13 @@ export default function RecordForm() {
           <Card className="md:col-span-2">
             <CardContent className="pt-6">
               <div className="space-y-2">
-                <Label>Remarks / Observations</Label>
+                <Label>{testType === TestType.Water ? "Remark" : "Remarks / Observations"}</Label>
                 <Textarea 
-                  placeholder="Enter any abnormalities, weather conditions, or extra notes..."
+                  placeholder={
+                    testType === TestType.Water
+                      ? "Enter a remark"
+                      : "Enter any abnormalities, weather conditions, or extra notes..."
+                  }
                   value={remarks}
                   onChange={e => setRemarks(e.target.value)}
                   className="min-h-[100px]"

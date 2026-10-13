@@ -861,7 +861,7 @@ export default function RecordDetail() {
     ["Record No.", record.recordNo],
     ["Test Type", record.testType],
     [
-      isSieveRecord
+      isSieveRecord || record.testType === "Water"
         ? "Sampling Date"
         : record.testType === "Precast" || record.testType === "Blocks" || record.testType === "Paving Blocks"
           ? "Casting Date"
@@ -869,12 +869,24 @@ export default function RecordDetail() {
       formatDate(record.sampleDate),
     ],
     [
-      isSieveRecord ? "Factory" : record.testType === "Precast" ? "Testing Location" : "Location",
+      isSieveRecord || record.testType === "Water"
+        ? "Factory"
+        : record.testType === "Precast"
+          ? "Testing Location"
+          : "Location",
       record.location,
     ],
     [
-      isSieveRecord ? "Material Type" : record.testType === "Precast" ? "Product Type" : "Material / Product",
-      record.material,
+      isSieveRecord
+        ? "Material Type"
+        : record.testType === "Water"
+          ? "Sample Source"
+          : record.testType === "Precast"
+            ? "Product Type"
+            : "Material / Product",
+      record.testType === "Water"
+        ? detailText(recordDetails, "source")
+        : record.material,
     ],
     [isSieveRecord ? "Sampled-Tested By" : "Tested By", record.testedBy],
     ["Approved By", record.reviewedBy || "ADEL ABBAS EBRAHIM"],
@@ -908,7 +920,7 @@ export default function RecordDetail() {
     );
   }
   if (record.testType === "Water") {
-    summaryEntries.push(["Source", detailText(recordDetails, "source")]);
+    summaryEntries.push(["Testing Age", detailText(recordDetails, "testingAge")]);
   }
   const testRows = Array.isArray(recordDetails.testRows) ? recordDetails.testRows : [];
   const hasLegacySpecimen = ["length", "width", "height", "dryWeight", "wetWeight", "load", "loadedFaceArea", "calculatedStrength"]
@@ -1489,11 +1501,21 @@ export default function RecordDetail() {
           title="Water Quality Measurements"
           entries={[
             ["pH", detailText(recordDetails, "ph")],
-            ["TDS", detailText(recordDetails, "tds")],
-            ["Chloride", detailText(recordDetails, "chloride")],
-            ["Sulphate", detailText(recordDetails, "sulphate")],
-            ["Observation 1", detailText(recordDetails, "observation1")],
-            ["Observation 2", detailText(recordDetails, "observation2")],
+            ["TDS (ppm)", detailText(recordDetails, "tds")],
+            [
+              "1st Cl point (ml)",
+              detailText(recordDetails, "firstChlorideTitrationPoint"),
+            ],
+            [
+              "2nd Cl point (ml)",
+              detailText(recordDetails, "secondChlorideTitrationPoint"),
+            ],
+            ["Sulfate Content (ppm)", detailText(recordDetails, "sulphate")],
+            ...(recordDetails.chloride !== undefined &&
+              recordDetails.chloride !== null &&
+              recordDetails.chloride !== ""
+              ? [["Legacy Chloride Content (ppm)", detailText(recordDetails, "chloride")] as const]
+              : []),
           ]}
         />
       )}
