@@ -211,7 +211,7 @@ export default function Records() {
     record: isReadyMixSection
       ? "w-[9%]"
       : isMasonrySection
-        ? "w-[8%]"
+        ? "w-[7%]"
         : isAggregateSection
           ? "w-[10%]"
           : "w-[8%]",
@@ -263,19 +263,19 @@ export default function Records() {
       : isAggregateSection
         ? "w-[10%]"
         : "w-[9%]",
-    blockType: isMasonrySection ? "w-[11%]" : "w-[13%]",
+    blockType: isMasonrySection ? "w-[10%]" : "w-[13%]",
     machine: isMasonrySection ? "w-[7%]" : "w-[8%]",
     status: isReadyMixSection
       ? "w-[7%]"
       : isMasonrySection
-        ? "w-[6%]"
+        ? "w-[9%]"
         : isAggregateSection
           ? "w-[9%]"
           : "w-[8%]",
     actions: isReadyMixSection
       ? "w-[14%]"
       : isMasonrySection
-        ? "w-[10%]"
+        ? "w-[9%]"
         : isAggregateSection
           ? "w-[21%]"
           : "w-[14%]",
