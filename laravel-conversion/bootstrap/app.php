@@ -13,7 +13,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->alias(['qc.role' => App\Http\Middleware\QcRoleMiddleware::class]);
+        $middleware->alias([
+            'employee.session' => App\Http\Middleware\EmployeeSessionMiddleware::class,
+            'employee.auth' => App\Http\Middleware\EmployeeAuthMiddleware::class,
+            'qc.role' => App\Http\Middleware\QcRoleMiddleware::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (ValidationException $exception, $request) {

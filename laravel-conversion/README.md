@@ -6,6 +6,7 @@ This is a separate, incomplete Laravel conversion. It does not replace or modify
 
 - PHP 8.2+
 - Composer 2
+- Node.js 20+ when verifying employee passwords created by the original API (new passwords use Laravel's password hasher)
 - PostgreSQL
 
 The conversion now includes the QC API foundation: records, reference data, strength/water/sieve standards, shape factors, report layouts and templates, dashboard summaries, historical age backfills, report payloads, and PHP calculation coverage. Employee sign-in/access controls, complaint/archive/file workflows, and the copied React pages remain separate conversion phases in `CONVERSION_PLAN.md`.

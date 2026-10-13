@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\HealthController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\EmployeesController;
 use App\Http\Controllers\QcController;
 use App\Http\Controllers\QcReferenceController;
 use App\Http\Controllers\QcReportController;
@@ -9,7 +11,30 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/healthz', HealthController::class);
 
-Route::prefix('qc')->middleware('auth')->group(function (): void {
+Route::post('/employee-login', [AuthController::class, 'login']);
+Route::get('/auth/user', [AuthController::class, 'user'])->middleware('employee.session');
+Route::get('/logout', [AuthController::class, 'logout'])->middleware('employee.session');
+Route::post('/mobile-auth/logout', [AuthController::class, 'logout'])->middleware('employee.session');
+
+Route::prefix('auth/employee-access')
+    ->middleware(['employee.session', 'employee.auth', 'qc.role:administrator'])
+    ->group(function (): void {
+        Route::get('/', [AuthController::class, 'employeeAccessIndex']);
+        Route::post('/', [AuthController::class, 'createEmployeeAccess']);
+        Route::patch('/{id}', [AuthController::class, 'updateEmployeeAccess'])->whereNumber('id');
+        Route::delete('/{id}', [AuthController::class, 'deleteEmployeeAccess'])->whereNumber('id');
+    });
+
+Route::prefix('employees')
+    ->middleware(['employee.session', 'employee.auth', 'qc.role:administrator'])
+    ->group(function (): void {
+        Route::get('/', [EmployeesController::class, 'index']);
+        Route::post('/', [EmployeesController::class, 'store']);
+        Route::patch('/{id}', [EmployeesController::class, 'update'])->whereNumber('id');
+        Route::delete('/{id}', [EmployeesController::class, 'destroy'])->whereNumber('id');
+    });
+
+Route::prefix('qc')->middleware(['employee.session', 'employee.auth'])->group(function (): void {
     Route::get('/dashboard', [QcController::class, 'dashboard']);
     Route::get('/daily-ready-mix-results', [QcController::class, 'dailyReadyMixResults']);
     Route::get('/lookups', [QcReferenceController::class, 'lookups']);

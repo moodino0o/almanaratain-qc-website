@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Models\QcRecord;
 use App\Models\QcStrengthStandard;
 use App\Models\EmployeeActivityEvent;
-use Illuminate\Foundation\Auth\User as Authenticatable;
+use App\Models\EmployeeAccess;
+use App\Models\EmployeeDirectoryEntry;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -421,13 +423,23 @@ class QcApiContractsTest extends TestCase
 
     private function asAdministrator(string $id = 'employee:100', string $role = 'administrator'): void
     {
-        $user = new class extends Authenticatable {
-            protected $table = 'users';
-            protected $guarded = [];
-        };
-        $user->setIncrementing(false);
-        $user->setKeyType('string');
-        $user->forceFill(['id' => $id, 'role' => $role]);
+        $employeeId = substr($id, strlen('employee:'));
+        EmployeeDirectoryEntry::query()->updateOrCreate(
+            ['employee_id' => $employeeId],
+            ['name' => 'Test Administrator', 'active' => true],
+        );
+        EmployeeAccess::query()->updateOrCreate(
+            ['employee_id' => $employeeId],
+            [
+                'active' => true,
+                'administrator' => $role === 'administrator',
+                'role' => $role,
+            ],
+        );
+        $user = User::query()->updateOrCreate(
+            ['id' => $id],
+            ['first_name' => null, 'last_name' => null],
+        );
         $this->actingAs($user, 'api');
     }
 }
