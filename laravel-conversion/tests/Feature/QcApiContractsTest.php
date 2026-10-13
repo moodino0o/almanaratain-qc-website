@@ -62,6 +62,121 @@ class QcApiContractsTest extends TestCase
         self::assertSame('waterDetails', array_key_first($report->json('layout.config.columns')));
     }
 
+    public function test_custom_report_layout_survives_reads_and_is_used_by_print_reports(): void
+    {
+        $this->asAdministrator();
+        $layout = collect($this->getJson('/api/qc/report-layouts')->assertOk()->json())
+            ->firstWhere('testType', 'Water');
+        self::assertNotNull($layout);
+        $config = $layout['config'];
+        $config['title'] = 'Water Report — Client Edition';
+        $config['accentColor'] = '#176B87';
+
+        $this->patchJson('/api/qc/report-layouts/'.$layout['id'], ['name' => 'Client Water Layout', 'config' => $config])
+            ->assertOk()
+            ->assertJsonPath('name', 'Client Water Layout')
+            ->assertJsonPath('config.title', 'Water Report — Client Edition')
+            ->assertJsonPath('config.accentColor', '#176B87');
+        $this->getJson('/api/qc/report-layouts')->assertOk()
+            ->assertJsonPath('0.testType', 'Aggregate Sieve');
+        $reloaded = collect($this->getJson('/api/qc/report-layouts')->assertOk()->json())->firstWhere('id', $layout['id']);
+        self::assertSame('Water Report — Client Edition', $reloaded['config']['title']);
+
+        $record = $this->postJson('/api/qc/records', [
+            'testType' => 'Water', 'sampleDate' => '2026-05-12', 'location' => 'Hidd',
+            'material' => 'Water', 'status' => 'Waiting for results', 'testedBy' => 'QC technician',
+            'details' => ['ph' => 7, 'chloride' => 100, 'tds' => 1000, 'so3' => 500],
+        ])->assertCreated();
+        $this->getJson('/api/qc/reports/'.$record->json('id'))->assertOk()
+            ->assertJsonPath('layout.name', 'Client Water Layout')
+            ->assertJsonPath('layout.config.title', 'Water Report — Client Edition');
+    }
+
+    public function test_custom_report_template_lifecycle_preserves_design_history_and_defaults(): void
+    {
+        $this->asAdministrator();
+        $designV1 = $this->validReportTemplateDesign('Water certificate v1');
+        $created = $this->postJson('/api/qc/report-templates', [
+            'testType' => 'Water', 'name' => 'Client certificate', 'description' => 'Client print design',
+            'isDefault' => false, 'design' => $designV1,
+        ])->assertCreated()
+            ->assertJsonPath('name', 'Client certificate')
+            ->assertJsonPath('version', 1)
+            ->assertJsonPath('design.layout.title', 'Water certificate v1');
+        $templateId = $created->json('id');
+
+        $duplicate = $this->postJson('/api/qc/report-templates/'.$templateId.'/duplicate', [
+            'name' => 'Client certificate copy',
+        ])->assertCreated()
+            ->assertJsonPath('name', 'Client certificate copy')
+            ->assertJsonPath('version', 1)
+            ->assertJsonPath('isDefault', false);
+        self::assertSame($designV1, $duplicate->json('design'));
+        $this->getJson('/api/qc/report-templates/'.$duplicate->json('id').'/versions')
+            ->assertOk()->assertExactJson([]);
+
+        $designV2 = $this->validReportTemplateDesign('Water certificate v2');
+        $this->patchJson('/api/qc/report-templates/'.$templateId, ['design' => $designV2])
+            ->assertOk()
+            ->assertJsonPath('version', 2)
+            ->assertJsonPath('design.layout.title', 'Water certificate v2');
+        $versions = $this->getJson('/api/qc/report-templates/'.$templateId.'/versions')
+            ->assertOk()->assertJsonCount(1);
+        $versions->assertJsonPath('0.version', 1);
+        self::assertIsString($versions->json('0.createdAt'));
+
+        $duplicateId = $duplicate->json('id');
+        $this->patchJson('/api/qc/report-templates/'.$duplicateId.'/default', [])
+            ->assertOk()->assertJsonPath('isDefault', true);
+        $listed = collect($this->getJson('/api/qc/report-templates?testType=Water')->assertOk()->json());
+        self::assertTrue($listed->firstWhere('id', $duplicateId)['isDefault']);
+        self::assertFalse($listed->firstWhere('id', $templateId)['isDefault']);
+
+        $restored = $this->postJson('/api/qc/report-templates/'.$templateId.'/restore/1', [])
+            ->assertOk()
+            ->assertJsonPath('version', 3)
+            ->assertJsonPath('design.layout.title', 'Water certificate v1');
+        self::assertSame($designV1, $restored->json('design'));
+        $persisted = collect($this->getJson('/api/qc/report-templates?testType=Water')->assertOk()->json())
+            ->firstWhere('id', $templateId);
+        self::assertSame($designV1, $persisted['design']);
+        $this->getJson('/api/qc/report-templates/'.$templateId.'/versions')
+            ->assertOk()->assertJsonCount(2);
+        self::assertTrue(collect($this->getJson('/api/qc/report-templates')->assertOk()->json())
+            ->firstWhere('id', $duplicateId)['isDefault']);
+    }
+
+    public function test_report_template_rejects_unknown_fields_invalid_formulas_and_unsafe_images(): void
+    {
+        $this->asAdministrator();
+        $cases = [
+            [
+                'design' => array_merge($this->validReportTemplateDesign('Unknown field'), [
+                    'objects' => [['id' => 'unknown-field', 'type' => 'dynamicField', 'fieldKey' => 'details.internalSecret']],
+                ]),
+                'error' => 'Dynamic field is not allowed.',
+            ],
+            [
+                'design' => array_merge($this->validReportTemplateDesign('Invalid formula'), [
+                    'objects' => [['id' => 'invalid-formula', 'type' => 'formula', 'formula' => 'window.alert(1)']],
+                ]),
+                'error' => 'Formula contains unsupported syntax.',
+            ],
+            [
+                'design' => array_merge($this->validReportTemplateDesign('Unsafe image'), [
+                    'objects' => [['id' => 'unsafe-image', 'type' => 'image', 'objectPath' => '/objects/uploads/../private/secret.png']],
+                ]),
+                'error' => 'Image objects must reference a private uploaded object.',
+            ],
+        ];
+
+        foreach ($cases as $index => $case) {
+            $this->postJson('/api/qc/report-templates', [
+                'testType' => 'Water', 'name' => 'Invalid design '.$index, 'design' => $case['design'],
+            ])->assertBadRequest()->assertJsonPath('error', $case['error']);
+        }
+    }
+
     public function test_water_standard_edits_recalculate_existing_water_records(): void
     {
         $this->asAdministrator();
@@ -281,6 +396,27 @@ class QcApiContractsTest extends TestCase
                 'referenceNumber' => $reference, 'designStrength' => $mixDesign, 'testRows' => $testRows,
             ],
         ]);
+    }
+
+    private function validReportTemplateDesign(string $title): array
+    {
+        return [
+            'schemaVersion' => 1,
+            'layout' => [
+                'title' => $title, 'fontFamily' => 'Arial', 'fontSize' => 11,
+                'textColor' => '#1f2937', 'accentColor' => '#be0055', 'paperPadding' => 14,
+                'sections' => [['key' => 'header', 'label' => 'Header', 'visible' => true, 'order' => 0]],
+                'columns' => ['waterDetails' => [
+                    ['key' => 'ph', 'label' => 'pH', 'visible' => true, 'order' => 0, 'width' => 100],
+                ]],
+            ],
+            'page' => [
+                'pageSize' => 'A4', 'orientation' => 'portrait', 'widthMm' => 210, 'heightMm' => 297,
+                'marginTopMm' => 14, 'marginRightMm' => 14, 'marginBottomMm' => 14, 'marginLeftMm' => 14,
+                'showHeader' => true, 'showFooter' => true, 'headerHeightMm' => 24, 'footerHeightMm' => 18,
+            ],
+            'objects' => [],
+        ];
     }
 
     private function asAdministrator(string $id = 'employee:100', string $role = 'administrator'): void
