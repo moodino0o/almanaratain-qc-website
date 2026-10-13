@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\QcRecord;
+use App\Models\EmployeeActivityEvent;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -94,6 +95,43 @@ class QcApiContractsTest extends TestCase
         self::assertSame(200, $apply->status(), $apply->getContent());
         $apply->assertJsonPath('applied', 1)->assertJsonPath('skipped', []);
         self::assertSame('7', $record->fresh()->details['blockAge']);
+
+        $event = EmployeeActivityEvent::query()->sole();
+        self::assertSame('999', $event->employee_id);
+        self::assertSame('999', $event->employee_name);
+        self::assertSame('updated', $event->action);
+        self::assertSame('QC record', $event->entity_type);
+        self::assertSame((string) $record->id, $event->entity_id);
+        self::assertSame('Backfilled historical age for QC record #'.$record->id.' (BLK-2026-TEST01)', $event->summary);
+        self::assertSame('historical age backfill', $event->details['submitted']['operation']);
+        self::assertSame('', $event->details['submitted']['oldAgeValue']);
+        self::assertSame('7', $event->details['submitted']['newAgeValue']);
+        self::assertSame('2026-01-08', $event->details['submitted']['newTestingDate']);
+    }
+
+    public function test_stale_age_backfill_candidate_is_skipped_without_an_activity_event(): void
+    {
+        $this->asAdministrator('employee:999');
+        $record = QcRecord::create([
+            'record_no' => 'BLK-2026-STALE1', 'test_type' => 'Blocks', 'sample_date' => '2026-01-01',
+            'location' => 'Hidd', 'material' => 'Concrete Block', 'status' => 'Review',
+            'tested_by' => 'QC technician', 'details' => [
+                'blockAge' => '', 'testingDate' => '2026-01-08', 'testRows' => [['sampleAge' => '']],
+            ],
+        ]);
+        $candidate = collect($this->postJson('/api/qc/records/age-backfill/preview', [])->assertOk()->json('eligible'))
+            ->firstWhere('id', $record->id);
+        self::assertNotNull($candidate);
+
+        $record->details = array_merge($record->details, ['blockAge' => '6']);
+        $record->save();
+
+        $this->postJson('/api/qc/records/age-backfill/apply', ['candidates' => [$candidate]])
+            ->assertOk()
+            ->assertJsonPath('applied', 0)
+            ->assertJsonCount(1, 'skipped');
+        self::assertSame('6', $record->fresh()->details['blockAge']);
+        self::assertSame(0, EmployeeActivityEvent::query()->count());
     }
 
     private function asAdministrator(string $id = 'employee:100'): void

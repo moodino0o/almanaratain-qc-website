@@ -8,6 +8,7 @@ use App\Models\QcShapeFactor;
 use App\Models\QcSieveStandard;
 use App\Models\QcStrengthStandard;
 use App\Models\QcWaterStandard;
+use App\Models\EmployeeActivityEvent;
 use App\Services\QcCalculationService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
@@ -216,12 +217,18 @@ class QcController extends Controller
         $data = $request->validate(['candidates' => ['required', 'array', 'min:1'], 'candidates.*.id' => ['required', 'integer', 'min:1'], 'candidates.*.recordNo' => ['required', 'string'], 'candidates.*.testType' => ['required', Rule::in(self::TYPES)], 'candidates.*.sampleDate' => ['required', 'date_format:Y-m-d'], 'candidates.*.testingDate' => ['required', 'date_format:Y-m-d'], 'candidates.*.age' => ['required', 'integer', 'min:0']]);
         $ids = array_column($data['candidates'], 'id');
         if (count(array_unique($ids)) !== count($ids) || collect($data['candidates'])->contains(fn ($candidate) => $candidate['id'] > 9007199254740991 || $candidate['age'] > 9007199254740991)) return response()->json(['error' => 'Candidates must contain unique record IDs and whole-day ages.'], 400);
-        $userId = (string) ($request->user()?->id ?? '');
+        $user = $request->user();
+        $userId = (string) ($user?->getAuthIdentifier() ?? $user?->id ?? '');
         if (! str_starts_with($userId, 'employee:') || trim(substr($userId, strlen('employee:'))) === '') {
             return response()->json(['error' => 'An employee identity is required to audit historical date corrections.'], 403);
         }
+        $employeeId = trim(substr($userId, strlen('employee:')));
+        $employeeName = $this->employeeActivityName($user, $employeeId);
+        $sessionFingerprint = $request->hasSession()
+            ? hash('sha256', $request->session()->getId())
+            : null;
         $applied = 0; $skipped = [];
-        DB::transaction(function () use ($data, &$applied, &$skipped): void {
+        DB::transaction(function () use ($data, $employeeId, $employeeName, $sessionFingerprint, $request, &$applied, &$skipped): void {
             foreach ($data['candidates'] as $candidate) {
                 $record = QcRecord::lockForUpdate()->find($candidate['id']);
                 $issue = fn ($reason) => ['id' => $candidate['id'], 'recordNo' => $candidate['recordNo'], 'testType' => $candidate['testType'], 'sampleDate' => $candidate['sampleDate'], 'testingDate' => $candidate['testingDate'], 'reason' => $reason];
@@ -236,10 +243,53 @@ class QcController extends Controller
                 if (! $key || $record->test_type !== $candidate['testType'] || ! $rowAgesMatch || trim((string) ($details[$key] ?? '')) !== '' || $record->record_no !== $candidate['recordNo'] || $record->sample_date->toDateString() !== $candidate['sampleDate'] || ($details['testingDate'] ?? null) !== $candidate['testingDate'] || $candidate['testingDate'] !== CarbonImmutable::parse($candidate['sampleDate'])->addDays($candidate['age'])->toDateString()) {
                     $skipped[] = $issue('Record changed after preview. Run a new preview before applying.'); continue;
                 }
-                $details[$key] = (string) $candidate['age']; $record->details = $details; $record->save(); $applied++;
+                $oldTestingDate = $details['testingDate'] ?? null;
+                $oldAgeValue = $details[$key] ?? null;
+                $details[$key] = (string) $candidate['age'];
+                $record->details = $details;
+                $record->save();
+                EmployeeActivityEvent::create([
+                    'employee_id' => $employeeId,
+                    'employee_name' => $employeeName,
+                    'session_fingerprint' => $sessionFingerprint,
+                    'action' => 'updated',
+                    'entity_type' => 'QC record',
+                    'entity_id' => (string) $record->id,
+                    'summary' => "Backfilled historical age for QC record #{$record->id} ({$record->record_no})",
+                    'details' => [
+                        'submitted' => [
+                            'operation' => 'historical age backfill',
+                            'recordId' => $record->id,
+                            'recordNo' => $record->record_no,
+                            'testType' => $record->test_type,
+                            'sampleDate' => $record->sample_date->toDateString(),
+                            'oldTestingDate' => $oldTestingDate,
+                            'oldAgeValue' => $oldAgeValue,
+                            'newTestingDate' => $details['testingDate'] ?? null,
+                            'ageField' => $key,
+                            'newAgeValue' => $details[$key],
+                        ],
+                        'path' => $request->path(),
+                    ],
+                ]);
+                $applied++;
             }
         });
         return response()->json(['applied' => $applied, 'skipped' => $skipped]);
+    }
+
+    private function employeeActivityName(?object $user, string $fallback): string
+    {
+        foreach (['display_name', 'displayName', 'name', 'full_name', 'fullName'] as $key) {
+            $value = data_get($user, $key);
+            if (is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+        }
+
+        $firstName = trim((string) (data_get($user, 'first_name') ?? data_get($user, 'firstName') ?? ''));
+        $lastName = trim((string) (data_get($user, 'last_name') ?? data_get($user, 'lastName') ?? ''));
+        return trim($firstName.' '.$lastName) ?: $fallback;
     }
 
     private function evaluate(QcCalculationService $calculator, string $testType, string $material, string $location, array $details): array
