@@ -4,6 +4,7 @@ import type { DailyReadyMixResult, QcRecord } from "@workspace/api-client-react"
 import {
   buildDailyReportRows,
   buildDailyStrengthRows,
+  canonicalPlantLocation,
   dailyReportProductOptions,
   downloadDailyReportWorkbook,
   firstWords,
@@ -122,6 +123,19 @@ test("groups all mixes with each plant nested under its mix design", () => {
     minimumStrength: null,
     maximumStrength: null,
   });
+});
+
+test("groups Eastern Hidd, Aker, and system labels as one plant", () => {
+  const grouped = groupDailyResults([
+    record({ id: 1, mixDesign: "25 N OPC", location: "EASTERN Hidd", sevenDay: 30, twentyEightDay: null }),
+    record({ id: 2, mixDesign: "25 N OPC", location: "EASTERN Aker", sevenDay: 32, twentyEightDay: null }),
+    record({ id: 3, mixDesign: "25 N OPC", location: "EASTERN system", sevenDay: 34, twentyEightDay: null }),
+  ]);
+
+  assert.equal(grouped[0].locations.length, 1);
+  assert.equal(grouped[0].locations[0].location, "EASTERN");
+  assert.equal(grouped[0].locations[0].recordCount, 3);
+  assert.equal(canonicalPlantLocation(" eastern   hidd "), "EASTERN");
 });
 
 test("keeps a single-mix filter in the same nested hierarchy", () => {

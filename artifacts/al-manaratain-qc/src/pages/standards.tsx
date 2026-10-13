@@ -1205,7 +1205,7 @@ function PrecastStrengthStandardsFolder({
               Precast fallback criteria
             </span>
             <span className="block text-xs text-muted-foreground">
-              Used only when no type-specific age standard is configured
+              Used for each product and age without its own saved standard
             </span>
           </span>
         </span>
@@ -1218,12 +1218,13 @@ function PrecastStrengthStandardsFolder({
       {expanded && (
         <div className="border-t border-border">
           <p className="border-b border-border px-4 py-3 text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">
-              Fallback criteria for Precast types without configured age rows:
-            </span>{" "}
-            {precastTypes.length
-              ? precastTypes.join(", ")
-              : "types configured in Settings."}
+              <span className="font-medium text-foreground">
+                Fallback criteria apply independently to each product and cube age without a saved standard.
+              </span>{" "}
+              Current Precast types:{" "}
+              {precastTypes.length
+                ? precastTypes.join(", ")
+                : "types configured in Settings."}
           </p>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[680px] text-xs sm:text-sm">
@@ -3074,20 +3075,16 @@ export default function Standards() {
                 onDelete={canEditStandards ? handleDelete : () => undefined}
               />
             ))}
-            {!strengthStandards?.some(
-              (standard) => standard.testType === TestType.Precast,
-            ) && (
-              <PrecastStrengthStandardsFolder
-                expanded={expandedStrengthFolders.precast}
-                precastTypes={precastTypes}
-                onToggle={() =>
-                  setExpandedStrengthFolders((current) => ({
-                    ...current,
-                    precast: !current.precast,
-                  }))
-                }
-              />
-            )}
+            <PrecastStrengthStandardsFolder
+              expanded={expandedStrengthFolders.precast}
+              precastTypes={precastTypes}
+              onToggle={() =>
+                setExpandedStrengthFolders((current) => ({
+                  ...current,
+                  precast: !current.precast,
+                }))
+              }
+            />
           </>
         )}
       </div>

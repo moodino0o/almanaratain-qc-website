@@ -111,6 +111,15 @@ const isDammamLocation = (location: string) => {
   return normalizedLocation === "dammam" || normalizedLocation === "dammam plant";
 };
 
+export const canonicalPlantLocation = (location: string) => {
+  const normalized = location.trim().toLocaleLowerCase().replace(/\s+/g, " ");
+  return ["eastern", "eastern hidd", "eastern aker", "eastern system"].includes(
+    normalized,
+  )
+    ? "EASTERN"
+    : location;
+};
+
 const firstNumericValue = (values: Record<string, unknown>, keys: string[]) => {
   for (const key of keys) {
     const parsed = numericValue(values[key]);
@@ -344,14 +353,15 @@ export function buildDailyReportRows(
       record.testType === "Blocks" || record.testType === "Paving Blocks"
         ? detailsValue(details, ["machineType", "machine"])
         : "";
-    const key = `${date}\u0000${castingDate}\u0000${testingDate}\u0000${category}\u0000${record.location}\u0000${machineType}\u0000${product}\u0000${cubeAge ?? ""}`;
+    const plant = canonicalPlantLocation(record.location);
+    const key = `${date}\u0000${castingDate}\u0000${testingDate}\u0000${category}\u0000${plant}\u0000${machineType}\u0000${product}\u0000${cubeAge ?? ""}`;
     if (selected.size && !selected.has(`${category}\u0000${product}`)) return;
     const current = groups.get(key) ?? {
       date,
       castingDate,
       testingDate,
       category,
-      plant: record.location,
+      plant,
       machineType,
       product,
       cubeAge,
@@ -797,13 +807,14 @@ export function groupDailyResults(records: DailyReadyMixResult[]): GroupedDailyM
       group.twentyEightDay.push(record.twentyEightDay);
     }
 
-    let location = group.locations.get(record.location);
+    const plant = canonicalPlantLocation(record.location);
+    let location = group.locations.get(plant);
     if (!location) {
       location = {
         ...createDailyStrengthAccumulator(),
         strengthUnit: record.strengthUnit,
       };
-      group.locations.set(record.location, location);
+      group.locations.set(plant, location);
     }
     location.recordCount += 1;
     if (record.sevenDay.averageStrength !== null) {

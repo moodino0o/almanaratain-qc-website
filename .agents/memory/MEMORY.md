@@ -17,7 +17,8 @@
 - [Shape factor defaults](shape-factor-defaults.md) — seed one editable row per Block size, but keep the numeric value empty until an approved standard is provided.
 - [Report layout safety](report-layout-safety.md) — preserve saved layouts and account for absolute section positions when enforcing report order.
 - [QC register typography](qc-register-typography.md) — verify effective CSS for per-column sizes; shared readable-table rules can override utility classes.
-- [Precast workflow and criteria](precast-workflow-differences.md) — match editable strength limits by Precast type and cube age, with original thresholds as fallback.
+- [Precast workflow and criteria](precast-workflow-differences.md) — match standards per product and age; use fallbacks only for missing pairs and never auto-create sibling-age rows.
+- [Eastern plant location aliases](plant-location-aliases.md) — group EASTERN Hidd, EASTERN Aker, and EASTERN system under canonical EASTERN while retaining record labels.
 - [Paving correction factors](paving-correction-factors.md) — use the reference tensile formula, apply size factors, and evaluate the average against the matching standard.
 - [Employee activity audit](employee-activity-audit.md) — never expose session bearer IDs; distinguish explicit sign-out from expiry and last confirmed activity.
 - [Dashboard month status](dashboard-month-status.md) — QC Test Status groups records by sample/test date for the selected calendar month.

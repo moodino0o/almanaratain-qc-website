@@ -124,6 +124,7 @@ import {
   recordEmployeeActivityChange,
 } from "../lib/employee-activity";
 import { canEmployeeAddReferenceCategory } from "../lib/employee-reference-permissions";
+import { canonicalPlantLocation } from "../lib/plant-location";
 import {
   blockShapeFactorFromSize,
   pavingCorrectionFactorFromSize,
@@ -3062,7 +3063,8 @@ router.get("/daily-ready-mix-results", async (req, res): Promise<void> => {
     if (record.twentyEightDay.averageStrength !== null) current.twentyEightDay.push(record.twentyEightDay);
     mixSummaryMap.set(record.mixDesign, current);
 
-    const location = locationSummaryMap.get(record.location) ?? {
+    const normalizedLocation = canonicalPlantLocation(record.location);
+    const location = locationSummaryMap.get(normalizedLocation) ?? {
       recordCount: 0,
       sevenDay: [],
       twentyEightDay: [],
@@ -3070,7 +3072,7 @@ router.get("/daily-ready-mix-results", async (req, res): Promise<void> => {
     location.recordCount += 1;
     if (record.sevenDay.averageStrength !== null) location.sevenDay.push(record.sevenDay);
     if (record.twentyEightDay.averageStrength !== null) location.twentyEightDay.push(record.twentyEightDay);
-    locationSummaryMap.set(record.location, location);
+    locationSummaryMap.set(normalizedLocation, location);
   }
   const mixes = [...mixSummaryMap.entries()]
     .sort(([left], [right]) => left.localeCompare(right))
