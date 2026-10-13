@@ -1,5 +1,6 @@
 const EMPLOYEE_ADDABLE_REFERENCE_CATEGORY_KEYS = new Set([
   "locations",
+  "readyMixPlantLocations",
   "customers",
   "customerLocations",
   "mixStrengths",

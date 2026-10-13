@@ -7,6 +7,7 @@ test("employees can add supported reference values, including Masonry machines",
     "customers",
     "customerLocations",
     "locations",
+    "readyMixPlantLocations",
     "mixStrengths",
     "machines",
   ]) {

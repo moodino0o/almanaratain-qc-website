@@ -1732,9 +1732,21 @@ export default function RecordForm() {
                 <TypeaheadInput
                   value={locationValue}
                   onChange={setLocationValue}
-                  options={lookups?.locations || []}
+                  options={
+                    referenceData?.categories.find(
+                      (category) =>
+                        category.key ===
+                        (testType === TestType.Ready_Mix
+                          ? "readyMixPlantLocations"
+                          : "locations"),
+                    )?.items.map((item) => item.value) ?? []
+                  }
                   placeholder="Select or type location..."
-                  onCreateOption={createReferenceOption("locations")}
+                  onCreateOption={createReferenceOption(
+                    testType === TestType.Ready_Mix
+                      ? "readyMixPlantLocations"
+                      : "locations",
+                  )}
                 />
               </div>
 

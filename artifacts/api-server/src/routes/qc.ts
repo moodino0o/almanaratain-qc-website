@@ -185,8 +185,13 @@ const REFERENCE_SEED = [
   },
   {
     key: "locations",
-    label: "Plant Locations",
-    values: ["HAFFERA", "HIDD", "AKER", "KHAMIS", "B.D.F", "Diplomatic Area"],
+    label: "Other QC Plant Locations",
+    values: ["Hidd", "Khamis", "Haffera", "Dammam"],
+  },
+  {
+    key: "readyMixPlantLocations",
+    label: "Ready Mix Plant / Production Locations",
+    values: ["ELBA", "EASTERN"],
   },
   {
     key: "blockTypes",
@@ -1300,6 +1305,59 @@ export async function ensureReferenceData() {
             .values(seed.values.map((value) => ({ categoryId: targetCategory.id, value })))
             .onConflictDoNothing();
         }
+      }
+
+      const [locationCategory] = await db
+        .select()
+        .from(qcReferenceCategoriesTable)
+        .where(eq(qcReferenceCategoriesTable.key, "locations"));
+      if (locationCategory && locationCategory.label !== "Other QC Plant Locations") {
+        const allowedLocations = ["Hidd", "Khamis", "Haffera", "Dammam"];
+        const existingItems = await db
+          .select()
+          .from(qcReferenceItemsTable)
+          .where(eq(qcReferenceItemsTable.categoryId, locationCategory.id));
+        const retainedIds = new Set<number>();
+
+        for (const value of allowedLocations) {
+          const existingItem =
+            existingItems.find(
+              (item) => !retainedIds.has(item.id) && item.value === value,
+            ) ??
+            existingItems.find(
+              (item) =>
+                !retainedIds.has(item.id) &&
+                item.value.trim().toLocaleLowerCase() === value.toLocaleLowerCase(),
+            );
+          if (existingItem) {
+            retainedIds.add(existingItem.id);
+            if (existingItem.value !== value) {
+              await db
+                .update(qcReferenceItemsTable)
+                .set({ value })
+                .where(eq(qcReferenceItemsTable.id, existingItem.id));
+            }
+          } else {
+            const [createdItem] = await db
+              .insert(qcReferenceItemsTable)
+              .values({ categoryId: locationCategory.id, value })
+              .returning({ id: qcReferenceItemsTable.id });
+            if (createdItem) retainedIds.add(createdItem.id);
+          }
+        }
+
+        const obsoleteIds = existingItems
+          .filter((item) => !retainedIds.has(item.id))
+          .map((item) => item.id);
+        if (obsoleteIds.length) {
+          await db
+            .delete(qcReferenceItemsTable)
+            .where(inArray(qcReferenceItemsTable.id, obsoleteIds));
+        }
+        await db
+          .update(qcReferenceCategoriesTable)
+          .set({ label: "Other QC Plant Locations" })
+          .where(eq(qcReferenceCategoriesTable.id, locationCategory.id));
       }
     })().catch((error) => {
       referenceSeedPromise = null;
