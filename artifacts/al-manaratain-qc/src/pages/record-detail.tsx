@@ -1194,7 +1194,7 @@ export default function RecordDetail() {
                   <table className="w-full min-w-[980px] text-sm">
                     <thead className="bg-muted/50">
                       <tr className="border-b">
-                        {["Cube Age (days)", "Cube Size (mm)", "Weight (g)", "Density (kg/m³)", "Load (kN)", "Compressive Strength (N/mm²)"].map((label) => (
+                        {["Cube Age (days)", "Cube Size (mm)", "Weight (g)", "Load (kN)", "Compressive Strength (N/mm²)", "Density (kg/m³)"].map((label) => (
                           <th key={label} className="px-3 py-3 text-left font-semibold">{label}</th>
                         ))}
                       </tr>
@@ -1205,7 +1205,11 @@ export default function RecordDetail() {
                           ? row as Record<string, unknown>
                           : {};
                         const age = values.testAge ?? values.sampleAge ?? values.cubeAge ?? values.age;
-                        const size = detailText(recordDetails, "cubeSize", "100*100*100").replace(/\*/g, " × ");
+                        const cubeSize = String(
+                          values.cubeSize ||
+                            detailText(recordDetails, "cubeSize", "100*100*100"),
+                        );
+                        const size = cubeSize.replace(/\*/g, " × ");
                         const strength = getCubeRowStrength(row);
                         const hasSavedWeight =
                           values.weight !== undefined &&
@@ -1218,7 +1222,7 @@ export default function RecordDetail() {
                             : "kg";
                         const displayedWeight = cubeWeightInGrams(weight, weightUnit);
                         const calculatedDensity = calculateCubeDensity(
-                          detailText(recordDetails, "cubeSize", "100*100*100"),
+                          cubeSize,
                           weight,
                           weightUnit,
                         );
@@ -1231,12 +1235,12 @@ export default function RecordDetail() {
                             <td className="px-3 py-2">{displayValue(age)}</td>
                             <td className="px-3 py-2">{size}</td>
                             <td className="px-3 py-2">{displayValue(displayedWeight)}</td>
-                            <td className="px-3 py-2 font-semibold">
-                              {density === "—" ? density : `${density} kg/m³`}
-                            </td>
                             <td className="px-3 py-2">{displayValue(values.load)}</td>
                             <td className="px-3 py-2 font-semibold">
                               {strength === null ? "—" : formatStrengthMetric(strength)}
+                            </td>
+                            <td className="px-3 py-2 font-semibold">
+                              {density === "—" ? density : `${density} kg/m³`}
                             </td>
                           </tr>
                         );
