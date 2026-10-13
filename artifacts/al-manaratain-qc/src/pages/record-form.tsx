@@ -77,6 +77,7 @@ const REFERENCE_NUMBER_MAX_LENGTH = 32;
 const REFERENCE_DATA_REFRESH_INTERVAL_MS = 15_000;
 const DEFAULT_APPROVED_BY = "ADEL ABBAS EBRAHIM";
 const MATERIAL_CONDITIONS = ["Single Washed", "Unwashed", "Double Washed"] as const;
+const WATER_SULPHATE_OPTIONS = ["<200", ">400", ">800", ">1200", ">1600"] as const;
 const GENERAL_INFO_FIELD_ORDER: Partial<Record<TestType, Record<string, number>>> = {
   [TestType.Ready_Mix]: {
     testType: 1,
@@ -771,7 +772,7 @@ export default function RecordForm() {
           { key: "tds", label: "TDS (ppm)", type: "number" },
           { key: "firstChlorideTitrationPoint", label: "1st Cl point (ml)", type: "number" },
           { key: "secondChlorideTitrationPoint", label: "2nd Cl point (ml)", type: "number" },
-          { key: "sulphate", label: "Sulfate Content (ppm)", type: "number" },
+          { key: "sulphate", label: "Sulfate Content (ppm)", type: "select" },
           { key: "source", label: "Sample Source", type: "text" },
         ];
       case TestType.Kerb_Stone:
@@ -3344,17 +3345,35 @@ export default function RecordForm() {
                   {getDynamicFields().map(field => (
                     <div key={field.key} className="space-y-2">
                       <Label>{field.label}</Label>
-                      <Input
-                        type={field.type}
-                        min={field.key === "testingAge" ? 0 : undefined}
-                        step={field.key === "testingAge" ? 1 : undefined}
-                        value={String(
-                          details[field.key] ??
-                            (field.key === "source" ? "RO Plant" : ""),
-                        )}
-                        onChange={e => handleDetailChange(field.key, e.target.value)}
-                        placeholder={`Enter ${field.label.toLowerCase()}`}
-                      />
+                      {field.type === "select" && field.key === "sulphate" ? (
+                        <Select
+                          value={String(details[field.key] ?? "")}
+                          onValueChange={(value) => handleDetailChange(field.key, value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select sulfate content..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {WATER_SULPHATE_OPTIONS.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          type={field.type}
+                          min={field.key === "testingAge" ? 0 : undefined}
+                          step={field.key === "testingAge" ? 1 : undefined}
+                          value={String(
+                            details[field.key] ??
+                              (field.key === "source" ? "RO Plant" : ""),
+                          )}
+                          onChange={e => handleDetailChange(field.key, e.target.value)}
+                          placeholder={`Enter ${field.label.toLowerCase()}`}
+                        />
+                      )}
                     </div>
                   ))}
                   </div>
