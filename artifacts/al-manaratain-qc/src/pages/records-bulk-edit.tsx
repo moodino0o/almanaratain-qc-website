@@ -148,6 +148,7 @@ function LookupCell({
 
 type BulkLookupOptions = {
   locations: string[];
+  readyMixPlantLocations: string[];
   materials: string[];
   mixStrengths: string[];
   machines: string[];
@@ -309,8 +310,8 @@ function DraftRow({
         value={draft.location}
         onChange={(value) => onChange("location", value)}
         label={`${kerbStone ? "Factory" : "Location or plant"} for ${recordLabel}`}
-        options={lookupOptions.locations}
-        {...referenceOptionProps("locations")}
+        options={readyMix ? lookupOptions.readyMixPlantLocations : lookupOptions.locations}
+        {...referenceOptionProps(readyMix ? "readyMixPlantLocations" : "locations")}
       />
     )),
     field(kerbStone ? "Kerb Type" : "Material / Product", (
@@ -664,6 +665,10 @@ export default function RecordsBulkEdit() {
       lookups?.locations ?? [],
       lookups?.factories ?? [],
       lookups?.plants ?? [],
+    ),
+    readyMixPlantLocations: categoryValues(
+      referenceData?.categories,
+      "readyMixPlantLocations",
     ),
     materials: lookups?.materials ?? [],
     mixStrengths: lookups?.mixStrengths ?? [],
