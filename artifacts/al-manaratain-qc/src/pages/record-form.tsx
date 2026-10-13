@@ -2811,6 +2811,11 @@ export default function RecordForm() {
                                     </th>
                                   </>
                                )}
+                                {testType === TestType.Precast && (
+                                  <th className="px-3 py-3 text-left font-semibold">
+                                    Density (kg/m³)
+                                  </th>
+                                )}
                                 {testType === TestType.Paving_Blocks && (
                                   <>
                                     <th className="px-3 py-3 text-left font-semibold">
