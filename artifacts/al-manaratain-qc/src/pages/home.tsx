@@ -33,6 +33,8 @@ import {
 } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { RecordTableActions } from "@/components/record-table-actions";
+import { RecordNumberCell } from "@/components/record-number-cell";
 import {
   Card,
   CardContent,
@@ -558,9 +560,12 @@ export default function Home() {
                     const details = record.details as Record<string, unknown>;
                     return (
                       <TableRow key={record.id}>
-                        <TableCell className="pl-5 font-semibold text-primary">
-                          {String(details.referenceNumber || record.recordNo)}
-                        </TableCell>
+                        <RecordNumberCell
+                          record={record}
+                          recordNumber={String(details.referenceNumber || record.recordNo)}
+                          isAdmin={role === "administrator"}
+                          className="pl-5"
+                        />
                         <TableCell>{record.testType}</TableCell>
                         <TableCell>{record.material}</TableCell>
                         <TableCell className="whitespace-nowrap text-muted-foreground">
@@ -569,18 +574,8 @@ export default function Home() {
                         <TableCell>
                           <StatusBadge status={record.status} />
                         </TableCell>
-                        <TableCell className="pr-5 text-right">
-                          <Button
-                            asChild
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-[10px] sm:h-8 sm:px-3 sm:text-xs md:h-9 md:text-sm"
-                          >
-                            <Link href={`/records/${record.id}`}>
-                              View{" "}
-                              <ArrowUpRight className="ml-1 h-3 w-3 sm:ml-1.5 sm:h-3.5 sm:w-3.5" />
-                            </Link>
-                          </Button>
+                        <TableCell className="pr-5">
+                          <RecordTableActions recordId={record.id} showPrint={false} />
                         </TableCell>
                       </TableRow>
                     );

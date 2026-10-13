@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { RecordTableActions } from "@/components/record-table-actions";
+import { RecordNumberCell } from "@/components/record-number-cell";
 import { Link } from "wouter";
 import { CheckCircle2, AlertTriangle, XCircle, Search, Plus, Printer, TableProperties, Clock3 } from "lucide-react";
-import { formatDateTime } from "@/lib/utils";
 import { useAuth } from "@workspace/replit-auth-web";
 import { useLocation } from "wouter";
 import { REGISTER_SECTIONS, type RegisterSection } from "./register-sections";
@@ -411,7 +412,12 @@ export default function Records() {
                     <TableRow><TableCell colSpan={12} className="h-32 text-center text-muted-foreground">No Water records found.</TableCell></TableRow>
                   ) : sectionRecords.map((record) => (
                     <TableRow key={record.id}>
-                      <TableCell className="whitespace-normal break-words px-2 py-2 font-semibold text-primary">{record.recordNo}</TableCell>
+                      <RecordNumberCell
+                        record={record}
+                        recordNumber={record.recordNo}
+                        isAdmin={role === "administrator"}
+                        className="whitespace-normal break-words px-2 py-2"
+                      />
                       <TableCell className="whitespace-normal break-words px-2 py-2 tabular-nums">{formatRegisterDate(record.sampleDate)}</TableCell>
                       <TableCell className="whitespace-normal break-words px-2 py-2 tabular-nums">{formatRegisterDate(getRecordDetail(record.details, ["testingDate"], ""))}</TableCell>
                       <TableCell className="whitespace-normal break-words px-2 py-2">{record.testedBy || "—"}</TableCell>
@@ -422,14 +428,8 @@ export default function Records() {
                       <TableCell className="whitespace-normal break-words px-2 py-2 tabular-nums">{formatWaterMeasurement(getRecordDetail(record.details, ["sulphate", "sulfate", "sulphateContent"]))}</TableCell>
                       <TableCell className="whitespace-normal break-words px-2 py-2">{record.remarks?.trim() || "—"}</TableCell>
                       <TableCell className="px-2 py-2">{getWaterResultBadge(record.status)}</TableCell>
-                      <TableCell className="px-2 py-2 text-right">
-                         <div className="flex justify-center gap-1">
-                           <Link href={`/records/${record.id}`} className="inline-flex h-5 items-center rounded-md bg-secondary px-1 text-[9px] font-medium text-secondary-foreground sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs">View</Link>
-                            <Link href={`/reports/${record.id}`} className="inline-flex h-5 items-center rounded-md border px-1 text-[9px] font-medium sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs">
-                              <Printer className="mr-0.5 h-2.5 w-2.5 shrink-0 sm:mr-1 sm:h-3 sm:w-3" />
-                              Print
-                            </Link>
-                        </div>
+                       <TableCell className="px-1 py-2">
+                         <RecordTableActions recordId={record.id} />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -467,7 +467,12 @@ export default function Records() {
                     <TableRow><TableCell colSpan={10} className="h-32 text-center text-muted-foreground">No Precast records found.</TableCell></TableRow>
                   ) : sectionRecords.map((record) => (
                     <TableRow key={record.id}>
-                      <TableCell className="break-words px-1 py-1.5 font-semibold text-primary">{record.recordNo}</TableCell>
+                      <RecordNumberCell
+                        record={record}
+                        recordNumber={record.recordNo}
+                        isAdmin={role === "administrator"}
+                        className="break-words px-1 py-1.5"
+                      />
                       <TableCell className="break-words px-1 py-1.5">{detailValue(record, ["sampleNo"])}</TableCell>
                       <TableCell className="break-words px-1 py-1.5">{detailValue(record, ["customerName", "customer"])}</TableCell>
                       <TableCell className="break-words px-1 py-1.5">{record.material}</TableCell>
@@ -476,14 +481,8 @@ export default function Records() {
                       <TableCell className="px-1 py-1.5 text-right tabular-nums">{precastAverageStrength(record, 7, ["averageStrength7Days", "avgStrength7Days", "day7AverageStrength"])}</TableCell>
                       <TableCell className="px-1 py-1.5 text-right tabular-nums">{precastAverageStrength(record, 28, ["averageStrength28Days", "avgStrength28Days", "day28AverageStrength"])}</TableCell>
                       <TableCell className="px-1 py-1.5 text-center" title={strengthEvaluationReason(record)}>{getWaterResultBadge(record.status)}</TableCell>
-                      <TableCell className="px-1 py-1.5">
-                        <div className="flex flex-wrap justify-center gap-0.5">
-                          <Link href={`/records/${record.id}`} className="inline-flex h-5 items-center justify-center rounded-md bg-secondary px-1 text-[9px] font-medium text-secondary-foreground">View</Link>
-                          <Link href={`/reports/${record.id}`} className="inline-flex h-5 items-center justify-center whitespace-nowrap rounded-md border px-1 text-[9px] font-medium">
-                            <Printer className="mr-0.5 h-2.5 w-2.5 shrink-0" />
-                            Print
-                          </Link>
-                        </div>
+                       <TableCell className="px-1 py-1.5">
+                         <RecordTableActions recordId={record.id} />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -507,7 +506,12 @@ export default function Records() {
                     <TableRow><TableCell colSpan={11} className="h-32 text-center text-muted-foreground">No Kerb Stone records found.</TableCell></TableRow>
                   ) : sectionRecords.map((record) => (
                     <TableRow key={record.id}>
-                      <TableCell className="break-words px-1 py-1.5 font-semibold text-primary">{record.recordNo}</TableCell>
+                      <RecordNumberCell
+                        record={record}
+                        recordNumber={record.recordNo}
+                        isAdmin={role === "administrator"}
+                        className="break-words px-1 py-1.5"
+                      />
                       <TableCell className="break-words px-1 py-1.5 tabular-nums">{formatRegisterDate(record.sampleDate)}</TableCell>
                       <TableCell className="break-words px-1 py-1.5 tabular-nums">{formatRegisterDate(registerTestingDate(record))}</TableCell>
                       <TableCell className="px-1 py-1.5 text-center tabular-nums">{derivedAge(record)}</TableCell>
@@ -517,14 +521,8 @@ export default function Records() {
                       <TableCell className="px-1 py-1.5 text-right tabular-nums">{kerbStrengthValue(record, "minimumStrength", ["minimumStrength", "minStrength"])}</TableCell>
                       <TableCell className="px-1 py-1.5 text-right tabular-nums">{kerbStrengthValue(record, "maximumStrength", ["maximumStrength", "maxStrength"])}</TableCell>
                       <TableCell className="px-1 py-1.5 text-center" title={strengthEvaluationReason(record)}>{getWaterResultBadge(record.status)}</TableCell>
-                      <TableCell className="px-1 py-1.5">
-                        <div className="flex flex-wrap justify-center gap-0.5">
-                          <Link href={`/records/${record.id}`} className="inline-flex h-5 items-center justify-center rounded-md bg-secondary px-1 text-[9px] font-medium text-secondary-foreground">View</Link>
-                          <Link href={`/reports/${record.id}`} className="inline-flex h-5 items-center justify-center whitespace-nowrap rounded-md border px-1 text-[9px] font-medium">
-                            <Printer className="mr-0.5 h-2.5 w-2.5 shrink-0" />
-                            Print
-                          </Link>
-                        </div>
+                       <TableCell className="px-1 py-1.5">
+                         <RecordTableActions recordId={record.id} />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -628,17 +626,16 @@ export default function Records() {
               ) : (
                 sectionRecords.map((record) => (
                   <TableRow key={record.id}>
-                    <TableCell className="whitespace-normal break-words px-1 py-1 font-semibold text-primary">
-                      <div>
-                        {isReadyMixSection
+                    <RecordNumberCell
+                      record={record}
+                      recordNumber={
+                        isReadyMixSection
                           ? getRecordDetail(record.details, ["referenceNumber", "referenceNo", "reference"])
-                          : record.recordNo}
-                      </div>
-                      <div className="mt-0.5 break-words text-[10px] font-normal leading-tight text-black dark:text-white">
-                        Added by {record.createdBy?.trim() || "Not recorded"} ·{" "}
-                        {formatDateTime(record.createdAt)}
-                      </div>
-                    </TableCell>
+                          : record.recordNo
+                      }
+                      isAdmin={role === "administrator"}
+                      className="whitespace-normal break-words px-1 py-1"
+                    />
                     <TableCell className="whitespace-normal break-words px-1 py-1">
                       <span className="inline-block max-w-full break-words rounded-sm bg-muted px-1 py-0.5 text-xs font-medium leading-tight">
                         {record.testType}
@@ -735,22 +732,8 @@ export default function Records() {
                         </TableCell>
                       </>
                     )}
-                    <TableCell className="px-1 py-1 text-right">
-                       <div className="flex flex-wrap justify-center gap-0.5">
-                        <Link
-                          href={`/records/${record.id}`}
-                          className="inline-flex h-5 items-center justify-center whitespace-nowrap rounded-md bg-secondary px-1 text-[9px] font-medium text-secondary-foreground shadow-sm transition-colors hover:bg-secondary/80 sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs"
-                        >
-                          View
-                        </Link>
-                        <Link
-                          href={`/reports/${record.id}`}
-                          className="inline-flex h-5 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-1 text-[9px] font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs"
-                        >
-                          <Printer className="mr-0.5 h-2.5 w-2.5 shrink-0 sm:mr-1 sm:h-3 sm:w-3" />
-                          Print
-                        </Link>
-                      </div>
+                    <TableCell className="px-1 py-1">
+                      <RecordTableActions recordId={record.id} />
                     </TableCell>
                   </TableRow>
                 ))
