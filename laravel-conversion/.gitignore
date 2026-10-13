@@ -6,7 +6,14 @@
 /.phpunit.cache
 /storage/*.key
 /storage/framework/cache/*
+!/storage/framework/cache/data/
+/storage/framework/cache/data/*
+!/storage/framework/cache/data/.gitignore
 /storage/framework/sessions/*
+!/storage/framework/sessions/.gitignore
 /storage/framework/views/*
+!/storage/framework/views/.gitignore
 /storage/logs/*
-/bootstrap/cache/*.php
+!/storage/logs/.gitignore
+/bootstrap/cache/*
+!/bootstrap/cache/.gitignore
