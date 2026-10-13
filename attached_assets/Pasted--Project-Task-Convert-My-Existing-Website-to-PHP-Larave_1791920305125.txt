@@ -1,0 +1,145 @@
+# Project Task: Convert My Existing Website to PHP Laravel Without Changing the Original
+
+## Objective
+
+I already have a fully developed website in this Replit project. I do NOT want to redesign it, rebuild it from scratch, or change its appearance or functionality.
+
+I want you to convert my existing website's source code into a working PHP Laravel application and provide the complete Laravel source code.
+
+**Preserving the existing website is the highest priority.**
+
+## 1. CRITICAL: Protect the Original Website
+
+Before doing anything:
+
+* Inspect the entire existing project and understand its current architecture.
+* Do not modify, delete, rename, overwrite, or move any original project files.
+* Do not replace the existing application or change its current startup configuration.
+* Do not install dependencies or make configuration changes that could disrupt the original application.
+* Create a completely separate directory named `laravel-conversion` for the new Laravel application.
+* Keep all original source code, assets, configuration, and database files untouched.
+* If creating a separate directory inside this Replit project is not sufficient to isolate the conversion, use a separate Git branch or a separate project copy.
+* Never run destructive database operations against the original database.
+
+If any step could affect the original website, stop and explain the risk before proceeding.
+
+## 2. Analyze the Existing Website
+
+Read and analyze the original source code, including:
+
+* All pages and routes.
+* Frontend components and layouts.
+* CSS, JavaScript, images, icons, fonts, and other assets.
+* Backend logic and API endpoints.
+* Forms, validation, and business rules.
+* Login, registration, sessions, and permissions.
+* Database tables, relationships, and queries.
+* External API integrations and environment variables.
+* Existing dependencies and runtime configuration.
+
+Create a feature inventory and map each feature to its corresponding Laravel implementation.
+
+Do not assume that the website is a simple static website.
+
+## 3. Convert the Existing Website to PHP Laravel
+
+Create a separate, complete Laravel application inside `laravel-conversion/`.
+
+* Use a Laravel version compatible with the PHP environment and project requirements.
+* Convert backend functionality into Laravel routes, controllers, models, middleware, services, and other appropriate components.
+* Use Laravel Eloquent where appropriate for database operations.
+* Preserve the existing frontend wherever possible.
+* If the frontend uses HTML, CSS, and JavaScript, reuse the original markup and assets and integrate them into Laravel Blade templates where appropriate.
+* If the frontend uses React, Vue, or another framework, preserve it and use an appropriate Laravel integration rather than forcing an unnecessary rewrite.
+* Preserve the website's existing URLs and routing behavior wherever possible.
+* Reproduce the existing design, responsive behavior, navigation, forms, tables, dashboards, and interactive elements.
+* Preserve all existing functionality and business rules.
+* Implement authentication and authorization using compatible Laravel components when needed.
+* Preserve API integrations and data formats.
+* Do not replace working features with mock data, placeholder pages, or generic templates.
+
+Do not make visual improvements, redesign pages, or introduce unrelated features.
+
+## 4. Database and Data Protection
+
+* Identify the original database technology and schema.
+* Create the necessary Laravel models and migrations.
+* Preserve table relationships, constraints, and existing data.
+* Never delete, reset, or overwrite the original database.
+* Do not expose credentials in source code.
+* Provide a safe method for configuring the Laravel application's database connection.
+* If the original database cannot be migrated safely, document the required steps instead of making destructive changes.
+
+## 5. Keep the Conversion Isolated
+
+The new Laravel application must have its own:
+
+* `composer.json`
+* Laravel application structure
+* `routes/`
+* `app/`
+* `resources/`
+* `public/`
+* `config/`
+* `.env.example`
+* Database migrations
+* Required dependency configuration
+* Setup and execution instructions
+
+Keep the original website and its configuration separate from the new Laravel application.
+
+Do not switch the live website to Laravel automatically.
+
+## 6. Test the Converted Application
+
+Run the Laravel application separately from the original website.
+
+Verify that:
+
+* Every original page has a corresponding implementation.
+* The layout and styling match the original website.
+* Navigation and links work.
+* Forms and interactive elements work.
+* Authentication works, if present.
+* Database operations work.
+* API integrations work.
+* No required assets are missing.
+* No major errors appear in the logs.
+* Existing behavior is preserved.
+
+Compare the original website and Laravel version before declaring the conversion complete.
+
+Do not claim success for features that have not been tested.
+
+## 7. Deliver the Actual Laravel Source Code
+
+The final deliverable must be the complete, runnable PHP Laravel source code, not just instructions or a demonstration.
+
+Provide:
+
+1. The complete `laravel-conversion/` directory.
+2. All Laravel PHP files and frontend templates.
+3. All required assets and configuration templates.
+4. Database migrations and models.
+5. Dependency manifests.
+6. A README with installation and execution instructions.
+7. A report of migrated features and any remaining limitations.
+
+Ensure the new application can be copied into a compatible PHP/Laravel development environment and installed using Composer.
+
+Clearly identify any functionality that could not be converted.
+
+## 8. Final Rules
+
+* Do not modify the original website.
+* Do not rebuild the website with a different design.
+* Do not remove existing functionality.
+* Do not silently change the database schema or business logic.
+* Do not claim that the project is fully converted until the source code has been generated and tested.
+* If the current Replit environment cannot run PHP or Composer, still preserve the original project and generate the Laravel source in a separate directory. Explain how to test it in a compatible environment.
+
+### Start Here
+
+First inspect the existing repository and present a conversion plan. Confirm how the original website will be protected. Then create the isolated Laravel conversion and implement it incrementally.
+
+Do not make changes to the original application.
