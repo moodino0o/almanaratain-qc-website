@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useParams } from "wouter";
-import { getGetDashboardQueryKey, getGetLookupsQueryKey, getGetRecordQueryKey, getGetReferenceDataQueryKey, getGetReportQueryKey, getListRecordsQueryKey, getListShapeFactorsQueryKey, useCreateRecord, useCreateReferenceItem, useGetLookups, useGetReferenceData, useGetRecord, useListSieveStandards, useListShapeFactors, useListStrengthStandards, useListWaterStandards, useUpdateRecord, TestType, RecordStatus, QcRecordInput, QcRecordUpdate } from "@workspace/api-client-react";
+import { getGetDashboardQueryKey, getGetLookupsQueryKey, getGetRecordQueryKey, getGetReferenceDataQueryKey, getGetReportQueryKey, getListRecordsQueryKey, getListShapeFactorsQueryKey, useCreateRecord, useCreateReferenceItem, useGetLookups, useGetReferenceData, useGetRecord, useListSieveStandards, useListShapeFactors, useListStrengthStandards, useUpdateRecord, TestType, RecordStatus, QcRecordInput, QcRecordUpdate } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -193,7 +193,6 @@ export default function RecordForm() {
     },
   });
   const { data: strengthStandards } = useListStrengthStandards();
-  const { data: waterStandards } = useListWaterStandards();
   const { data: shapeFactors } = useListShapeFactors({
     query: {
       queryKey: getListShapeFactorsQueryKey(),
@@ -1210,6 +1209,12 @@ export default function RecordForm() {
     }
 
     let payloadDetails: Record<string, unknown> = { ...details };
+    if (testType === TestType.Water) {
+      // Water records always use the server-selected default profile.
+      delete payloadDetails.waterStandardId;
+      delete payloadDetails.waterEvaluation;
+      payloadDetails.source = stringValue(payloadDetails.source).trim() || "RO Plant";
+    }
     if (usesSieveRows) {
       const selectedCondition = stringValue(
         details.materialCondition || details.condition,
@@ -2440,7 +2445,9 @@ export default function RecordForm() {
                   </div>
                 </div>
               )}
-              {!usesTestRows && testType !== TestType.Kerb_Stone && (
+              {!usesTestRows &&
+                testType !== TestType.Kerb_Stone &&
+                testType !== TestType.Water && (
                 <div className="mb-6 rounded-md border border-sky-500/25 bg-sky-500/[0.04] p-4">
                   <div className="mb-3">
                     <h3 className="font-semibold text-foreground">Sample Weights</h3>
@@ -3318,39 +3325,6 @@ export default function RecordForm() {
                 </div>
               ) : (
                 <>
-                  {testType === TestType.Water && (
-                    <div className="mb-6 space-y-2">
-                      <Label>Water limit profile</Label>
-                      <Select
-                        value={String(
-                          details.waterStandardId ??
-                            waterStandards?.find((standard) => standard.isDefault)?.id ??
-                            "",
-                        )}
-                        onValueChange={(value) =>
-                          setDetails((current) => ({
-                            ...current,
-                            waterStandardId: Number(value),
-                          }))
-                        }
-                        disabled={!waterStandards?.length}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a Water limit profile..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(waterStandards ?? []).map((standard) => (
-                            <SelectItem key={standard.id} value={String(standard.id)}>
-                              {standard.name}{standard.isDefault ? " (default)" : ""}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground">
-                        The selected profile is saved with this record and used for Pass/Fail evaluation.
-                      </p>
-                    </div>
-                  )}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {testType === TestType.Kerb_Stone && (
                     <>
@@ -3374,7 +3348,10 @@ export default function RecordForm() {
                         type={field.type}
                         min={field.key === "testingAge" ? 0 : undefined}
                         step={field.key === "testingAge" ? 1 : undefined}
-                        value={String(details[field.key] ?? "")}
+                        value={String(
+                          details[field.key] ??
+                            (field.key === "source" ? "RO Plant" : ""),
+                        )}
                         onChange={e => handleDetailChange(field.key, e.target.value)}
                         placeholder={`Enter ${field.label.toLowerCase()}`}
                       />
