@@ -129,7 +129,6 @@ import {
   pavingCorrectionFactorFromSize,
   evaluateSieveRecord,
   evaluateStrengthRecord,
-  PRECAST_AGE_STRENGTH_CRITERIA,
   type SieveStandardForEvaluation,
 } from "../lib/qc-strength";
 import { evaluateWaterRecord as evaluateWaterQcRecord } from "../lib/qc-water";
@@ -811,44 +810,6 @@ export async function ensureDefaultStrengthStandards() {
         });
         existingKeys.add(key);
         insertedDefault = true;
-      }
-      const [precastCategory] = await db
-        .select()
-        .from(qcReferenceCategoriesTable)
-        .where(eq(qcReferenceCategoriesTable.key, "precastTypes"));
-      const configuredPrecastTypes = precastCategory
-        ? await db
-            .select()
-            .from(qcReferenceItemsTable)
-            .where(eq(qcReferenceItemsTable.categoryId, precastCategory.id))
-            .orderBy(asc(qcReferenceItemsTable.value))
-        : [];
-      const precastTypes = configuredPrecastTypes.length
-        ? configuredPrecastTypes.map((item) => item.value)
-        : ["150 mm slab", "200", "250", "260"];
-      for (const material of precastTypes) {
-        for (const criterion of PRECAST_AGE_STRENGTH_CRITERIA) {
-          const key = strengthStandardKey({
-            testType: "Precast",
-            material,
-            blockType: null,
-            blockSize: null,
-            cubeAge: criterion.age,
-          });
-          if (existingKeys.has(key)) continue;
-          await db.insert(qcStrengthStandardsTable).values({
-            testType: "Precast",
-            material,
-            blockType: null,
-            blockSize: null,
-            cubeAge: String(criterion.age),
-            bsStandard: "BS 1881 : PART 116 : 1983",
-            requiredStrength: String(criterion.minimumStrength),
-            strengthUnit: "N/mm²",
-          });
-          existingKeys.add(key);
-          insertedDefault = true;
-        }
       }
       if (insertedDefault) {
         await refreshRecordEvaluations(["Ready Mix", "Blocks", "Precast", "Kerb Stone"]);
