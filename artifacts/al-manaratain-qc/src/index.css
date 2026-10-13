@@ -833,6 +833,46 @@
   font-weight: 700;
 }
 
+.water-report-location {
+  font-weight: 700;
+  margin-bottom: 3mm;
+}
+
+.water-report-dates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 10mm 8mm 6mm;
+  text-align: center;
+}
+
+.water-report-dates > div {
+  display: grid;
+  gap: 4mm;
+}
+
+.water-report-dates strong {
+  font-size: 10px;
+}
+
+.water-results-table {
+  width: 82%;
+  margin: 0 auto 24mm;
+}
+
+.water-results-table th,
+.water-results-table td {
+  padding: 1.6mm 1.2mm;
+}
+
+.water-result-parameter strong,
+.water-result-parameter span {
+  display: block;
+}
+
+.water-result-parameter span {
+  margin-top: 0.8mm;
+}
+
 .report-results-table {
   margin-top: 3mm;
 }

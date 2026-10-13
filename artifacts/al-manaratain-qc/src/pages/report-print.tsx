@@ -652,6 +652,47 @@ function formatReportDate(value: string | undefined | null) {
     .replace(/ /g, "-");
 }
 
+function waterTestingDate(record: QcRecord) {
+  const savedDate = String(record.details.testingDate ?? "").trim();
+  const sampleDate = String(record.sampleDate ?? "").slice(0, 10);
+  const ageText = String(record.details.testingAge ?? "").trim();
+  const age = Number(ageText);
+  if (
+    !ageText ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(sampleDate) ||
+    !Number.isSafeInteger(age) ||
+    age < 0
+  ) {
+    return savedDate || null;
+  }
+  const date = new Date(`${sampleDate}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== sampleDate) {
+    return null;
+  }
+  date.setUTCDate(date.getUTCDate() + age);
+  return date.toISOString().slice(0, 10);
+}
+
+function waterNumericValue(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string" || !value.trim()) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function waterNumberText(value: unknown) {
+  const numeric = waterNumericValue(value);
+  return numeric === null ? rawTextValue(value) : numeric.toFixed(2);
+}
+
+function waterLimitText(minimum: unknown, maximum: unknown, unit = "") {
+  const formatLimit = (value: unknown, fallback: number) => {
+    const numeric = waterNumericValue(value) ?? fallback;
+    return String(numeric);
+  };
+  return `${formatLimit(minimum, 0)} - ${formatLimit(maximum, 0)}${unit ? ` ${unit}` : ""}`;
+}
+
 function formatKerbReportDate(value: string | undefined | null) {
   if (!value) return "-";
   const date = new Date(value);
@@ -3527,11 +3568,77 @@ function WaterReport({ record, layout }: { record: QcRecord; layout?: ReportLayo
   const configured = layout?.config.columns.waterDetails;
   const waterFields = (configured === undefined ? REPORT_LAYOUT_FIELD_GROUPS.Water.waterDetails.map((field, order) => ({ ...field, visible: true, order })) : configured)
     .filter((field) => field.visible).sort((a, b) => a.order - b.order);
+  const visibleKeys = new Set(waterFields.map((field) => field.key));
+  const waterEvaluation = objectValue(details.waterEvaluation);
+  const criteria = Array.isArray(waterEvaluation?.criteria)
+    ? waterEvaluation.criteria.map(objectValue).filter((item): item is ValueMap => item !== null)
+    : [];
+  const criterionFor = (parameter: string) =>
+    criteria.find((criterion) => String(criterion.parameter ?? "").toLowerCase() === parameter.toLowerCase());
+  const chloride =
+    details.chloride ??
+    (() => {
+      const first = waterNumericValue(details.firstChlorideTitrationPoint);
+      const second = waterNumericValue(details.secondChlorideTitrationPoint);
+      return first === null || second === null
+        ? null
+        : (second - first) * (0.02 * 10_000 * 3.5453) / 50;
+    })();
+  const tds = waterNumericValue(details.tds);
+  const conductivity = tds === null ? null : (tds * 3) / (2 * 1000);
+  const testingDate = waterTestingDate(record);
+  const standardRows = [
+    { key: "ph", parameter: "pH:", criterion: "pH", result: details.ph, min: 4.5, max: 8, unit: "" },
+    { key: "tds", parameter: "TDS:", criterion: "TDS", result: details.tds, min: 0, max: 2000, unit: "ppm" },
+    { key: "chloride", parameter: "Cl Cont.:", criterion: "Chloride (Cl)", result: chloride, min: 0, max: 350, unit: "ppm" },
+    { key: "sulphate", parameter: "SO₄ Cont.:", criterion: "SO3", result: details.sulphate ?? details.sulfate, min: 400, max: 1000, unit: "ppm" },
+  ].filter((row) => visibleKeys.has(row.key));
+  const statusText = (criterion: ValueMap | undefined) => {
+    if (criterion?.withinLimits === true) return "PASS";
+    if (criterion?.withinLimits === false) return "FAIL";
+    return "REVIEW";
+  };
+
   return (
     <>
       <section>
-        <SectionHeading>Water Quality Details</SectionHeading>
-        <div className="report-fields">{waterFields.map((field) => <ReportField key={field.key} label={field.label} value={detailValue(details, [field.key, field.key === "sulphate" ? "sulfate" : field.key])} />)}</div>
+        <div className="water-report-dates">
+          <div><strong>Sampling Date</strong><span>{formatReportDate(record.sampleDate)}</span></div>
+          <div><strong>Testing Date</strong><span>{testingDate ? formatReportDate(testingDate) : "—"}</span></div>
+        </div>
+        <table className="report-table water-results-table">
+          <thead>
+            <tr>
+              <th scope="col">PARAMETER / LIMIT</th>
+              <th scope="col">RESULT</th>
+              <th scope="col">REMARK</th>
+            </tr>
+          </thead>
+          <tbody>
+            {standardRows.map((row) => {
+              const criterion = criterionFor(row.criterion);
+              const minimum = criterion?.minimum ?? row.min;
+              const maximum = criterion?.maximum ?? row.max;
+              return (
+                <tr key={row.key}>
+                  <td className="water-result-parameter">
+                    <strong><u>{row.parameter}</u></strong>
+                    <span>{waterLimitText(minimum, maximum, row.unit)}</span>
+                  </td>
+                  <td>{row.key === "sulphate" ? rawTextValue(row.result) : waterNumberText(row.result)}</td>
+                  <td>{statusText(criterion)}</td>
+                </tr>
+              );
+            })}
+            <tr>
+              <td className="water-result-parameter">
+                <strong><u>Conduct.:</u></strong>
+              </td>
+              <td>{conductivity === null ? "—" : conductivity.toFixed(2)}</td>
+              <td>Non</td>
+            </tr>
+          </tbody>
+        </table>
       </section>
       <ReportRemarks record={record} layout={layout} inFlow />
     </>
@@ -3642,9 +3749,9 @@ export function ReportDocument({ report, strengthStandards = [], sieveStandards 
       } as CSSProperties : undefined}
     ><div className={`report-layout-content ${positionedTemplateDesign ? "report-layout-content-template" : ""} ${hasPositionedSections ? "report-layout-content-positioned" : ""} ${blockFlowMode ? "report-layout-content-flow" : ""}`}>
     {layoutSectionVisible(layout, "header") && <><LayoutElements layout={layout} sectionKey="header" placement="before" /><header className="report-header report-layout-section" style={layoutSectionStyle(layout, "header", { inFlow: blockFlowMode })}>
-      <div className="report-company">{companySubtitle}</div><img src="/al-manaratain-logo.webp" alt="Al Manaratain Logo" className="report-logo" /><div className="report-title"><strong>{reportTitle}</strong><span>Ref: {reportReferenceNumber}</span></div>
+       <div className="report-company">{record.testType === "Water" ? <><span>{companyName}</span><small>{companySubtitle}</small></> : companySubtitle}</div><img src="/al-manaratain-logo.webp" alt="Al Manaratain Logo" className="report-logo" /><div className="report-title"><strong>{reportTitle}</strong>{record.testType !== "Water" && <span>Ref: {reportReferenceNumber}</span>}</div>
     </header><LayoutElements layout={layout} sectionKey="header" placement="after" /></>}
-    {layoutSectionVisible(layout, "standard") && <><LayoutElements layout={layout} sectionKey="standard" placement="before" /><p className="report-standard report-layout-section" style={layoutSectionStyle(layout, "standard", { inFlow: blockFlowMode })}>{accordingTo ? `ACCORDING TO ${accordingTo}` : "QUALITY CONTROL TEST REPORT"}</p><LayoutElements layout={layout} sectionKey="standard" placement="after" /></>}
+    {layoutSectionVisible(layout, "standard") && <><LayoutElements layout={layout} sectionKey="standard" placement="before" /><p className={`report-standard report-layout-section ${record.testType === "Water" ? "water-report-location" : ""}`} style={layoutSectionStyle(layout, "standard", { inFlow: blockFlowMode })}>{record.testType === "Water" ? (record.location || "HIDD") : accordingTo ? `ACCORDING TO ${accordingTo}` : "QUALITY CONTROL TEST REPORT"}</p><LayoutElements layout={layout} sectionKey="standard" placement="after" /></>}
     {record.testType === "Blocks" ? (
       <BlocksReport record={record} standards={strengthStandards} layout={layout} />
     ) : layoutSectionVisible(layout, "results") && (

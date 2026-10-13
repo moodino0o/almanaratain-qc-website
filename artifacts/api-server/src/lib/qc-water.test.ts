@@ -97,6 +97,30 @@ test("requires at least 400 ppm SO3 for the default Water profile", () => {
   assert.equal(atMinimum.status, "Passed");
 });
 
+test("calculates Water chloride ppm from titration points and grades SO3 choices by threshold", () => {
+  const passed = evaluateWaterRecord(
+    waterRecord({
+      chloride: undefined,
+      firstChlorideTitrationPoint: 1.5,
+      secondChlorideTitrationPoint: 4.2,
+      sulphate: ">800",
+    }),
+    [waterStandard()],
+  );
+  const failedSulfate = evaluateWaterRecord(
+    waterRecord({ sulphate: ">1200" }),
+    [waterStandard()],
+  );
+
+  assert.equal(passed.status, "Passed");
+  assert.ok(
+    Math.abs(Number((passed.details as Record<string, unknown>).chloride) - 38.28924) < 1e-9,
+  );
+  assert.equal(passed.evaluation?.criteria[3]?.measuredValue, 800);
+  assert.equal(failedSulfate.status, "Failed");
+  assert.equal(failedSulfate.evaluation?.criteria[3]?.measuredValue, 1200);
+});
+
 test("keeps incomplete and broken Water links in Review", () => {
   const incomplete = evaluateWaterRecord(
     waterRecord({ tds: "" }),

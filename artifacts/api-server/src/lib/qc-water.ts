@@ -22,6 +22,21 @@ function numericValue(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function sulphateThreshold(value: unknown): number | null {
+  const numeric = numericValue(value);
+  if (numeric !== null) return numeric;
+  if (typeof value !== "string") return null;
+  const match = value.trim().match(/^[<>]\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+))$/);
+  return match ? numericValue(match[1]) : null;
+}
+
+function chlorideFromTitration(details: Record<string, unknown>): number | null {
+  const first = numericValue(details.firstChlorideTitrationPoint);
+  const second = numericValue(details.secondChlorideTitrationPoint);
+  if (first === null || second === null) return numericValue(details.chloride);
+  return (second - first) * (0.02 * 10_000 * 3.5453) / 50;
+}
+
 function idValue(value: unknown): number | null {
   const id = numericValue(value);
   return id !== null && Number.isSafeInteger(id) && id > 0 ? id : null;
@@ -45,7 +60,7 @@ function criteriaFor(
     },
     {
       parameter: "Chloride (Cl)",
-      value: details.chloride,
+      value: chlorideFromTitration(details),
       minimum: standard.chlorideMin,
       maximum: standard.chlorideMax,
     },
@@ -64,7 +79,9 @@ function criteriaFor(
   ];
 
   return definitions.map((definition) => {
-    const measuredValue = numericValue(definition.value);
+    const measuredValue = definition.parameter === "SO3"
+      ? sulphateThreshold(definition.value)
+      : numericValue(definition.value);
     const minimum = Number(definition.minimum);
     const maximum = Number(definition.maximum);
     return {
@@ -92,7 +109,11 @@ export function evaluateWaterRecord(
   const standard = requestedId === null
     ? standards.find((item) => item.isDefault) ?? standards[0]
     : standards.find((item) => item.id === requestedId);
-  const criteria = standard ? criteriaFor(record.details, standard) : [];
+  const calculatedChloride = chlorideFromTitration(record.details);
+  const evaluatedDetails = calculatedChloride === null
+    ? record.details
+    : { ...record.details, chloride: calculatedChloride };
+  const criteria = standard ? criteriaFor(evaluatedDetails, standard) : [];
   const hasInvalidLink = requestedId !== null && !standard;
   const complete = criteria.length > 0 && criteria.every(
     (criterion) => criterion.measuredValue !== null,
@@ -111,7 +132,7 @@ export function evaluateWaterRecord(
     : !standard
       ? "Configure a Water limit profile before evaluating this record."
       : !complete
-        ? "Enter pH, chloride, TDS, and SO3 results to evaluate this record."
+        ? "Enter pH, chloride titration points or a ppm result, TDS, and SO3 results to evaluate this record."
         : failed
           ? "One or more Water results are outside the selected profile limits."
           : null;
@@ -124,7 +145,7 @@ export function evaluateWaterRecord(
     criteria,
   };
   const details = {
-    ...record.details,
+    ...evaluatedDetails,
     ...(standard && requestedId === null
       ? { waterStandardId: standard.id }
       : {}),

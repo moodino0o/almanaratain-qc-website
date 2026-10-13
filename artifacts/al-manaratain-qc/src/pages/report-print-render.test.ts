@@ -203,6 +203,45 @@ function renderDocument(
   return renderToStaticMarkup(createElement(ReportDocument, props));
 }
 
+test("prints Water reports with dates, limits, exact SO3 choice, chloride, and derived conductivity", () => {
+  const record = {
+    ...reportFixture(),
+    testType: "Water",
+    sampleDate: "2026-05-21",
+    location: "HIDD",
+    details: {
+      testingAge: 10,
+      ph: 7.2,
+      tds: "273.90",
+      chloride: 38.28924,
+      sulphate: ">400",
+      waterEvaluation: {
+        criteria: [
+          { parameter: "pH", minimum: 4.5, maximum: 8, withinLimits: true },
+          { parameter: "Chloride (Cl)", minimum: 0, maximum: 350, withinLimits: true },
+          { parameter: "TDS", minimum: 0, maximum: 2000, withinLimits: true },
+          { parameter: "SO3", minimum: 400, maximum: 1000, withinLimits: true },
+        ],
+      },
+    },
+  } as QcRecord;
+  const markup = renderDocument(record);
+
+  assert.match(markup, /PARAMETER \/ LIMIT/);
+  assert.match(markup, /Sampling Date/);
+  assert.match(markup, /Testing Date/);
+  assert.match(markup, /21-May-26/);
+  assert.match(markup, /31-May-26/);
+  assert.match(markup, /&gt;400/);
+  assert.match(markup, /38\.29/);
+  assert.match(markup, /273\.90/);
+  assert.match(markup, /0\.41/);
+  assert.match(markup, /Conduct\.:/);
+  assert.match(markup, /Non/);
+  assert.match(markup, /PASS/);
+  assert.doesNotMatch(markup, /Water Quality Details/);
+});
+
 test("prints Kerbstone specimen measurements and per-type formula-calculated bending strengths", () => {
   const record = {
     ...reportFixture(),
@@ -982,7 +1021,7 @@ test("places remarks after report details and before specimen results across eve
       detailsMarker: "Precast Details",
       resultsMarker: "Precast Compression Results",
     },
-    { testType: "Water", detailsMarker: "Water Quality Details" },
+    { testType: "Water", detailsMarker: "PARAMETER / LIMIT" },
     { testType: "Flakiness & Elongation", detailsMarker: "Elongation Details" },
     { testType: "RMX Trial", detailsMarker: "RMX Trial Details" },
     { testType: "Kerb Stone", detailsMarker: "Test Details" },

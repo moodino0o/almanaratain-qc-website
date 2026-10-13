@@ -3696,13 +3696,29 @@ router.get("/reports/:id", async (req, res): Promise<void> => {
     return;
   }
   await ensureDefaultStrengthStandards();
-  const [record] = await db
+  let [record] = await db
     .select()
     .from(qcRecordsTable)
     .where(eq(qcRecordsTable.id, parsed.data.id));
   if (!record) {
     res.status(404).json({ error: "Record not found" });
     return;
+  }
+  if (record.testType === "Water") {
+    await ensureDefaultWaterStandard();
+    [record] = await db
+      .select()
+      .from(qcRecordsTable)
+      .where(eq(qcRecordsTable.id, parsed.data.id));
+    if (record) {
+      const waterStandards = await db.select().from(qcWaterStandardsTable);
+      const evaluated = evaluateWaterQcRecord(record, waterStandards);
+      record = {
+        ...record,
+        details: evaluated.details,
+        ...(evaluated.status ? { status: evaluated.status } : {}),
+      };
+    }
   }
   await ensureReferenceData();
   const [layout] = await db
