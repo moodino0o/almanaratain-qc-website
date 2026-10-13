@@ -417,7 +417,10 @@ export default function Records() {
                       <TableCell className="px-2 py-2 text-right">
                          <div className="flex justify-center gap-1">
                            <Link href={`/records/${record.id}`} className="inline-flex h-5 items-center rounded-md bg-secondary px-1 text-[9px] font-medium text-secondary-foreground sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs">View</Link>
-                           <Link href={`/reports/${record.id}`} className="inline-flex h-5 items-center rounded-md border px-1 text-[9px] font-medium sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs">Print</Link>
+                            <Link href={`/reports/${record.id}`} className="inline-flex h-5 items-center rounded-md border px-1 text-[9px] font-medium sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs">
+                              <Printer className="mr-0.5 h-2.5 w-2.5 shrink-0 sm:mr-1 sm:h-3 sm:w-3" />
+                              Print
+                            </Link>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -455,7 +458,10 @@ export default function Records() {
                       <TableCell className="px-2 py-2 text-right">
                          <div className="flex justify-center gap-1">
                            <Link href={`/records/${record.id}`} className="inline-flex h-5 items-center rounded-md bg-secondary px-1 text-[9px] font-medium text-secondary-foreground sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs">View</Link>
-                           <Link href={`/reports/${record.id}`} className="inline-flex h-5 items-center rounded-md border px-1 text-[9px] font-medium sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs">Print</Link>
+                            <Link href={`/reports/${record.id}`} className="inline-flex h-5 items-center rounded-md border px-1 text-[9px] font-medium sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs">
+                              <Printer className="mr-0.5 h-2.5 w-2.5 shrink-0 sm:mr-1 sm:h-3 sm:w-3" />
+                              Print
+                            </Link>
                         </div>
                       </TableCell>
                     </TableRow>
