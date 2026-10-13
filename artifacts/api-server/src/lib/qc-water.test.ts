@@ -14,7 +14,7 @@ const waterStandard = (
   chlorideMax: "350",
   tdsMin: "0",
   tdsMax: "2000",
-  so3Min: "0",
+  so3Min: "400",
   so3Max: "1000",
   isDefault: true,
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -53,6 +53,7 @@ test("uses the Water profile linked to the record and fails out-of-range results
     phMax: "7",
     chlorideMax: "100",
     tdsMax: "500",
+    so3Min: "0",
     so3Max: "250",
     isDefault: false,
   });
@@ -80,6 +81,20 @@ test("uses the Water profile linked to the record and fails out-of-range results
   assert.equal(passed.status, "Passed");
   assert.equal(failed.status, "Failed");
   assert.equal(failed.evaluation?.standardId, 2);
+});
+
+test("requires at least 400 ppm SO3 for the default Water profile", () => {
+  const belowMinimum = evaluateWaterRecord(
+    waterRecord({ sulphate: 399 }),
+    [waterStandard()],
+  );
+  const atMinimum = evaluateWaterRecord(
+    waterRecord({ sulphate: 400 }),
+    [waterStandard()],
+  );
+
+  assert.equal(belowMinimum.status, "Failed");
+  assert.equal(atMinimum.status, "Passed");
 });
 
 test("keeps incomplete and broken Water links in Review", () => {

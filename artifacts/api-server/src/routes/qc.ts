@@ -866,12 +866,32 @@ async function ensureDefaultWaterStandard() {
   if (!waterSeedPromise) {
     waterSeedPromise = (async () => {
       const standards = await db.select().from(qcWaterStandardsTable);
-      if (standards.some((standard) => standard.isDefault)) return;
+      const defaultStandard = standards.find((standard) => standard.isDefault);
+      if (defaultStandard) {
+        if (
+          Number(defaultStandard.so3Min) === 0 &&
+          Number(defaultStandard.so3Max) === 1000
+        ) {
+          await db
+            .update(qcWaterStandardsTable)
+            .set({ so3Min: "400" })
+            .where(eq(qcWaterStandardsTable.id, defaultStandard.id));
+          await refreshRecordEvaluations(["Water"]);
+        }
+        return;
+      }
       if (standards[0]) {
+        const needsSulfateMinimumUpdate =
+          Number(standards[0].so3Min) === 0 &&
+          Number(standards[0].so3Max) === 1000;
         await db
           .update(qcWaterStandardsTable)
-          .set({ isDefault: true })
+          .set({
+            isDefault: true,
+            ...(needsSulfateMinimumUpdate ? { so3Min: "400" } : {}),
+          })
           .where(eq(qcWaterStandardsTable.id, standards[0].id));
+        await refreshRecordEvaluations(["Water"]);
         return;
       }
       await db.insert(qcWaterStandardsTable).values({
@@ -882,7 +902,7 @@ async function ensureDefaultWaterStandard() {
         chlorideMax: "350",
         tdsMin: "0",
         tdsMax: "2000",
-        so3Min: "0",
+        so3Min: "400",
         so3Max: "1000",
         isDefault: true,
       });
@@ -2960,6 +2980,9 @@ router.get("/records", async (req, res): Promise<void> => {
     return;
   }
   await ensureDefaultStrengthStandards();
+  if (!parsed.data.testType || parsed.data.testType === "Water") {
+    await ensureDefaultWaterStandard();
+  }
 
   const filters = [];
   if (parsed.data.testType) {

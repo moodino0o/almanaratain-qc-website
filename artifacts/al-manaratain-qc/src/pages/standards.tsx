@@ -160,7 +160,7 @@ const emptyWaterForm: WaterLimitForm = {
   chlorideMax: "350",
   tdsMin: "0",
   tdsMax: "2000",
-  so3Min: "0",
+  so3Min: "400",
   so3Max: "1000",
 };
 
