@@ -331,6 +331,22 @@
   min-width: 960px;
 }
 
+.water-register-table-container {
+  overflow-x: hidden;
+}
+
+.qc-register-table.qc-water-register-table {
+  width: 100%;
+  min-width: 0;
+}
+
+.qc-table-readable.qc-water-register-table thead th,
+.qc-table-readable.qc-water-register-table tbody td {
+  overflow-wrap: anywhere;
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+}
+
 .precast-register-table-container {
   overflow-x: hidden;
 }

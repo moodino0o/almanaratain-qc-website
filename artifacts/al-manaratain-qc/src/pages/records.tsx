@@ -64,6 +64,14 @@ function kerbStrengthValue(
   return detailValue(record, legacyKeys);
 }
 
+function formatWaterMeasurement(value: string) {
+  const trimmed = value.trim();
+  const numericValue = Number(trimmed);
+  return trimmed && Number.isFinite(numericValue)
+    ? numericValue.toFixed(2)
+    : value;
+}
+
 function strengthEvaluationReason(record: QcRecord) {
   const details = record.details as Record<string, unknown>;
   const evaluation = typeof details.strengthEvaluation === "object" &&
@@ -378,22 +386,22 @@ export default function Records() {
         </CardHeader>
         <CardContent className="p-0 md:flex-1 md:overflow-auto">
           {isWaterSection ? (
-            <div className="qc-register-table-container w-full min-w-0">
-              <Table className="qc-register-table qc-table-readable min-w-[1220px] w-full table-fixed text-[10px]">
+            <div className="qc-register-table-container water-register-table-container w-full min-w-0">
+              <Table className="qc-register-table qc-water-register-table qc-table-readable w-full table-fixed text-[10px]">
                 <TableHeader className="sticky top-0 z-10 bg-card shadow-sm">
                   <TableRow>
                     <TableHead className="w-[7%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">Serial<br />No.</TableHead>
                     <TableHead className="w-[9%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">Sampling<br />Date</TableHead>
                     <TableHead className="w-[9%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">Testing<br />Date</TableHead>
-                    <TableHead className="w-[12%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">Tested By</TableHead>
-                    <TableHead className="w-[8%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">Factory</TableHead>
+                    <TableHead className="w-[11%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">Tested By</TableHead>
+                    <TableHead className="w-[7%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">Factory</TableHead>
                     <TableHead className="w-[5%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">pH</TableHead>
                     <TableHead className="w-[7%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">TDS<br />(ppm)</TableHead>
                     <TableHead className="w-[9%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">Chloride<br />content</TableHead>
                     <TableHead className="w-[9%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">Sulphate<br />Content</TableHead>
                     <TableHead className="w-[10%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">Remark</TableHead>
                     <TableHead className="w-[7%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">Pass / Fail</TableHead>
-                    <TableHead className="w-[8%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">Actions</TableHead>
+                    <TableHead className="w-[10%] whitespace-normal break-words px-2 py-2 text-[10px] leading-tight">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -408,10 +416,10 @@ export default function Records() {
                       <TableCell className="whitespace-normal break-words px-2 py-2 tabular-nums">{formatRegisterDate(getRecordDetail(record.details, ["testingDate"], ""))}</TableCell>
                       <TableCell className="whitespace-normal break-words px-2 py-2">{record.testedBy || "—"}</TableCell>
                       <TableCell className="whitespace-normal break-words px-2 py-2">{getRecordDetail(record.details, ["factory"], record.location || "—")}</TableCell>
-                      <TableCell className="whitespace-normal break-words px-2 py-2 tabular-nums">{getRecordDetail(record.details, ["ph"])}</TableCell>
-                      <TableCell className="whitespace-normal break-words px-2 py-2 tabular-nums">{getRecordDetail(record.details, ["tds"])}</TableCell>
-                      <TableCell className="whitespace-normal break-words px-2 py-2 tabular-nums">{getRecordDetail(record.details, ["chloride", "chlorideContent"])}</TableCell>
-                      <TableCell className="whitespace-normal break-words px-2 py-2 tabular-nums">{getRecordDetail(record.details, ["sulphate", "sulfate", "sulphateContent"])}</TableCell>
+                      <TableCell className="whitespace-normal break-words px-2 py-2 tabular-nums">{formatWaterMeasurement(getRecordDetail(record.details, ["ph"]))}</TableCell>
+                      <TableCell className="whitespace-normal break-words px-2 py-2 tabular-nums">{formatWaterMeasurement(getRecordDetail(record.details, ["tds"]))}</TableCell>
+                      <TableCell className="whitespace-normal break-words px-2 py-2 tabular-nums">{formatWaterMeasurement(getRecordDetail(record.details, ["chloride", "chlorideContent"]))}</TableCell>
+                      <TableCell className="whitespace-normal break-words px-2 py-2 tabular-nums">{formatWaterMeasurement(getRecordDetail(record.details, ["sulphate", "sulfate", "sulphateContent"]))}</TableCell>
                       <TableCell className="whitespace-normal break-words px-2 py-2">{record.remarks?.trim() || "—"}</TableCell>
                       <TableCell className="px-2 py-2">{getWaterResultBadge(record.status)}</TableCell>
                       <TableCell className="px-2 py-2 text-right">
