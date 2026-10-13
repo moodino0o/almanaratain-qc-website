@@ -470,8 +470,8 @@ export default function Records() {
                       <TableCell className="px-1 py-1.5 text-center" title={strengthEvaluationReason(record)}>{getWaterResultBadge(record.status)}</TableCell>
                       <TableCell className="px-1 py-1.5">
                         <div className="flex flex-wrap justify-center gap-0.5">
-                          <Link href={`/records/${record.id}`} className="inline-flex h-5 items-center justify-center rounded-md bg-secondary px-1 text-[8px] font-medium text-secondary-foreground">View</Link>
-                          <Link href={`/reports/${record.id}`} className="inline-flex h-5 items-center justify-center whitespace-nowrap rounded-md border px-1 text-[8px] font-medium">
+                          <Link href={`/records/${record.id}`} className="inline-flex h-5 items-center justify-center rounded-md bg-secondary px-1 text-[9px] font-medium text-secondary-foreground">View</Link>
+                          <Link href={`/reports/${record.id}`} className="inline-flex h-5 items-center justify-center whitespace-nowrap rounded-md border px-1 text-[9px] font-medium">
                             <Printer className="mr-0.5 h-2.5 w-2.5 shrink-0" />
                             Print
                           </Link>
@@ -511,8 +511,8 @@ export default function Records() {
                       <TableCell className="px-1 py-1.5 text-center" title={strengthEvaluationReason(record)}>{getWaterResultBadge(record.status)}</TableCell>
                       <TableCell className="px-1 py-1.5">
                         <div className="flex flex-wrap justify-center gap-0.5">
-                          <Link href={`/records/${record.id}`} className="inline-flex h-5 items-center justify-center rounded-md bg-secondary px-1 text-[8px] font-medium text-secondary-foreground">View</Link>
-                          <Link href={`/reports/${record.id}`} className="inline-flex h-5 items-center justify-center whitespace-nowrap rounded-md border px-1 text-[8px] font-medium">
+                          <Link href={`/records/${record.id}`} className="inline-flex h-5 items-center justify-center rounded-md bg-secondary px-1 text-[9px] font-medium text-secondary-foreground">View</Link>
+                          <Link href={`/reports/${record.id}`} className="inline-flex h-5 items-center justify-center whitespace-nowrap rounded-md border px-1 text-[9px] font-medium">
                             <Printer className="mr-0.5 h-2.5 w-2.5 shrink-0" />
                             Print
                           </Link>

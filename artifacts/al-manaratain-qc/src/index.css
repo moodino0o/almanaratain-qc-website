@@ -348,12 +348,12 @@
 }
 
 .qc-table-readable.qc-precast-register-table thead th {
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.15;
 }
 
 .qc-table-readable.qc-precast-register-table tbody td {
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.25;
 }
 
@@ -374,12 +374,12 @@
 }
 
 .qc-table-readable.qc-kerbstone-register-table thead th {
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.15;
 }
 
 .qc-table-readable.qc-kerbstone-register-table tbody td {
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.25;
 }
 
