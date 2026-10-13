@@ -429,12 +429,26 @@ export default function Records() {
               </Table>
             </div>
           ) : isPrecastSection ? (
-            <div className="qc-register-table-container w-full min-w-0">
-              <Table className="qc-register-table qc-table-readable w-full table-fixed text-[9px]">
+            <div className="qc-register-table-container precast-register-table-container w-full min-w-0">
+              <Table className="qc-register-table qc-precast-register-table qc-table-readable w-full table-fixed">
                 <TableHeader className="sticky top-0 z-10 bg-card shadow-sm">
                   <TableRow>
-                    {["Record No.", "Sample No.", "Customer Name", "Product Type", "Casting Date", "Avg. Strength (1 day)", "Avg. Strength (7 days)", "Avg. Strength (28 days)", "Status", "Actions"].map((label) => (
-                      <TableHead key={label} className="whitespace-normal break-words px-1.5 py-1.5 text-[9px] leading-tight">{label}</TableHead>
+                    {[
+                      { label: "Record No." },
+                      { label: "Sample No." },
+                      { label: "Customer Name" },
+                      { label: "Product Type" },
+                      { label: "Casting Date" },
+                      { label: "Avg. Strength", age: "(1 day)" },
+                      { label: "Avg. Strength", age: "(7 days)" },
+                      { label: "Avg. Strength", age: "(28 days)" },
+                      { label: "Status" },
+                      { label: "Actions" },
+                    ].map(({ label, age }, index) => (
+                      <TableHead key={`${label}-${age ?? index}`} className="whitespace-normal break-words px-1 py-1.5 leading-tight">
+                        {label}
+                        {age && <><br /><span className="whitespace-nowrap">{age}</span></>}
+                      </TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
@@ -445,22 +459,22 @@ export default function Records() {
                     <TableRow><TableCell colSpan={10} className="h-32 text-center text-muted-foreground">No Precast records found.</TableCell></TableRow>
                   ) : sectionRecords.map((record) => (
                     <TableRow key={record.id}>
-                      <TableCell className="break-words px-1.5 py-1.5 font-semibold text-primary">{record.recordNo}</TableCell>
-                      <TableCell className="break-words px-1.5 py-1.5">{detailValue(record, ["sampleNo"])}</TableCell>
-                      <TableCell className="break-words px-1.5 py-1.5">{detailValue(record, ["customerName", "customer"])}</TableCell>
-                      <TableCell className="break-words px-1.5 py-1.5">{record.material}</TableCell>
-                      <TableCell className="break-words px-1.5 py-1.5 tabular-nums">{formatRegisterDate(record.sampleDate)}</TableCell>
-                      <TableCell className="px-1.5 py-1.5 text-right tabular-nums">{precastAverageStrength(record, 1, ["averageStrength1Day", "avgStrength1Day", "day1AverageStrength"])}</TableCell>
-                      <TableCell className="px-1.5 py-1.5 text-right tabular-nums">{precastAverageStrength(record, 7, ["averageStrength7Days", "avgStrength7Days", "day7AverageStrength"])}</TableCell>
-                      <TableCell className="px-1.5 py-1.5 text-right tabular-nums">{precastAverageStrength(record, 28, ["averageStrength28Days", "avgStrength28Days", "day28AverageStrength"])}</TableCell>
-                      <TableCell className="px-1.5 py-1.5 text-center" title={strengthEvaluationReason(record)}>{getWaterResultBadge(record.status)}</TableCell>
-                      <TableCell className="px-1.5 py-1.5 text-right">
-                         <div className="flex justify-center gap-1">
-                           <Link href={`/records/${record.id}`} className="inline-flex h-5 items-center rounded-md bg-secondary px-1 text-[9px] font-medium text-secondary-foreground sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs">View</Link>
-                            <Link href={`/reports/${record.id}`} className="inline-flex h-5 items-center rounded-md border px-1 text-[9px] font-medium sm:h-6 sm:px-1.5 sm:text-[10px] md:h-7 md:px-2 md:text-xs">
-                              <Printer className="mr-0.5 h-2.5 w-2.5 shrink-0 sm:mr-1 sm:h-3 sm:w-3" />
-                              Print
-                            </Link>
+                      <TableCell className="break-words px-1 py-1.5 font-semibold text-primary">{record.recordNo}</TableCell>
+                      <TableCell className="break-words px-1 py-1.5">{detailValue(record, ["sampleNo"])}</TableCell>
+                      <TableCell className="break-words px-1 py-1.5">{detailValue(record, ["customerName", "customer"])}</TableCell>
+                      <TableCell className="break-words px-1 py-1.5">{record.material}</TableCell>
+                      <TableCell className="break-words px-1 py-1.5 tabular-nums">{formatRegisterDate(record.sampleDate)}</TableCell>
+                      <TableCell className="px-1 py-1.5 text-right tabular-nums">{precastAverageStrength(record, 1, ["averageStrength1Day", "avgStrength1Day", "day1AverageStrength"])}</TableCell>
+                      <TableCell className="px-1 py-1.5 text-right tabular-nums">{precastAverageStrength(record, 7, ["averageStrength7Days", "avgStrength7Days", "day7AverageStrength"])}</TableCell>
+                      <TableCell className="px-1 py-1.5 text-right tabular-nums">{precastAverageStrength(record, 28, ["averageStrength28Days", "avgStrength28Days", "day28AverageStrength"])}</TableCell>
+                      <TableCell className="px-1 py-1.5 text-center" title={strengthEvaluationReason(record)}>{getWaterResultBadge(record.status)}</TableCell>
+                      <TableCell className="px-1 py-1.5">
+                        <div className="flex flex-wrap justify-center gap-0.5">
+                          <Link href={`/records/${record.id}`} className="inline-flex h-5 items-center justify-center rounded-md bg-secondary px-1 text-[8px] font-medium text-secondary-foreground">View</Link>
+                          <Link href={`/reports/${record.id}`} className="inline-flex h-5 items-center justify-center whitespace-nowrap rounded-md border px-1 text-[8px] font-medium">
+                            <Printer className="mr-0.5 h-2.5 w-2.5 shrink-0" />
+                            Print
+                          </Link>
                         </div>
                       </TableCell>
                     </TableRow>
