@@ -155,8 +155,6 @@ const addDaysToDate = (date: string, days: number) => {
 };
 
 const REFERENCE_SEED = [
-  { key: "factories", label: "Factories", values: ["HAFFERA", "HIDD", "AKER", "KHAMIS"] },
-  { key: "plants", label: "Plants", values: ["COLUMBIA", "MASA", "HENKI I", "HENKI II", "LIEBHERR"] },
   {
     key: "machines",
     label: "Masonry Machines",
