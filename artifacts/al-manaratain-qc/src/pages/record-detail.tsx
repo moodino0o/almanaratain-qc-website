@@ -716,6 +716,15 @@ function detailText(details: Record<string, unknown>, key: string, fallback = "â
   return value === undefined || value === null || value === "" ? fallback : String(value);
 }
 
+function chlorideContentText(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return value.toFixed(2);
+  if (typeof value === "string" && value.trim() !== "") {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric.toFixed(2) : value;
+  }
+  return "â€”";
+}
+
 function SieveEvaluation({ value }: { value: unknown }) {
   if (typeof value !== "object" || value === null) {
     return <span className="text-muted-foreground">No automatic sieve evaluation has been recorded.</span>;
@@ -1514,7 +1523,7 @@ export default function RecordDetail() {
             ...(recordDetails.chloride !== undefined &&
               recordDetails.chloride !== null &&
               recordDetails.chloride !== ""
-              ? [["Legacy Chloride Content (ppm)", detailText(recordDetails, "chloride")] as const]
+              ? [["Chloride Content (ppm)", chlorideContentText(recordDetails.chloride)] as const]
               : []),
           ]}
         />
