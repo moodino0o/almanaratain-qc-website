@@ -2073,10 +2073,16 @@ export default function RecordForm() {
                   <div className="space-y-2">
                     <Label>Cube Size</Label>
                     <Input
+                      type="text"
                       value={String(details.cubeSize ?? DEFAULT_PRECAST_CUBE_SIZE)}
                       onChange={(event) => handleDetailChange("cubeSize", event.target.value)}
                       placeholder="100*100*100"
+                      data-enter-skip="true"
+                      aria-describedby="precast-cube-size-help"
                     />
+                    <p id="precast-cube-size-help" className="text-xs text-muted-foreground">
+                      Default: 100*100*100. Press Enter to skip this field, or edit it manually.
+                    </p>
                   </div>
                 </>
               )}
