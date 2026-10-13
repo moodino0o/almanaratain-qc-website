@@ -14,6 +14,7 @@ import {
   calculateReadyMixAgeBandAverages,
   filterRecordsByDashboardStatus,
   parseDashboardRegisterFilters,
+  registerTestingDate,
   type ReadyMixAgeBandAverages,
 } from "./records-utils";
 import { averageCubeStrengthAtAge } from "./record-form-utils";
@@ -96,41 +97,6 @@ function formatRegisterDate(value: string | null | undefined) {
   }).format(date);
 }
 
-function masonryTestingDate(record: QcRecord) {
-  const details = record.details as Record<string, unknown>;
-  const ageKey = record.testType === TestType.Blocks || record.testType === TestType.Paving_Blocks
-    ? "blockAge"
-    : "sampleAge";
-  const directAgeText = String(details[ageKey] ?? "").trim();
-  const directAge = directAgeText ? Number(directAgeText) : Number.NaN;
-  const rows = Array.isArray(details.testRows) ? details.testRows : [];
-  const legacyRowAge = rows
-    .map((row) => (
-      typeof row === "object" && row !== null
-        ? String((row as Record<string, unknown>).sampleAge ?? "").trim()
-        : Number.NaN
-    ))
-    .map((value) => typeof value === "string" && value ? Number(value) : Number.NaN)
-    .find((value) => Number.isSafeInteger(value) && value >= 0);
-  const age = Number.isSafeInteger(directAge) && directAge >= 0 ? directAge : legacyRowAge;
-  if (age !== undefined && Number.isSafeInteger(age) && age >= 0) {
-    const sampleDay = record.sampleDate.slice(0, 10);
-    const date = new Date(`${sampleDay}T00:00:00.000Z`);
-    if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== sampleDay) {
-      return typeof details.testingDate === "string" && details.testingDate
-        ? details.testingDate
-        : record.sampleDate;
-    }
-    if (!Number.isNaN(date.getTime())) {
-      date.setUTCDate(date.getUTCDate() + age);
-      return date.toISOString();
-    }
-  }
-  return typeof details.testingDate === "string" && details.testingDate
-    ? details.testingDate
-    : record.sampleDate;
-}
-
 function masonryBlockAge(record: QcRecord) {
   const details = record.details as Record<string, unknown>;
   const directAgeText = String(details.blockAge ?? "").trim();
@@ -149,7 +115,7 @@ function masonryBlockAge(record: QcRecord) {
   if (legacyRowAge !== undefined) return String(legacyRowAge);
 
   const sampleDay = record.sampleDate.slice(0, 10);
-  const testingDay = masonryTestingDate(record).slice(0, 10);
+  const testingDay = registerTestingDate(record).slice(0, 10);
   const sampleTime = Date.parse(`${sampleDay}T00:00:00.000Z`);
   const testingTime = Date.parse(`${testingDay}T00:00:00.000Z`);
   if (
@@ -516,7 +482,7 @@ export default function Records() {
                     <TableRow key={record.id}>
                       <TableCell className="break-words px-2 py-2 font-semibold text-primary">{record.recordNo}</TableCell>
                       <TableCell className="break-words px-2 py-2 tabular-nums">{formatRegisterDate(record.sampleDate)}</TableCell>
-                      <TableCell className="break-words px-2 py-2 tabular-nums">{formatRegisterDate(detailValue(record, ["testingDate"], ""))}</TableCell>
+                      <TableCell className="break-words px-2 py-2 tabular-nums">{formatRegisterDate(registerTestingDate(record))}</TableCell>
                       <TableCell className="px-2 py-2 text-center tabular-nums">{derivedAge(record)}</TableCell>
                       <TableCell className="break-words px-2 py-2">{detailValue(record, ["kerbType", "productType"], record.material || "—")}</TableCell>
                       <TableCell className="break-words px-2 py-2">{detailValue(record, ["factory"], record.location || "—")}</TableCell>
@@ -683,7 +649,7 @@ export default function Records() {
                           {formatRegisterDate(record.sampleDate)}
                         </TableCell>
                         <TableCell className="whitespace-normal break-words px-1 py-1 tabular-nums">
-                          {formatRegisterDate(masonryTestingDate(record))}
+                          {formatRegisterDate(registerTestingDate(record))}
                         </TableCell>
                         <TableCell className="whitespace-normal break-words px-1 py-1 text-center tabular-nums">
                           {masonryBlockAge(record)}

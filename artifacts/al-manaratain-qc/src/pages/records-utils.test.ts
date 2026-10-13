@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { RecordStatus } from "@workspace/api-client-react";
+import { RecordStatus, TestType } from "@workspace/api-client-react";
 import {
   calculateReadyMixAgeBandAverages,
   dashboardStatusRegisterUrl,
   filterRecordsByDashboardStatus,
   parseDashboardRegisterFilters,
+  registerTestingDate,
 } from "./records-utils";
 
 test("builds QC register links for the selected month and status", () => {
@@ -87,5 +88,16 @@ test("returns null for Ready Mix age bands without recorded strengths", () => {
       sixToEightDays: null,
       twentyEightToTwentyNineDays: null,
     },
+  );
+});
+
+test("derives Kerbstone register testing date from casting date and age", () => {
+  assert.equal(
+    registerTestingDate({
+      testType: TestType.Kerb_Stone,
+      sampleDate: "2026-09-01T00:00:00.000Z",
+      details: { age: "28" },
+    }),
+    "2026-09-29T00:00:00.000Z",
   );
 });

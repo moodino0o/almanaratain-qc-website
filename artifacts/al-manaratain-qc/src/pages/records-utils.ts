@@ -1,4 +1,4 @@
-import { RecordStatus, type QcRecord } from "@workspace/api-client-react";
+import { RecordStatus, TestType, type QcRecord } from "@workspace/api-client-react";
 
 export type ReadyMixAgeBandAverages = {
   twoToFiveDays: number | null;
@@ -44,6 +44,41 @@ export function filterRecordsByDashboardStatus<T extends Pick<QcRecord, "sampleD
     (!filters.month || record.sampleDate.slice(0, 7) === filters.month) &&
     (!filters.status || record.status === filters.status),
   );
+}
+
+export function registerTestingDate(
+  record: Pick<QcRecord, "testType" | "sampleDate" | "details">,
+) {
+  const details = record.details as Record<string, unknown>;
+  const ageKey =
+    record.testType === TestType.Blocks || record.testType === TestType.Paving_Blocks
+      ? "blockAge"
+      : record.testType === TestType.Kerb_Stone
+        ? "age"
+        : "sampleAge";
+  const directAgeText = String(details[ageKey] ?? "").trim();
+  const directAge = directAgeText ? Number(directAgeText) : Number.NaN;
+  const rows = Array.isArray(details.testRows) ? details.testRows : [];
+  const legacyRowAge = rows
+    .map((row) => (
+      typeof row === "object" && row !== null
+        ? String((row as Record<string, unknown>).sampleAge ?? "").trim()
+        : ""
+    ))
+    .map((value) => value ? Number(value) : Number.NaN)
+    .find((value) => Number.isSafeInteger(value) && value >= 0);
+  const age = Number.isSafeInteger(directAge) && directAge >= 0 ? directAge : legacyRowAge;
+  const sampleDay = record.sampleDate.slice(0, 10);
+  if (age !== undefined && Number.isSafeInteger(age) && age >= 0) {
+    const date = new Date(`${sampleDay}T00:00:00.000Z`);
+    if (!Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === sampleDay) {
+      date.setUTCDate(date.getUTCDate() + age);
+      return date.toISOString();
+    }
+  }
+  return typeof details.testingDate === "string" && details.testingDate
+    ? details.testingDate
+    : record.sampleDate;
 }
 
 const numericValue = (value: unknown) => {
