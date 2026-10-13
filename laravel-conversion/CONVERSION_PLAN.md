@@ -13,7 +13,7 @@
 
 The source is a React/Vite SPA backed by an Express 5 JSON API and PostgreSQL through Drizzle. The conversion will retain the React UI and its URLs, build it independently inside this directory, and replace the Express API with Laravel routes/controllers/services. The first-party React workspace imports must be copied or replaced with local code before the new frontend can build outside the pnpm monorepo.
 
-The destination is a standalone Laravel 12 application requiring PHP 8.2 or later. PHP and Composer are not installed in the current Replit environment, so local PHP execution and PHPUnit verification are unavailable until the source is opened in a compatible environment.
+The destination is a standalone Laravel 12 application requiring PHP 8.2 or later. The QC conversion has been verified with the Laravel test suite; deployment against a separate PostgreSQL database still needs integration verification.
 
 ## Implementation phases
 
@@ -27,4 +27,4 @@ The destination is a standalone Laravel 12 application requiring PHP 8.2 or late
 
 ## Current state
 
-The standalone Laravel project foundation, `/api/healthz`, and an initial database slice for QC records, reference categories/items, complaints, and the employee directory are present. Matching Eloquent models are included. The remaining schemas, original pages, business APIs, authentication, and object-storage operations have not yet been ported. Do not treat this conversion as production-ready or complete.
+The standalone Laravel project includes the foundation and `/api/healthz`, plus QC database models/migrations, reference/standards/records/dashboard/backfill/report APIs, and calculation tests. Employee sign-in/access, complaints, archive/object storage, and the React pages remain to be ported. Do not treat this conversion as production-ready or complete until those assigned phases and a separate-database integration verification are finished.
