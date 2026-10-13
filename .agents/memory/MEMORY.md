@@ -19,6 +19,7 @@
 - [QC register typography](qc-register-typography.md) — verify effective CSS for per-column sizes; shared readable-table rules can override utility classes.
 - [Precast workflow and criteria](precast-workflow-differences.md) — match standards per product and age; use fallbacks only for missing pairs and never auto-create sibling-age rows.
 - [Eastern plant location aliases](plant-location-aliases.md) — group EASTERN Hidd, EASTERN Aker, and EASTERN system under canonical EASTERN while retaining record labels.
+- [QC location settings](qc-location-settings.md) — keep Ready Mix options ELBA/EASTERN separate from the shared non-Ready-Mix plant list.
 - [Paving correction factors](paving-correction-factors.md) — use the reference tensile formula, apply size factors, and evaluate the average against the matching standard.
 - [Employee activity audit](employee-activity-audit.md) — never expose session bearer IDs; distinguish explicit sign-out from expiry and last confirmed activity.
 - [Dashboard month status](dashboard-month-status.md) — QC Test Status groups records by sample/test date for the selected calendar month.
