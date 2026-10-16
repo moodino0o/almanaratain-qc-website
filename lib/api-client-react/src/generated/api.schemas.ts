@@ -21,6 +21,8 @@ export const TestType = {
   Water: 'Water',
   'Flakiness_&_Elongation': 'Flakiness & Elongation',
   RMX_Trial: 'RMX Trial',
+  Precast: 'Precast',
+  Kerb_Stone: 'Kerb Stone',
 } as const;
 
 export type RecordStatus = typeof RecordStatus[keyof typeof RecordStatus];
@@ -30,6 +32,7 @@ export const RecordStatus = {
   Passed: 'Passed',
   Review: 'Review',
   Failed: 'Failed',
+  Waiting_for_results: 'Waiting for results',
 } as const;
 
 export type QcRecordDetails = { [key: string]: unknown };
@@ -43,6 +46,8 @@ export interface QcRecord {
   material: string;
   status: RecordStatus;
   testedBy: string;
+  /** @nullable */
+  createdBy?: string | null;
   /** @nullable */
   reviewedBy?: string | null;
   /** @nullable */
@@ -86,6 +91,45 @@ export interface QcRecordUpdate {
   details?: QcRecordUpdateDetails;
 }
 
+export interface RecordAgeBackfillPreviewInput { [key: string]: unknown }
+
+export interface RecordAgeBackfillCandidate {
+  id: number;
+  recordNo: string;
+  testType: TestType;
+  sampleDate: string;
+  testingDate: string;
+  /** @minimum 0 */
+  age: number;
+}
+
+export interface RecordAgeBackfillIssue {
+  id: number;
+  recordNo: string;
+  testType: TestType;
+  /** @nullable */
+  sampleDate: string | null;
+  /** @nullable */
+  testingDate: string | null;
+  reason: string;
+}
+
+export interface RecordAgeBackfillPreview {
+  eligible: RecordAgeBackfillCandidate[];
+  manualReview: RecordAgeBackfillIssue[];
+}
+
+export interface RecordAgeBackfillApplyInput {
+  /** @minItems 1 */
+  candidates: RecordAgeBackfillCandidate[];
+}
+
+export interface RecordAgeBackfillApplyResult {
+  /** @minimum 0 */
+  applied: number;
+  skipped: RecordAgeBackfillIssue[];
+}
+
 export interface ComplaintPicture {
   /** @minLength 1 */
   objectPath: string;
@@ -115,6 +159,8 @@ export interface Complaint {
   details: string;
   solution: string;
   recommendation: string;
+  qcReviewerName: string | null;
+  reviewDate: string | null;
   status: ComplaintStatus;
   picturePaths: ComplaintPicture[];
   createdAt: string;
@@ -133,6 +179,8 @@ export interface ComplaintInput {
   details: string;
   solution?: string;
   recommendation?: string;
+  qcReviewerName?: string | null;
+  reviewDate?: string | null;
   picturePaths?: ComplaintPicture[];
 }
 
@@ -156,6 +204,8 @@ export interface ComplaintUpdate {
   details?: string;
   solution?: string;
   recommendation?: string;
+  qcReviewerName?: string | null;
+  reviewDate?: string | null;
   status?: ComplaintUpdateStatus;
   picturePaths?: ComplaintPicture[];
 }
@@ -171,6 +221,9 @@ export interface Dashboard {
   reviewRecords: number;
   failedRecords: number;
   recordsThisMonth: number;
+  passedRecordsThisMonth: number;
+  reviewRecordsThisMonth: number;
+  failedRecordsThisMonth: number;
   totalComplaints: number;
   solvedComplaints: number;
   openComplaints: number;
@@ -277,10 +330,36 @@ export interface StrengthStandard {
   blockType: string | null;
   /** @nullable */
   blockSize: string | null;
+  /** @nullable */
+  cubeAge: number | null;
+  /** @nullable */
+  kerbClass: number | null;
+  /** @nullable */
+  kerbMarking: string | null;
   bsStandard: string;
   requiredStrength: number;
+  /** @nullable */
+  minimumIndividualStrength: number | null;
+  /** @nullable */
+  waterAbsorptionLimit: number | null;
+  /** @nullable */
+  dammamAverageStrength: number | null;
+  /** @nullable */
+  dammamMinimumStrength: number | null;
   strengthUnit: string;
 }
+
+/**
+ * @nullable
+ */
+export type StrengthStandardInputCubeAge = typeof StrengthStandardInputCubeAge[keyof typeof StrengthStandardInputCubeAge] | null;
+
+
+export const StrengthStandardInputCubeAge = {
+  NUMBER_1: 1,
+  NUMBER_7: 7,
+  NUMBER_28: 28,
+} as const;
 
 export interface StrengthStandardInput {
   testType: TestType;
@@ -290,12 +369,53 @@ export interface StrengthStandardInput {
   blockType?: string | null;
   /** @nullable */
   blockSize?: string | null;
+  /** @nullable */
+  cubeAge?: StrengthStandardInputCubeAge;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  kerbClass?: number | null;
+  /** @nullable */
+  kerbMarking?: string | null;
   /** @minLength 1 */
   bsStandard: string;
   /** @minimum 0 */
   requiredStrength: number;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  minimumIndividualStrength?: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  waterAbsorptionLimit?: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  dammamAverageStrength?: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  dammamMinimumStrength?: number | null;
   strengthUnit?: string;
 }
+
+/**
+ * @nullable
+ */
+export type StrengthStandardUpdateCubeAge = typeof StrengthStandardUpdateCubeAge[keyof typeof StrengthStandardUpdateCubeAge] | null;
+
+
+export const StrengthStandardUpdateCubeAge = {
+  NUMBER_1: 1,
+  NUMBER_7: 7,
+  NUMBER_28: 28,
+} as const;
 
 export interface StrengthStandardUpdate {
   testType?: TestType;
@@ -305,11 +425,96 @@ export interface StrengthStandardUpdate {
   blockType?: string | null;
   /** @nullable */
   blockSize?: string | null;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  kerbClass?: number | null;
+  /** @nullable */
+  kerbMarking?: string | null;
+  /** @nullable */
+  cubeAge?: StrengthStandardUpdateCubeAge;
   /** @minLength 1 */
   bsStandard?: string;
   /** @minimum 0 */
   requiredStrength?: number;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  minimumIndividualStrength?: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  waterAbsorptionLimit?: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  dammamAverageStrength?: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  dammamMinimumStrength?: number | null;
   strengthUnit?: string;
+}
+
+export interface WaterStandard {
+  id: number;
+  name: string;
+  phMin: number;
+  phMax: number;
+  chlorideMin: number;
+  chlorideMax: number;
+  tdsMin: number;
+  tdsMax: number;
+  so3Min: number;
+  so3Max: number;
+  isDefault: boolean;
+}
+
+export interface WaterStandardInput {
+  /** @minLength 1 */
+  name: string;
+  /** @minimum 0 */
+  phMin: number;
+  /** @minimum 0 */
+  phMax: number;
+  /** @minimum 0 */
+  chlorideMin: number;
+  /** @minimum 0 */
+  chlorideMax: number;
+  /** @minimum 0 */
+  tdsMin: number;
+  /** @minimum 0 */
+  tdsMax: number;
+  /** @minimum 0 */
+  so3Min: number;
+  /** @minimum 0 */
+  so3Max: number;
+}
+
+export interface WaterStandardUpdate {
+  /** @minLength 1 */
+  name?: string;
+  /** @minimum 0 */
+  phMin?: number;
+  /** @minimum 0 */
+  phMax?: number;
+  /** @minimum 0 */
+  chlorideMin?: number;
+  /** @minimum 0 */
+  chlorideMax?: number;
+  /** @minimum 0 */
+  tdsMin?: number;
+  /** @minimum 0 */
+  tdsMax?: number;
+  /** @minimum 0 */
+  so3Min?: number;
+  /** @minimum 0 */
+  so3Max?: number;
 }
 
 export type SieveStandardMeasurementType = typeof SieveStandardMeasurementType[keyof typeof SieveStandardMeasurementType];
@@ -577,6 +782,7 @@ export type UploadUrlRequestPurpose = typeof UploadUrlRequestPurpose[keyof typeo
 export const UploadUrlRequestPurpose = {
   complaint: 'complaint',
   archive: 'archive',
+  'report-template': 'report-template',
 } as const;
 
 export interface UploadUrlRequest {
@@ -673,6 +879,26 @@ export const ReportLayoutConfigFontFamily = {
   Helvetica: 'Helvetica',
 } as const;
 
+export type ReportLayoutSectionFontFamily = typeof ReportLayoutSectionFontFamily[keyof typeof ReportLayoutSectionFontFamily];
+
+
+export const ReportLayoutSectionFontFamily = {
+  Arial: 'Arial',
+  Calibri: 'Calibri',
+  Times_New_Roman: 'Times New Roman',
+  Helvetica: 'Helvetica',
+} as const;
+
+export type ReportLayoutSectionBorderStyle = typeof ReportLayoutSectionBorderStyle[keyof typeof ReportLayoutSectionBorderStyle];
+
+
+export const ReportLayoutSectionBorderStyle = {
+  none: 'none',
+  solid: 'solid',
+  dashed: 'dashed',
+  dotted: 'dotted',
+} as const;
+
 export interface ReportLayoutSection {
   /** @minLength 1 */
   key: string;
@@ -681,6 +907,25 @@ export interface ReportLayoutSection {
   visible: boolean;
   /** @minimum 0 */
   order: number;
+  fontFamily?: ReportLayoutSectionFontFamily;
+  /**
+     * @minimum 8
+     * @maximum 24
+     */
+  fontSize?: number;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  textColor?: string;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  backgroundColor?: string;
+  bold?: boolean;
+  borderStyle?: ReportLayoutSectionBorderStyle;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  borderColor?: string;
+  /**
+     * @minimum 0
+     * @maximum 4
+     */
+  borderWidth?: number;
 }
 
 export interface ReportLayoutColumn {
@@ -696,6 +941,75 @@ export interface ReportLayoutColumn {
      * @maximum 100
      */
   width: number;
+}
+
+export type ReportLayoutElementType = typeof ReportLayoutElementType[keyof typeof ReportLayoutElementType];
+
+
+export const ReportLayoutElementType = {
+  text: 'text',
+  divider: 'divider',
+} as const;
+
+export type ReportLayoutElementPlacement = typeof ReportLayoutElementPlacement[keyof typeof ReportLayoutElementPlacement];
+
+
+export const ReportLayoutElementPlacement = {
+  before: 'before',
+  after: 'after',
+} as const;
+
+export type ReportLayoutElementFontFamily = typeof ReportLayoutElementFontFamily[keyof typeof ReportLayoutElementFontFamily];
+
+
+export const ReportLayoutElementFontFamily = {
+  Arial: 'Arial',
+  Calibri: 'Calibri',
+  Times_New_Roman: 'Times New Roman',
+  Helvetica: 'Helvetica',
+} as const;
+
+export type ReportLayoutElementLineStyle = typeof ReportLayoutElementLineStyle[keyof typeof ReportLayoutElementLineStyle];
+
+
+export const ReportLayoutElementLineStyle = {
+  solid: 'solid',
+  dashed: 'dashed',
+  dotted: 'dotted',
+} as const;
+
+export interface ReportLayoutElement {
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  key: string;
+  type: ReportLayoutElementType;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  sectionKey: string;
+  placement: ReportLayoutElementPlacement;
+  /** @minimum 0 */
+  order: number;
+  /** @maxLength 500 */
+  content?: string;
+  fontFamily?: ReportLayoutElementFontFamily;
+  /**
+     * @minimum 8
+     * @maximum 24
+     */
+  fontSize?: number;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  color?: string;
+  bold?: boolean;
+  /**
+     * @minimum 10
+     * @maximum 100
+     */
+  width?: number;
+  lineStyle?: ReportLayoutElementLineStyle;
 }
 
 export type ReportLayoutConfigColumns = {[key: string]: ReportLayoutColumn[]};
@@ -720,6 +1034,8 @@ export interface ReportLayoutConfig {
   paperPadding: number;
   sections: ReportLayoutSection[];
   columns: ReportLayoutConfigColumns;
+  /** @maxItems 40 */
+  elements?: ReportLayoutElement[];
 }
 
 export interface ReportLayout {
@@ -742,6 +1058,418 @@ export interface ReportLayoutUpdate {
   config: ReportLayoutConfig;
 }
 
+export type ReportTemplatePagePageSize = typeof ReportTemplatePagePageSize[keyof typeof ReportTemplatePagePageSize];
+
+
+export const ReportTemplatePagePageSize = {
+  A4: 'A4',
+  A3: 'A3',
+  Letter: 'Letter',
+  custom: 'custom',
+} as const;
+
+export type ReportTemplatePageOrientation = typeof ReportTemplatePageOrientation[keyof typeof ReportTemplatePageOrientation];
+
+
+export const ReportTemplatePageOrientation = {
+  portrait: 'portrait',
+  landscape: 'landscape',
+} as const;
+
+export interface ReportTemplatePage {
+  pageSize: ReportTemplatePagePageSize;
+  orientation: ReportTemplatePageOrientation;
+  /**
+     * @minimum 50
+     * @maximum 1000
+     */
+  widthMm: number;
+  /**
+     * @minimum 50
+     * @maximum 1000
+     */
+  heightMm: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  marginTopMm: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  marginRightMm: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  marginBottomMm: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  marginLeftMm: number;
+  showHeader: boolean;
+  showFooter: boolean;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  headerHeightMm: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  footerHeightMm: number;
+}
+
+export type ReportTemplateObjectType = typeof ReportTemplateObjectType[keyof typeof ReportTemplateObjectType];
+
+
+export const ReportTemplateObjectType = {
+  section: 'section',
+  group: 'group',
+  text: 'text',
+  dynamicField: 'dynamicField',
+  line: 'line',
+  shape: 'shape',
+  image: 'image',
+  table: 'table',
+  tableRow: 'tableRow',
+  tableCell: 'tableCell',
+  signature: 'signature',
+  formula: 'formula',
+} as const;
+
+export type ReportTemplateObjectRowType = typeof ReportTemplateObjectRowType[keyof typeof ReportTemplateObjectRowType];
+
+
+export const ReportTemplateObjectRowType = {
+  header: 'header',
+  static: 'static',
+  dynamic: 'dynamic',
+} as const;
+
+export type ReportTemplateObjectFontFamily = typeof ReportTemplateObjectFontFamily[keyof typeof ReportTemplateObjectFontFamily];
+
+
+export const ReportTemplateObjectFontFamily = {
+  Arial: 'Arial',
+  Calibri: 'Calibri',
+  Times_New_Roman: 'Times New Roman',
+  Helvetica: 'Helvetica',
+} as const;
+
+export type ReportTemplateObjectTextAlign = typeof ReportTemplateObjectTextAlign[keyof typeof ReportTemplateObjectTextAlign];
+
+
+export const ReportTemplateObjectTextAlign = {
+  left: 'left',
+  center: 'center',
+  right: 'right',
+  justify: 'justify',
+} as const;
+
+export type ReportTemplateObjectLineOrientation = typeof ReportTemplateObjectLineOrientation[keyof typeof ReportTemplateObjectLineOrientation];
+
+
+export const ReportTemplateObjectLineOrientation = {
+  horizontal: 'horizontal',
+  vertical: 'vertical',
+} as const;
+
+export type ReportTemplateObjectLineStyle = typeof ReportTemplateObjectLineStyle[keyof typeof ReportTemplateObjectLineStyle];
+
+
+export const ReportTemplateObjectLineStyle = {
+  solid: 'solid',
+  dashed: 'dashed',
+  dotted: 'dotted',
+} as const;
+
+export type ReportTemplateObjectShapeType = typeof ReportTemplateObjectShapeType[keyof typeof ReportTemplateObjectShapeType];
+
+
+export const ReportTemplateObjectShapeType = {
+  rectangle: 'rectangle',
+  square: 'square',
+  circle: 'circle',
+  divider: 'divider',
+} as const;
+
+export interface ReportTemplateObject {
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  id: string;
+  type: ReportTemplateObjectType;
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  name: string;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  parentId?: string;
+  /**
+     * @minimum -1000
+     * @maximum 5000
+     */
+  x: number;
+  /**
+     * @minimum -1000
+     * @maximum 5000
+     */
+  y: number;
+  /**
+     * @minimum 1
+     * @maximum 5000
+     */
+  width: number;
+  /**
+     * @minimum 1
+     * @maximum 5000
+     */
+  height: number;
+  /**
+     * @minimum -10000
+     * @maximum 10000
+     */
+  zIndex: number;
+  /**
+     * @minimum -360
+     * @maximum 360
+     */
+  rotation: number;
+  locked: boolean;
+  visible: boolean;
+  /** @maxLength 80 */
+  sectionKey?: string;
+  /** @maxLength 5000 */
+  content?: string;
+  /** @maxLength 80 */
+  fieldKey?: string;
+  /** @maxLength 1000 */
+  formula?: string;
+  rowType?: ReportTemplateObjectRowType;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  columnIndex?: number;
+  /** @pattern ^/objects/uploads/[A-Za-z0-9._/-]+$ */
+  objectPath?: string;
+  fontFamily?: ReportTemplateObjectFontFamily;
+  /**
+     * @minimum 6
+     * @maximum 96
+     */
+  fontSize?: number;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  textAlign?: ReportTemplateObjectTextAlign;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  textColor?: string;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  backgroundColor?: string;
+  /**
+     * @minimum 0.5
+     * @maximum 4
+     */
+  lineHeight?: number;
+  /**
+     * @minimum -10
+     * @maximum 50
+     */
+  letterSpacing?: number;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  borderColor?: string;
+  /**
+     * @minimum 0
+     * @maximum 20
+     */
+  borderWidth?: number;
+  /**
+     * @minimum 0
+     * @maximum 200
+     */
+  borderRadius?: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  padding?: number;
+  lineOrientation?: ReportTemplateObjectLineOrientation;
+  lineStyle?: ReportTemplateObjectLineStyle;
+  shapeType?: ReportTemplateObjectShapeType;
+  /** @maxLength 80 */
+  tableKey?: string;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  fillColor?: string;
+  /**
+     * @minimum 0
+     * @maximum 1
+     */
+  opacity?: number;
+}
+
+export type ReportTemplateDesignSchemaVersion = typeof ReportTemplateDesignSchemaVersion[keyof typeof ReportTemplateDesignSchemaVersion];
+
+
+export const ReportTemplateDesignSchemaVersion = {
+  NUMBER_1: 1,
+  NUMBER_2: 2,
+} as const;
+
+export interface ReportTemplateDesign {
+  schemaVersion: ReportTemplateDesignSchemaVersion;
+  layout: ReportLayoutConfig;
+  page: ReportTemplatePage;
+  /** @maxItems 200 */
+  objects: ReportTemplateObject[];
+}
+
+export interface ReportTemplate {
+  id: number;
+  testType: TestType;
+  name: string;
+  /** @nullable */
+  description: string | null;
+  isDefault: boolean;
+  /** @minimum 1 */
+  version: number;
+  design: ReportTemplateDesign;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReportTemplateInput {
+  testType: TestType;
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  name: string;
+  /**
+     * @maxLength 1000
+     * @nullable
+     */
+  description?: string | null;
+  isDefault?: boolean;
+  design: ReportTemplateDesign;
+}
+
+export interface ReportTemplateUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  name?: string;
+  /**
+     * @maxLength 1000
+     * @nullable
+     */
+  description?: string | null;
+  design?: ReportTemplateDesign;
+}
+
+export interface ReportTemplateDuplicate {
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  name?: string;
+  /**
+     * @maxLength 1000
+     * @nullable
+     */
+  description?: string | null;
+  design?: ReportTemplateDesign;
+}
+
+export interface ReportTemplateVersion {
+  /** @minimum 1 */
+  version: number;
+  createdAt: string;
+}
+
+/**
+ * @nullable
+ */
+export type EmployeeActivitySessionEndReason = typeof EmployeeActivitySessionEndReason[keyof typeof EmployeeActivitySessionEndReason] | null;
+
+
+export const EmployeeActivitySessionEndReason = {
+  logout: 'logout',
+  expired: 'expired',
+  revoked: 'revoked',
+} as const;
+
+export interface EmployeeActivitySession {
+  startedAt: string;
+  lastSeenAt: string;
+  expiresAt: string;
+  /** @nullable */
+  endedAt: string | null;
+  /** @nullable */
+  endReason: EmployeeActivitySessionEndReason;
+}
+
+export type EmployeeLoginAttemptOutcome = typeof EmployeeLoginAttemptOutcome[keyof typeof EmployeeLoginAttemptOutcome];
+
+
+export const EmployeeLoginAttemptOutcome = {
+  success: 'success',
+  failure: 'failure',
+} as const;
+
+export interface EmployeeLoginAttempt {
+  occurredAt: string;
+  ipAddress: string;
+  location: string;
+  outcome: EmployeeLoginAttemptOutcome;
+}
+
+export type EmployeeActivityChangeAction = typeof EmployeeActivityChangeAction[keyof typeof EmployeeActivityChangeAction];
+
+
+export const EmployeeActivityChangeAction = {
+  created: 'created',
+  updated: 'updated',
+  deleted: 'deleted',
+} as const;
+
+export type EmployeeActivityChangeDetails = { [key: string]: unknown };
+
+export interface EmployeeActivityChange {
+  id: number;
+  occurredAt: string;
+  action: EmployeeActivityChangeAction;
+  entityType: string;
+  /** @nullable */
+  entityId: string | null;
+  summary: string;
+  details: EmployeeActivityChangeDetails;
+}
+
+export interface EmployeeActivityDay {
+  employeeId: string;
+  employeeName: string;
+  date: string;
+  loginCount: number;
+  sessions: EmployeeActivitySession[];
+  loginAttempts: EmployeeLoginAttempt[];
+  changes: EmployeeActivityChange[];
+}
+
+export interface EmployeeActivityResponse {
+  records: EmployeeActivityDay[];
+}
+
 export type TestTypeParamParameter = TestType;
 
 export type SearchParamParameter = string;
@@ -749,6 +1477,19 @@ export type SearchParamParameter = string;
 export type LimitParamParameter = number;
 
 export type AuthorizationSessionHeaderParameter = string;
+
+export type GetDashboardParams = {
+/**
+ * Calendar month for the monthly QC status summary; defaults to the current month.
+ * @pattern ^\d{4}-(0[1-9]|1[0-2])$
+ */
+month?: string;
+};
+
+export type GetEmployeeActivityParams = {
+from: string;
+to: string;
+};
 
 export type BeginBrowserLoginParams = {
 returnTo?: string;
@@ -781,5 +1522,9 @@ export type ListComplaintsParams = {
 search?: string;
 complaintType?: string;
 materialType?: string;
+};
+
+export type ListReportTemplatesParams = {
+testType?: TestTypeParamParameter;
 };
 

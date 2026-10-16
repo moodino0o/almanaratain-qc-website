@@ -1,15 +1,50 @@
 import { useParams, Link, useLocation } from "wouter";
-import { useGetRecord, useUpdateRecord, useDeleteRecord, RecordStatus } from "@workspace/api-client-react";
+import { useGetRecord, useListStrengthStandards, useUpdateRecord, useDeleteRecord, RecordStatus } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatDate } from "@/lib/utils";
-import { CheckCircle2, AlertTriangle, XCircle, ArrowLeft, Printer, Trash2, Edit2, Check, X } from "lucide-react";
+import { formatDate, formatDateTime } from "@/lib/utils";
+import { CheckCircle2, AlertTriangle, XCircle, ArrowLeft, Printer, Trash2, Edit2, Check, X, Clock3 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@workspace/replit-auth-web";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListRecordsQueryKey, getGetDashboardQueryKey, getGetRecordQueryKey } from "@workspace/api-client-react";
-import { useState } from "react";
+import { Fragment, useState } from "react";
+import { useAppBack } from "@/hooks/use-app-back";
+import {
+  AGGREGATE_CHLORIDE_LIMIT_PERCENT,
+  AGGREGATE_CHEMISTRY_FIELDS,
+  AGGREGATE_SULPHATE_LIMIT_PERCENT,
+  blockAirDryRowStrength,
+  isDammamBlockLocation,
+  isSandwichBlockType,
+  calculateCubeDensity,
+  cubeWeightInGrams,
+  calculateRetainedPercentage,
+  calculateSieveSampleWeight,
+  calculateChlorideContent,
+  calculateMoistureContent,
+  calculateKerbBendingStrength,
+  kerbBendingFactorsForType,
+  calculateSiltContent,
+  calculateSulphateContent,
+  evaluateKerbWaterAbsorption,
+  evaluateContentAgainstLimit,
+  evaluateSiltContent,
+  getDammamBlockThicknessDefaults,
+  findSieveEvaluationCriterion,
+  PRECAST_AGE_STRENGTH_CRITERIA,
+  precastAgeStrengthSummary,
+  precastStrengthOutcome,
+  SIEVE_SILT_LIMIT_PERCENT,
+  sortSieveRowsByPoreSize,
+  cubeRowStrength as getCubeRowStrength,
+} from "./record-form-utils";
+import {
+  dammamBlockDisplayResults,
+  summarizeDammamBlockAirDryStrengths,
+  summarizeDammamBlockNetStrengths,
+} from "./record-detail-utils";
 
 function calculatedWaterAbsorption(values: Record<string, unknown>) {
   const dryWeight = Number(values.dryWeight);
@@ -24,6 +59,20 @@ type DetailMap = Record<string, unknown>;
 
 function displayValue(value: unknown, fallback = "—") {
   return value === undefined || value === null || value === "" ? fallback : String(value);
+}
+
+function ageDerivedTestingDate(sampleDate: string, ageValue: unknown) {
+  const ageText = String(ageValue ?? "").trim();
+  const age = ageText ? Number(ageText) : Number.NaN;
+  if (!Number.isSafeInteger(age) || age < 0) return null;
+  const sampleDay = sampleDate.slice(0, 10);
+  const date = new Date(`${sampleDay}T00:00:00.000Z`);
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.toISOString().slice(0, 10) !== sampleDay
+  ) return null;
+  date.setUTCDate(date.getUTCDate() + age);
+  return date.toISOString();
 }
 
 function sortCubeRowsByAge(rows: unknown[]) {
@@ -78,9 +127,12 @@ function averageStrengthForAge(rows: unknown[], age: number) {
   return strengths.reduce((total, strength) => total + strength, 0) / strengths.length;
 }
 
-function strengthSummary(rows: unknown[]) {
+function strengthSummary(
+  rows: unknown[],
+  strengthForRow: (row: unknown) => number | null = cubeRowStrength,
+) {
   const strengths = rows
-    .map(cubeRowStrength)
+    .map(strengthForRow)
     .filter((strength): strength is number => strength !== null);
   if (!strengths.length) return { average: null, minimum: null, maximum: null };
   return {
@@ -91,13 +143,192 @@ function strengthSummary(rows: unknown[]) {
 }
 
 function formatStrengthMetric(value: unknown) {
+  if (value === null || value === undefined || value === "") return "—";
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed.toFixed(2) : "—";
+}
+
+function formatBlockNetArea(value: unknown) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0
+    ? Math.round(parsed).toLocaleString("en-US")
+    : "—";
 }
 
 function formatAverageStrength(value: number | null) {
   if (value === null) return "—";
   return Number.isInteger(value) ? String(value) : value.toFixed(2);
+}
+
+function numericOrNull(value: unknown) {
+  const text = String(value ?? "").trim();
+  if (!text) return null;
+  const number = Number(text);
+  return Number.isFinite(number) ? number : null;
+}
+
+function KerbstoneResultsTable({
+  rows,
+  kerbType,
+  requiredAverage,
+  requiredIndividual,
+  waterAbsorptionLimit,
+}: {
+  rows: unknown[];
+  kerbType: unknown;
+  requiredAverage: unknown;
+  requiredIndividual: unknown;
+  waterAbsorptionLimit: unknown;
+}) {
+  const strengths = rows.map((rawRow) => {
+    const row = typeof rawRow === "object" && rawRow !== null
+      ? rawRow as Record<string, unknown>
+      : {};
+    const evaluatedStrength = numericOrNull(row.bendingStrength);
+    if (evaluatedStrength !== null) return evaluatedStrength;
+    const value = calculateKerbBendingStrength(kerbType, {
+      failureLoad: String(row.failureLoad ?? row.load ?? ""),
+      spanLength: String(row.spanLength ?? ""),
+    });
+    return value ? Number(value) : null;
+  });
+  const completeStrengths = strengths.filter(
+    (value): value is number => value !== null && Number.isFinite(value),
+  );
+  const average = completeStrengths.length
+    ? completeStrengths.reduce((sum, value) => sum + value, 0) / completeStrengths.length
+    : null;
+  const minimum = completeStrengths.length ? Math.min(...completeStrengths) : null;
+  const maximum = completeStrengths.length ? Math.max(...completeStrengths) : null;
+  const avgLimit = numericOrNull(requiredAverage);
+  const minLimit = numericOrNull(requiredIndividual);
+  const dataComplete = rows.length > 0 && completeStrengths.length === rows.length;
+  const averageStatus = !dataComplete || average === null || avgLimit === null
+    ? "Review"
+    : average >= avgLimit ? "Pass" : "Fail";
+  const minimumStatus = !dataComplete || minimum === null || minLimit === null
+    ? "Review"
+    : minimum >= minLimit ? "Pass" : "Fail";
+  const absorptionResults = rows
+    .map((rawRow) => {
+      const row = typeof rawRow === "object" && rawRow !== null
+        ? rawRow as Record<string, unknown>
+        : {};
+      return evaluateKerbWaterAbsorption(
+        row.weight,
+        row.wetWeight,
+        waterAbsorptionLimit,
+      );
+    })
+    .filter((result): result is NonNullable<typeof result> => result !== null);
+  const absorptionValues = rows
+    .map((rawRow) => {
+      const row = typeof rawRow === "object" && rawRow !== null
+        ? rawRow as Record<string, unknown>
+        : {};
+      const dryWeight = numericOrNull(row.weight);
+      const wetWeight = numericOrNull(row.wetWeight);
+      return dryWeight !== null && wetWeight !== null && dryWeight > 0
+        ? ((wetWeight - dryWeight) / dryWeight) * 100
+        : null;
+    })
+    .filter((value): value is number => value !== null);
+  const averageAbsorption = absorptionValues.length
+    ? absorptionValues.reduce((sum, value) => sum + value, 0) / absorptionValues.length
+    : null;
+  const absorptionStatus = absorptionResults.some((result) => result.status === "Fail")
+    ? "Fail"
+    : absorptionResults.length > 0 && absorptionResults.every((result) => result.status === "Pass")
+      ? "Pass"
+      : "Review";
+  const factors = kerbBendingFactorsForType(kerbType);
+  const results = [
+    ...rows.map((rawRow, index) => {
+      const specimen = typeof rawRow === "object" && rawRow !== null
+        ? rawRow as Record<string, unknown>
+        : {};
+      const value = strengths[index];
+      const outcome = value === null || minLimit === null
+        ? "Review"
+        : value >= minLimit ? "Pass" : "Fail";
+      return {
+        test: `Specimen ${index + 1} (${String(specimen.failureLoad ?? specimen.load ?? "—")} kN × ${String(specimen.spanLength ?? "—")} mm)`,
+        result: value === null ? "—" : `${formatStrengthMetric(value)} MPa`,
+        standard: minLimit === null ? "Not configured" : `≥ ${formatStrengthMetric(minLimit)} MPa`,
+        status: outcome,
+      };
+    }),
+    {
+      test: "Average bending strength",
+      result: average === null ? "—" : `${formatStrengthMetric(average)} MPa`,
+      standard: avgLimit === null ? "Not configured" : `≥ ${formatStrengthMetric(avgLimit)} MPa`,
+      status: averageStatus,
+    },
+    {
+      test: "Minimum individual bending strength",
+      result: minimum === null ? "—" : `${formatStrengthMetric(minimum)} MPa`,
+      standard: minLimit === null ? "Not configured" : `≥ ${formatStrengthMetric(minLimit)} MPa`,
+      status: minimumStatus,
+    },
+    {
+      test: "Maximum individual bending strength",
+      result: maximum === null ? "—" : `${formatStrengthMetric(maximum)} MPa`,
+      standard: "Reported value",
+      status: "",
+    },
+    ...(absorptionResults.length > 0 ? [{
+      test: "Water absorption",
+      result: averageAbsorption === null ? "Review" : `${formatStrengthMetric(averageAbsorption)}%`,
+      standard: numericOrNull(waterAbsorptionLimit) === null
+        ? "Not configured"
+        : `< ${formatStrengthMetric(numericOrNull(waterAbsorptionLimit))}%`,
+      status: absorptionStatus,
+    }] : []),
+  ];
+
+  return (
+    <Card>
+      <CardHeader className="bg-muted/30 border-b">
+        <CardTitle>Kerbstone Results</CardTitle>
+        <CardDescription>Measured values compared with the saved kerb standard.</CardDescription>
+      </CardHeader>
+      <CardContent className="p-0">
+        {factors && (
+          <p className="border-b px-3 py-2 text-xs text-muted-foreground">
+            Bending formula: (failure load × 1,000 × span × y) ÷ (4 × I); y = {factors.y} mm, I = {factors.secondMoment.toLocaleString()} mm⁴.
+          </p>
+        )}
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[620px] text-sm">
+            <thead className="bg-muted/30">
+              <tr className="border-b text-left">
+                <th className="p-3">Test</th>
+                <th className="p-3">Result</th>
+                <th className="p-3">Standard</th>
+                <th className="p-3">Outcome</th>
+              </tr>
+            </thead>
+            <tbody>
+              {results.map((row) => (
+                <tr key={row.test} className="border-b last:border-b-0">
+                  <td className="p-3">{row.test}</td>
+                  <td className="p-3 font-medium tabular-nums">{row.result}</td>
+                  <td className="p-3">{row.standard}</td>
+                  <td className={`p-3 font-semibold ${
+                    row.status === "Pass" ? "text-green-700"
+                      : row.status === "Fail" ? "text-red-700"
+                        : row.status === "Review" ? "text-amber-700" : "text-muted-foreground"
+                  }`}>
+                    {row.status ? row.status.toUpperCase() : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 function CubeAgeAveragesTable({ rows }: { rows: unknown[] }) {
@@ -171,21 +402,80 @@ function MeasurementTable({
   );
 }
 
+function CompactMeasurementTable({
+  title,
+  entries,
+}: {
+  title: string;
+  entries: ReadonlyArray<readonly [string, unknown]>;
+}) {
+  const groupedEntries = Array.from(
+    { length: Math.ceil(entries.length / 2) },
+    (_, index) => entries.slice(index * 2, index * 2 + 2),
+  );
+
+  return (
+    <Card>
+      <CardHeader className="bg-muted/30 border-b">
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[760px] table-fixed text-xs">
+            <tbody>
+              {groupedEntries.map((group, index) => (
+                <tr key={group[0]?.[0] ?? index} className="border-b last:border-b-0">
+                  {group.map(([label, value]) => (
+                    <Fragment key={label}>
+                      <th
+                        scope="row"
+                        className="w-[18%] bg-muted/20 p-2 text-left text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
+                      >
+                        {label}
+                      </th>
+                      <td className="w-[32%] break-words p-2 text-left font-medium text-foreground">
+                        {displayValue(value)}
+                      </td>
+                    </Fragment>
+                  ))}
+                  {group.length === 1 && (
+                    <td colSpan={2} aria-hidden="true" className="p-2" />
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function TestRowsTable({
   rows,
   includeAbsorption,
   includeAge = true,
   sortByAge = false,
+  strengthLabel = "Calculated Strength (N/mm²)",
+  areaLabel = "Loaded Face Area (mm²)",
+  strengthValueForRow,
+  areaValueForRow,
+  normalizedValueForRow,
 }: {
   rows: unknown[];
   includeAbsorption: boolean;
   includeAge?: boolean;
   sortByAge?: boolean;
+  strengthLabel?: string;
+  areaLabel?: string;
+  strengthValueForRow?: (row: Record<string, unknown>) => unknown;
+  areaValueForRow?: (row: Record<string, unknown>) => unknown;
+  normalizedValueForRow?: (row: Record<string, unknown>) => unknown;
 }) {
   const displayRows = sortByAge ? sortCubeRowsByAge(rows) : rows;
   return (
     <div className="overflow-x-auto">
-      <table className={`w-full ${includeAbsorption ? "min-w-[1040px]" : "min-w-[900px]"} text-xs`}>
+      <table className={`w-full ${normalizedValueForRow ? "min-w-[1040px]" : includeAbsorption ? "min-w-[1040px]" : "min-w-[900px]"} text-xs`}>
         <thead className="bg-muted/30">
           <tr className="border-b">
             <th className="p-2 text-left">No.</th>
@@ -197,8 +487,11 @@ function TestRowsTable({
             <th className="p-2 text-left">Wet Weight</th>
             {includeAbsorption && <th className="p-2 text-left">Water Absorption (%)</th>}
             <th className="p-2 text-left">Load (kN)</th>
-            <th className="p-2 text-left">Loaded Face Area (mm²)</th>
-            <th className="p-2 text-left">Calculated Strength (N/mm²)</th>
+            <th className="p-2 text-left">{areaLabel}</th>
+            <th className="p-2 text-left">{strengthLabel}</th>
+            {normalizedValueForRow && (
+              <th className="p-2 text-left">Normalized Strength (N/mm²)</th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -219,9 +512,133 @@ function TestRowsTable({
                 <td className="p-2">{displayValue(values.wetWeight)}</td>
                 {includeAbsorption && <td className="p-2">{calculatedWaterAbsorption(values)}</td>}
                 <td className="p-2">{displayValue(values.load)}</td>
-                <td className="p-2">{displayValue(values.loadedFaceArea)}</td>
+                <td className="p-2">
+                  {displayValue(
+                    areaValueForRow ? areaValueForRow(values) : values.loadedFaceArea,
+                  )}
+                </td>
                 <td className="p-2 font-semibold">
-                  {displayValue(values.calculatedStrength ?? values.strength ?? values.compressiveStrength)}
+                  {displayValue(
+                    strengthValueForRow
+                      ? strengthValueForRow(values)
+                      : values.tensileStrength ??
+                          values.correctedStrength ??
+                          values.calculatedStrength ??
+                          values.strength ??
+                          values.compressiveStrength,
+                  )}
+                </td>
+                {normalizedValueForRow && (
+                  <td className="p-2 font-semibold">
+                    {displayValue(normalizedValueForRow(values))}
+                  </td>
+                )}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function SieveRowsTable({
+  rows,
+  evaluation,
+}: {
+  rows: unknown[];
+  evaluation: unknown;
+}) {
+  const measuredRows = rows.filter((row) => {
+    const values = typeof row === "object" && row !== null
+      ? row as Record<string, unknown>
+      : {};
+    const hasSize = String(values.sieveSize ?? "").trim().length > 0;
+    const hasEnteredMass = values.amountReturned !== null &&
+      values.amountReturned !== undefined &&
+      String(values.amountReturned).trim().length > 0;
+    return hasSize && hasEnteredMass;
+  });
+  const orderedRows = sortSieveRowsByPoreSize(measuredRows, (row) => {
+    if (typeof row !== "object" || row === null) return "";
+    return (row as Record<string, unknown>).sieveSize;
+  });
+  if (!orderedRows.length) {
+    return (
+      <p className="p-6 text-center text-muted-foreground">
+        No sieve measurements recorded.
+      </p>
+    );
+  }
+  const sampleWeight = calculateSieveSampleWeight(
+    orderedRows.map((row) => {
+      const values = typeof row === "object" && row !== null
+        ? row as Record<string, unknown>
+        : {};
+      return { amountReturned: String(values.amountReturned ?? "") };
+    }),
+  );
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[1040px] text-xs">
+        <thead className="bg-muted/30">
+          <tr className="border-b">
+            <th className="p-2 text-left">No.</th>
+            <th className="p-2 text-left">Sieve / Pore Size</th>
+            <th className="p-2 text-left">Mass Retained (g)</th>
+            <th className="p-2 text-left">Retained (%)</th>
+            <th className="p-2 text-left">Passing (%)</th>
+            <th className="p-2 text-left">Lower Limit</th>
+            <th className="p-2 text-left">Upper Limit</th>
+            <th className="p-2 text-left">Remarks</th>
+          </tr>
+        </thead>
+        <tbody>
+          {orderedRows.map((row, index) => {
+            const values = typeof row === "object" && row !== null
+              ? row as Record<string, unknown>
+              : {};
+            const criterion = findSieveEvaluationCriterion(
+              evaluation,
+              values.sieveSize,
+            );
+            const result = criterion?.withinLimits === true
+              ? "Pass"
+              : criterion?.withinLimits === false
+                ? "Fail"
+                : criterion
+                  ? "Pending"
+                  : "—";
+            const limitUnit = displayValue(criterion?.unit, "");
+            return (
+              <tr key={index} className="border-b last:border-b-0">
+                <td className="p-2 font-semibold">{index + 1}</td>
+                <td className="p-2">{displayValue(values.sieveSize)}</td>
+                <td className="p-2">{displayValue(values.amountReturned)}</td>
+                <td className="p-2">
+                  {calculateRetainedPercentage(values.amountReturned, sampleWeight) || "—"}
+                </td>
+                <td className="p-2">{displayValue(values.passingPercentage)}</td>
+                <td className="p-2">
+                  {criterion?.minimum == null
+                    ? "—"
+                    : `${displayValue(criterion.minimum)}${limitUnit ? ` ${limitUnit}` : ""}`}
+                </td>
+                <td className="p-2">
+                  {criterion?.maximum == null
+                    ? "—"
+                    : `${displayValue(criterion.maximum)}${limitUnit ? ` ${limitUnit}` : ""}`}
+                </td>
+                <td
+                  className={
+                    result === "Pass"
+                      ? "p-2 font-semibold text-green-700"
+                      : result === "Fail"
+                        ? "p-2 font-semibold text-red-700"
+                        : "p-2 text-muted-foreground"
+                  }
+                >
+                  {result}
                 </td>
               </tr>
             );
@@ -232,41 +649,17 @@ function TestRowsTable({
   );
 }
 
-function SieveRowsTable({ rows }: { rows: unknown[] }) {
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[620px] text-xs">
-        <thead className="bg-muted/30">
-          <tr className="border-b">
-            <th className="p-2 text-left">No.</th>
-            <th className="p-2 text-left">Sieve / Pore Size</th>
-            <th className="p-2 text-left">Amount Returned</th>
-            <th className="p-2 text-left">Amount Passing</th>
-            <th className="p-2 text-left">% Passing</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, index) => {
-            const values = typeof row === "object" && row !== null
-              ? row as Record<string, unknown>
-              : {};
-            return (
-              <tr key={index} className="border-b last:border-b-0">
-                <td className="p-2 font-semibold">{displayValue(values.rowNo, String(index + 1))}</td>
-                <td className="p-2">{displayValue(values.sieveSize)}</td>
-                <td className="p-2">{displayValue(values.amountReturned)}</td>
-                <td className="p-2">{displayValue(values.passingAmount)}</td>
-                <td className="p-2">{displayValue(values.passingPercentage)}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function StrengthEvaluation({ value }: { value: unknown }) {
+function StrengthEvaluation({
+  value,
+  strengthName = "strength",
+  dammamBlock = false,
+  dammamSandwich = false,
+}: {
+  value: unknown;
+  strengthName?: string;
+  dammamBlock?: boolean;
+  dammamSandwich?: boolean;
+}) {
   if (typeof value !== "object" || value === null) {
     return (
       <span className="text-muted-foreground">
@@ -275,29 +668,41 @@ function StrengthEvaluation({ value }: { value: unknown }) {
     );
   }
   const evaluation = value as Record<string, unknown>;
-  const status = String(evaluation.status ?? "Review");
+  const storedStatus = String(evaluation.status ?? "Review");
+  const status = storedStatus === "Waiting for results" ? "Waiting" : storedStatus;
   const statusClass =
     status === RecordStatus.Passed
       ? "text-success"
       : status === RecordStatus.Failed
         ? "text-destructive"
+        : status === "Waiting"
+          ? "text-lime-700 dark:text-lime-300"
         : "text-warning";
   return (
     <div className="space-y-1">
       <p className={`font-bold ${statusClass}`}>{status}</p>
       {evaluation.averageStrength != null && (
         <>
-          <p>Average strength: {formatStrengthMetric(evaluation.averageStrength)} {String(evaluation.strengthUnit ?? "N/mm²")}</p>
-          <p>Minimum strength: {formatStrengthMetric(evaluation.minimumStrength)} {String(evaluation.strengthUnit ?? "N/mm²")}</p>
-          <p>Maximum strength: {formatStrengthMetric(evaluation.maximumStrength)} {String(evaluation.strengthUnit ?? "N/mm²")}</p>
+          <p>Average {strengthName}: {formatStrengthMetric(evaluation.averageStrength)} {String(evaluation.strengthUnit ?? "N/mm²")}</p>
+          <p>Minimum {strengthName}: {formatStrengthMetric(evaluation.minimumStrength)} {String(evaluation.strengthUnit ?? "N/mm²")}</p>
+          <p>Maximum {strengthName}: {formatStrengthMetric(evaluation.maximumStrength)} {String(evaluation.strengthUnit ?? "N/mm²")}</p>
         </>
       )}
       <p>
-        Minimum: {evaluation.requiredStrength == null
+        {dammamBlock
+          ? `Required Dammam average ${dammamSandwich ? "Air-dry" : "Net"} strength:`
+          : "Minimum:"} {evaluation.requiredStrength == null
           ? "Not configured"
           : `${evaluation.requiredStrength} ${String(evaluation.strengthUnit ?? "N/mm²")}`}
       </p>
-      <p>BS reference: {String(evaluation.bsStandard ?? "Not configured")}</p>
+      {dammamBlock && !dammamSandwich && (
+        <p>
+          Minimum specimen Net Strength: {evaluation.minimumRequiredStrength == null
+            ? "Not configured"
+            : `${evaluation.minimumRequiredStrength} ${String(evaluation.strengthUnit ?? "N/mm²")}`}
+        </p>
+      )}
+      <p>Linked standard reference: {String(evaluation.bsStandard ?? "Not configured")}</p>
       {evaluation.reason != null && (
         <p className="text-muted-foreground">{String(evaluation.reason)}</p>
       )}
@@ -309,6 +714,15 @@ function detailText(details: Record<string, unknown>, key: string, fallback = "�
   const normalizedKey = key.toLocaleLowerCase();
   const value = Object.entries(details).find(([candidate]) => candidate.toLocaleLowerCase() === normalizedKey)?.[1];
   return value === undefined || value === null || value === "" ? fallback : String(value);
+}
+
+function chlorideContentText(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return value.toFixed(2);
+  if (typeof value === "string" && value.trim() !== "") {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric.toFixed(2) : value;
+  }
+  return "—";
 }
 
 function SieveEvaluation({ value }: { value: unknown }) {
@@ -364,12 +778,15 @@ export default function RecordDetail() {
   const canEditApprovedBy = role === "administrator";
   const recordId = Number(id);
   const [, setLocation] = useLocation();
+  const goBack = useAppBack("/records");
   const queryClient = useQueryClient();
   const [isDeleting, setIsDeleting] = useState(false);
 
   const { data: record, isLoading, error } = useGetRecord(recordId);
   const updateRecord = useUpdateRecord();
   const deleteRecord = useDeleteRecord();
+  const { data: strengthStandards, isLoading: isStrengthStandardsLoading } =
+    useListStrengthStandards();
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">Loading record details...</div>;
   if (error || !record) return <div className="p-8 text-center text-destructive">Failed to load record.</div>;
@@ -397,21 +814,109 @@ export default function RecordDetail() {
   const isStrengthEvaluated = record.testType === "Ready Mix" || record.testType === "Blocks";
   const isSieveEvaluated = record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve";
   const recordDetails = record.details as DetailMap;
+  const savedStrengthStandardId = numericOrNull(recordDetails.strengthStandardId);
+  const kerbStandard = strengthStandards?.find(
+    (standard) => standard.id === savedStrengthStandardId,
+  );
+  const testRowsForStandard = Array.isArray(recordDetails.testRows)
+    ? recordDetails.testRows
+    : [];
+  const precastAges = new Set(
+    testRowsForStandard
+      .map((row) => {
+        const values = typeof row === "object" && row !== null
+          ? row as Record<string, unknown>
+          : {};
+        return numericOrNull(
+          values.testAge ?? values.sampleAge ?? values.cubeAge ?? values.age,
+        );
+      })
+      .filter((age): age is number => age !== null),
+  );
+  const hasLinkedStrengthStandard = Boolean(
+    strengthStandards?.some((standard) =>
+      standard.id === savedStrengthStandardId &&
+      standard.testType === record.testType,
+    ) ||
+    (record.testType === "Precast" &&
+      precastAges.size > 0 &&
+      strengthStandards?.some((standard) =>
+        standard.testType === "Precast" &&
+        standard.material.trim().toLocaleLowerCase() ===
+          record.material.trim().toLocaleLowerCase() &&
+        standard.cubeAge !== null &&
+        precastAges.has(Number(standard.cubeAge)),
+      )),
+  );
+  const isSieveRecord = isSieveEvaluated;
+  const ageKey = record.testType === "Blocks" || record.testType === "Paving Blocks"
+    ? "blockAge"
+    : "sampleAge";
+  const configuredAge = Number(String(recordDetails[ageKey] ?? "").trim());
+  const legacyRows = Array.isArray(recordDetails.testRows) ? recordDetails.testRows : [];
+  const legacyRowAge = legacyRows
+    .map((row) => (
+      typeof row === "object" && row !== null
+        ? (row as Record<string, unknown>).sampleAge
+        : undefined
+    ))
+    .find((value) => Number.isFinite(Number(value)) && Number(value) > 0);
+  const ageForDate =
+    Number.isFinite(configuredAge) && configuredAge > 0
+      ? recordDetails[ageKey]
+      : legacyRowAge;
+  const calculatedTestingDate = ageDerivedTestingDate(record.sampleDate, ageForDate);
   const summaryEntries: Array<readonly [string, unknown]> = [
     ["Record No.", record.recordNo],
     ["Test Type", record.testType],
-    ["Sample Date", formatDate(record.sampleDate)],
-    ["Location", record.location],
-    ["Material / Product", record.material],
-    ["Tested By", record.testedBy],
+    [
+      isSieveRecord || record.testType === "Water"
+        ? "Sampling Date"
+        : record.testType === "Precast" || record.testType === "Blocks" || record.testType === "Paving Blocks"
+          ? "Casting Date"
+          : "Sample Date",
+      formatDate(record.sampleDate),
+    ],
+    [
+      isSieveRecord || record.testType === "Water"
+        ? "Factory"
+        : record.testType === "Precast"
+          ? "Testing Location"
+          : "Location",
+      record.location,
+    ],
+    [
+      isSieveRecord
+        ? "Material Type"
+        : record.testType === "Water"
+          ? "Sample Source"
+          : record.testType === "Precast"
+            ? "Product Type"
+            : "Material / Product",
+      record.testType === "Water"
+        ? detailText(recordDetails, "source")
+        : record.material,
+    ],
+    [isSieveRecord ? "Sampled-Tested By" : "Tested By", record.testedBy],
     ["Approved By", record.reviewedBy || "ADEL ABBAS EBRAHIM"],
   ];
 
   if (record.testType === "Ready Mix") {
     summaryEntries.push(
       ["Reference Number", detailText(recordDetails, "referenceNumber")],
+      ["Truck Number", detailText(recordDetails, "truckNumber")],
       ["Customer Name", detailText(recordDetails, "customerName", record.location)],
       ["Customer Location", detailText(recordDetails, "customerLocation", record.location)],
+    );
+  }
+  if (record.testType === "Precast") {
+    summaryEntries.push(
+      ["Sample No.", detailText(recordDetails, "sampleNo")],
+      ["Precast Mould No.", detailText(recordDetails, "precastMouldNo")],
+      ["Job No.", detailText(recordDetails, "jobNo")],
+      ["Customer Name", detailText(recordDetails, "customerName")],
+      ["Cube Size", detailText(recordDetails, "cubeSize", "100*100*100")],
+      ["Compaction", detailText(recordDetails, "compactionType", "Mechanical compaction")],
     );
   }
   if (record.testType === "Blocks" || record.testType === "Paving Blocks") {
@@ -419,31 +924,12 @@ export default function RecordDetail() {
       ["Block Type", detailText(recordDetails, "blockType", record.material)],
       ["Block Size", detailText(recordDetails, "blockSize")],
       ["Block Age (days)", detailText(recordDetails, "blockAge")],
+      ["Testing Date", calculatedTestingDate ? formatDate(calculatedTestingDate) : detailText(recordDetails, "testingDate")],
       ["Machine", detailText(recordDetails, "machine")],
     );
   }
-  if (record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve") {
-    summaryEntries.push(
-      ["Sample Weight", detailText(recordDetails, "sampleWeight")],
-      ["Supplier", detailText(recordDetails, "supplier")],
-      [
-        record.testType === "Aggregate Sieve" ? "Material Condition" : "Condition",
-        detailText(recordDetails, record.testType === "Aggregate Sieve" ? "materialCondition" : "condition"),
-      ],
-      ["Dry Sample", detailText(recordDetails, "drySample")],
-      ["Wet Sample", detailText(recordDetails, "wetSample")],
-    );
-    if (record.testType === "Aggregate Sieve") {
-      summaryEntries.push(["Fineness Modulus", detailText(recordDetails, "finenessModulus")]);
-    } else {
-      summaryEntries.push(
-        ["Silt Before", detailText(recordDetails, "siltBefore")],
-        ["Silt After", detailText(recordDetails, "siltAfter")],
-      );
-    }
-  }
   if (record.testType === "Water") {
-    summaryEntries.push(["Source", detailText(recordDetails, "source")]);
+    summaryEntries.push(["Testing Age", detailText(recordDetails, "testingAge")]);
   }
   const testRows = Array.isArray(recordDetails.testRows) ? recordDetails.testRows : [];
   const hasLegacySpecimen = ["length", "width", "height", "dryWeight", "wetWeight", "load", "loadedFaceArea", "calculatedStrength"]
@@ -458,7 +944,26 @@ export default function RecordDetail() {
     recordDetails.strengthEvaluation !== null
     ? recordDetails.strengthEvaluation as Record<string, unknown>
     : {};
-  const blockStrengthSummary = strengthSummary(specimenRows);
+  const isDammamBlock =
+    record.testType === "Blocks" && isDammamBlockLocation(record.location);
+  const isDammamSandwich =
+    isDammamBlock && isSandwichBlockType(recordDetails.blockType);
+  const blockStrengthSummary = isDammamBlock
+    ? isDammamSandwich
+      ? summarizeDammamBlockAirDryStrengths(specimenRows, recordDetails.blockSize, recordDetails)
+      : summarizeDammamBlockNetStrengths(specimenRows, recordDetails.blockSize, recordDetails)
+    : strengthSummary(
+        specimenRows,
+        (row) => blockAirDryRowStrength(row, record.location),
+      );
+  const strengthEvaluationForDisplay = isDammamBlock
+    ? {
+        ...strengthEvaluation,
+        averageStrength: blockStrengthSummary.average,
+        minimumStrength: blockStrengthSummary.minimum,
+        maximumStrength: blockStrengthSummary.maximum,
+      }
+    : recordDetails.strengthEvaluation;
 
   const handleDelete = () => {
     if (!confirm("Are you sure you want to delete this record? This action cannot be undone.")) return;
@@ -483,6 +988,7 @@ export default function RecordDetail() {
       case RecordStatus.Passed: return <Badge variant="success" className="text-sm px-3 py-1"><CheckCircle2 className="w-4 h-4 mr-1.5" /> Passed</Badge>;
       case RecordStatus.Review: return <Badge variant="warning" className="text-sm px-3 py-1"><AlertTriangle className="w-4 h-4 mr-1.5" /> Review Required</Badge>;
       case RecordStatus.Failed: return <Badge variant="destructive" className="text-sm px-3 py-1"><XCircle className="w-4 h-4 mr-1.5" /> Failed</Badge>;
+      case "Waiting for results": return <Badge variant="outline" className="border-lime-300 bg-lime-100 px-3 py-1 text-sm text-lime-800 dark:border-lime-700 dark:bg-lime-950 dark:text-lime-200"><Clock3 className="mr-1.5 h-4 w-4" /> Waiting</Badge>;
       default: return <Badge variant="secondary" className="text-sm px-3 py-1">{status}</Badge>;
     }
   };
@@ -491,15 +997,19 @@ export default function RecordDetail() {
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Link href="/records" className="p-2 rounded-md hover:bg-muted transition-colors">
+          <button type="button" onClick={goBack} aria-label="Go back" className="p-2 rounded-md hover:bg-muted transition-colors">
             <ArrowLeft className="w-5 h-5 text-muted-foreground" />
-          </Link>
+          </button>
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold tracking-tight text-foreground">{record.recordNo}</h1>
               {getStatusBadge(record.status)}
             </div>
             <p className="text-muted-foreground text-sm mt-1">{record.testType} Quality Control Record</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Added by {record.createdBy?.trim() || "Not recorded"} ·{" "}
+              {formatDateTime(record.createdAt)}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -538,6 +1048,130 @@ export default function RecordDetail() {
         </CardContent>
       </Card>
 
+      {record.testType === "Kerb Stone" && (
+        <KerbstoneResultsTable
+          rows={specimenRows}
+          kerbType={recordDetails.kerbType}
+          requiredAverage={kerbStandard?.requiredStrength ?? recordDetails.characteristicBendingStrength}
+          requiredIndividual={kerbStandard?.minimumIndividualStrength ?? recordDetails.minimumIndividualStrength}
+          waterAbsorptionLimit={kerbStandard?.waterAbsorptionLimit ?? recordDetails.waterAbsorptionLimit}
+        />
+      )}
+
+      {isSieveEvaluated && (() => {
+        const dryWeight = recordDetails.dryWeight ?? recordDetails.drySample;
+        const wetWeight = recordDetails.wetWeight ?? recordDetails.wetSample;
+        const moistureContent = calculateMoistureContent(dryWeight, wetWeight);
+        const siltContent = calculateSiltContent(
+          recordDetails.siltBefore,
+          recordDetails.siltAfter,
+        );
+        const chlorideContent = calculateChlorideContent(
+          recordDetails.silverNitrateContent,
+          recordDetails.firstChlorideTitrationPoint,
+          recordDetails.secondChlorideTitrationPoint,
+        );
+        const sulphateContent = calculateSulphateContent(
+          recordDetails.crucibleWeight,
+          recordDetails.crucibleAshWeight,
+        );
+        return (
+          <>
+            <CompactMeasurementTable
+              title="Sieve, Moisture and Chemical Test Details"
+              entries={[
+              ["Sample Weight", detailText(recordDetails, "sampleWeight")],
+              [
+                "Material Condition",
+                detailText(
+                  recordDetails,
+                  "materialCondition",
+                  detailText(recordDetails, "condition"),
+                ),
+              ],
+              ["Supplier", detailText(recordDetails, "supplier")],
+              ["Age (days)", detailText(recordDetails, "sampleAge")],
+              ["Testing Date", calculatedTestingDate ? formatDate(calculatedTestingDate) : detailText(recordDetails, "testingDate")],
+              [
+                "Dry Weight (g)",
+                detailText(recordDetails, "dryWeight", detailText(recordDetails, "drySample")),
+              ],
+              [
+                "Wet Weight (g)",
+                detailText(recordDetails, "wetWeight", detailText(recordDetails, "wetSample")),
+              ],
+              [
+                "Moisture Content (%)",
+                moistureContent || "—",
+              ],
+              ["Fineness Modulus", detailText(recordDetails, "finenessModulus")],
+              ["Silt Before", detailText(recordDetails, "siltBefore")],
+              ["Silt After", detailText(recordDetails, "siltAfter")],
+              [
+                "Silt Content (%)",
+                siltContent === null ? "—" : `${siltContent.toFixed(2)}%`,
+              ],
+              ["Silt Limit", `< ${SIEVE_SILT_LIMIT_PERCENT}%`],
+              ["Silt Result", evaluateSiltContent(siltContent)],
+              [
+                "Chloride Content",
+                chlorideContent === null ? "—" : `${chlorideContent.toFixed(3)}%`,
+              ],
+              [
+                "Chloride Standard",
+                `${AGGREGATE_CHLORIDE_LIMIT_PERCENT.toFixed(2)}%`,
+              ],
+              [
+                "Chloride Result",
+                evaluateContentAgainstLimit(
+                  chlorideContent,
+                  AGGREGATE_CHLORIDE_LIMIT_PERCENT,
+                ),
+              ],
+              [
+                "Sulphate Content",
+                sulphateContent === null ? "—" : `${sulphateContent.toFixed(2)}%`,
+              ],
+              [
+                "Sulphate Standard",
+                `${AGGREGATE_SULPHATE_LIMIT_PERCENT.toFixed(2)}%`,
+              ],
+              [
+                "Sulphate Result",
+                evaluateContentAgainstLimit(
+                  sulphateContent,
+                  AGGREGATE_SULPHATE_LIMIT_PERCENT,
+                ),
+              ],
+              [
+                "Chemical Tested By",
+                detailText(recordDetails, "chemicalTestedBy"),
+              ],
+              ["Chemical Testing Standard", "BS812:Part 117 and 118:1988"],
+              ...AGGREGATE_CHEMISTRY_FIELDS.map(
+                ({ key, label }) =>
+                  [label, detailText(recordDetails, key)] as const,
+              ),
+              ]}
+            />
+            <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+              <p>
+                Retained (%) = retained mass ÷ total retained mass × 100;
+                passing mass = sample mass − cumulative retained mass; passing
+                (%) = passing mass ÷ sample mass × 100.
+              </p>
+              <p>
+                Moisture (%) = (wet − dry) ÷ dry × 100. Silt (%) = (silt before
+                − silt after) ÷ silt before × 100. Chloride (%) = 0.07092 ×
+                (silver nitrate content − (10 × 0.1 × (second titration point −
+                first titration point))). Sulfate (%) = ((crucible + ash −
+                crucible) × 34.3) ÷ 3.
+              </p>
+            </div>
+          </>
+        );
+      })()}
+
       {record.testType === "Ready Mix" && (
         <>
           <MeasurementTable
@@ -566,16 +1200,199 @@ export default function RecordDetail() {
         </>
       )}
 
+      {record.testType === "Precast" && (
+        <Card>
+          <CardHeader className="bg-muted/30 border-b">
+            <CardTitle>Precast Cube Measurements</CardTitle>
+            <CardDescription>
+              Compression, weight, density, and strength for each cube.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            {specimenRows.length ? (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[980px] text-sm">
+                    <thead className="bg-muted/50">
+                      <tr className="border-b">
+                        {["Cube Age (days)", "Cube Size (mm)", "Weight (g)", "Load (kN)", "Compressive Strength (N/mm²)", "Density (kg/m³)"].map((label) => (
+                          <th key={label} className="px-3 py-3 text-left font-semibold">{label}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortCubeRowsByAge(specimenRows).map((row, index) => {
+                        const values = typeof row === "object" && row !== null
+                          ? row as Record<string, unknown>
+                          : {};
+                        const age = values.testAge ?? values.sampleAge ?? values.cubeAge ?? values.age;
+                        const cubeSize = String(
+                          values.cubeSize ||
+                            detailText(recordDetails, "cubeSize", "100*100*100"),
+                        );
+                        const size = cubeSize.replace(/\*/g, " × ");
+                        const strength = getCubeRowStrength(row);
+                        const hasSavedWeight =
+                          values.weight !== undefined &&
+                          values.weight !== null &&
+                          values.weight !== "";
+                        const weight = hasSavedWeight ? values.weight : values.wetWeight;
+                        const weightUnit =
+                          hasSavedWeight && recordDetails.cubeWeightUnit === "g"
+                            ? "g"
+                            : "kg";
+                        const displayedWeight = cubeWeightInGrams(weight, weightUnit);
+                        const calculatedDensity = calculateCubeDensity(
+                          cubeSize,
+                          weight,
+                          weightUnit,
+                        );
+                        const density = displayValue(
+                          values.density || calculatedDensity,
+                          "—",
+                        );
+                        return (
+                          <tr key={index} className="border-b last:border-b-0">
+                            <td className="px-3 py-2">{displayValue(age)}</td>
+                            <td className="px-3 py-2">{size}</td>
+                            <td className="px-3 py-2">{displayValue(displayedWeight)}</td>
+                            <td className="px-3 py-2">{displayValue(values.load)}</td>
+                            <td className="px-3 py-2 font-semibold">
+                              {strength === null ? "—" : formatStrengthMetric(strength)}
+                            </td>
+                            <td className="px-3 py-2 font-semibold">
+                              {density === "—" ? density : `${density} kg/m³`}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="grid gap-3 border-t bg-muted/10 p-4 sm:grid-cols-3">
+                  {PRECAST_AGE_STRENGTH_CRITERIA.map((criterion) => {
+                    const summary = precastAgeStrengthSummary(
+                      specimenRows,
+                      criterion.age,
+                    );
+                    const legacyKey =
+                      criterion.age === 1
+                        ? "averageStrength1Day"
+                        : criterion.age === 7
+                          ? "averageStrength7Days"
+                          : "averageStrength28Days";
+                    const legacyAverage = Number(recordDetails[legacyKey]);
+                    const averageToDisplay =
+                      summary.averageStrength ??
+                      (Number.isFinite(legacyAverage) ? legacyAverage : null);
+                    const complete =
+                      specimenRows.length > 0
+                        ? summary.complete
+                        : averageToDisplay !== null;
+                    const outcome = precastStrengthOutcome(
+                      criterion.age,
+                      averageToDisplay,
+                      complete,
+                    );
+                    return (
+                      <div key={criterion.age} className="rounded-md border bg-background p-3 text-center">
+                        <div className="text-xs text-muted-foreground">{criterion.age}-day average strength</div>
+                        <div className="mt-1 font-semibold">
+                          {averageToDisplay === null
+                            ? "—"
+                            : `${formatStrengthMetric(averageToDisplay)} N/mm²`}
+                        </div>
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          Minimum: {criterion.minimumStrength} N/mm²
+                        </div>
+                        <div className={`mt-2 text-sm font-semibold ${
+                          outcome === "Pass" || outcome === "Approved for demolding"
+                            ? "text-emerald-700"
+                            : outcome === "Pending"
+                              ? "text-muted-foreground"
+                              : "text-destructive"
+                        }`}>
+                          {outcome}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <p className="p-6 text-center text-muted-foreground">
+                No cube measurements recorded. Legacy average strength fields: 1 day{" "}
+                {detailText(recordDetails, "averageStrength1Day")}; 7 days{" "}
+                {detailText(recordDetails, "averageStrength7Days")}; 28 days{" "}
+                {detailText(recordDetails, "averageStrength28Days")}.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {record.testType === "Blocks" && (
         <>
           <Card>
             <CardHeader className="bg-muted/30 border-b">
               <CardTitle>Specimen Measurements</CardTitle>
-              <CardDescription>Block sample dimensions, weights, load, and calculated strength.</CardDescription>
+              <CardDescription>
+                {isDammamBlock
+                  ? isDammamSandwich
+                    ? "Block sample dimensions, load, Gross Area, Air-dry Strength, and Normalized Strength."
+                    : "Block sample dimensions, weights, load, Net Area, and Net Strength."
+                  : "Block sample dimensions, weights, load, and air-dry strength."}
+              </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
               {specimenRows.length > 0
-                 ? <TestRowsTable rows={specimenRows} includeAbsorption={false} includeAge={false} />
+                ? (
+                  <TestRowsTable
+                    rows={specimenRows}
+                    includeAbsorption={false}
+                    includeAge={false}
+                    strengthLabel={isDammamBlock
+                      ? isDammamSandwich
+                        ? "Air-dry Strength (N/mm²)"
+                        : "Net Strength (N/mm²)"
+                      : "Air-dry Strength (N/mm²)"}
+                    areaLabel={isDammamSandwich ? "Gross Area (mm²)" : "Net Area (mm²)"}
+                    areaValueForRow={isDammamBlock
+                      ? isDammamSandwich
+                        ? (row) => {
+                            const results = dammamBlockDisplayResults(
+                              row,
+                              recordDetails.blockSize,
+                              recordDetails,
+                            );
+                            return results.grossArea === null
+                              ? "—"
+                              : Math.round(results.grossArea).toLocaleString("en-US");
+                          }
+                        : (row) => formatBlockNetArea(
+                            dammamBlockDisplayResults(row, recordDetails.blockSize, recordDetails).netArea,
+                          )
+                      : undefined}
+                    strengthValueForRow={(row) => isDammamBlock
+                      ? formatStrengthMetric(isDammamSandwich
+                          ? dammamBlockDisplayResults(
+                              row,
+                              recordDetails.blockSize,
+                              recordDetails,
+                            ).airDryStrength
+                          : dammamBlockDisplayResults(row, recordDetails.blockSize, recordDetails).netStrength)
+                      : blockAirDryRowStrength(row, record.location)}
+                    normalizedValueForRow={isDammamSandwich
+                      ? (row) => formatStrengthMetric(
+                          dammamBlockDisplayResults(
+                            row,
+                            recordDetails.blockSize,
+                            recordDetails,
+                          ).normalizedStrength,
+                        )
+                      : undefined}
+                  />
+                )
                 : <p className="p-6 text-center text-muted-foreground">No specimen measurements recorded.</p>}
             </CardContent>
           </Card>
@@ -583,9 +1400,30 @@ export default function RecordDetail() {
             title="Block Test Result"
             entries={[
               ["Block No.", detailText(recordDetails, "blockNo", detailText(recordDetails, "blockNumber"))],
-              ["Average Strength (N/mm²)", formatStrengthMetric(strengthEvaluation.averageStrength ?? blockStrengthSummary.average)],
-              ["Minimum Strength (N/mm²)", formatStrengthMetric(strengthEvaluation.minimumStrength ?? blockStrengthSummary.minimum)],
-              ["Maximum Strength (N/mm²)", formatStrengthMetric(strengthEvaluation.maximumStrength ?? blockStrengthSummary.maximum)],
+              [
+                `Average ${isDammamBlock && !isDammamSandwich ? "Net" : "Air-dry"} Strength (N/mm²)`,
+                formatStrengthMetric(
+                  isDammamBlock
+                    ? blockStrengthSummary.average
+                    : strengthEvaluation.averageStrength ?? blockStrengthSummary.average,
+                ),
+              ],
+              [
+                    `Minimum ${isDammamBlock && !isDammamSandwich ? "Net" : "Air-dry"} Strength (N/mm²)`,
+                formatStrengthMetric(
+                  isDammamBlock
+                    ? blockStrengthSummary.minimum
+                    : blockStrengthSummary.minimum ?? strengthEvaluation.minimumStrength,
+                ),
+              ],
+              [
+                    `Maximum ${isDammamBlock && !isDammamSandwich ? "Net" : "Air-dry"} Strength (N/mm²)`,
+                formatStrengthMetric(
+                  isDammamBlock
+                    ? blockStrengthSummary.maximum
+                    : blockStrengthSummary.maximum ?? strengthEvaluation.maximumStrength,
+                ),
+              ],
               ["Shape Factor", detailText(recordDetails, "shapeFactor")],
               ["Compliance", displayValue(strengthEvaluation.status ?? record.status)],
             ]}
@@ -602,7 +1440,12 @@ export default function RecordDetail() {
             </CardHeader>
             <CardContent className="p-0">
               {sieveRows.length > 0
-                ? <SieveRowsTable rows={sieveRows} />
+                ? (
+                  <SieveRowsTable
+                    rows={sieveRows}
+                    evaluation={recordDetails.sieveEvaluation}
+                  />
+                )
                 : <p className="p-6 text-center text-muted-foreground">No sieve measurements recorded.</p>}
             </CardContent>
           </Card>
@@ -615,29 +1458,47 @@ export default function RecordDetail() {
             <Card>
               <CardHeader className="bg-muted/30 border-b">
                 <CardTitle>Paving Block Specimen Measurements</CardTitle>
-                <CardDescription>Saved specimen dimensions, weights, load, and calculated strength.</CardDescription>
+                <CardDescription>
+                  Saved specimen dimensions, dry and wet weights, load, and
+                  calculated tensile strength.
+                </CardDescription>
               </CardHeader>
               <CardContent className="p-0">
-                <TestRowsTable rows={specimenRows} includeAbsorption={false} />
+                <TestRowsTable
+                  rows={specimenRows}
+                  includeAbsorption
+                  strengthLabel="Tensile Strength (N/mm²)"
+                />
               </CardContent>
             </Card>
           ) : (
             <MeasurementTable
               title="Paving Block Measurements"
               entries={[
-                ["Weight (kg)", detailText(recordDetails, "weight")],
+                ["Dry Weight (kg)", detailText(recordDetails, "dryWeight")],
+                ["Wet Weight (kg)", detailText(recordDetails, "wetWeight")],
                 ["Length (mm)", detailText(recordDetails, "length")],
                 ["Width (mm)", detailText(recordDetails, "width")],
                 ["Height (mm)", detailText(recordDetails, "height")],
-                ["Compressive Strength (N/mm²)", detailText(recordDetails, "compressiveStrength")],
+                [
+                  "Tensile Strength (N/mm²)",
+                  detailText(
+                    recordDetails,
+                    "tensileStrength",
+                    detailText(recordDetails, "correctedStrength"),
+                  ),
+                ],
               ]}
             />
           )}
           <MeasurementTable
             title="Paving Block Test Result"
             entries={[
-              ["Target", detailText(recordDetails, "target")],
-              ["Strength", detailText(recordDetails, "strength", detailText(recordDetails, "compressiveStrength"))],
+              [
+                "Average Tensile Strength (N/mm²)",
+                formatStrengthMetric(strengthEvaluation.averageStrength),
+              ],
+              ["Result", displayValue(strengthEvaluation.status ?? record.status)],
               ["Correction Factor", detailText(recordDetails, "correctionFactor")],
             ]}
           />
@@ -649,16 +1510,27 @@ export default function RecordDetail() {
           title="Water Quality Measurements"
           entries={[
             ["pH", detailText(recordDetails, "ph")],
-            ["TDS", detailText(recordDetails, "tds")],
-            ["Chloride", detailText(recordDetails, "chloride")],
-            ["Sulphate", detailText(recordDetails, "sulphate")],
-            ["Observation 1", detailText(recordDetails, "observation1")],
-            ["Observation 2", detailText(recordDetails, "observation2")],
+            ["TDS (ppm)", detailText(recordDetails, "tds")],
+            [
+              "1st Cl point (ml)",
+              detailText(recordDetails, "firstChlorideTitrationPoint"),
+            ],
+            [
+              "2nd Cl point (ml)",
+              detailText(recordDetails, "secondChlorideTitrationPoint"),
+            ],
+            ["Sulfate Content (ppm)", detailText(recordDetails, "sulphate")],
+            ...(recordDetails.chloride !== undefined &&
+              recordDetails.chloride !== null &&
+              recordDetails.chloride !== ""
+              ? [["Chloride Content (ppm)", chlorideContentText(recordDetails.chloride)] as const]
+              : []),
           ]}
         />
       )}
 
       {(record.testType !== "Ready Mix" &&
+        record.testType !== "Precast" &&
         record.testType !== "Blocks" &&
         record.testType !== "Sand Sieve" &&
         record.testType !== "Aggregate Sieve" &&
@@ -692,7 +1564,20 @@ export default function RecordDetail() {
             <CardDescription>Status is based on the configured standard and measured values.</CardDescription>
           </CardHeader>
           <CardContent>
-            <StrengthEvaluation value={recordDetails.strengthEvaluation} />
+            <StrengthEvaluation
+              value={strengthEvaluationForDisplay}
+              strengthName={
+                record.testType === "Blocks"
+                  ? isDammamBlock && !isDammamSandwich
+                    ? "Net Strength"
+                    : "Air-dry Strength"
+                  : record.testType === "Paving Blocks"
+                    ? "tensile strength"
+                    : "strength"
+              }
+              dammamBlock={isDammamBlock}
+              dammamSandwich={isDammamSandwich}
+            />
           </CardContent>
         </Card>
       )}
@@ -710,7 +1595,11 @@ export default function RecordDetail() {
         </CardContent>
       </Card>
 
-       {canEditQc && !isStrengthEvaluated && !isSieveEvaluated && (
+       {canEditQc &&
+         !isStrengthEvaluated &&
+         !isSieveEvaluated &&
+         !isStrengthStandardsLoading &&
+         !hasLinkedStrengthStandard && (
         <Card>
           <CardHeader>
             <CardTitle>Quality Review</CardTitle>

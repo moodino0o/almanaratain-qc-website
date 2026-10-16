@@ -19,12 +19,44 @@ const blockStandard = (
   material: "Concrete Block",
   blockType: "8'' Solid Block",
   blockSize: "400 x 200 x 200",
+  cubeAge: null,
+  kerbClass: null,
+  kerbMarking: null,
   bsStandard: "BS EN 771-3",
   requiredStrength: "5",
+  minimumIndividualStrength: null,
+  waterAbsorptionLimit: null,
+  dammamAverageStrength: "13.8",
+  dammamMinimumStrength: "12.4",
   strengthUnit: "N/mm²",
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   updatedAt: new Date("2026-01-01T00:00:00.000Z"),
   ...overrides,
+});
+
+const precastStandard = (
+  id: number,
+  material: string,
+  cubeAge: number,
+  requiredStrength: number,
+): QcStrengthStandardRow => ({
+  id,
+  testType: "Precast",
+  material,
+  blockType: null,
+  blockSize: null,
+  cubeAge: String(cubeAge),
+  kerbClass: null,
+  kerbMarking: null,
+  bsStandard: `Precast ${cubeAge}-day criterion`,
+  requiredStrength: String(requiredStrength),
+  minimumIndividualStrength: null,
+  waterAbsorptionLimit: null,
+  dammamAverageStrength: null,
+  dammamMinimumStrength: null,
+  strengthUnit: "N/mm²",
+  createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 });
 
 const blockShapeFactor = (
@@ -51,6 +83,74 @@ const blockRecord = (
     blockAge: 28,
     testRows: rows,
   },
+});
+
+const dammamBlockRecord = (
+  loads: number[],
+  blockType = "8'' Solid Block",
+): Parameters<typeof evaluateStrengthRecord>[0] => {
+  const record = blockRecord(
+    loads.map((load) => ({
+      length: 400,
+      width: 200,
+      height: 200,
+      load,
+    })),
+  );
+  record.location = "Dammam Plant";
+  record.details = {
+    ...record.details,
+    blockType,
+    blockSize: '8"',
+    faceThickness: 30,
+    webThickness: 30,
+  };
+  return record;
+};
+
+const precastRecord = (
+  rows: Record<string, unknown>[],
+  cubeWeightUnit: string | null = "g",
+  material = "150 mm slab",
+): Parameters<typeof evaluateStrengthRecord>[0] => ({
+  testType: "Precast",
+  material,
+  details: {
+    ...(cubeWeightUnit ? { cubeWeightUnit } : {}),
+    cubeSize: "100*100*100",
+    testRows: rows,
+  },
+});
+
+const readyMixStandard = (
+  overrides: Partial<QcStrengthStandardRow> = {},
+): QcStrengthStandardRow => ({
+  id: 3,
+  testType: "Ready Mix",
+  material: "Concrete",
+  blockType: null,
+  blockSize: null,
+  cubeAge: null,
+  kerbClass: null,
+  kerbMarking: null,
+  bsStandard: "Ready Mix strength",
+  requiredStrength: "7",
+  minimumIndividualStrength: null,
+  waterAbsorptionLimit: null,
+  dammamAverageStrength: null,
+  dammamMinimumStrength: null,
+  strengthUnit: "N/mm²",
+  createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+  ...overrides,
+});
+
+const readyMixRecord = (
+  rows: Record<string, unknown>[],
+): Parameters<typeof evaluateStrengthRecord>[0] => ({
+  testType: "Ready Mix",
+  material: "Concrete",
+  details: { testRows: rows },
 });
 
 const standard = (
@@ -100,6 +200,46 @@ const record = (
   },
 });
 
+test("Ready Mix waits for blank 28-day results and reviews incomplete required entries", () => {
+  const standards = [readyMixStandard()];
+  const waiting = evaluateStrengthRecord(
+    readyMixRecord([
+      { id: 1, testAge: "7", length: 400, width: 200, load: 100 },
+      { id: 2, testAge: "28", length: "", width: "", load: "" },
+      { id: 3, testAge: "28", length: "", width: "", load: "" },
+    ]),
+    standards,
+  );
+  assert.equal(waiting.status, "Waiting for results");
+  assert.equal(waiting.evaluation?.status, "Waiting for results");
+
+  const incompleteResult = evaluateStrengthRecord(
+    readyMixRecord([
+      { id: 1, testAge: "28", length: 400, width: 200, load: "" },
+    ]),
+    standards,
+  );
+  assert.equal(incompleteResult.status, "Review");
+  assert.equal(
+    incompleteResult.evaluation?.reason,
+    "Complete each 28-day cube's dimensions and load.",
+  );
+
+  const missingAge = evaluateStrengthRecord(
+    readyMixRecord([{ id: 1, length: "", width: "", load: "" }]),
+    standards,
+  );
+  assert.equal(missingAge.status, "Review");
+
+  const completedResult = evaluateStrengthRecord(
+    readyMixRecord([
+      { id: 1, testAge: "28", length: 400, width: 200, load: 600 },
+    ]),
+    standards,
+  );
+  assert.equal(completedResult.status, "Passed");
+});
+
 const criterion = (result: ReturnType<typeof evaluateSieveRecord>) =>
   result.evaluation.criteria[0];
 
@@ -127,16 +267,418 @@ test("maps paving sizes ending in 60 and 80 to correction factors", () => {
   assert.equal(pavingCorrectionFactorFromSize("200 x 200 x 50"), null);
 });
 
-test("evaluates multiple paving rows using the configured correction factor", () => {
+test("evaluates Kerbstone bending and optional water absorption against editable limits", () => {
+  const standard = readyMixStandard({
+    testType: "Kerb Stone",
+    material: "Kerbstone",
+    blockType: "Road kerb",
+    blockSize: "915",
+    requiredStrength: "1",
+    minimumIndividualStrength: "1",
+    waterAbsorptionLimit: "6.5",
+    strengthUnit: "MPa",
+  });
+  const record = {
+    testType: "Kerb Stone",
+    material: "Kerbstone",
+    details: {
+      kerbType: "Road kerb",
+      testRows: [{
+        rowNo: 1,
+        spanLength: "300",
+        width: "100",
+        batterDepth: "40",
+        failureLoad: "10",
+        weight: "100",
+        wetWeight: "106.49",
+      }],
+    },
+  };
+  const passed = evaluateStrengthRecord(record, [standard]);
+  const passedDetails = passed.details as Record<string, unknown>;
+  const passedRows = passedDetails.testRows as Array<Record<string, unknown>>;
+  assert.equal(passed.status, "Passed");
+  assert.equal(passedRows[0].bendingStrength, "1.21");
+  assert.equal(passedRows[0].waterAbsorptionStatus, "Pass");
+
+  const atLimit = evaluateStrengthRecord({
+    ...record,
+    details: {
+      ...record.details,
+      testRows: [{ ...record.details.testRows[0], wetWeight: "106.5" }],
+    },
+  }, [standard]);
+  assert.equal(atLimit.status, "Failed");
+
+  const skippedAbsorption = evaluateStrengthRecord({
+    ...record,
+    details: {
+      ...record.details,
+      testRows: [{ ...record.details.testRows[0], wetWeight: "" }],
+    },
+  }, [standard]);
+  const skippedRows = (skippedAbsorption.details as Record<string, unknown>)
+    .testRows as Array<Record<string, unknown>>;
+  assert.equal(skippedAbsorption.status, "Passed");
+  assert.equal(skippedRows[0].waterAbsorptionStatus, "");
+  const edgeStandard = { ...standard, blockType: "Edge kerb", requiredStrength: "3.5", minimumIndividualStrength: "2.8" };
+  const edge = evaluateStrengthRecord({
+    ...record,
+    details: {
+      ...record.details,
+      kerbType: "Edge kerb",
+      testRows: [{ ...record.details.testRows[0], spanLength: "300", failureLoad: "10" }],
+    },
+  }, [edgeStandard]);
+  const edgeRows = (edge.details as Record<string, unknown>).testRows as Array<Record<string, unknown>>;
+  assert.equal(edgeRows[0].bendingStrength, "7.21");
+  assert.equal(edge.status, "Passed");
+});
+
+test("recalculates Road and Edge kerb strengths and reasons without changing measured inputs", () => {
+  const roadAndEdge = [
+    {
+      kerbType: "Road kerb",
+      expectedStrength: "1.21",
+      width: "127",
+      batterDepth: "150",
+      weight: "100",
+      wetWeight: "105",
+    },
+    {
+      kerbType: "Edge kerb",
+      expectedStrength: "7.21",
+      width: "100",
+      batterDepth: "40",
+      weight: "90",
+      wetWeight: "96",
+    },
+  ];
+
+  for (const specimen of roadAndEdge) {
+    const sourceRow = {
+      rowNo: 1,
+      spanLength: "300",
+      failureLoad: "10",
+      width: specimen.width,
+      batterDepth: specimen.batterDepth,
+      weight: specimen.weight,
+      wetWeight: specimen.wetWeight,
+      bendingStrength: "999.00",
+    };
+    const result = evaluateStrengthRecord(
+      {
+        testType: "Kerb Stone",
+        material: "Kerbstone",
+        details: {
+          kerbType: specimen.kerbType,
+          testRows: [sourceRow],
+          strengthEvaluation: { status: "Passed", reason: null },
+        },
+      },
+      [
+        readyMixStandard({
+          testType: "Kerb Stone",
+          material: "Kerbstone",
+          blockType: specimen.kerbType,
+          requiredStrength: "10",
+          minimumIndividualStrength: "10",
+          waterAbsorptionLimit: "6.5",
+          strengthUnit: "MPa",
+        }),
+      ],
+    );
+    const details = result.details as Record<string, unknown>;
+    const rows = details.testRows as Array<Record<string, unknown>>;
+    const evaluation = details.strengthEvaluation as Record<string, unknown>;
+
+    assert.equal(result.status, "Failed");
+    assert.equal(rows[0].bendingStrength, specimen.expectedStrength);
+    assert.equal(evaluation.status, "Failed");
+    assert.equal(
+      evaluation.reason,
+      "The average or minimum individual bending strength is below the configured Kerbstone standard.",
+    );
+    for (const field of [
+      "spanLength",
+      "failureLoad",
+      "width",
+      "batterDepth",
+      "weight",
+      "wetWeight",
+    ]) {
+      assert.equal(rows[0][field], sourceRow[field as keyof typeof sourceRow]);
+    }
+  }
+});
+
+test("recalculates stale Edge kerb summaries from specimen rows using the current standard", () => {
+  const record = {
+    testType: "Kerb Stone",
+    material: "Kerbstone",
+    status: "Failed",
+    details: {
+      kerbType: "Edge kerb",
+      strengthEvaluation: {
+        status: "Failed",
+        averageStrength: 2.33,
+        minimumStrength: 2.29,
+        maximumStrength: 2.38,
+      },
+      testRows: [
+        { spanLength: "250", failureLoad: "7.14", bendingStrength: "2.38" },
+        { spanLength: "250", failureLoad: "6.94", bendingStrength: "2.29" },
+        { spanLength: "250", failureLoad: "6.88", bendingStrength: "2.32" },
+      ],
+    },
+  };
+  const standard = readyMixStandard({
+    testType: "Kerb Stone",
+    material: "Kerbstone",
+    blockType: "Edge kerb",
+    requiredStrength: "3.5",
+    minimumIndividualStrength: "2.8",
+    waterAbsorptionLimit: "6.5",
+    strengthUnit: "MPa",
+  });
+
+  const result = evaluateStrengthRecord(record, [standard]);
+  const details = result.details as Record<string, unknown>;
+  const evaluation = details.strengthEvaluation as Record<string, unknown>;
+  const rows = details.testRows as Array<Record<string, unknown>>;
+
+  assert.equal(result.status, "Passed");
+  assert.deepEqual(rows.map((row) => row.bendingStrength), ["4.29", "4.17", "4.13"]);
+  assert.equal(evaluation.averageStrength, 4.2);
+  assert.equal(evaluation.minimumStrength, 4.13);
+  assert.equal(evaluation.maximumStrength, 4.29);
+});
+
+test("explains Kerbstone review when a minimum individual limit is missing", () => {
+  const standard = readyMixStandard({
+    testType: "Kerb Stone",
+    material: "Kerbstone",
+    blockType: "Road kerb",
+    requiredStrength: "5",
+    minimumIndividualStrength: null,
+    waterAbsorptionLimit: "6.5",
+    strengthUnit: "MPa",
+  });
+  const result = evaluateStrengthRecord({
+    testType: "Kerb Stone",
+    material: "Kerbstone",
+    details: {
+      kerbType: "Road kerb",
+      testRows: [{
+        spanLength: "750",
+        width: "127",
+        batterDepth: "150",
+        failureLoad: "19.84",
+      }],
+    },
+  }, [standard]);
+  const evaluation = (result.details as Record<string, unknown>)
+    .strengthEvaluation as Record<string, unknown>;
+
+  assert.equal(result.status, "Review");
+  assert.equal(
+    evaluation.reason,
+    "The matching Kerbstone standard has no minimum individual bending-strength limit.",
+  );
+});
+
+test("evaluates Precast age thresholds and calculates cube density from weight", () => {
+  const result = evaluateStrengthRecord(
+    precastRecord([
+      { rowNo: 1, testAge: 1, length: 200, width: 100, height: 100, load: 600, weight: 4000 },
+      { rowNo: 2, testAge: 7, length: 100, width: 100, height: 100, load: 520, weight: 2400 },
+      { rowNo: 3, testAge: 7, length: 100, width: 100, height: 100, load: 520, weight: 2400 },
+      { rowNo: 4, testAge: 28, length: 100, width: 100, height: 100, load: 650, weight: 2400 },
+      { rowNo: 5, testAge: 28, length: 100, width: 100, height: 100, load: 650, weight: 2400 },
+    ]),
+    [],
+  );
+  const details = result.details as Record<string, unknown>;
+  const evaluations = details.precastAgeEvaluations as Array<Record<string, unknown>>;
+  const rows = details.testRows as Array<Record<string, unknown>>;
+
+  assert.equal(result.status, "Passed");
+  assert.deepEqual(
+    evaluations.map(({ age, minimumStrength, averageStrength, outcome }) => ({
+      age,
+      minimumStrength,
+      averageStrength,
+      outcome,
+    })),
+    [
+      { age: 1, minimumStrength: 30, averageStrength: 30, outcome: "Approved for demolding" },
+      { age: 7, minimumStrength: 52, averageStrength: 52, outcome: "Pass" },
+      { age: 28, minimumStrength: 65, averageStrength: 65, outcome: "Pass" },
+    ],
+  );
+  assert.equal(rows[0].density, "2000.00");
+});
+
+test("matches editable Precast age thresholds by product type", () => {
+  const standards = [
+    precastStandard(1, "150 mm slab", 28, 68),
+    precastStandard(2, "200", 28, 72),
+  ];
+  const specimenRows = [
+    { rowNo: 1, testAge: 28, length: 100, width: 100, height: 100, load: 700 },
+  ];
+  const lowerThreshold = evaluateStrengthRecord(
+    precastRecord(specimenRows, "g", "150 mm slab"),
+    standards,
+  );
+  const higherThreshold = evaluateStrengthRecord(
+    precastRecord(specimenRows, "g", "200"),
+    standards,
+  );
+
+  assert.equal(lowerThreshold.status, "Passed");
+  assert.equal(higherThreshold.status, "Failed");
+  assert.equal(
+    (
+      (lowerThreshold.details as Record<string, unknown>)
+        .precastAgeEvaluations as Array<Record<string, unknown>>
+    ).find((evaluation) => evaluation.age === 28)?.minimumStrength,
+    68,
+  );
+  assert.equal(
+    (
+      (higherThreshold.details as Record<string, unknown>)
+        .precastAgeEvaluations as Array<Record<string, unknown>>
+    ).find((evaluation) => evaluation.age === 28)?.minimumStrength,
+    72,
+  );
+});
+
+test("applies the same Precast age thresholds to other product types", () => {
+  const result = evaluateStrengthRecord(
+    precastRecord(
+      [
+        { rowNo: 1, testAge: 1, length: 100, width: 100, height: 100, load: 300 },
+        { rowNo: 2, testAge: 7, length: 100, width: 100, height: 100, load: 520 },
+        { rowNo: 3, testAge: 28, length: 100, width: 100, height: 100, load: 650 },
+      ],
+      "g",
+      "200",
+    ),
+    [],
+  );
+  const details = result.details as Record<string, unknown>;
+  const evaluations = details.precastAgeEvaluations as Array<Record<string, unknown>>;
+
+  assert.equal(result.status, "Passed");
+  assert.deepEqual(
+    evaluations.map(({ age, minimumStrength, outcome }) => ({
+      age,
+      minimumStrength,
+      outcome,
+    })),
+    [
+      { age: 1, minimumStrength: 30, outcome: "Approved for demolding" },
+      { age: 7, minimumStrength: 52, outcome: "Pass" },
+      { age: 28, minimumStrength: 65, outcome: "Pass" },
+    ],
+  );
+});
+
+test("keeps existing Precast weights saved in kilograms compatible", () => {
+  const result = evaluateStrengthRecord(
+    precastRecord(
+      [
+        {
+          rowNo: 1,
+          testAge: 28,
+          length: 100,
+          width: 100,
+          height: 100,
+          load: 650,
+          weight: 2.4,
+        },
+      ],
+      null,
+    ),
+    [],
+  );
+  const details = result.details as Record<string, unknown>;
+  const rows = details.testRows as Array<Record<string, unknown>>;
+
+  assert.equal(result.status, "Passed");
+  assert.equal(rows[0].density, "2400.00");
+});
+
+test("marks Precast age criteria below threshold and leaves incomplete ages pending", () => {
+  const result = evaluateStrengthRecord(
+    precastRecord([
+      { rowNo: 1, testAge: 1, length: 100, width: 100, height: 100, load: 290 },
+      { rowNo: 2, testAge: 7, length: 100, width: 100, height: 100, load: 510 },
+      { rowNo: 3, testAge: 7, length: 100, width: 100, height: 100, load: "" },
+      { rowNo: 4, testAge: 28, length: 100, width: 100, height: 100, load: 640 },
+      { rowNo: 5, testAge: 28, length: 100, width: 100, height: 100, load: 640 },
+    ]),
+    [],
+  );
+  const details = result.details as Record<string, unknown>;
+  const evaluations = details.precastAgeEvaluations as Array<Record<string, unknown>>;
+
+  assert.equal(result.status, "Failed");
+  assert.deepEqual(
+    evaluations.map(({ age, outcome }) => ({ age, outcome })),
+    [
+      { age: 1, outcome: "Not approved for demolding" },
+      { age: 7, outcome: "Pending" },
+      { age: 28, outcome: "Fail" },
+    ],
+  );
+});
+
+test("calculates Paving tensile strength and evaluates the average against its standard", () => {
   const result = evaluateStrengthRecord(
     {
       testType: "Paving Blocks",
       material: "Concrete Block",
       details: {
-        pavingBlockSize: "200*200*60",
+        pavingBlockSize: "200*100*60",
         testRows: [
-          { rowNo: 1, length: 200, width: 200, load: 400 },
-          { rowNo: 2, length: 200, width: 200, load: 800 },
+          {
+            rowNo: 1,
+            length: 200,
+            width: 100,
+            height: 60,
+            load: 60.79,
+            dryWeight: 2.51,
+            wetWeight: 2.6,
+          },
+          {
+            rowNo: 2,
+            length: 200,
+            width: 100,
+            height: 60,
+            load: 62.47,
+            dryWeight: 2.5,
+            wetWeight: 2.6,
+          },
+          {
+            rowNo: 3,
+            length: 200,
+            width: 100,
+            height: 60,
+            load: 58.51,
+            dryWeight: 2.49,
+            wetWeight: 2.57,
+          },
+          {
+            rowNo: 4,
+            length: 200,
+            width: 100,
+            height: 60,
+            load: 58.42,
+            dryWeight: 2.48,
+            wetWeight: 2.56,
+          },
         ],
       },
     },
@@ -144,12 +686,12 @@ test("evaluates multiple paving rows using the configured correction factor", ()
       ...blockStandard(),
       testType: "Paving Blocks",
       blockType: null,
-      blockSize: "200 x 200 x 60",
-      requiredStrength: "13",
+      blockSize: "200 x 100 x 60",
+      requiredStrength: "3.6",
     }],
     [{
       ...blockShapeFactor(),
-      blockSize: "200*200*60",
+      blockSize: "200*100*60",
       shapeFactor: null,
       correctionFactor: "0.87",
     }],
@@ -157,11 +699,14 @@ test("evaluates multiple paving rows using the configured correction factor", ()
 
   const details = result.details as Record<string, unknown>;
   const rows = details.testRows as Array<Record<string, unknown>>;
-  assert.equal(result.status, "Passed");
-  assert.equal(result.evaluation.averageStrength, 13.05);
-  assert.equal(rows[0].compressiveStrength, "10.00");
-  assert.equal(rows[0].correctedStrength, 8.7);
-  assert.equal(rows[1].correctedStrength, 17.4);
+  assert.equal(result.status, "Failed");
+  assert.equal(result.evaluation.averageStrength, 2.78);
+  assert.equal(rows[0].tensileStrength, "2.81");
+  assert.equal(rows[0].correctedStrength, 2.81);
+  assert.equal(rows[1].tensileStrength, "2.89");
+  assert.equal(rows[2].tensileStrength, "2.70");
+  assert.equal(rows[0].density, "2166.67");
+  assert.equal(rows[0].waterAbsorption, "3.59");
 });
 
 test("normalizes Block age once and fills only missing dimensions", () => {
@@ -243,19 +788,20 @@ test("calculates Block air-dry and normalized strength with one-decimal rounding
   assert.equal(row.normalizedStrength, 4.5);
 });
 
-test("uses air-dry strength for every Block evaluation and keeps Dammam water equal to air-dry", () => {
+test("uses net strength for Dammam evaluation and keeps its water and air-dry results equal", () => {
   const result = evaluateStrengthRecord(
     {
       ...blockRecord([{ length: 400, width: 200, height: 200, load: 1000 }]),
       location: "Dammam",
     },
-    [blockStandard({ requiredStrength: "12.5" })],
+    [blockStandard({ requiredStrength: "13" })],
   );
   const row = (result.details.testRows as Record<string, unknown>[])[0];
 
   assert.equal(row.waterStrength, "12.50");
   assert.equal(row.airDryStrength, 12.5);
-  assert.equal(result.evaluation!.averageStrength, 12.5);
+  assert.ok(Math.abs(Number(row.netStrength) - 24.509803921568626) < 1e-10);
+  assert.equal(result.evaluation!.averageStrength, 24.51);
   assert.equal(result.status, "Passed");
 });
 
@@ -266,6 +812,246 @@ test("uses the air-dry result for Block pass and fail evaluation", () => {
   );
 
   assert.equal(result.evaluation!.averageStrength, 15);
+  assert.equal(result.status, "Passed");
+});
+
+test("calculates Dammam gross and net results and uses net strength for compliance", () => {
+  const record = blockRecord([
+    { length: 400, width: 200, height: 200, load: 1200 },
+    { length: 400, width: 200, height: 200, load: 1500 },
+  ]);
+  record.location = "Dammam Plant";
+  record.details.blockSize = '8"';
+  record.details.faceThickness = 30;
+  record.details.webThickness = 30;
+
+  const result = evaluateStrengthRecord(
+    record,
+    [blockStandard({ requiredStrength: "18" })],
+  );
+  const rows = result.details.testRows as Record<string, unknown>[];
+
+  assert.equal((result.details as Record<string, unknown>).numberOfHoles, 3);
+  assert.equal(rows[1].numberOfHoles, 3);
+  assert.equal(rows[1].failureLoad, 1500);
+  assert.equal(rows[1].failureLoadN, 1_500_000);
+  assert.equal(rows[1].grossArea, 80_000);
+  assert.equal(rows[1].netArea, 40_800);
+  assert.equal(rows[1].grossStrength, 18.75);
+  assert.ok(Math.abs(Number(rows[1].netStrength) - 1_500_000 / 40_800) < 1e-10);
+  assert.equal(rows[1].airDryStrength, 18.8);
+  assert.equal(result.evaluation!.averageStrength, 33.09);
+  assert.ok(Math.abs(result.evaluation!.minimumStrength! - 1_200_000 / 40_800) < 1e-10);
+  assert.ok(Math.abs(result.evaluation!.maximumStrength! - 1_500_000 / 40_800) < 1e-10);
+  assert.equal(result.status, "Passed");
+});
+
+test("uses the linked standard's Dammam thresholds and passes at inclusive limits", () => {
+  const record = dammamBlockRecord([505.92, 620.16]);
+  record.details.strengthStandardId = 2;
+  const result = evaluateStrengthRecord(record, [
+    blockStandard({
+      id: 1,
+      bsStandard: "Unselected reference",
+      requiredStrength: "0",
+      dammamAverageStrength: "100",
+      dammamMinimumStrength: "100",
+    }),
+    blockStandard({
+      id: 2,
+      bsStandard: "Linked Dammam standard",
+      requiredStrength: "999",
+      dammamAverageStrength: "13.8",
+      dammamMinimumStrength: "12.4",
+    }),
+  ]);
+
+  assert.equal(result.status, "Passed");
+  assert.equal(result.evaluation!.bsStandard, "Linked Dammam standard");
+  assert.equal(result.evaluation!.requiredStrength, 13.8);
+  assert.equal(result.evaluation!.minimumRequiredStrength, 12.4);
+  assert.equal(result.evaluation!.averageStrength, 13.8);
+  assert.ok(Math.abs(result.evaluation!.minimumStrength! - 12.4) < 1e-9);
+});
+
+test("fails Dammam regular Blocks when either the average or specimen minimum is below its linked limit", () => {
+  const minimumFailure = evaluateStrengthRecord(
+    dammamBlockRecord([449, 700]),
+    [blockStandard({ dammamAverageStrength: "13.8", dammamMinimumStrength: "12.4" })],
+  );
+  assert.equal(minimumFailure.status, "Failed");
+  assert.ok(minimumFailure.evaluation!.averageStrength! >= 13.8);
+  assert.ok(minimumFailure.evaluation!.minimumStrength! < 12.4);
+  assert.match(minimumFailure.evaluation!.reason ?? "", /minimum.*net strength/i);
+
+  const averageFailure = evaluateStrengthRecord(
+    dammamBlockRecord([510, 530]),
+    [blockStandard({ dammamAverageStrength: "13.8", dammamMinimumStrength: "12.4" })],
+  );
+  assert.equal(averageFailure.status, "Failed");
+  assert.ok(averageFailure.evaluation!.averageStrength! < 13.8);
+  assert.ok(averageFailure.evaluation!.minimumStrength! >= 12.4);
+  assert.match(averageFailure.evaluation!.reason ?? "", /average.*net strength/i);
+});
+
+test("keeps Dammam Blocks in Review when the linked standard lacks Dammam criteria", () => {
+  const result = evaluateStrengthRecord(
+    dammamBlockRecord([600, 700]),
+    [blockStandard({ dammamAverageStrength: null, dammamMinimumStrength: null })],
+  );
+  assert.equal(result.status, "Review");
+  assert.match(result.evaluation!.reason ?? "", /missing a Dammam average-strength limit/i);
+});
+
+test("uses gross-area Air-dry strength for Dammam Sandwich Block compliance", () => {
+  const record = blockRecord([
+    { length: 400, width: 200, height: 200, load: 1200 },
+    { length: 400, width: 200, height: 200, load: 1500 },
+  ]);
+  record.location = "Dammam Plant";
+  record.details = {
+    ...record.details,
+    blockType: "8'' Sandwich Insulation Block",
+    blockSize: "400 x 200 x 200",
+    shapeFactor: "1.1",
+  };
+
+  const result = evaluateStrengthRecord(
+    record,
+    [
+      blockStandard({
+        blockType: "8'' Sandwich Insulation Block",
+        requiredStrength: "16.7",
+      dammamAverageStrength: "4.14",
+      dammamMinimumStrength: null,
+      }),
+    ],
+  );
+  const details = result.details as Record<string, unknown>;
+  const rows = details.testRows as Record<string, unknown>[];
+
+  assert.equal(rows[1].grossArea, 80_000);
+  assert.equal(rows[1].grossStrength, 18.75);
+  assert.equal(rows[1].waterStrength, "15.63");
+  assert.equal(rows[1].airDryStrength, 18.8);
+  assert.equal(rows[1].normalizedStrength, 20.7);
+  assert.equal("netArea" in rows[1], false);
+  assert.equal("netStrength" in rows[1], false);
+  assert.equal("faceThickness" in rows[1], false);
+  assert.equal("webThickness" in rows[1], false);
+  assert.equal("numberOfHoles" in details, false);
+  assert.equal(result.evaluation!.averageStrength, 16.9);
+  assert.equal(result.status, "Passed");
+});
+
+test("uses size defaults and each specimen's own Dammam thickness values", () => {
+  const cases = [
+    { blockSize: "400*200*200", width: 200, expectedWeb: 30 },
+    { blockSize: "400*150*200", width: 150, expectedWeb: 25 },
+    { blockSize: "400*100*200", width: 100, expectedWeb: 25 },
+  ];
+
+  for (const { blockSize, width, expectedWeb } of cases) {
+    const result = evaluateStrengthRecord(
+      {
+        ...blockRecord([{ length: 400, width, height: 200, load: 1000 }]),
+        location: "Dammam",
+        details: {
+          ...blockRecord([]).details,
+          blockSize,
+          testRows: [{ length: 400, width, height: 200, load: 1000 }],
+        },
+      },
+      [blockStandard()],
+    );
+    const row = (result.details.testRows as Record<string, unknown>[])[0];
+    assert.equal(row.faceThickness, 30);
+    assert.equal(row.webThickness, expectedWeb);
+  }
+
+  const customResult = evaluateStrengthRecord(
+    {
+      ...blockRecord([
+        { length: 400, width: 200, height: 200, load: 1000 },
+        {
+          length: 400,
+          width: 200,
+          height: 200,
+          load: 1000,
+          faceThickness: 40,
+          webThickness: 30,
+        },
+      ]),
+      location: "Dammam",
+    },
+    [blockStandard()],
+  );
+  const rows = customResult.details.testRows as Record<string, unknown>[];
+  assert.equal(rows[0].webThickness, 30);
+  assert.equal(rows[0].faceThickness, 30);
+  assert.equal(rows[1].webThickness, 30);
+  assert.equal(rows[1].faceThickness, 40);
+  assert.notEqual(rows[0].netArea, rows[1].netArea);
+});
+
+test("does not add Dammam result fields or change strength outside Dammam", () => {
+  const result = evaluateStrengthRecord(
+    blockRecord([{ length: 400, width: 200, height: 200, load: 1000 }]),
+    [blockStandard()],
+  );
+  const row = (result.details.testRows as Record<string, unknown>[])[0];
+
+  assert.equal("grossArea" in row, false);
+  assert.equal("netArea" in row, false);
+  assert.equal(row.airDryStrength, 15);
+});
+
+test("matches a Block standard by Block Type and Size without a material entry", () => {
+  const result = evaluateStrengthRecord(
+    {
+      ...blockRecord([{ length: 400, width: 200, height: 200, load: 1000 }]),
+      material: "",
+    },
+    [blockStandard()],
+  );
+
+  assert.equal(result.evaluation?.bsStandard, "BS EN 771-3");
+  assert.equal(result.status, "Passed");
+});
+
+test("allows a saved manual Block standard to override the automatic match", () => {
+  const selectedStandard = blockStandard({
+    id: 2,
+    bsStandard: "Manual block standard",
+    requiredStrength: "20",
+  });
+  const record = blockRecord([
+    { length: 400, width: 200, height: 200, load: 1000 },
+  ]);
+  record.details.strengthStandardId = selectedStandard.id;
+
+  const result = evaluateStrengthRecord(
+    { ...record, material: "" },
+    [blockStandard(), selectedStandard],
+  );
+
+  assert.equal(result.evaluation?.bsStandard, "Manual block standard");
+  assert.equal(result.status, "Failed");
+});
+
+test("passes Blocks when air-dry average meets the minimum even if wet average does not", () => {
+  const result = evaluateStrengthRecord(
+    blockRecord([
+      { length: 400, width: 200, height: 200, load: 460.8 },
+      { length: 400, width: 200, height: 200, load: 447.3 },
+      { length: 400, width: 200, height: 200, load: 572.3 },
+      { length: 400, width: 200, height: 200, load: 590.3 },
+      { length: 400, width: 200, height: 200, load: 598.4 },
+    ]),
+    [blockStandard({ requiredStrength: "7.5" })],
+  );
+
+  assert.equal(result.evaluation!.averageStrength, 8.02);
   assert.equal(result.status, "Passed");
 });
 
@@ -301,6 +1087,21 @@ test("applies a configured Block-size shape factor only when no saved value exis
   const legacyRows = legacyDetails.testRows as Array<Record<string, unknown>>;
   assert.equal(legacyDetails.shapeFactor, "1.3");
   assert.equal(legacyRows[0].normalizedStrength, 19.5);
+});
+
+test("preserves the configured shape-factor precision in Block calculations", () => {
+  const result = evaluateStrengthRecord(
+    blockRecord([
+      { length: 400, width: 200, height: 200, load: 1000 },
+    ]),
+    [blockStandard()],
+    [blockShapeFactor({ shapeFactor: "1.234" })],
+  );
+
+  const resultDetails = result.details as Record<string, unknown>;
+  const resultRows = resultDetails.testRows as Array<Record<string, unknown>>;
+  assert.equal(resultDetails.shapeFactor, "1.234");
+  assert.equal(resultRows[0].normalizedStrength, 18.5);
 });
 
 test("does not apply a shape factor configured for a different Block size", () => {
@@ -593,22 +1394,29 @@ test("evaluates block compliance using the average sample strength", () => {
   assert.equal(result.evaluation!.reason, null);
 });
 
-test("uses Air Dry strength for Dammam Block compliance", () => {
+test("keeps Dammam Blocks in Review when Net Strength cannot be calculated", () => {
   const result = evaluateStrengthRecord(
     {
       ...blockRecord([
-        { rowNo: 1, length: 100, width: 100, load: 125 },
-        { rowNo: 2, length: 100, width: 100, load: 150 },
+        {
+          rowNo: 1,
+          length: 400,
+          width: 200,
+          height: 200,
+          load: 1500,
+          faceThickness: 500,
+          webThickness: 500,
+          airDryStrength: 100,
+        },
       ]),
       location: "Dammam",
     },
-    [blockStandard({ requiredStrength: "13.75" })],
+    [blockStandard({ requiredStrength: "13" })],
   );
 
-  assert.equal(result.status, "Passed");
-  assert.equal(result.evaluation!.averageStrength, 13.75);
-  assert.equal(result.evaluation!.minimumStrength, 12.5);
-  assert.equal(result.evaluation!.maximumStrength, 15);
+  assert.equal(result.status, "Review");
+  assert.equal(result.evaluation!.averageStrength, null);
+  assert.match(result.evaluation!.reason ?? "", /net strength/i);
 });
 
 test("fails block compliance when the average sample strength is below the standard", () => {

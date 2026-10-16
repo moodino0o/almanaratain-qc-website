@@ -1,7 +1,11 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { ensureEmployeeDirectorySeed } from "./lib/employee-access";
-import { ensureReferenceData } from "./routes/qc";
+import { initializeApiBeforeListen } from "./lib/api-startup";
+import {
+  ensureDefaultStrengthStandards,
+  ensureReferenceData,
+} from "./routes/qc";
 
 const rawPort = process.env["PORT"];
 
@@ -17,9 +21,11 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-ensureEmployeeDirectorySeed()
-  .then(() => ensureReferenceData())
-  .then(() => {
+void initializeApiBeforeListen({
+  ensureEmployeeDirectorySeed,
+  ensureReferenceData,
+  ensureDefaultStrengthStandards,
+  startServer: () => {
     app.listen(port, (err) => {
       if (err) {
         logger.error({ err }, "Error listening on port");
@@ -28,8 +34,9 @@ ensureEmployeeDirectorySeed()
 
       logger.info({ port }, "Server listening");
     });
-  })
+  },
+})
   .catch((err) => {
-    logger.error({ err }, "Unable to initialize employee directory");
+    logger.error({ err }, "Unable to initialize application data");
     process.exit(1);
   });

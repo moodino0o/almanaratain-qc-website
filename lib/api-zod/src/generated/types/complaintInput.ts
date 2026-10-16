@@ -19,5 +19,7 @@ export interface ComplaintInput {
   details: string;
   solution?: string;
   recommendation?: string;
+  qcReviewerName?: string | null;
+  reviewDate?: Date | null;
   picturePaths?: ComplaintPicture[];
 }

@@ -1,31 +1,28 @@
-import { Bullet, SlideFooter, SlideFrame, SlideHeader, SlideTitle } from '../../components/SlideFrame';
+import { Card, ManagementSlide, Note } from '../../components/ManagementSlide';
 
 export default function Slide3() {
   return (
-    <SlideFrame>
-      <SlideHeader section="Project Overview" number="03 / 16" />
-      <div className="absolute left-[5vw] right-[5vw] top-[16vh]">
-        <SlideTitle>Operating Context</SlideTitle>
-        <div className="mt-[8vh] grid grid-cols-2 gap-x-[7vw] gap-y-[7vh]">
-          <div className="border-t-2 border-primary pt-[2vh]">
-            <div className="mb-[1.5vh] font-mono text-[1.5vw] text-[#718096]">01</div>
-            <Bullet number="">Quality checks span multiple materials and test types</Bullet>
-          </div>
-          <div className="border-t-2 border-primary pt-[2vh]">
-            <div className="mb-[1.5vh] font-mono text-[1.5vw] text-[#718096]">02</div>
-            <Bullet number="">Inspectors need consistent fields and reference values</Bullet>
-          </div>
-          <div className="border-t-2 border-primary pt-[2vh]">
-            <div className="mb-[1.5vh] font-mono text-[1.5vw] text-[#718096]">03</div>
-            <Bullet number="">Managers need current records, statuses, and reports</Bullet>
-          </div>
-          <div className="border-t-2 border-primary pt-[2vh]">
-            <div className="mb-[1.5vh] font-mono text-[1.5vw] text-[#718096]">04</div>
-            <Bullet number="">Administrators need control over access and master data</Bullet>
-          </div>
-        </div>
+    <ManagementSlide section="Operating Context" page="03" title="The operational problem it targets">
+      <div className="grid h-[49vh] grid-cols-2 gap-[1.5vw]">
+        <Card label="MANUAL-PROCESS RISKS" title="Where friction can occur" soft>
+          <div>Repeated entry across forms and spreadsheets</div>
+          <div>Formula and formatting differences</div>
+          <div>Manual assembly of reports</div>
+          <div>Historical records spread across files</div>
+        </Card>
+        <Card label="CURRENT DIGITAL CAPABILITY" title="What the app centralizes">
+          <div>Typed QC records with test-specific details</div>
+          <div>Calculations and standards in application logic</div>
+          <div>Print-ready reports and spreadsheet export</div>
+          <div>Searchable records, reference data and archive</div>
+        </Card>
       </div>
-      <SlideFooter label="Project Overview / Operating Context" number="03" />
-    </SlideFrame>
+      <div className="mt-[2.5vh] grid grid-cols-[1fr_auto_1fr] items-center gap-[1.5vw]">
+        <div className="border border-line px-[1.5vw] py-[1.2vh] text-[1.8vw] text-muted">Manual entry / calculation / report work</div>
+        <div className="font-display text-[2.5vw] font-bold text-accent">→</div>
+        <div className="border border-accent/50 bg-soft px-[1.5vw] py-[1.2vh] text-[1.8vw] font-semibold text-primary">Structured digital QC workflow</div>
+      </div>
+      <Note>These are design goals, not quantified before-and-after results.</Note>
+    </ManagementSlide>
   );
 }

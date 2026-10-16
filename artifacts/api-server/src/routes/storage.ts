@@ -54,12 +54,29 @@ router.post(
     }
     const role = await getEmployeeRole(req.user);
     const allowed =
-      parsed.data.purpose === 'archive'
+      parsed.data.purpose === 'archive' || parsed.data.purpose === 'report-template'
         ? role === 'administrator'
         : role === 'managerial' || role === 'administrator';
     if (!allowed) {
       res.status(403).json({ error: 'Your role does not allow this upload.' });
       return;
+    }
+
+    if (parsed.data.purpose === 'report-template') {
+      const supportedImageTypes = new Set([
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+      ]);
+      if (
+        !supportedImageTypes.has(parsed.data.contentType.toLowerCase()) ||
+        parsed.data.size > 10 * 1024 * 1024
+      ) {
+        res.status(400).json({
+          error: 'Report template images must be JPEG, PNG, or WebP files under 10 MB.',
+        });
+        return;
+      }
     }
 
     try {

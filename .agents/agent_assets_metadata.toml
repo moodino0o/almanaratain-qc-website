@@ -1,0 +1,23 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "3sXpB36D4TmZlJueanU0T"
+uri = "file://.local/outputs/Al-Manaratain-QC-Project-Deck.pptx"
+type = "slides"
+title = "Al Manaratain QC Project Deck.pptx"
+logical_id = "234b9911-f6e2-4069-ac53-9c6006e5285c"
+
+[[outputs]]
+id = "dSJeA-sy5uwY0VEdCetN5"
+uri = "file://.local/outputs/Al-Manaratain-QC-Application-Management-Presentation.pptx"
+type = "slides"
+title = "Al Manaratain QC Management Presentation (PPTX)"
+description = "25 slides: management overview, app-verified calculations, Dammam geometry, deployment, security and five technical appendices."
+logical_id = "3fee7ec1-2ba7-4cd6-b334-a813d882da06"
+content_hash = "sha256:5abf345cda3f379f3887537aca4ff4894ae5d14ac0e959a682c5cd139fd21fbd"
+size = 1169881
+mtime_ms = 1791373080782
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:c71f58a2-45bd-4643-9a2b-a7a365ead18b/3fee7ec1-2ba7-4cd6-b334-a813d882da06/ce67b75b-9551-48a9-8845-71813c5303e3"
+storage_version_token = "1791373082483952"
+content_type = "application/vnd.openxmlformats-officedocument.presentationml.presentation"

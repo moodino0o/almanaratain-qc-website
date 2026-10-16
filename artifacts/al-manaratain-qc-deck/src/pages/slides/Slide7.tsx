@@ -1,28 +1,23 @@
-import { SectionTag, SlideFooter, SlideFrame, SlideHeader, SlideTitle } from '../../components/SlideFrame';
+import { FormulaCard, ManagementSlide, Note } from '../../components/ManagementSlide';
 
 export default function Slide7() {
   return (
-    <SlideFrame>
-      <SlideHeader section="QC Workflows" number="07 / 16" />
-      <div className="absolute left-[5vw] right-[5vw] top-[16vh]">
-        <SlideTitle>Assessment Engine</SlideTitle>
-        <div className="mt-[7vh] grid grid-cols-[0.85fr_1.15fr] gap-[7vw]">
-          <div className="border border-line bg-soft px-[3vw] py-[4vh]">
-            <SectionTag>Review signal</SectionTag>
-            <div className="font-display text-[5.5vw] font-black leading-none tracking-[-0.06em] text-primary">QC</div>
-            <p className="mt-[2vh] text-[1.9vw] leading-[1.35] text-muted">
-              Calculated results stay close to the submitted record.
-            </p>
-          </div>
-          <div className="space-y-[4vh]">
-            <div className="border-t-2 border-primary pt-[2vh]"><SectionTag>01 / Strength</SectionTag><p className="text-[2vw] leading-[1.3] text-muted">Strength records are evaluated against configured standards</p></div>
-            <div className="border-t-2 border-primary pt-[2vh]"><SectionTag>02 / Sieve</SectionTag><p className="text-[2vw] leading-[1.3] text-muted">Sieve records calculate passing mass from retained amounts</p></div>
-            <div className="border-t-2 border-primary pt-[2vh]"><SectionTag>03 / Review</SectionTag><p className="text-[2vw] leading-[1.3] text-muted">Results are stored with the submitted QC record</p></div>
-            <div className="border-t-2 border-primary pt-[2vh]"><SectionTag>04 / Visibility</SectionTag><p className="text-[2vw] leading-[1.3] text-muted">Status and calculated values remain visible during review</p></div>
-          </div>
+    <ManagementSlide section="Calculations" page="07" title="Calculations use the selected test workflow">
+      <div className="grid h-[43vh] grid-cols-3 gap-[1.35vw]">
+        <FormulaCard label="CUBE / BLOCK BASIS" expression="Load (kN) × 1,000 ÷ [Length × Width]" note="Result: N/mm². Block air-dry factor is applied separately." />
+        <FormulaCard label="PAVING BLOCK" expression="0.637 × Load × 1,000 ÷ [Length × Height]" note="The configured size correction factor is applied when available." />
+        <FormulaCard label="WATER ABSORPTION" expression="(Wet − Dry) ÷ Dry × 100" note="Displayed as a percentage; invalid or incomplete inputs remain blank." />
+      </div>
+      <div className="mt-[2.3vh] grid grid-cols-[1fr_1fr] gap-[1.35vw]">
+        <div className="border border-line bg-soft p-[1.4vw]">
+          <div className="mb-[0.8vh] font-mono text-[1.5vw] uppercase tracking-[0.12em] text-[#718096]">BLOCK ADJUSTMENTS</div>
+          <div className="text-[1.8vw] leading-[1.2] text-primary">Air-dry strength = water strength × 1.2 for non-Dammam Blocks; × 1.0 for Dammam. Optional normalized strength uses the configured shape factor.</div>
+        </div>
+        <div className="flex items-center border-l-[0.35vw] border-accent pl-[1.4vw] text-[1.8vw] leading-[1.2] text-muted">
+          Result precision is field-specific. The app does not use one universal display-rounding rule.
         </div>
       </div>
-      <SlideFooter label="QC Workflows / Assessment Engine" number="07" />
-    </SlideFrame>
+      <Note>Appendix A lists additional equations directly from the application logic.</Note>
+    </ManagementSlide>
   );
 }

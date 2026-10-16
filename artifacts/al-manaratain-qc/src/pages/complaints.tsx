@@ -141,7 +141,81 @@ export default function Complaints() {
 
       <Card className="overflow-hidden">
          <CardHeader className="flex flex-row items-center justify-between border-b bg-card pb-4"><div><CardTitle className="text-base">Complaint register</CardTitle><p className="mt-1 text-sm text-muted-foreground">{filtered.length} loaded record{filtered.length === 1 ? "" : "s"}</p></div><Badge variant="outline">QC controlled</Badge></CardHeader>
-            {filtered.length === 0 ? <CardContent className="flex flex-col items-center justify-center gap-3 p-14 text-center"><div className="rounded-full bg-muted p-4"><FileWarning className="h-7 w-7 text-muted-foreground" /></div><h2 className="text-lg font-semibold">{complaints.length ? "No complaints match those filters" : "No complaints recorded yet"}</h2><p className="max-w-md text-sm text-muted-foreground">{complaints.length ? "Try a broader search or clear one of the filters." : "No complaints have been recorded yet."}</p>{!complaints.length && canEditComplaints && <Button asChild><Link href="/complaints/new">Create first complaint</Link></Button>}</CardContent> : <div className="complaint-register-scroll"><table className="complaint-register-table w-full table-fixed text-xs"><colgroup><col className="w-[12%]" /><col className="w-[11%]" /><col className="w-[12%]" /><col className="w-[9%]" /><col className="w-[15%]" /><col className="w-[16%]" /><col className="w-[16%]" /><col className="w-[9%]" /></colgroup><thead className="sticky top-0 z-10 bg-muted/95 text-left text-[10px] uppercase tracking-wide text-muted-foreground"><tr><th>Complaint</th><th>Status</th><th>Customer</th><th>Delivery</th><th>Classification</th><th>Details</th><th>Follow-through</th><th className="text-right">Action</th></tr></thead><tbody className="divide-y">{filtered.map((complaint) => <tr key={complaint.id} className="align-top transition-colors hover:bg-muted/20"><td><Link href={`/complaints/${complaint.id}`} className="font-semibold text-primary hover:underline">{complaint.complaintNo}</Link><p className="mt-1 text-[10px] text-muted-foreground">Updated {displayDate(complaint.updatedAt)}</p></td><td><Badge variant={complaint.status === "complete" ? "success" : "secondary"}>{complaint.status === "complete" ? "Complete" : "Open"}</Badge>{canEditComplaints && complaint.status === "open" && <Button type="button" variant="outline" size="sm" className="mt-2 h-7 whitespace-normal px-1.5 text-[10px]" disabled={updateComplaint.isPending} onClick={() => void markComplete(complaint.id)}><CheckCircle2 className="mr-1 h-3 w-3 shrink-0" />Mark complete</Button>}</td><td className="font-medium">{complaint.customerName}</td><td className="text-muted-foreground">{displayDate(complaint.deliveryDate)}</td><td><p className="font-medium">{complaint.materialType}</p><div className="mt-1 flex flex-wrap items-center gap-1"><Badge variant="outline" className="text-[10px]">{complaintCategory(complaint.materialType)}</Badge></div></td><td className="text-muted-foreground"><p className="line-clamp-2">{complaint.details}</p></td><td><div className="flex flex-wrap gap-1"><Badge variant={complaint.solution.trim() ? "success" : "secondary"} className="text-[10px]">Solution: {availability(complaint.solution)}</Badge><Badge variant={complaint.recommendation.trim() ? "success" : "secondary"} className="text-[10px]">Recommendation: {availability(complaint.recommendation)}</Badge><span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground"><ShieldCheck className="h-3 w-3 shrink-0" />{complaint.picturePaths.length} picture{complaint.picturePaths.length === 1 ? "" : "s"}</span></div></td><td className="text-right"><Button asChild variant="ghost" size="sm" className="h-7 px-1 text-[10px]"><Link href={`/complaints/${complaint.id}`}>Review <ArrowUpRight className="ml-1 h-3 w-3" /></Link></Button></td></tr>)}</tbody></table><div className="sticky bottom-0 z-10 border-t bg-card/95 px-3 py-2 text-[11px] text-muted-foreground backdrop-blur">Showing {filtered.length} of {complaints.length} loaded record{complaints.length === 1 ? "" : "s"}</div></div>}
+            {filtered.length === 0 ? (
+              <CardContent className="flex flex-col items-center justify-center gap-3 p-14 text-center">
+                <div className="rounded-full bg-muted p-4"><FileWarning className="h-7 w-7 text-muted-foreground" /></div>
+                <h2 className="text-lg font-semibold">{complaints.length ? "No complaints match those filters" : "No complaints recorded yet"}</h2>
+                <p className="max-w-md text-sm text-muted-foreground">{complaints.length ? "Try a broader search or clear one of the filters." : "No complaints have been recorded yet."}</p>
+                {!complaints.length && canEditComplaints && <Button asChild><Link href="/complaints/new">Create first complaint</Link></Button>}
+              </CardContent>
+            ) : (
+              <div className="complaint-register-scroll overflow-x-auto xl:overflow-x-visible">
+                <table className="complaint-register-table w-full min-w-[1240px] table-fixed text-xs xl:min-w-0">
+                  <colgroup>
+                    <col className="w-[12%]" />
+                    <col className="w-[11%]" />
+                    <col className="w-[12%]" />
+                    <col className="w-[9%]" />
+                    <col className="w-[15%]" />
+                    <col className="w-[16%]" />
+                    <col className="w-[16%]" />
+                    <col className="w-[9%]" />
+                  </colgroup>
+                  <thead className="sticky top-0 z-10 bg-muted/95 text-left text-[10px] uppercase tracking-wide text-muted-foreground">
+                    <tr>
+                      <th>Complaint</th>
+                      <th>Status</th>
+                      <th>Customer</th>
+                      <th>Delivery</th>
+                      <th>Classification</th>
+                      <th>Details</th>
+                      <th>Follow-through</th>
+                      <th className="text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {filtered.map((complaint) => (
+                      <tr key={complaint.id} className="align-top transition-colors hover:bg-muted/20">
+                        <td>
+                          <Link href={`/complaints/${complaint.id}`} className="font-semibold text-primary hover:underline">{complaint.complaintNo}</Link>
+                          <p className="mt-1 text-[10px] text-muted-foreground">Updated {displayDate(complaint.updatedAt)}</p>
+                        </td>
+                        <td>
+                          <Badge variant={complaint.status === "complete" ? "success" : "secondary"}>{complaint.status === "complete" ? "Complete" : "Open"}</Badge>
+                          {canEditComplaints && complaint.status === "open" && (
+                            <Button type="button" variant="outline" size="sm" className="mt-2 h-7 whitespace-normal px-1.5 text-[10px]" disabled={updateComplaint.isPending} onClick={() => void markComplete(complaint.id)}>
+                              <CheckCircle2 className="mr-1 h-3 w-3 shrink-0" />Mark complete
+                            </Button>
+                          )}
+                        </td>
+                        <td className="font-medium">{complaint.customerName}</td>
+                        <td className="text-muted-foreground">{displayDate(complaint.deliveryDate)}</td>
+                        <td>
+                          <p className="font-medium">{complaint.materialType}</p>
+                          <div className="mt-1 flex flex-wrap items-center gap-1"><Badge variant="outline" className="text-[10px]">{complaintCategory(complaint.materialType)}</Badge></div>
+                        </td>
+                        <td className="text-muted-foreground"><p className="line-clamp-2">{complaint.details}</p></td>
+                        <td>
+                          <div className="flex flex-wrap gap-1">
+                            <Badge variant={complaint.solution.trim() ? "success" : "secondary"} className="text-[10px]">Solution: {availability(complaint.solution)}</Badge>
+                            <Badge variant={complaint.recommendation.trim() ? "success" : "secondary"} className="text-[10px]">Recommendation: {availability(complaint.recommendation)}</Badge>
+                            <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground"><ShieldCheck className="h-3 w-3 shrink-0" />{complaint.picturePaths.length} picture{complaint.picturePaths.length === 1 ? "" : "s"}</span>
+                          </div>
+                        </td>
+                        <td className="text-right">
+                          <Button asChild variant="ghost" size="sm" className="h-7 px-1 text-[10px]">
+                            <Link href={`/complaints/${complaint.id}`}>Review <ArrowUpRight className="ml-1 h-3 w-3" /></Link>
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="sticky bottom-0 z-10 border-t bg-card/95 px-3 py-2 text-[11px] text-muted-foreground backdrop-blur">
+                  Showing {filtered.length} of {complaints.length} loaded record{complaints.length === 1 ? "" : "s"}
+                </div>
+              </div>
+            )}
       </Card>
     </div>
   );

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { Link, useLocation, useParams } from "wouter";
+import { useLocation, useParams } from "wouter";
 import { ArrowLeft, Check, FileImage, Loader2, Plus, Upload, X } from "lucide-react";
 import { useCreateComplaint, useCreateReferenceItem, useGetComplaint, useGetReferenceData, useRequestUploadUrl, useUpdateComplaint, type ComplaintInput, type ComplaintPicture } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useAuth } from "@workspace/replit-auth-web";
+import { useAppBack } from "@/hooks/use-app-back";
 
 const maxPictureSize = 10 * 1024 * 1024;
 
@@ -48,6 +49,8 @@ export default function ComplaintForm() {
   const isNew = !id || id === "new";
   const complaintId = Number(id);
   const [, setLocation] = useLocation();
+  const fallbackRoute = isNew ? "/complaints" : `/complaints/${complaintId}`;
+  const goBack = useAppBack(fallbackRoute);
   const queryClient = useQueryClient();
   const detailQuery = useGetComplaint(complaintId, { query: { enabled: !isNew && Number.isFinite(complaintId), queryKey: getGetComplaintQueryKey(complaintId) } });
   const referenceQuery = useGetReferenceData();
@@ -63,6 +66,8 @@ export default function ComplaintForm() {
   const [details, setDetails] = useState("");
   const [solution, setSolution] = useState("");
   const [recommendation, setRecommendation] = useState("");
+  const [qcReviewerName, setQcReviewerName] = useState("");
+  const [reviewDate, setReviewDate] = useState("");
   const [pictures, setPictures] = useState<ComplaintPicture[]>([]);
   const [customType, setCustomType] = useState("");
   const [customMaterial, setCustomMaterial] = useState("");
@@ -97,6 +102,8 @@ export default function ComplaintForm() {
       setDetails(complaint.details);
       setSolution(complaint.solution);
       setRecommendation(complaint.recommendation);
+      setQcReviewerName(complaint.qcReviewerName ?? "");
+      setReviewDate(dateOnly(complaint.reviewDate ?? ""));
       setPictures(complaint.picturePaths);
     }
   }, [complaintId, detailQuery.data, isNew]);
@@ -168,7 +175,18 @@ export default function ComplaintForm() {
       toast.error("Complete the required complaint fields before saving.");
       return;
     }
-    const data: ComplaintInput = { customerName: customerName.trim(), deliveryDate, complaintType: selectedType, materialType: selectedMaterial, details: details.trim(), solution: solution.trim(), recommendation: recommendation.trim(), picturePaths: pictures };
+    const data: ComplaintInput = {
+      customerName: customerName.trim(),
+      deliveryDate,
+      complaintType: selectedType,
+      materialType: selectedMaterial,
+      details: details.trim(),
+      solution: solution.trim(),
+      recommendation: recommendation.trim(),
+      qcReviewerName: qcReviewerName.trim() || null,
+      reviewDate: reviewDate || null,
+      picturePaths: pictures,
+    };
     setSaving(true);
     try {
       if (isNew) {
@@ -191,8 +209,8 @@ export default function ComplaintForm() {
   }
 
   if (!isNew && detailQuery.isLoading) return <div className="space-y-4"><div className="h-8 w-64 animate-pulse rounded bg-muted" /><div className="h-96 animate-pulse rounded-xl bg-muted" /></div>;
-  if (!isNew && (detailQuery.isError || !detailQuery.data)) return <Card className="mx-auto mt-10 max-w-lg text-center"><CardContent className="space-y-4 p-10"><h1 className="text-lg font-semibold">Complaint could not be loaded</h1><Button asChild variant="outline"><Link href="/complaints">Back to complaints</Link></Button></CardContent></Card>;
-  if (!canEditComplaints) return <Card className="mx-auto mt-12 max-w-lg text-center"><CardContent className="space-y-3 p-10"><h1 className="text-lg font-semibold">View-only access</h1><p className="text-sm text-muted-foreground">Your access role can view complaints but cannot add or change them.</p><Button asChild variant="outline"><Link href={isNew ? "/complaints" : `/complaints/${complaintId}`}>Back to Complaints</Link></Button></CardContent></Card>;
+  if (!isNew && (detailQuery.isError || !detailQuery.data)) return <Card className="mx-auto mt-10 max-w-lg text-center"><CardContent className="space-y-4 p-10"><h1 className="text-lg font-semibold">Complaint could not be loaded</h1><Button variant="outline" onClick={goBack}>Back</Button></CardContent></Card>;
+  if (!canEditComplaints) return <Card className="mx-auto mt-12 max-w-lg text-center"><CardContent className="space-y-3 p-10"><h1 className="text-lg font-semibold">View-only access</h1><p className="text-sm text-muted-foreground">Your access role can view complaints but cannot add or change them.</p><Button variant="outline" onClick={goBack}>Back</Button></CardContent></Card>;
 
   return (
     <div className="complaint-page mx-auto max-w-4xl space-y-6 pb-12">
@@ -203,7 +221,7 @@ export default function ComplaintForm() {
            <p className="mt-1 text-sm text-muted-foreground">Al Manaratain Company &amp; Ali Shaab Group W.L.L</p>
          </div>
        </div>
-      <div className="flex items-start gap-3"><Link href={isNew ? "/complaints" : `/complaints/${complaintId}`} className="mt-1 rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"><ArrowLeft className="h-5 w-5" /></Link><div><p className="complaint-kicker">{isNew ? "New record" : "Amend controlled record"}</p><h1 className="mt-1 text-3xl font-bold tracking-tight">{isNew ? "Record a complaint" : "Edit complaint"}</h1><p className="mt-2 text-sm text-muted-foreground">Capture the customer concern, delivery context, response, and evidence in one official record.</p></div></div>
+       <div className="flex items-start gap-3"><button type="button" onClick={goBack} aria-label="Go back" className="mt-1 rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"><ArrowLeft className="h-5 w-5" /></button><div><p className="complaint-kicker">{isNew ? "New record" : "Amend controlled record"}</p><h1 className="mt-1 text-3xl font-bold tracking-tight">{isNew ? "Record a complaint" : "Edit complaint"}</h1><p className="mt-2 text-sm text-muted-foreground">Capture the customer concern, delivery context, response, and evidence in one official record.</p></div></div>
       <form onSubmit={submit} className="space-y-5">
         <Card><CardHeader className="border-b bg-muted/20"><CardTitle className="text-base">Complaint identity</CardTitle></CardHeader><CardContent className="grid gap-5 p-5 md:grid-cols-2">
           <div className="space-y-2"><Label htmlFor="customer">Customer name <span className="text-destructive">*</span></Label><Input id="customer" value={customerName} onChange={(event) => setCustomerName(event.target.value)} required placeholder="Customer or account name" /></div>
@@ -214,9 +232,29 @@ export default function ComplaintForm() {
         <Card><CardHeader className="border-b bg-muted/20"><CardTitle className="text-base">Complaint review</CardTitle></CardHeader><CardContent className="space-y-5 p-5">
           <div className="space-y-2"><Label htmlFor="details">Complaint details <span className="text-destructive">*</span></Label><Textarea id="details" value={details} onChange={(event) => setDetails(event.target.value)} required rows={6} placeholder="Describe what was reported, observed, and when it was raised." /></div>
           <div className="grid gap-5 md:grid-cols-2"><div className="space-y-2"><Label htmlFor="solution">Solution / action taken</Label><Textarea id="solution" value={solution} onChange={(event) => setSolution(event.target.value)} rows={5} placeholder="Record the response, replacement, investigation, or corrective action." /></div><div className="space-y-2"><Label htmlFor="recommendation">Recommendation</Label><Textarea id="recommendation" value={recommendation} onChange={(event) => setRecommendation(event.target.value)} rows={5} placeholder="Note prevention steps or follow-up recommended by QC." /></div></div>
+          <div className="grid gap-5 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="qcReviewerName">QC reviewer name</Label>
+              <Input
+                id="qcReviewerName"
+                value={qcReviewerName}
+                onChange={(event) => setQcReviewerName(event.target.value)}
+                placeholder="Enter reviewer name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reviewDate">Review date</Label>
+              <Input
+                id="reviewDate"
+                type="date"
+                value={reviewDate}
+                onChange={(event) => setReviewDate(event.target.value)}
+              />
+            </div>
+          </div>
         </CardContent></Card>
         <Card><CardHeader className="border-b bg-muted/20"><CardTitle className="text-base">Picture evidence</CardTitle></CardHeader><CardContent className="space-y-4 p-5"><div className="flex flex-col justify-between gap-3 rounded-lg border border-dashed border-primary/40 bg-primary/[0.03] p-4 sm:flex-row sm:items-center"><div><p className="font-medium">Attach delivery or product pictures</p><p className="mt-1 text-xs text-muted-foreground">Images only, up to 10 MB each. Files are stored securely; only their paths are saved in this record.</p></div><Button type="button" variant="outline" onClick={() => fileRef.current?.click()} disabled={uploading}>{uploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Uploading</> : <><Upload className="mr-2 h-4 w-4" />Choose pictures</>}<input ref={fileRef} className="hidden" type="file" accept="image/*" multiple onChange={(event) => void addPictures(event.target.files)} /></Button></div>{pictures.length > 0 && <div className="space-y-2">{pictures.map((picture) => <div key={picture.objectPath} className="flex items-center gap-3 rounded-md border p-2"><img src={`/api/storage${picture.objectPath}`} alt="" className="h-12 w-16 rounded object-cover" /><FileImage className="h-4 w-4 text-muted-foreground" /><span className="min-w-0 flex-1 truncate text-sm">{picture.originalName}</span><Button type="button" variant="ghost" size="icon" aria-label={`Remove ${picture.originalName}`} onClick={() => setPictures((current) => current.filter((item) => item.objectPath !== picture.objectPath))}><X className="h-4 w-4" /></Button></div>)}</div>}</CardContent></Card>
-        <div className="flex flex-col-reverse justify-end gap-2 sm:flex-row"><Button type="button" variant="outline" asChild><Link href={isNew ? "/complaints" : `/complaints/${complaintId}`}>Cancel</Link></Button><Button type="submit" disabled={saving || uploading || requestUrl.isPending}>{saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving</> : <><Check className="mr-2 h-4 w-4" />{isNew ? "Record complaint" : "Save changes"}</>}</Button></div>
+        <div className="flex flex-col-reverse justify-end gap-2 sm:flex-row"><Button type="button" variant="outline" onClick={goBack}>Cancel</Button><Button type="submit" disabled={saving || uploading || requestUrl.isPending}>{saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving</> : <><Check className="mr-2 h-4 w-4" />{isNew ? "Record complaint" : "Save changes"}</>}</Button></div>
       </form>
     </div>
   );

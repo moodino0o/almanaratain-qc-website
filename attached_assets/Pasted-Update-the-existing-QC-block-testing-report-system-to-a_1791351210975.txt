@@ -1,0 +1,846 @@
+Update the existing QC block testing/report system to add **Dammam Plant-specific Gross Area, Net Area, Gross Strength, and Net Strength calculations**.
+
+**IMPORTANT:** These changes must apply **ONLY to Dammam Plant**. All other plants must keep their existing calculations and report behavior unchanged.
+
+---
+
+# 1. Dammam Plant — Data Entry
+
+When the selected plant is **Dammam Plant**, add these fields to the existing block dimension/data-entry section:
+
+* Length (mm)
+* Width (mm)
+* Height (mm)
+* **Face Thickness (mm)**
+* **Web Thickness (mm)**
+
+Face and Web must be editable by the user.
+
+Default values:
+
+```text
+Face Thickness = 30 mm
+Web Thickness = 30 mm
+```
+
+The user must be able to change these values.
+
+Example:
+
+```text
+Length (mm):          [400]
+Width (mm):           [200]
+Height (mm):          [200]
+Face Thickness (mm):  [30]
+Web Thickness (mm):   [30]
+```
+
+Only display Face Thickness and Web Thickness when:
+
+```text
+Plant = Dammam Plant
+```
+
+For other plants, do not show these new fields.
+
+---
+
+# 2. Determine Number of Holes Automatically
+
+For Dammam Plant, determine the number of holes from the block type.
+
+```javascript
+function getNumberOfHoles(blockType) {
+  if (blockType === "8 inch") return 3;
+  if (blockType === "6 inch") return 2;
+  if (blockType === "4 inch") return 2;
+  return 0;
+}
+```
+
+Therefore:
+
+| Block  | Number of Holes |
+| ------ | --------------: |
+| 8 inch |               3 |
+| 6 inch |               2 |
+| 4 inch |               2 |
+
+Do **not** ask the user to manually enter the number of holes.
+
+Adapt the block type names to the values already used in the application.
+
+---
+
+# 3. Gross Area
+
+For Dammam Plant:
+
+```text
+Gross Area = Width × Length
+```
+
+JavaScript:
+
+```javascript
+const grossArea = width * length;
+```
+
+The result is in **mm²**.
+
+Do not use Height in the gross-area calculation.
+
+---
+
+# 4. Net Area
+
+Calculate the net area based on the entered Face and Web thicknesses.
+
+Assume the holes are equal in size.
+
+### Hole Width
+
+```text
+Hole Width =
+[
+  Width
+  − (2 × Face)
+  − ((Number of Holes − 1) × Web)
+]
+÷ Number of Holes
+```
+
+JavaScript:
+
+```javascript
+const holeWidth =
+  (width - (2 * face) - ((holes - 1) * web)) / holes;
+```
+
+### Hole Length
+
+```text
+Hole Length =
+[
+  Length
+  − (2 × Face)
+  − ((Number of Holes − 1) × Web)
+]
+÷ Number of Holes
+```
+
+JavaScript:
+
+```javascript
+const holeLength =
+  (length - (2 * face) - ((holes - 1) * web)) / holes;
+```
+
+### Total Void Area
+
+```text
+Total Void Area =
+Number of Holes × Hole Width × Hole Length
+```
+
+JavaScript:
+
+```javascript
+const totalVoidArea =
+  holes * holeWidth * holeLength;
+```
+
+### Net Area
+
+```text
+Net Area = Gross Area − Total Void Area
+```
+
+JavaScript:
+
+```javascript
+const netArea =
+  grossArea - totalVoidArea;
+```
+
+---
+
+# 5. Reusable Area Calculation Function
+
+Create:
+
+```javascript
+function calculateDammamNetArea({
+  width,
+  length,
+  face,
+  web,
+  holes
+}) {
+  const grossArea = width * length;
+
+  const holeWidth =
+    (width - (2 * face) - ((holes - 1) * web)) / holes;
+
+  const holeLength =
+    (length - (2 * face) - ((holes - 1) * web)) / holes;
+
+  if (holeWidth <= 0 || holeLength <= 0) {
+    throw new Error(
+      "Invalid Face/Web thickness: calculated hole dimensions must be positive."
+    );
+  }
+
+  const totalVoidArea =
+    holes * holeWidth * holeLength;
+
+  const netArea =
+    grossArea - totalVoidArea;
+
+  if (netArea <= 0 || netArea >= grossArea) {
+    throw new Error("Invalid calculated net area.");
+  }
+
+  return {
+    grossArea,
+    holeWidth,
+    holeLength,
+    totalVoidArea,
+    netArea,
+    holes
+  };
+}
+```
+
+---
+
+# 6. Strength Calculation
+
+For Dammam Plant, calculate **both Gross Strength and Net Strength**.
+
+Use the actual measured failure load from the compression test.
+
+### Gross Strength
+
+```text
+Gross Strength =
+Failure Load ÷ Gross Area
+```
+
+JavaScript:
+
+```javascript
+const grossStrength =
+  failureLoadN / grossArea;
+```
+
+### Net Strength
+
+```text
+Net Strength =
+Failure Load ÷ Net Area
+```
+
+JavaScript:
+
+```javascript
+const netStrength =
+  failureLoadN / netArea;
+```
+
+The same actual failure load must be used for both calculations.
+
+**Do NOT calculate Net Strength by multiplying Gross Strength by a correction factor.**
+
+Calculate it directly from:
+
+```text
+Failure Load ÷ Net Area
+```
+
+---
+
+# 7. Failure Load Units
+
+Inspect the existing application to determine whether the compression failure load is stored in **N** or **kN**.
+
+If it is stored in kN:
+
+```javascript
+const failureLoadN = failureLoadKN * 1000;
+```
+
+Then:
+
+```javascript
+const grossStrength =
+  failureLoadN / grossArea;
+
+const netStrength =
+  failureLoadN / netArea;
+```
+
+If it is already stored in Newtons, do not convert it again.
+
+Follow the existing application's load-unit convention.
+
+---
+
+# 8. Combined Dammam Calculation
+
+Create one reusable function where practical:
+
+```javascript
+function calculateDammamBlock({
+  width,
+  length,
+  face,
+  web,
+  holes,
+  failureLoadN
+}) {
+  const grossArea = width * length;
+
+  const holeWidth =
+    (width - (2 * face) - ((holes - 1) * web)) / holes;
+
+  const holeLength =
+    (length - (2 * face) - ((holes - 1) * web)) / holes;
+
+  if (holeWidth <= 0 || holeLength <= 0) {
+    throw new Error(
+      "Invalid Face/Web thickness: calculated hole dimensions must be positive."
+    );
+  }
+
+  const totalVoidArea =
+    holes * holeWidth * holeLength;
+
+  const netArea =
+    grossArea - totalVoidArea;
+
+  if (netArea <= 0 || netArea >= grossArea) {
+    throw new Error("Invalid calculated net area.");
+  }
+
+  if (!failureLoadN || failureLoadN <= 0) {
+    throw new Error("Failure load must be greater than zero.");
+  }
+
+  const grossStrength =
+    failureLoadN / grossArea;
+
+  const netStrength =
+    failureLoadN / netArea;
+
+  return {
+    holes,
+    grossArea,
+    holeWidth,
+    holeLength,
+    totalVoidArea,
+    netArea,
+    grossStrength,
+    netStrength
+  };
+}
+```
+
+---
+
+# 9. Apply Calculation ONLY to Dammam Plant
+
+Use plant-specific logic:
+
+```javascript
+if (plant === "Dammam Plant") {
+
+  const holes = getNumberOfHoles(blockType);
+
+  const dammamResult = calculateDammamBlock({
+    width,
+    length,
+    face,
+    web,
+    holes,
+    failureLoadN
+  });
+
+  // dammamResult.grossArea
+  // dammamResult.netArea
+  // dammamResult.grossStrength
+  // dammamResult.netStrength
+
+} else {
+
+  // EXISTING CALCULATION
+  // DO NOT MODIFY
+}
+```
+
+Do not apply the Dammam calculation to Hidd, Khamis, or any other plant.
+
+---
+
+# 10. Dammam Results Table
+
+In the existing report's **Results Table**, show:
+
+| Parameter              |        Result |
+| ---------------------- | ------------: |
+| Number of Holes        |         2 / 3 |
+| Face Thickness (mm)    | entered value |
+| Web Thickness (mm)     | entered value |
+| Gross Area (mm²)       |    calculated |
+| Net Area (mm²)         |    calculated |
+| Gross Strength (N/mm²) |    calculated |
+| Net Strength (N/mm²)   |    calculated |
+
+Do not create a separate results panel.
+
+---
+
+# 11. IMPORTANT DISPLAY FORMATTING
+
+## Area — NO DECIMAL PLACES
+
+Both Gross Area and Net Area must be displayed with **zero decimal places**.
+
+Use:
+
+```javascript
+Math.round(area)
+```
+
+or the application's existing number formatter configured for zero decimals.
+
+Examples:
+
+```text
+80,000 mm²
+72,533 mm²
+50,700 mm²
+```
+
+**Do not display:**
+
+```text
+80,000.00
+72,533.33
+50,700.00
+```
+
+The internal calculation must retain full precision. Only the displayed result is rounded.
+
+Recommended formatter:
+
+```javascript
+function formatArea(area) {
+  return Math.round(area).toLocaleString() + " mm²";
+}
+```
+
+---
+
+## Strength — ONE DECIMAL PLACE
+
+Both Gross Strength and Net Strength must be displayed with **exactly 1 decimal place**.
+
+Use:
+
+```javascript
+Number(strength).toFixed(1)
+```
+
+Recommended formatter:
+
+```javascript
+function formatStrength(strength) {
+  return Number(strength).toFixed(1) + " N/mm²";
+}
+```
+
+Examples:
+
+```text
+18.8 N/mm²
+20.7 N/mm²
+16.7 N/mm²
+19.7 N/mm²
+```
+
+**Do not display:**
+
+```text
+18.75 N/mm²
+20.68 N/mm²
+16.67 N/mm²
+```
+
+Again, retain full precision internally and only round for display.
+
+---
+
+# 12. Example — Dammam 8-inch Block
+
+Inputs:
+
+```text
+Block Type = 8 inch
+Width = 200 mm
+Length = 400 mm
+Height = 200 mm
+Face = 30 mm
+Web = 30 mm
+Number of Holes = 3
+Failure Load = 1,500,000 N
+```
+
+Gross area:
+
+```text
+200 × 400 = 80,000 mm²
+```
+
+Hole width:
+
+```text
+(200 − 60 − 60) ÷ 3
+= 26.67 mm
+```
+
+Hole length:
+
+```text
+(400 − 60 − 60) ÷ 3
+= 93.33 mm
+```
+
+Net area:
+
+```text
+≈ 72,533 mm²
+```
+
+Gross strength:
+
+```text
+1,500,000 ÷ 80,000
+= 18.75...
+```
+
+Display:
+
+```text
+18.8 N/mm²
+```
+
+Net strength:
+
+```text
+1,500,000 ÷ 72,533.33
+= 20.68...
+```
+
+Display:
+
+```text
+20.7 N/mm²
+```
+
+The report should show:
+
+```text
+Gross Area       80,000 mm²
+Net Area         72,533 mm²
+Gross Strength   18.8 N/mm²
+Net Strength     20.7 N/mm²
+```
+
+---
+
+# 13. Example — Dammam 6-inch Block
+
+Inputs:
+
+```text
+Block Type = 6 inch
+Width = 150 mm
+Length = 400 mm
+Face = 30 mm
+Web = 30 mm
+Number of Holes = 2
+Failure Load = 1,000,000 N
+```
+
+Calculated:
+
+```text
+Gross Area = 60,000 mm²
+Net Area = 50,700 mm²
+```
+
+Gross strength:
+
+```text
+1,000,000 ÷ 60,000
+= 16.666...
+```
+
+Display:
+
+```text
+16.7 N/mm²
+```
+
+Net strength:
+
+```text
+1,000,000 ÷ 50,700
+= 19.723...
+```
+
+Display:
+
+```text
+19.7 N/mm²
+```
+
+---
+
+# 14. Example — Dammam 4-inch Block
+
+For:
+
+```text
+Block Type = 4 inch
+Number of Holes = 2
+```
+
+Use the same calculation automatically based on the actual:
+
+* Width
+* Length
+* Face
+* Web
+* Failure Load
+
+Do not hard-code the result.
+
+Display:
+
+* Gross Area → **0 decimals**
+* Net Area → **0 decimals**
+* Gross Strength → **1 decimal**
+* Net Strength → **1 decimal**
+
+---
+
+# 15. Dynamic Recalculation
+
+Results must update automatically whenever the user changes:
+
+* Block Type
+* Width
+* Length
+* Face Thickness
+* Web Thickness
+* Failure Load
+
+For example:
+
+```text
+Change Face
+→ Net Area changes
+→ Net Strength changes
+
+Change Web
+→ Net Area changes
+→ Net Strength changes
+
+Change Failure Load
+→ Gross Strength changes
+→ Net Strength changes
+
+Change Width/Length
+→ Gross Area changes
+→ Net Area changes
+→ Gross Strength changes
+→ Net Strength changes
+```
+
+---
+
+# 16. Validation
+
+Validate Face:
+
+```javascript
+if (!face || face <= 0) {
+  throw new Error("Face thickness must be greater than zero.");
+}
+```
+
+Validate Web:
+
+```javascript
+if (!web || web <= 0) {
+  throw new Error("Web thickness must be greater than zero.");
+}
+```
+
+Validate failure load:
+
+```javascript
+if (!failureLoadN || failureLoadN <= 0) {
+  throw new Error("Failure load must be greater than zero.");
+}
+```
+
+Validate hole dimensions:
+
+```javascript
+if (holeWidth <= 0 || holeLength <= 0) {
+  throw new Error(
+    "Invalid dimensions: Face/Web thickness leaves no valid hole dimensions."
+  );
+}
+```
+
+Validate area:
+
+```javascript
+if (netArea <= 0 || netArea >= grossArea) {
+  throw new Error(
+    "Calculated net area must be greater than zero and less than gross area."
+  );
+}
+```
+
+---
+
+# 17. Save the Data
+
+Make sure the Dammam test record retains:
+
+```text
+plant
+blockType
+length
+width
+height
+faceThickness
+webThickness
+numberOfHoles
+failureLoad
+grossArea
+netArea
+grossStrength
+netStrength
+```
+
+Face and Web values must remain available when the report is reopened or regenerated.
+
+Prefer recalculating calculated values from the saved inputs rather than relying only on previously stored calculated values.
+
+---
+
+# 18. Other Plants — NO CHANGE
+
+For every plant other than Dammam:
+
+* Existing data entry remains unchanged.
+* Existing strength calculation remains unchanged.
+* Existing report remains unchanged.
+* Do not show Face Thickness.
+* Do not show Web Thickness.
+* Do not show Number of Holes.
+* Do not show Net Area.
+* Do not show Net Strength.
+* Do not alter the current area calculation.
+* Do not alter the current strength calculation.
+
+The existing behavior for other plants must remain exactly as it was before this update.
+
+---
+
+# 19. Report Formatting
+
+Use the existing report's:
+
+* Font
+* Font size
+* Borders
+* Alignment
+* Row height
+* Table styling
+* Page layout
+
+For Dammam:
+
+**Areas:**
+
+```javascript
+Math.round(area)
+```
+
+Display:
+
+```text
+80,000 mm²
+72,533 mm²
+```
+
+**Strengths:**
+
+```javascript
+Number(strength).toFixed(1)
+```
+
+Display:
+
+```text
+18.8 N/mm²
+20.7 N/mm²
+```
+
+Do not round the values before performing subsequent calculations. Round only the final displayed values.
+
+---
+
+# 20. Final Testing
+
+Test the following before completing the implementation:
+
+### Dammam Plant
+
+1. 8-inch → automatically 3 holes
+2. 6-inch → automatically 2 holes
+3. 4-inch → automatically 2 holes
+4. Face = 30 mm
+5. Web = 30 mm
+6. Gross Area calculates correctly
+7. Net Area calculates correctly
+8. Gross Strength uses Gross Area
+9. Net Strength uses Net Area
+10. Area displays **0 decimals**
+11. Strength displays **1 decimal**
+12. Changing Face updates Net Area and Net Strength
+13. Changing Web updates Net Area and Net Strength
+14. Changing Failure Load updates Gross and Net Strength
+15. Generated report shows Gross Area
+16. Generated report shows Net Area
+17. Generated report shows Gross Strength
+18. Generated report shows Net Strength
+19. Saved test retains Face/Web values
+20. Reopened report recalculates correctly
+
+### Other Plants
+
+21. Select Hidd Plant → existing behavior unchanged
+22. Select Khamis Plant → existing behavior unchanged
+23. Select any other plant → existing behavior unchanged
+24. Dammam-specific fields are not shown
+25. Dammam-specific calculations are not applied
+
+Before finishing, inspect the existing calculation and report code carefully and integrate this into the current architecture rather than creating a duplicate report or calculation system.

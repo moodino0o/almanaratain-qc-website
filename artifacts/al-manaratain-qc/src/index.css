@@ -68,7 +68,7 @@
 
   /* Burgundy: #B60251 */
   --primary: 334 98% 36%;
-  --primary-foreground: 0 0% 100%;
+  --primary-foreground: 0 0% 96%;
 
   /* Charcoal/Muted Gray mix */
   --secondary: 210 7% 46%;
@@ -123,7 +123,6 @@
 
 .complaint-register-scroll {
   max-height: min(70vh, 760px);
-  overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -137,6 +136,7 @@
 .complaint-register-table td {
   padding: 0.55rem 0.45rem;
   vertical-align: top;
+  text-align: center;
 }
 
 .complaint-register-table th {
@@ -164,6 +164,63 @@
 
 .employee-access-table th {
   white-space: normal;
+}
+
+.daily-results-row-passed > td {
+  background-color: #dcfce7 !important;
+  color: #14532d;
+}
+
+.daily-results-row-failed > td {
+  background-color: #fee2e2 !important;
+  color: #7f1d1d;
+}
+
+.daily-results-row-neutral > td {
+  background-color: #ffffff !important;
+}
+
+.dark .daily-results-row-passed > td {
+  background-color: rgb(20 83 45 / 0.45) !important;
+  color: #dcfce7;
+}
+
+.dark .daily-results-row-failed > td {
+  background-color: rgb(127 29 29 / 0.45) !important;
+  color: #fee2e2;
+}
+
+.dark .daily-results-row-neutral > td {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground));
+}
+
+.employee-activity-table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  overflow-wrap: anywhere;
+}
+
+.employee-activity-table th,
+.employee-activity-table td {
+  padding: 0.7rem 0.4rem;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.employee-activity-table th {
+  white-space: normal;
+}
+
+@media (max-width: 640px) {
+  .employee-activity-table {
+    font-size: 0.68rem;
+  }
+
+  .employee-activity-table th,
+  .employee-activity-table td {
+    padding: 0.6rem 0.28rem;
+  }
 }
 
 .complaint-photo-grid {
@@ -235,7 +292,7 @@
 .complaint-print-table td {
   border: 1px solid hsl(210 15% 32%);
   padding: 0.65rem;
-  text-align: left;
+  text-align: center;
   vertical-align: top;
 }
 
@@ -262,6 +319,142 @@
 
   .complaint-print-paper .complaint-photo-grid img {
     max-height: 55mm;
+  }
+}
+
+.qc-register-table-container {
+  container-type: inline-size;
+  overflow-x: auto;
+}
+
+.qc-register-table {
+  min-width: 960px;
+}
+
+.water-register-table-container {
+  overflow-x: hidden;
+}
+
+.qc-register-table.qc-water-register-table {
+  width: 100%;
+  min-width: 0;
+}
+
+.qc-table-readable.qc-water-register-table thead th,
+.qc-table-readable.qc-water-register-table tbody td {
+  overflow-wrap: anywhere;
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+}
+
+.precast-register-table-container {
+  overflow-x: hidden;
+}
+
+.qc-register-table.qc-precast-register-table {
+  width: 100%;
+  min-width: 0;
+}
+
+.qc-table-readable.qc-precast-register-table thead th,
+.qc-table-readable.qc-precast-register-table tbody td {
+  overflow-wrap: anywhere;
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+}
+
+.qc-table-readable.qc-precast-register-table thead th {
+  font-size: 11px;
+  line-height: 1.15;
+}
+
+.qc-table-readable.qc-precast-register-table tbody td {
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.kerbstone-register-table-container {
+  overflow-x: hidden;
+}
+
+.qc-register-table.qc-kerbstone-register-table {
+  width: 100%;
+  min-width: 0;
+}
+
+.qc-table-readable.qc-kerbstone-register-table thead th,
+.qc-table-readable.qc-kerbstone-register-table tbody td {
+  overflow-wrap: anywhere;
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+}
+
+.qc-table-readable.qc-kerbstone-register-table thead th {
+  font-size: 11px;
+  line-height: 1.15;
+}
+
+.qc-table-readable.qc-kerbstone-register-table tbody td {
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.qc-table-readable thead th {
+  color: #000;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.qc-table-readable tbody td {
+  color: #000;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.qc-table-readable tbody td .text-muted-foreground {
+  color: #000;
+}
+
+.qc-table-readable thead th,
+.qc-table-readable tbody td {
+  text-align: center;
+}
+
+.qc-table-readable thead th.masonry-strength-header {
+  font-size: 9px;
+}
+
+.qc-table-readable tbody td.masonry-strength-value {
+  font-size: 12px;
+}
+
+.qc-table-readable tbody td.masonry-average-strength {
+  font-size: 10px;
+}
+
+.dark .qc-table-readable thead th,
+.dark .qc-table-readable tbody td,
+.dark .qc-table-readable tbody td .text-muted-foreground {
+  color: #fff;
+}
+
+@media (min-width: 640px) {
+  .qc-table-readable thead th {
+    font-size: 12px;
+  }
+
+  .qc-table-readable thead th.masonry-strength-header {
+    font-size: 10px;
+  }
+
+  .qc-table-readable tbody td {
+    font-size: 12px;
+  }
+}
+
+@container (min-width: 960px) {
+  .qc-register-table {
+    min-width: 0;
   }
 }
 
@@ -299,10 +492,40 @@
   box-shadow: 0 8px 30px rgb(0 0 0 / 0.12);
 }
 
+.report-template-paper {
+  position: relative;
+  overflow: visible;
+}
+
 .report-layout-content {
   display: flex;
   flex-direction: column;
   min-height: 100%;
+}
+
+.report-layout-content-template {
+  position: relative;
+  width: 100%;
+}
+
+.report-layout-content-positioned {
+  position: absolute;
+  inset: 0;
+  display: block;
+  min-height: 100%;
+}
+
+.report-layout-content-flow {
+  display: block;
+}
+
+.report-template-object {
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+.report-template-image {
+  display: block;
 }
 
 .report-layout-section {
@@ -439,6 +662,121 @@
   color: #996515;
 }
 
+.report-compliance-status.pass,
+.report-compliance-status.passed {
+  color: #16733b;
+}
+
+.report-compliance-status.fail,
+.report-compliance-status.failed {
+  color: #b42318;
+}
+
+.report-compliance-status.pending {
+  color: #996515;
+}
+
+.kerb-details-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(62mm, 0.8fr);
+  gap: 6mm;
+  align-items: start;
+}
+
+.kerb-details-layout > section {
+  min-width: 0;
+}
+
+.kerb-report-standard {
+  border-left: 1px solid #9ca3af;
+  padding-left: 5mm;
+}
+
+.kerb-date-fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  margin-bottom: 2mm;
+}
+
+.kerb-details-layout .report-section-heading {
+  margin: 0 0 2mm;
+  font-size: 10px;
+}
+
+.kerb-details-layout .report-field {
+  grid-template-columns: 31mm minmax(0, 1fr);
+  min-height: 4.5mm;
+}
+
+.kerb-details-layout .report-field span {
+  font-size: 8px;
+}
+
+.kerb-details-layout .report-field strong {
+  font-size: 9px;
+  font-weight: 400;
+}
+
+.kerb-results-summary {
+  width: 70%;
+  margin: 3mm auto 0;
+  text-align: center;
+}
+
+.kerb-results-summary .report-table th,
+.kerb-results-summary .report-table td {
+  padding: 0.8mm 1mm;
+  font-size: 6.5px;
+}
+
+.kerb-results-summary .report-table th {
+  font-size: 6px;
+}
+
+.kerbstone-specimen-table th,
+.kerbstone-specimen-table td {
+  padding: 2mm 1mm;
+  font-size: 10px;
+  text-align: center;
+}
+
+.kerbstone-specimen-table th {
+  font-size: 9.5px;
+  font-weight: 700;
+}
+
+.report-paper .kerb-results-summary .report-table {
+  width: max-content;
+  max-width: 100%;
+  margin: 0 auto;
+  table-layout: auto;
+}
+
+.report-paper .kerb-results-summary .report-table th {
+  font-size: 10.5px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.report-paper .kerb-results-summary .report-table td {
+  font-size: 11px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.report-paper .kerbstone-specimen-section > .report-section-heading {
+  margin: 0 0 2mm;
+  font-size: 15px;
+  text-align: center;
+}
+
+.report-paper .kerbstone-specimen-table th,
+.report-paper .kerbstone-specimen-table td {
+  font-size: 12px;
+  text-align: center;
+}
+
 .report-compliance-reason {
   margin: 2mm 0 0;
   color: #444;
@@ -509,6 +847,46 @@
 .report-table th {
   font-size: 9px;
   font-weight: 700;
+}
+
+.water-report-location {
+  font-weight: 700;
+  margin-bottom: 3mm;
+}
+
+.water-report-dates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 10mm 8mm 6mm;
+  text-align: center;
+}
+
+.water-report-dates > div {
+  display: grid;
+  gap: 4mm;
+}
+
+.water-report-dates strong {
+  font-size: 10px;
+}
+
+.water-results-table {
+  width: 82%;
+  margin: 0 auto 24mm;
+}
+
+.water-results-table th,
+.water-results-table td {
+  padding: 1.6mm 1.2mm;
+}
+
+.water-result-parameter strong,
+.water-result-parameter span {
+  display: block;
+}
+
+.water-result-parameter span {
+  margin-top: 0.8mm;
 }
 
 .report-results-table {
@@ -626,13 +1004,12 @@
 }
 
 .block-report-remarks {
-  display: grid;
-  grid-template-columns: 24mm minmax(0, 1fr);
+  display: block;
   min-height: 8mm;
   margin-top: 1mm;
   border-bottom: 1px solid #e0e4e8;
   padding: 2mm 0;
-  align-items: start;
+  text-align: center;
 }
 
 .block-report-remarks strong {
@@ -777,6 +1154,73 @@
   font-size: 8.5px;
 }
 
+.paving-block-report .block-report-section-heading {
+  margin-top: 2mm;
+  border-bottom-color: #202020;
+}
+
+.paving-block-report .block-report-section-heading span {
+  color: #202020;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.paving-block-report .block-report-remarks {
+  min-height: 7mm;
+  margin-top: 1mm;
+  padding: 1.5mm 2mm;
+  background: #dce9ff;
+  text-align: center;
+}
+
+.paving-average-row td {
+  border-top: 1.5px solid #202020 !important;
+  border-bottom: 1.5px solid #202020 !important;
+  background: #fff;
+  color: #202020;
+  font-size: 9px !important;
+  font-weight: 700;
+  text-align: center;
+}
+
+.paving-average-row td:first-child {
+  text-align: left;
+}
+
+.paving-average-status.failed {
+  color: #b42318;
+}
+
+.paving-average-status.passed {
+  color: #16733b;
+}
+
+.paving-average-status.review {
+  color: #996515;
+}
+
+.paving-tensile-statistics {
+  width: 76%;
+  margin: 3mm auto 0;
+  padding: 2mm 0;
+  background: transparent;
+}
+
+.paving-tensile-statistics strong {
+  font-size: 9px;
+  font-weight: 500;
+}
+
+.paving-tensile-statistics span {
+  color: #202020;
+  font-size: 8px;
+  font-style: italic;
+}
+
+.paving-tensile-statistics b {
+  font-size: 11px;
+}
+
 .report-standard-block.paving-report-standard-block {
   width: 100%;
   margin: 4mm 0 0;
@@ -831,6 +1275,300 @@
   font-weight: 700;
 }
 
+.ready-mix-page {
+  background: #f1f3f5;
+}
+
+.ready-mix-paper {
+  box-shadow: none;
+  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  color: #111;
+}
+
+.ready-mix-paper .report-title span {
+  display: block;
+}
+
+.ready-mix-report {
+  color: #111;
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.ready-mix-overview,
+.ready-mix-test-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(55mm, 0.85fr);
+  gap: 10mm;
+  align-items: start;
+}
+
+.ready-mix-test-summary {
+  margin-top: 2mm;
+}
+
+.ready-mix-report .report-section-heading {
+  margin: 2.2mm 0 1.2mm;
+  border-bottom: 1px solid #111;
+  padding-bottom: 0.7mm;
+  font-size: 10px;
+}
+
+.ready-mix-report .report-fields {
+  gap: 0.7mm;
+}
+
+.ready-mix-report .report-field {
+  grid-template-columns: 31mm minmax(0, 1fr);
+  min-height: 4.3mm;
+}
+
+.ready-mix-report .report-field span {
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.ready-mix-report .report-field strong {
+  font-size: 9px;
+  font-weight: 400;
+}
+
+.ready-mix-report .report-ready-mix-info .report-fields {
+  grid-template-columns: 1fr;
+  gap: 0.7mm;
+}
+
+.ready-mix-average-block {
+  width: 100%;
+  margin: 2.2mm 0 0;
+}
+
+.ready-mix-average-block .report-centered-title {
+  margin: 0 0 1.2mm;
+  font-size: 10px;
+}
+
+.ready-mix-average-table {
+  table-layout: auto;
+}
+
+.ready-mix-average-table th,
+.ready-mix-average-table td {
+  padding: 1.2mm 1mm;
+  font-size: 8px;
+}
+
+.ready-mix-average-table th {
+  font-size: 7.8px;
+}
+
+.ready-mix-average-table td {
+  font-weight: 400;
+}
+
+.precast-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(65mm, 0.9fr);
+  gap: 6mm;
+  align-items: start;
+}
+
+.precast-overview > section {
+  min-width: 0;
+}
+
+.precast-average-block {
+  width: 100%;
+  margin: 2.2mm 0 0;
+}
+
+.precast-average-block .report-centered-title {
+  margin: 0 0 1.2mm;
+  font-size: 10px;
+}
+
+.precast-average-table {
+  table-layout: auto;
+}
+
+.precast-average-table th,
+.precast-average-table td {
+  padding: 1.2mm 1mm;
+  font-size: 8px;
+}
+
+.precast-average-table th {
+  font-size: 7.8px;
+}
+
+.precast-average-table td {
+  font-weight: 400;
+}
+
+.ready-mix-compliance-block {
+  margin-top: 0;
+  border-top: 0;
+  padding-top: 0;
+}
+
+.ready-mix-compliance-block .report-section-heading {
+  margin-top: 2.2mm;
+}
+
+.ready-mix-compliance-block .report-compliance-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.7mm 3mm;
+}
+
+.ready-mix-compliance-block .report-compliance-grid span {
+  margin-bottom: 0.4mm;
+  font-size: 7px;
+}
+
+.ready-mix-compliance-block .report-compliance-grid strong {
+  font-size: 8.5px;
+  font-weight: 500;
+}
+
+.ready-mix-compliance-block .report-compliance-reason {
+  display: none;
+}
+
+.ready-mix-report .report-ready-mix-measures {
+  margin-top: 2.5mm;
+}
+
+.ready-mix-report .report-measure-grid {
+  grid-template-columns: 1fr;
+  gap: 1mm 5mm;
+}
+
+.ready-mix-report .report-ready-mix-results {
+  margin-top: 2.5mm;
+}
+
+.ready-mix-report .report-results-table {
+  table-layout: fixed;
+  margin-top: 0;
+}
+
+.ready-mix-report .report-results-table th,
+.ready-mix-report .report-results-table td {
+  padding: 1.35mm 0.8mm;
+  font-size: 8px;
+}
+
+.ready-mix-report .report-results-table th {
+  font-size: 7.5px;
+  line-height: 1.1;
+}
+
+.ready-mix-report .report-results-table td {
+  font-size: 8.5px;
+  font-weight: 400;
+}
+
+.report-standard-block.ready-mix-standard-block {
+  width: 95mm;
+  margin: 14mm auto 0;
+}
+
+.ready-mix-standard-block .report-centered-title {
+  margin-bottom: 1mm;
+  color: #111;
+  font-size: 8px;
+  letter-spacing: normal;
+  text-align: center;
+  text-transform: none;
+}
+
+.ready-mix-standard-block .report-strength-table {
+  table-layout: fixed;
+}
+
+.ready-mix-standard-block .report-strength-table th,
+.ready-mix-standard-block .report-strength-table td {
+  border: 1px solid #111;
+  background: transparent;
+  color: #111;
+  padding: 1.1mm 1mm;
+  font-size: 8px;
+}
+
+.ready-mix-standard-block .report-strength-table th {
+  font-size: 7.8px;
+}
+
+.report-standard-block.precast-standard-block {
+  width: 95mm;
+  margin: 14mm auto 0;
+}
+
+.precast-standard-block .report-centered-title {
+  width: max-content;
+  max-width: 100%;
+  margin: 0 auto 1mm;
+  padding: 0.7mm 2mm;
+  color: #111;
+  font-size: 8px;
+  letter-spacing: normal;
+  text-align: center;
+  text-transform: none;
+}
+
+.precast-standard-block .report-strength-table {
+  table-layout: fixed;
+}
+
+.precast-standard-block .report-strength-table th,
+.precast-standard-block .report-strength-table td {
+  border: 1px solid #111;
+  background: transparent;
+  color: #111;
+  padding: 1.1mm 1mm;
+  font-size: 8px;
+}
+
+.precast-standard-block .report-strength-table th {
+  font-size: 7.8px;
+}
+
+.precast-standard-block .report-strength-table td:last-child {
+  color: #223e63;
+  font-weight: 700;
+}
+
+.report-precast-empty {
+  margin: 3mm 0;
+  text-align: center;
+  font-size: 9px;
+}
+
+.ready-mix-paper .report-signatures {
+  margin-top: 14mm;
+}
+
+.ready-mix-paper .report-signatures small {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .ready-mix-overview,
+  .ready-mix-test-summary,
+  .precast-overview {
+    grid-template-columns: 1fr;
+    gap: 2mm;
+  }
+
+  .report-standard-block.ready-mix-standard-block {
+    width: 100%;
+  }
+
+  .report-standard-block.precast-standard-block {
+    width: 100%;
+  }
+}
+
 .report-strength-table th,
 .report-strength-table td {
   padding: 1.5mm;
@@ -854,6 +1592,7 @@
   margin-top: 7mm;
   border-top: 1px solid #111;
   padding-top: 2mm;
+  text-align: center;
 }
 
 .report-remarks span {
@@ -896,6 +1635,162 @@
   font-size: 7.5px;
 }
 
+/* Keep printable QC report text readable at normal screen and print scale. */
+.report-paper {
+  font-size: 13px;
+}
+
+.report-paper .report-company {
+  font-size: 12px;
+}
+
+.report-paper .report-title strong {
+  font-size: 16px;
+}
+
+.report-paper .report-title span {
+  font-size: 11px;
+}
+
+.report-paper .report-standard,
+.report-paper .report-field span,
+.report-paper .report-compliance-grid span,
+.report-paper .report-compliance-reason,
+.report-paper .report-table th,
+.report-paper .report-specimen-table th,
+.report-paper .report-signatures span,
+.report-paper .report-signatures small {
+  font-size: 11px;
+}
+
+.report-paper .report-section-heading,
+.report-paper .report-subheading,
+.report-paper .report-centered-value {
+  font-size: 14px;
+}
+
+.report-paper .report-centered-title {
+  font-size: 12px;
+}
+
+.report-paper .report-field strong,
+.report-paper .report-results-table td,
+.report-paper .report-compliance-grid strong,
+.report-paper .report-signatures strong {
+  font-size: 13px;
+}
+
+.report-paper .report-table td,
+.report-paper .report-specimen-table td {
+  font-size: 12px;
+}
+
+.report-paper .report-results-table th {
+  font-size: 11px;
+}
+
+.report-paper .block-report-fields .report-field span,
+.report-paper .block-report-section-heading small,
+.report-paper .block-report-section-heading > strong,
+.report-paper .block-report-remarks strong,
+.report-paper .block-report-result span,
+.report-paper .block-report-statistics span {
+  font-size: 10px;
+}
+
+.report-paper .block-report-fields .report-field strong,
+.report-paper .block-report-table th,
+.report-paper .paving-report-table th,
+.report-paper .paving-report-standard-table th,
+.report-paper .paving-report-standard-table td {
+  font-size: 12px;
+}
+
+.report-paper .block-report-section-heading span,
+.report-paper .block-report-remarks span,
+.report-paper .block-report-table td,
+.report-paper .paving-report-table td,
+.report-paper .block-report-statistics strong,
+.report-paper .paving-average-row td {
+  font-size: 11px !important;
+}
+
+.report-paper .block-report-result strong,
+.report-paper .block-report-statistics b {
+  font-size: 14px;
+}
+
+.report-paper .paving-report-standard-block .report-centered-title {
+  font-size: 12px;
+}
+
+.report-paper .paving-tensile-statistics strong {
+  font-size: 11px;
+}
+
+.report-paper .paving-tensile-statistics span {
+  font-size: 10px;
+}
+
+.report-paper .paving-tensile-statistics b {
+  font-size: 13px;
+}
+
+.report-paper.ready-mix-paper .report-title span {
+  display: block;
+  font-size: 11px;
+}
+
+.report-paper .ready-mix-report {
+  font-size: 13px;
+}
+
+.report-paper .ready-mix-report .report-section-heading {
+  font-size: 13px;
+}
+
+.report-paper .ready-mix-report .report-field span,
+.report-paper .ready-mix-compliance-block .report-compliance-grid span {
+  font-size: 10px;
+}
+
+.report-paper .ready-mix-report .report-field strong,
+.report-paper .ready-mix-compliance-block .report-compliance-grid strong,
+.report-paper .ready-mix-average-table td,
+.report-paper .ready-mix-report .report-results-table td,
+.report-paper .ready-mix-standard-block .report-strength-table td {
+  font-size: 11px;
+}
+
+.report-paper .ready-mix-average-table th,
+.report-paper .ready-mix-report .report-results-table th,
+.report-paper .ready-mix-standard-block .report-centered-title,
+.report-paper .ready-mix-standard-block .report-strength-table th {
+  font-size: 10px;
+}
+
+.report-paper .precast-average-table td,
+.report-paper .precast-standard-block .report-strength-table td {
+  font-size: 11px;
+}
+
+.report-paper .precast-average-table th,
+.report-paper .precast-standard-block .report-centered-title,
+.report-paper .precast-standard-block .report-strength-table th {
+  font-size: 10px;
+}
+
+.report-paper .report-table.precast-compression-results {
+  width: 100%;
+  table-layout: auto;
+}
+
+.report-paper .report-table.precast-compression-results th,
+.report-paper .report-table.precast-compression-results td {
+  white-space: nowrap;
+  font-size: 10px;
+}
+
 @media print {
   @page {
     margin: 0;
@@ -904,8 +1799,8 @@
   
   html,
   body {
-    width: 210mm;
-    min-height: 297mm;
+    width: auto;
+    min-height: 0;
     margin: 0 !important;
     background: white !important;
   }
@@ -940,6 +1835,18 @@
     box-shadow: none;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
+  }
+
+  .report-template-paper {
+    overflow: visible;
+  }
+
+  .report-layout-content-positioned {
+    overflow: visible;
+  }
+
+  .ready-mix-paper {
+    box-shadow: none;
   }
 
   .report-paper table,

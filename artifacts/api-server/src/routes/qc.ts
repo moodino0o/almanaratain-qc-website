@@ -5,6 +5,7 @@ import {
   desc,
   eq,
   asc,
+  gt,
   inArray,
   ilike,
   or,
@@ -13,15 +14,20 @@ import {
 import {
   db,
   complaintsTable,
+  employeeActivityEventsTable,
   qcRecordsTable,
   qcReferenceCategoriesTable,
   qcReferenceItemsTable,
   qcSieveStandardsTable,
   qcShapeFactorsTable,
   qcReportLayoutsTable,
+  qcReportTemplatesTable,
   qcStrengthStandardsTable,
+  qcWaterStandardsTable,
 } from "@workspace/db";
 import {
+  ApplyRecordAgeBackfillBody,
+  ApplyRecordAgeBackfillResponse,
   CreateReferenceCategoryBody,
   CreateReferenceCategoryResponse,
   CreateReferenceItemBody,
@@ -32,6 +38,7 @@ import {
   DeleteRecordParams,
   DeleteReferenceCategoryParams,
   DeleteReferenceItemParams,
+  GetDashboardQueryParams,
   GetDashboardResponse,
   GetLookupsResponse,
   GetReferenceDataResponse,
@@ -42,13 +49,34 @@ import {
   GetReportParams,
   GetReportResponse,
   ListReportLayoutsResponse,
+  ListReportTemplatesQueryParams,
+  ListReportTemplatesResponse,
+  CreateReportTemplateBody,
+  CreateReportTemplateResponse,
+  UpdateReportTemplateParams,
+  UpdateReportTemplateBody,
+  UpdateReportTemplateResponse,
+  DeleteReportTemplateParams,
+  DuplicateReportTemplateParams,
+  DuplicateReportTemplateBody,
+  DuplicateReportTemplateResponse,
+  SetReportTemplateDefaultParams,
+  SetReportTemplateDefaultResponse,
+  ListReportTemplateVersionsParams,
+  ListReportTemplateVersionsResponse,
+  RestoreReportTemplateVersionParams,
+  RestoreReportTemplateVersionResponse,
   UpdateReportLayoutBody,
   UpdateReportLayoutParams,
   UpdateReportLayoutResponse,
   CreateStrengthStandardBody,
   CreateStrengthStandardResponse,
+  CreateWaterStandardBody,
+  CreateWaterStandardResponse,
   DeleteStrengthStandardParams,
+  DeleteWaterStandardParams,
   ListStrengthStandardsResponse,
+  ListWaterStandardsResponse,
   ListRecordsQueryParams,
   ListRecordsResponse,
   UpdateReferenceCategoryBody,
@@ -63,11 +91,16 @@ import {
   UpdateStrengthStandardBody,
   UpdateStrengthStandardParams,
   UpdateStrengthStandardResponse,
+  UpdateWaterStandardBody,
+  UpdateWaterStandardParams,
+  UpdateWaterStandardResponse,
   CreateSieveStandardBody,
   CreateSieveStandardResponse,
   DeleteSieveStandardParams,
   ListSieveStandardsResponse,
   ListShapeFactorsResponse,
+  PreviewRecordAgeBackfillBody,
+  PreviewRecordAgeBackfillResponse,
   UpdateSieveStandardBody,
   UpdateSieveStandardParams,
   UpdateSieveStandardResponse,
@@ -79,10 +112,19 @@ import {
   UpdateShapeFactorResponse,
 } from "@workspace/api-zod";
 import {
+  requireAuthenticated,
   requireAdministrator,
   requireQcEditor,
 } from "../middlewares/requireAuthenticated";
 import { isConfiguredAdministrator } from "../lib/auth";
+import { createInvalidatableInitializer } from "../lib/async-initializer";
+import {
+  getEmployeeActivityRequestSessionId,
+  getActivityEmployeeName,
+  recordEmployeeActivityChange,
+} from "../lib/employee-activity";
+import { canEmployeeAddReferenceCategory } from "../lib/employee-reference-permissions";
+import { canonicalPlantLocation } from "../lib/plant-location";
 import {
   blockShapeFactorFromSize,
   pavingCorrectionFactorFromSize,
@@ -90,6 +132,14 @@ import {
   evaluateStrengthRecord,
   type SieveStandardForEvaluation,
 } from "../lib/qc-strength";
+import { evaluateWaterRecord as evaluateWaterQcRecord } from "../lib/qc-water";
+import { normalizeMasonryMachineDetails } from "../lib/qc-machine-names";
+import {
+  ageDetailKeyForTestType,
+  calculateRecordTestingDate,
+  inspectHistoricalAgeBackfill,
+  previewHistoricalAgeBackfill,
+} from "../lib/qc-record-dates";
 import {
   readyMixStrengthsForAge,
   summarizeStrengths,
@@ -105,8 +155,11 @@ const addDaysToDate = (date: string, days: number) => {
 };
 
 const REFERENCE_SEED = [
-  { key: "factories", label: "Factories", values: ["HAFFERA", "HIDD", "AKER", "KHAMIS"] },
-  { key: "plants", label: "Plants", values: ["COLUMBIA", "MASA", "HENKI I", "HENKI II", "LIEBHERR"] },
+  {
+    key: "machines",
+    label: "Masonry Machines",
+    values: ["HENKI I", "HENKI II", "MASA", "FRIMA", "COLOMBIA"],
+  },
   {
     key: "employees",
     label: "Technicians",
@@ -120,12 +173,27 @@ const REFERENCE_SEED = [
   {
     key: "materials",
     label: "Materials",
-    values: ["Ready Mix Concrete", "Concrete Block", "Paving Block", "Sand", "Dust", "10 mm Aggregate", "20 mm Aggregate", "Water"],
+    values: [
+      "Ready Mix Concrete",
+      "Concrete Block",
+      "Paving Block",
+      "Sand",
+      "Dust",
+      "2-5 mm Aggregate",
+      "10 mm Aggregate",
+      "20 mm Aggregate",
+      "Water",
+    ],
   },
   {
     key: "locations",
-    label: "Plant Locations",
-    values: ["HAFFERA", "HIDD", "AKER", "KHAMIS", "B.D.F", "Diplomatic Area"],
+    label: "Other QC Plant Locations",
+    values: ["Hidd", "Khamis", "Haffera", "Dammam"],
+  },
+  {
+    key: "readyMixPlantLocations",
+    label: "Ready Mix Plant / Production Locations",
+    values: ["ELBA", "EASTERN"],
   },
   {
     key: "blockTypes",
@@ -205,9 +273,38 @@ const REFERENCE_SEED = [
     ],
   },
   {
+    key: "compactionTypes",
+    label: "Compaction Types",
+    values: ["Mechanical compaction"],
+  },
+  {
+    key: "precastTypes",
+    label: "Precast Types",
+    values: ["150 mm slab", "200", "250", "260"],
+  },
+  {
     key: "sieveSizes",
     label: "Sieve / Pore Sizes",
-    values: ["0.063 mm", "0.125 mm", "0.25 mm", "0.5 mm", "1 mm", "2 mm", "5 mm", "10 mm", "20 mm"],
+    values: [
+      "0 mm",
+      "0.063 mm",
+      "0.075 mm",
+      "0.125 mm",
+      "0.15 mm",
+      "0.25 mm",
+      "0.3 mm",
+      "0.5 mm",
+      "0.6 mm",
+      "1 mm",
+      "1.18 mm",
+      "2 mm",
+      "2.36 mm",
+      "5 mm",
+      "6.3 mm",
+      "10 mm",
+      "14 mm",
+      "20 mm",
+    ],
   },
   { key: "customers", label: "Customers", values: [] },
   { key: "customerLocations", label: "Customer Locations", values: [] },
@@ -225,6 +322,9 @@ const REFERENCE_SEED = [
 
 let referenceSeedPromise: Promise<void> | null = null;
 let strengthSeedPromise: Promise<void> | null = null;
+let waterSeedPromise: Promise<void> | null = null;
+let masonryMachineNormalizationPromise: Promise<void> | null = null;
+let backfillNullShapeFactorDefaults = true;
 
 const READY_MIX_DEFAULT_DESIGNS = [
   "20 N OPC",
@@ -276,6 +376,8 @@ const REPORT_LAYOUT_TEST_TYPES = [
   "Water",
   "Flakiness & Elongation",
   "RMX Trial",
+  "Precast",
+  "Kerb Stone",
 ] as const;
 
 const REPORT_LAYOUT_DEFAULTS: Record<string, Record<string, unknown>> = {
@@ -295,10 +397,12 @@ const REPORT_LAYOUT_DEFAULTS: Record<string, Record<string, unknown>> = {
     ],
     columns: {
       readyMixResults: [
-        { key: "age", label: "Age", visible: true, order: 0, width: 12 },
-        { key: "size", label: "Size", visible: true, order: 1, width: 16 },
-        { key: "load", label: "Load", visible: true, order: 2, width: 18 },
-        { key: "strength", label: "Strength", visible: true, order: 3, width: 20 },
+        { key: "testingDate", label: "Testing Date", visible: true, order: 0, width: 18 },
+        { key: "age", label: "Cube Age", visible: true, order: 1, width: 12 },
+        { key: "weight", label: "Cube Weight (g)", visible: true, order: 2, width: 16 },
+        { key: "load", label: "Load (kN)", visible: true, order: 3, width: 16 },
+        { key: "strength", label: "Strength (N/mm²)", visible: true, order: 4, width: 19 },
+        { key: "absorption", label: "Water Absorption (%)", visible: true, order: 5, width: 19 },
       ],
     },
   },
@@ -376,11 +480,15 @@ const REPORT_LAYOUT_DEFAULTS: Record<string, Record<string, unknown>> = {
     ],
     columns: {
       sieveResults: [
-        { key: "no", label: "No.", visible: true, order: 0, width: 7 },
-        { key: "size", label: "Sieve / Pore Size", visible: true, order: 1, width: 26 },
-        { key: "returned", label: "Amount Returned", visible: true, order: 2, width: 22 },
-        { key: "passing", label: "Amount Passing", visible: true, order: 3, width: 22 },
-        { key: "percentage", label: "% Passing", visible: true, order: 4, width: 23 },
+        { key: "no", label: "No.", visible: true, order: 0, width: 6 },
+        { key: "size", label: "Sieve / Pore Size", visible: true, order: 1, width: 17 },
+        { key: "returned", label: "Mass Retained (g)", visible: true, order: 2, width: 13 },
+        { key: "retained", label: "Retained (%)", visible: true, order: 3, width: 9 },
+        { key: "passing", label: "Amount Passing (g)", visible: true, order: 4, width: 11 },
+        { key: "percentage", label: "Passing (%)", visible: true, order: 5, width: 8 },
+        { key: "lower", label: "Lower Limit", visible: true, order: 6, width: 12 },
+        { key: "upper", label: "Upper Limit", visible: true, order: 7, width: 12 },
+        { key: "remarks", label: "Remarks", visible: true, order: 8, width: 18 },
       ],
     },
   },
@@ -400,11 +508,15 @@ const REPORT_LAYOUT_DEFAULTS: Record<string, Record<string, unknown>> = {
     ],
     columns: {
       sieveResults: [
-        { key: "no", label: "No.", visible: true, order: 0, width: 7 },
-        { key: "size", label: "Sieve / Pore Size", visible: true, order: 1, width: 26 },
-        { key: "returned", label: "Amount Returned", visible: true, order: 2, width: 22 },
-        { key: "passing", label: "Amount Passing", visible: true, order: 3, width: 22 },
-        { key: "percentage", label: "% Passing", visible: true, order: 4, width: 23 },
+        { key: "no", label: "No.", visible: true, order: 0, width: 6 },
+        { key: "size", label: "Sieve / Pore Size", visible: true, order: 1, width: 17 },
+        { key: "returned", label: "Mass Retained (g)", visible: true, order: 2, width: 13 },
+        { key: "retained", label: "Retained (%)", visible: true, order: 3, width: 9 },
+        { key: "passing", label: "Amount Passing (g)", visible: true, order: 4, width: 11 },
+        { key: "percentage", label: "Passing (%)", visible: true, order: 5, width: 8 },
+        { key: "lower", label: "Lower Limit", visible: true, order: 6, width: 12 },
+        { key: "upper", label: "Upper Limit", visible: true, order: 7, width: 12 },
+        { key: "remarks", label: "Remarks", visible: true, order: 8, width: 18 },
       ],
     },
   },
@@ -422,7 +534,15 @@ const REPORT_LAYOUT_DEFAULTS: Record<string, Record<string, unknown>> = {
       { key: "remarks", label: "Remarks", visible: true, order: 3 },
       { key: "signatures", label: "Signatures", visible: true, order: 4 },
     ],
-    columns: {},
+    columns: {
+      waterDetails: [
+        { key: "source", label: "Source", visible: true, order: 0, width: 20 },
+        { key: "ph", label: "pH", visible: true, order: 1, width: 20 },
+        { key: "tds", label: "TDS", visible: true, order: 2, width: 20 },
+        { key: "chloride", label: "Chloride", visible: true, order: 3, width: 20 },
+        { key: "sulphate", label: "Sulphate", visible: true, order: 4, width: 20 },
+      ],
+    },
   },
   "Flakiness & Elongation": {
     title: "Flakiness & Elongation Test Report",
@@ -438,7 +558,12 @@ const REPORT_LAYOUT_DEFAULTS: Record<string, Record<string, unknown>> = {
       { key: "remarks", label: "Remarks", visible: true, order: 3 },
       { key: "signatures", label: "Signatures", visible: true, order: 4 },
     ],
-    columns: {},
+    columns: {
+      flakinessDetails: [
+        { key: "observation1", label: "Observation 1", visible: true, order: 0, width: 50 },
+        { key: "observation2", label: "Observation 2", visible: true, order: 1, width: 50 },
+      ],
+    },
   },
   "RMX Trial": {
     title: "RMX Trial Report",
@@ -454,7 +579,74 @@ const REPORT_LAYOUT_DEFAULTS: Record<string, Record<string, unknown>> = {
       { key: "remarks", label: "Remarks", visible: true, order: 3 },
       { key: "signatures", label: "Signatures", visible: true, order: 4 },
     ],
-    columns: {},
+    columns: {
+      rmxTrialDetails: [
+        { key: "observation1", label: "Observation 1", visible: true, order: 0, width: 50 },
+        { key: "observation2", label: "Observation 2", visible: true, order: 1, width: 50 },
+      ],
+    },
+  },
+  Precast: {
+    title: "Precast Test Report",
+    fontFamily: "Arial",
+    fontSize: 11,
+    textColor: "#1f2937",
+    accentColor: "#be0055",
+    paperPadding: 14,
+    sections: [
+      { key: "header", label: "Header", visible: true, order: 0 },
+      { key: "standard", label: "Standard", visible: true, order: 1 },
+      { key: "results", label: "Results", visible: true, order: 2 },
+      { key: "remarks", label: "Remarks", visible: true, order: 3 },
+      { key: "signatures", label: "Signatures", visible: true, order: 4 },
+    ],
+    columns: {
+      precastDetails: [
+        { key: "sampleDate", label: "Casting Date", visible: true, order: 0, width: 14 },
+        { key: "sampleNo", label: "Sample No.", visible: true, order: 1, width: 14 },
+        { key: "precastMouldNo", label: "Precast Mould No.", visible: true, order: 2, width: 14 },
+        { key: "jobNo", label: "Job No.", visible: true, order: 3, width: 12 },
+        { key: "customerName", label: "Customer Name", visible: true, order: 4, width: 18 },
+        { key: "material", label: "Product Type", visible: true, order: 5, width: 12 },
+        { key: "cubeSize", label: "Cube Size (mm)", visible: true, order: 6, width: 14 },
+        { key: "location", label: "Testing Location", visible: true, order: 7, width: 16 },
+        { key: "compactionType", label: "Compaction", visible: true, order: 8, width: 16 },
+        { key: "testedBy", label: "Tested By", visible: true, order: 9, width: 14 },
+      ],
+      precastResults: [
+        { key: "age", label: "Cube Age (days)", visible: true, order: 0, width: 12 },
+        { key: "cubeSize", label: "Cube Size (mm)", visible: true, order: 1, width: 16 },
+        { key: "weight", label: "Weight (g)", visible: true, order: 2, width: 13 },
+        { key: "density", label: "Density (kg/m³)", visible: true, order: 3, width: 15 },
+        { key: "load", label: "Load (kN)", visible: true, order: 4, width: 15 },
+        { key: "strength", label: "Compressive Strength (N/mm²)", visible: true, order: 5, width: 29 },
+      ],
+    },
+  },
+  "Kerb Stone": {
+    title: "Kerb Stone Test Report",
+    fontFamily: "Arial",
+    fontSize: 11,
+    textColor: "#1f2937",
+    accentColor: "#be0055",
+    paperPadding: 14,
+    sections: [
+      { key: "header", label: "Header", visible: true, order: 0 },
+      { key: "standard", label: "Standard", visible: true, order: 1 },
+      { key: "results", label: "Results", visible: true, order: 2 },
+      { key: "remarks", label: "Remarks", visible: true, order: 3 },
+      { key: "signatures", label: "Signatures", visible: true, order: 4 },
+    ],
+    columns: {
+      kerbStoneDetails: [
+        { key: "testingDate", label: "Testing Date", visible: true, order: 0, width: 20 },
+        { key: "age", label: "Age (days)", visible: true, order: 1, width: 16 },
+        { key: "kerbType", label: "Kerb Type", visible: true, order: 2, width: 20 },
+        { key: "averageStrength", label: "Avg. Strength", visible: true, order: 3, width: 16 },
+        { key: "minimumStrength", label: "Min. Strength", visible: true, order: 4, width: 14 },
+        { key: "maximumStrength", label: "Max. Strength", visible: true, order: 5, width: 14 },
+      ],
+    },
   },
 };
 
@@ -463,26 +655,58 @@ const strengthStandardKey = (value: {
   material: string;
   blockType: string | null;
   blockSize: string | null;
+  cubeAge?: number | string | null;
 }) =>
   [
     value.testType,
     value.material,
     value.blockType ?? "",
     value.blockSize ?? "",
+    value.cubeAge ?? "",
   ]
-    .map((part) => part.trim().toLocaleLowerCase())
+    .map((part) => String(part).trim().toLocaleLowerCase())
     .join("|");
 
-async function ensureDefaultStrengthStandards() {
+const defaultDammamStrengthCriteria = (blockType: string | null | undefined) =>
+  String(blockType ?? "").toLocaleLowerCase().includes("sandwich")
+    ? { average: "4.14", minimum: null }
+    : { average: "13.8", minimum: "12.4" };
+
+export async function ensureDefaultStrengthStandards() {
   if (!strengthSeedPromise) {
     strengthSeedPromise = (async () => {
       const existing = await db
         .select()
         .from(qcStrengthStandardsTable)
-        .where(inArray(qcStrengthStandardsTable.testType, ["Ready Mix", "Blocks"]));
-      const existingMaterials = new Set(existing.map((row) => row.material.trim().toLocaleLowerCase()));
+        .where(inArray(qcStrengthStandardsTable.testType, ["Ready Mix", "Blocks", "Precast", "Kerb Stone"]));
+      const existingMaterials = new Set(
+        existing
+          .filter((row) => row.testType === "Ready Mix")
+          .map((row) => row.material.trim().toLocaleLowerCase()),
+      );
       let insertedDefault = false;
       const existingKeys = new Set(existing.map((row) => strengthStandardKey(row)));
+      for (const standard of existing.filter((row) => row.testType === "Blocks")) {
+        const defaults = defaultDammamStrengthCriteria(standard.blockType);
+        const average = standard.dammamAverageStrength ?? defaults.average;
+        const minimum = defaults.minimum === null
+          ? null
+          : standard.dammamMinimumStrength ?? defaults.minimum;
+        if (
+          standard.dammamAverageStrength === average &&
+          standard.dammamMinimumStrength === minimum
+        ) {
+          continue;
+        }
+        await db
+          .update(qcStrengthStandardsTable)
+          .set({
+            dammamAverageStrength: average,
+            dammamMinimumStrength: minimum,
+          })
+          .where(eq(qcStrengthStandardsTable.id, standard.id));
+        insertedDefault = true;
+      }
       for (const material of READY_MIX_DEFAULT_DESIGNS) {
         if (existingMaterials.has(material.toLocaleLowerCase())) continue;
         const grade = Number.parseInt(material, 10);
@@ -499,6 +723,7 @@ async function ensureDefaultStrengthStandards() {
         insertedDefault = true;
       }
       for (const standard of BLOCK_DEFAULT_STANDARDS) {
+        const dammamCriteria = defaultDammamStrengthCriteria(standard.blockType);
         const key = strengthStandardKey({
           testType: "Blocks",
           material: "Concrete Block",
@@ -513,13 +738,89 @@ async function ensureDefaultStrengthStandards() {
           blockSize: standard.blockSize,
           bsStandard: "BS EN 771-3",
           requiredStrength: standard.requiredStrength,
+          dammamAverageStrength: dammamCriteria.average,
+          dammamMinimumStrength: dammamCriteria.minimum,
           strengthUnit: "N/mm²",
         });
         existingKeys.add(key);
         insertedDefault = true;
       }
-      if (insertedDefault || existing.length > 0) {
-        await refreshRecordEvaluations(["Ready Mix", "Blocks"]);
+      for (const standard of [
+        {
+          blockType: "Road kerb",
+          blockSize: "915 × 125 × 225 mm",
+          requiredStrength: "5",
+          kerbClass: "2",
+          kerbMarking: "T",
+          minimumIndividualStrength: "4",
+        },
+        {
+          blockType: "Edge kerb",
+          blockSize: "915 × 50 × 150 mm",
+          requiredStrength: "3.5",
+          kerbClass: "1",
+          kerbMarking: "S",
+          minimumIndividualStrength: "2.8",
+        },
+      ]) {
+        const key = strengthStandardKey({
+          testType: "Kerb Stone",
+          material: "Kerbstone",
+          blockType: standard.blockType,
+          blockSize: standard.blockSize,
+        });
+        const existingKerbStandard = existing.find(
+          (row) => strengthStandardKey(row) === key,
+        );
+        if (existingKerbStandard) {
+          const legacyDefault = existingKerbStandard.bsStandard === "Kerbstone specific strength";
+          const nextKerbStandard = {
+            kerbClass: existingKerbStandard.kerbClass ?? standard.kerbClass,
+            kerbMarking: existingKerbStandard.kerbMarking ?? standard.kerbMarking,
+            minimumIndividualStrength:
+              existingKerbStandard.minimumIndividualStrength ?? standard.minimumIndividualStrength,
+            strengthUnit: existingKerbStandard.kerbClass === null
+              ? "MPa"
+              : existingKerbStandard.strengthUnit,
+          bsStandard: legacyDefault || existingKerbStandard.bsStandard === "Kerbstone flexural strength"
+            ? "BS EN 1340 : 2003"
+            : existingKerbStandard.bsStandard,
+          waterAbsorptionLimit: existingKerbStandard.waterAbsorptionLimit ?? "6.5",
+          };
+          if (
+            existingKerbStandard.kerbClass !== nextKerbStandard.kerbClass ||
+            existingKerbStandard.kerbMarking !== nextKerbStandard.kerbMarking ||
+            existingKerbStandard.minimumIndividualStrength !== nextKerbStandard.minimumIndividualStrength ||
+            existingKerbStandard.waterAbsorptionLimit !== nextKerbStandard.waterAbsorptionLimit ||
+            existingKerbStandard.strengthUnit !== nextKerbStandard.strengthUnit ||
+            existingKerbStandard.bsStandard !== nextKerbStandard.bsStandard
+          ) {
+            await db.update(qcStrengthStandardsTable)
+              .set(nextKerbStandard)
+              .where(eq(qcStrengthStandardsTable.id, existingKerbStandard.id));
+            insertedDefault = true;
+          }
+          continue;
+        }
+        if (existingKeys.has(key)) continue;
+        await db.insert(qcStrengthStandardsTable).values({
+          testType: "Kerb Stone",
+          material: "Kerbstone",
+          blockType: standard.blockType,
+          blockSize: standard.blockSize,
+          kerbClass: standard.kerbClass,
+          kerbMarking: standard.kerbMarking,
+          bsStandard: "BS EN 1340 : 2003",
+          requiredStrength: standard.requiredStrength,
+          minimumIndividualStrength: standard.minimumIndividualStrength,
+          waterAbsorptionLimit: "6.5",
+          strengthUnit: "MPa",
+        });
+        existingKeys.add(key);
+        insertedDefault = true;
+      }
+      if (insertedDefault) {
+        await refreshRecordEvaluations(["Ready Mix", "Blocks", "Precast", "Kerb Stone"]);
       }
     })().catch((error) => {
       strengthSeedPromise = null;
@@ -527,9 +828,66 @@ async function ensureDefaultStrengthStandards() {
     });
   }
   await strengthSeedPromise;
+  strengthSeedPromise = null;
 }
 
-async function ensureDefaultShapeFactors() {
+async function ensureDefaultWaterStandard() {
+  if (!waterSeedPromise) {
+    waterSeedPromise = (async () => {
+      const standards = await db.select().from(qcWaterStandardsTable);
+      const defaultStandard = standards.find((standard) => standard.isDefault);
+      if (defaultStandard) {
+        if (
+          Number(defaultStandard.so3Min) === 0 &&
+          Number(defaultStandard.so3Max) === 1000
+        ) {
+          await db
+            .update(qcWaterStandardsTable)
+            .set({ so3Min: "400" })
+            .where(eq(qcWaterStandardsTable.id, defaultStandard.id));
+          await refreshRecordEvaluations(["Water"]);
+        }
+        return;
+      }
+      if (standards[0]) {
+        const needsSulfateMinimumUpdate =
+          Number(standards[0].so3Min) === 0 &&
+          Number(standards[0].so3Max) === 1000;
+        await db
+          .update(qcWaterStandardsTable)
+          .set({
+            isDefault: true,
+            ...(needsSulfateMinimumUpdate ? { so3Min: "400" } : {}),
+          })
+          .where(eq(qcWaterStandardsTable.id, standards[0].id));
+        await refreshRecordEvaluations(["Water"]);
+        return;
+      }
+      await db.insert(qcWaterStandardsTable).values({
+        name: "Water Quality Limits",
+        phMin: "4.5",
+        phMax: "8",
+        chlorideMin: "0",
+        chlorideMax: "350",
+        tdsMin: "0",
+        tdsMax: "2000",
+        so3Min: "400",
+        so3Max: "1000",
+        isDefault: true,
+      });
+    })().catch((error) => {
+      waterSeedPromise = null;
+      throw error;
+    });
+  }
+  await waterSeedPromise;
+}
+
+function isSupportedPrecastAge(value: unknown): boolean {
+  return Number.isInteger(value) && [1, 7, 28].includes(value as number);
+}
+
+async function reconcileDefaultShapeFactors() {
   const [category] = await db
     .select()
     .from(qcReferenceCategoriesTable)
@@ -558,6 +916,7 @@ async function ensureDefaultShapeFactors() {
       changed = true;
       continue;
     }
+    if (!backfillNullShapeFactorDefaults) continue;
     if (defaultShapeFactor !== null) {
       const [updated] = await db
         .update(qcShapeFactorsTable)
@@ -583,9 +942,21 @@ async function ensureDefaultShapeFactors() {
   if (changed) {
     await refreshRecordEvaluations(["Blocks", "Paving Blocks"]);
   }
+  backfillNullShapeFactorDefaults = false;
 }
 
-async function ensureReportLayouts() {
+const shapeFactorInitializer =
+  createInvalidatableInitializer(reconcileDefaultShapeFactors);
+
+async function ensureDefaultShapeFactors() {
+  await shapeFactorInitializer.ensure();
+}
+
+function invalidateDefaultShapeFactors() {
+  shapeFactorInitializer.invalidate();
+}
+
+async function reconcileReportLayouts() {
   for (const testType of REPORT_LAYOUT_TEST_TYPES) {
     const defaults = REPORT_LAYOUT_DEFAULTS[testType];
     await db
@@ -606,21 +977,306 @@ async function ensureReportLayouts() {
     const existingColumns = typeof existing?.config.columns === "object" && existing.config.columns !== null
       ? existing.config.columns as Record<string, unknown>
       : {};
-    const missingColumns = Object.fromEntries(
-      Object.entries(defaultColumns).filter(([key]) => existingColumns[key] === undefined),
-    );
-    if (existing && Object.keys(missingColumns).length > 0) {
+    const mergedColumns = { ...existingColumns };
+    let columnsChanged = false;
+    for (const [key, defaultValue] of Object.entries(defaultColumns)) {
+      const currentValue = existingColumns[key];
+      if (currentValue === undefined) {
+        mergedColumns[key] = defaultValue;
+        columnsChanged = true;
+        continue;
+      }
+      const supportsColumnAdditions =
+        key === "sieveResults" ||
+        (testType === "Precast" &&
+          (key === "precastDetails" || key === "precastResults"));
+      if (
+        !supportsColumnAdditions ||
+        !Array.isArray(currentValue) ||
+        !Array.isArray(defaultValue)
+      ) {
+        continue;
+      }
+
+      let currentColumns = currentValue.filter(
+        (column): column is Record<string, unknown> =>
+          typeof column === "object" && column !== null,
+      );
+      if (testType === "Precast" && key === "precastResults") {
+        const normalizedColumns: Record<string, unknown>[] = [];
+        let normalized = false;
+        for (const column of currentColumns) {
+          if (column.key === "no") {
+            normalized = true;
+            continue;
+          }
+          if (column.key === "weight" && column.label === "Weight (kg)") {
+            normalizedColumns.push({ ...column, label: "Weight (g)" });
+            normalized = true;
+            continue;
+          }
+          normalizedColumns.push(column);
+        }
+        if (normalized) {
+          currentColumns = normalizedColumns;
+          mergedColumns[key] = currentColumns;
+          columnsChanged = true;
+        }
+      }
+      const defaultSieveColumns = defaultValue.filter(
+        (column): column is Record<string, unknown> =>
+          typeof column === "object" && column !== null,
+      );
+      const currentKeys = new Set(currentColumns.map((column) => column.key));
+      const lastOrder = Math.max(
+        -1,
+        ...currentColumns.map((column) =>
+          typeof column.order === "number" ? column.order : -1,
+        ),
+      );
+      const additions = defaultSieveColumns
+        .filter(
+          (column) =>
+            (key !== "sieveResults" ||
+              ["retained", "passing", "lower", "upper", "remarks"].includes(String(column.key))) &&
+            !currentKeys.has(column.key),
+        )
+        .map((column, index) => ({
+          ...column,
+          order: lastOrder + index + 1,
+        }));
+      if (additions.length) {
+        mergedColumns[key] = [...currentColumns, ...additions];
+        columnsChanged = true;
+      }
+    }
+    if (existing && columnsChanged) {
       await db
         .update(qcReportLayoutsTable)
         .set({
           config: {
             ...existing.config,
-            columns: { ...existingColumns, ...missingColumns },
+            columns: mergedColumns,
           },
         })
         .where(eq(qcReportLayoutsTable.id, existing.id));
     }
   }
+}
+
+const reportLayoutInitializer =
+  createInvalidatableInitializer(reconcileReportLayouts);
+
+async function ensureReportLayouts() {
+  await reportLayoutInitializer.ensure();
+}
+
+const REPORT_TEMPLATE_FIELD_KEYS = new Set([
+  "REPORT_TITLE", "REPORT_NUMBER", "REPORT_DATE", "SAMPLE_DATE",
+  "SUPPLIER", "SAMPLE_DESCRIPTION", "PROJECT", "TEST_METHOD",
+  "TEST_RESULT", "SIEVE_SIZE", "AMOUNT_RETAINED", "AMOUNT_PASSING",
+  "PERCENT_PASSING", "RETAINED_PERCENT", "LOWER_LIMIT", "UPPER_LIMIT",
+  "REMARKS", "COMPANY_NAME", "SAMPLE_NUMBER", "MATERIAL", "LOCATION",
+  "TESTED_BY", "REVIEWED_BY", "record.recordNo", "record.sampleDate",
+  "record.location", "record.material", "record.status", "record.testedBy",
+  "record.reviewedBy", "record.createdAt", "report.title",
+  ...[
+    "customerName", "customerLocation", "projectName", "otherDetails",
+    "castedBy", "sampleNumber", "slump", "temperature", "compactionType",
+    "testingDate", "age", "weight", "load", "strength", "absorption",
+    "blockSize", "blockAge", "machine", "sampleType", "conditioningMethod",
+    "preparationMethod", "shapeFactor", "blockType", "no", "length", "width",
+    "height", "water", "airDry", "normalized", "density", "wetWeight",
+    "pavingBlockSize", "correctionFactor", "dryWeight", "waterAbsorption",
+    "size", "returned", "retained", "passing", "percentage", "lower", "upper",
+    "remarks", "sampleAge", "supplier", "materialCondition", "siltBefore",
+    "siltAfter", "silverNitrateContent", "firstChlorideTitrationPoint",
+    "secondChlorideTitrationPoint", "crucibleWeight", "crucibleAshWeight",
+    "source", "ph", "tds", "chloride", "sulphate", "sampleDate", "location",
+    "material", "testedBy", "observation1", "observation2",
+    "sampleNo", "precastMouldNo", "jobNo", "cubeSize", "averageStrength1Day",
+    "averageStrength7Days", "averageStrength28Days",
+    "kerbType", "averageStrength", "minimumStrength", "maximumStrength",
+  ].map((key) => `details.${key}`),
+]);
+
+const REPORT_TEMPLATE_TABLE_KEYS = new Set([
+  "readyMixDetails", "readyMixResults", "blockDetails", "blockCompression",
+  "pavingDetails", "pavingResults", "sieveSampleDetails", "sieveResults",
+  "sieveChemicalDetails", "waterDetails", "genericContext",
+    "flakinessDetails", "rmxTrialDetails", "precastDetails", "precastResults", "kerbStoneDetails",
+]);
+const REPORT_TEMPLATE_COLUMN_KEYS = new Set(
+  [...REPORT_TEMPLATE_FIELD_KEYS]
+    .filter((key) => key.startsWith("details."))
+    .map((key) => key.slice("details.".length)),
+);
+
+function validateReportTemplateDesign(design: unknown): string | null {
+  if (typeof design !== "object" || design === null) return "A design is required.";
+  const value = design as Record<string, unknown>;
+  if ((value.schemaVersion !== 1 && value.schemaVersion !== 2) || !Array.isArray(value.objects)) {
+    return "Unsupported report template design.";
+  }
+  const objectsById = new Map<string, Record<string, unknown>>();
+  for (const object of value.objects) {
+    if (typeof object !== "object" || object === null) return "Invalid report template object.";
+    const item = object as Record<string, unknown>;
+    if (typeof item.id !== "string" || !item.id.trim() || objectsById.has(item.id)) {
+      return "Report template object IDs must be unique.";
+    }
+    objectsById.set(item.id, item);
+    if ((item.type === "dynamicField" && typeof item.fieldKey !== "string") ||
+      (item.type === "tableCell" && item.fieldKey !== undefined && typeof item.fieldKey !== "string") ||
+      ((item.type === "dynamicField" || item.type === "tableCell") &&
+        item.fieldKey !== undefined && !REPORT_TEMPLATE_FIELD_KEYS.has(item.fieldKey as string))) {
+      return "Dynamic field is not allowed.";
+    }
+    if (item.type === "table" &&
+      (typeof item.tableKey !== "string" || !REPORT_TEMPLATE_TABLE_KEYS.has(item.tableKey))) {
+      return "Report table is not allowed.";
+    }
+    if (item.type === "image") {
+      if (typeof item.objectPath !== "string" ||
+        !/^\/objects\/uploads\/[A-Za-z0-9._/-]+$/.test(item.objectPath) ||
+        item.objectPath.includes("..")) {
+        return "Image objects must reference a private uploaded object.";
+      }
+    }
+    if (typeof item.content === "string") {
+      const tokens = [...item.content.matchAll(/\{\{([A-Za-z_][A-Za-z0-9_.]*)\}\}/g)];
+      if (tokens.some(([, key]) => !REPORT_TEMPLATE_FIELD_KEYS.has(key))) {
+        return "Template text contains an unknown dynamic field.";
+      }
+    }
+    if (item.type === "formula" || item.type === "tableCell" && typeof item.formula === "string") {
+      const formula = typeof item.formula === "string" ? item.formula : "";
+      const fields = [...formula.matchAll(/\{\{([A-Za-z_][A-Za-z0-9_.]*)\}\}/g)];
+      if (fields.some(([, key]) => !REPORT_TEMPLATE_FIELD_KEYS.has(key))) {
+        return "Formula contains an unknown dynamic field.";
+      }
+      if (/[^\w\s.,+\-*/%()={}]/.test(formula) ||
+        /\{\{(?![A-Za-z_][A-Za-z0-9_.]*\}\})/.test(formula) ||
+        (formula.match(/\(/g)?.length ?? 0) !== (formula.match(/\)/g)?.length ?? 0) ||
+        [...formula.matchAll(/\b([A-Za-z]+)\s*\(/g)]
+          .some(([, name]) => !["SUM", "AVERAGE", "MIN", "MAX", "ROUND", "ABS"].includes(name.toUpperCase()))) {
+        return "Formula contains unsupported syntax.";
+      }
+    }
+  }
+  for (const item of objectsById.values()) {
+    if (item.parentId === undefined) continue;
+    if (typeof item.parentId !== "string" || !objectsById.has(item.parentId) || item.parentId === item.id) {
+      return "Report template object parent is invalid.";
+    }
+    const parent = objectsById.get(item.parentId)!;
+    const validParent = item.type === "tableRow"
+      ? parent.type === "table"
+      : item.type === "tableCell"
+        ? parent.type === "tableRow"
+        : item.type === "section"
+          ? false
+          : item.type === "table"
+            ? parent.type === "section" || parent.type === "group"
+            : parent.type === "section" || parent.type === "group";
+    if (!validParent) return "Report template object parent type is invalid.";
+    const visited = new Set<string>([item.id as string]);
+    let current: Record<string, unknown> | undefined = parent;
+    while (current) {
+      if (typeof current.id !== "string" || visited.has(current.id)) {
+        return "Report template object hierarchy contains a cycle.";
+      }
+      visited.add(current.id);
+      current = typeof current.parentId === "string" ? objectsById.get(current.parentId) : undefined;
+    }
+    if (item.type === "tableCell" && item.columnIndex !== undefined &&
+      (typeof item.columnIndex !== "number" || !Number.isInteger(item.columnIndex) ||
+        item.columnIndex < 0 || item.columnIndex > 100)) {
+      return "Table cell column index is invalid.";
+    }
+  }
+  const layout = value.layout;
+  if (typeof layout !== "object" || layout === null) return "A report layout is required.";
+  const columns = (layout as Record<string, unknown>).columns;
+  if (typeof columns !== "object" || columns === null || Array.isArray(columns)) {
+    return "Report table columns are invalid.";
+  }
+  for (const [groupKey, groupColumns] of Object.entries(columns)) {
+    if (!REPORT_TEMPLATE_TABLE_KEYS.has(groupKey) || !Array.isArray(groupColumns)) {
+      return "Report table columns are not allowed.";
+    }
+    for (const column of groupColumns) {
+      if (typeof column !== "object" || column === null ||
+        typeof (column as Record<string, unknown>).key !== "string" ||
+        !REPORT_TEMPLATE_COLUMN_KEYS.has((column as Record<string, unknown>).key as string)) {
+        return "Report table field is not allowed.";
+      }
+    }
+  }
+  return null;
+}
+
+function reportTemplateDesignFromLegacy(config: Record<string, unknown>) {
+  const paperPadding = typeof config.paperPadding === "number"
+    ? config.paperPadding
+    : 14;
+  return {
+    schemaVersion: 1 as const,
+    layout: config,
+    page: {
+      pageSize: "A4" as const,
+      orientation: "portrait" as const,
+      widthMm: 210,
+      heightMm: 297,
+      marginTopMm: paperPadding,
+      marginRightMm: paperPadding,
+      marginBottomMm: paperPadding,
+      marginLeftMm: paperPadding,
+      showHeader: true,
+      showFooter: true,
+      headerHeightMm: 24,
+      footerHeightMm: 18,
+    },
+    objects: [],
+  };
+}
+
+function toReportTemplate(row: typeof qcReportTemplatesTable.$inferSelect) {
+  return {
+    id: row.id,
+    testType: row.testType,
+    name: row.name,
+    description: row.description,
+    isDefault: row.isDefault,
+    version: row.version,
+    design: row.design,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+async function ensureReportTemplates() {
+  await ensureReportLayouts();
+  await db.transaction(async (tx) => {
+    const legacyLayouts = await tx.select().from(qcReportLayoutsTable);
+    for (const legacy of legacyLayouts) {
+      const [existing] = await tx.select({ id: qcReportTemplatesTable.id })
+        .from(qcReportTemplatesTable)
+        .where(eq(qcReportTemplatesTable.testType, legacy.testType))
+        .limit(1);
+      if (!existing) {
+        await tx.insert(qcReportTemplatesTable).values({
+          testType: legacy.testType,
+          name: legacy.name,
+          description: "Migrated from the legacy report layout.",
+          isDefault: true,
+          version: 1,
+          design: reportTemplateDesignFromLegacy(legacy.config),
+          history: [],
+        });
+      }
+    }
+  });
 }
 
 export async function ensureReferenceData() {
@@ -652,15 +1308,98 @@ export async function ensureReferenceData() {
             .onConflictDoNothing();
         }
       }
+
+      const [locationCategory] = await db
+        .select()
+        .from(qcReferenceCategoriesTable)
+        .where(eq(qcReferenceCategoriesTable.key, "locations"));
+      if (locationCategory && locationCategory.label !== "Other QC Plant Locations") {
+        const allowedLocations = ["Hidd", "Khamis", "Haffera", "Dammam"];
+        const existingItems = await db
+          .select()
+          .from(qcReferenceItemsTable)
+          .where(eq(qcReferenceItemsTable.categoryId, locationCategory.id));
+        const retainedIds = new Set<number>();
+
+        for (const value of allowedLocations) {
+          const existingItem =
+            existingItems.find(
+              (item) => !retainedIds.has(item.id) && item.value === value,
+            ) ??
+            existingItems.find(
+              (item) =>
+                !retainedIds.has(item.id) &&
+                item.value.trim().toLocaleLowerCase() === value.toLocaleLowerCase(),
+            );
+          if (existingItem) {
+            retainedIds.add(existingItem.id);
+            if (existingItem.value !== value) {
+              await db
+                .update(qcReferenceItemsTable)
+                .set({ value })
+                .where(eq(qcReferenceItemsTable.id, existingItem.id));
+            }
+          } else {
+            const [createdItem] = await db
+              .insert(qcReferenceItemsTable)
+              .values({ categoryId: locationCategory.id, value })
+              .returning({ id: qcReferenceItemsTable.id });
+            if (createdItem) retainedIds.add(createdItem.id);
+          }
+        }
+
+        const obsoleteIds = existingItems
+          .filter((item) => !retainedIds.has(item.id))
+          .map((item) => item.id);
+        if (obsoleteIds.length) {
+          await db
+            .delete(qcReferenceItemsTable)
+            .where(inArray(qcReferenceItemsTable.id, obsoleteIds));
+        }
+        await db
+          .update(qcReferenceCategoriesTable)
+          .set({ label: "Other QC Plant Locations" })
+          .where(eq(qcReferenceCategoriesTable.id, locationCategory.id));
+      }
     })().catch((error) => {
       referenceSeedPromise = null;
       throw error;
     });
   }
   await referenceSeedPromise;
+  if (!masonryMachineNormalizationPromise) {
+    masonryMachineNormalizationPromise = (async () => {
+      const records = await db
+        .select({
+          id: qcRecordsTable.id,
+          testType: qcRecordsTable.testType,
+          details: qcRecordsTable.details,
+        })
+        .from(qcRecordsTable)
+        .where(inArray(qcRecordsTable.testType, ["Blocks", "Paving Blocks"]));
+
+      for (const record of records) {
+        const details = normalizeMasonryMachineDetails(
+          record.testType,
+          record.details,
+        );
+        if (details === record.details) continue;
+        await db
+          .update(qcRecordsTable)
+          .set({ details })
+          .where(eq(qcRecordsTable.id, record.id));
+      }
+    })().catch((error) => {
+      masonryMachineNormalizationPromise = null;
+      throw error;
+    });
+  }
+  await masonryMachineNormalizationPromise;
   await ensureDefaultShapeFactors();
   await ensureReportLayouts();
 }
+
+const HIDDEN_REFERENCE_CATEGORY_KEYS = new Set(["factories", "plants"]);
 
 async function listReferenceData() {
   await ensureReferenceData();
@@ -668,10 +1407,58 @@ async function listReferenceData() {
     db.select().from(qcReferenceCategoriesTable).orderBy(asc(qcReferenceCategoriesTable.label)),
     db.select().from(qcReferenceItemsTable).orderBy(asc(qcReferenceItemsTable.value)),
   ]);
-  return categories.map((category) => ({
-    ...category,
-    items: items.filter((item) => item.categoryId === category.id),
-  }));
+  const itemsByCategory = new Map<number, typeof items>();
+  for (const item of items) {
+    const categoryItems = itemsByCategory.get(item.categoryId) ?? [];
+    categoryItems.push(item);
+    itemsByCategory.set(item.categoryId, categoryItems);
+  }
+  return categories
+    .filter((category) => !HIDDEN_REFERENCE_CATEGORY_KEYS.has(category.key))
+    .map((category) => ({
+      ...category,
+      items: itemsByCategory.get(category.id) ?? [],
+    }));
+}
+
+const LOOKUP_CATEGORY_KEYS = [
+  "factories",
+  "plants",
+  "employees",
+  "suppliers",
+  "materials",
+  "locations",
+  "blockTypes",
+  "blockSizes",
+  "mixStrengths",
+  "customers",
+  "customerLocations",
+  "sieveSizes",
+] as const;
+
+async function listLookupValues() {
+  await ensureReferenceData();
+  const rows = await db
+    .select({
+      categoryKey: qcReferenceCategoriesTable.key,
+      value: qcReferenceItemsTable.value,
+    })
+    .from(qcReferenceItemsTable)
+    .innerJoin(
+      qcReferenceCategoriesTable,
+      eq(qcReferenceCategoriesTable.id, qcReferenceItemsTable.categoryId),
+    )
+    .where(inArray(qcReferenceCategoriesTable.key, LOOKUP_CATEGORY_KEYS))
+    .orderBy(asc(qcReferenceItemsTable.value));
+
+  const valuesByCategory = new Map<string, string[]>(
+    LOOKUP_CATEGORY_KEYS.map((key) => [key, []]),
+  );
+  for (const row of rows) {
+    if (HIDDEN_REFERENCE_CATEGORY_KEYS.has(row.categoryKey)) continue;
+    valuesByCategory.get(row.categoryKey)?.push(row.value);
+  }
+  return valuesByCategory;
 }
 
 async function getReferenceCategory(id: number) {
@@ -688,31 +1475,119 @@ async function getReferenceCategory(id: number) {
   return { ...category, items };
 }
 
-function lookupValues(
-  categories: Awaited<ReturnType<typeof listReferenceData>>,
-  key: string,
-) {
-  return categories.find((category) => category.key === key)?.items.map((item) => item.value) ?? [];
+async function invalidateShapeFactorDefaultsForCategory(categoryId: number) {
+  const [category] = await db
+    .select({ key: qcReferenceCategoriesTable.key })
+    .from(qcReferenceCategoriesTable)
+    .where(eq(qcReferenceCategoriesTable.id, categoryId));
+  if (category?.key === "blockSizes") invalidateDefaultShapeFactors();
 }
 
-const toRecord = (row: typeof qcRecordsTable.$inferSelect) => ({
+const toRecord = (
+  row: typeof qcRecordsTable.$inferSelect,
+  createdBy: string | null = null,
+) => ({
   ...row,
   createdAt: row.createdAt.toISOString(),
+  createdBy,
 });
+
+async function getRecordCreatorNames(
+  rows: Array<typeof qcRecordsTable.$inferSelect>,
+) {
+  const recordIds = rows.map((row) => String(row.id));
+  const creatorNames = new Map<string, string>();
+  if (!recordIds.length) return creatorNames;
+
+  const creationEvents = await db
+    .select({
+      entityId: employeeActivityEventsTable.entityId,
+      employeeName: employeeActivityEventsTable.employeeName,
+    })
+    .from(employeeActivityEventsTable)
+    .where(
+      and(
+        eq(employeeActivityEventsTable.entityType, "QC record"),
+        eq(employeeActivityEventsTable.action, "created"),
+        inArray(employeeActivityEventsTable.entityId, recordIds),
+      ),
+    )
+    .orderBy(
+      asc(employeeActivityEventsTable.occurredAt),
+      asc(employeeActivityEventsTable.id),
+    );
+
+  for (const event of creationEvents) {
+    if (event.entityId && !creatorNames.has(event.entityId)) {
+      creatorNames.set(event.entityId, event.employeeName);
+    }
+  }
+  return creatorNames;
+}
+
+function evaluateKerbRecordForResponse(
+  row: typeof qcRecordsTable.$inferSelect,
+  strengthStandards: typeof qcStrengthStandardsTable.$inferSelect[],
+) {
+  if (row.testType !== "Kerb Stone") return row;
+  const evaluated = evaluateStrengthRecord(
+    {
+      testType: row.testType,
+      material: row.material,
+      location: row.location,
+      details: row.details as Record<string, unknown>,
+    },
+    strengthStandards,
+  );
+  if (evaluated.status === undefined) return row;
+  return {
+    ...row,
+    status: evaluated.status,
+    details: evaluated.details as typeof row.details,
+  };
+}
+
+async function toRecords(
+  rows: Array<typeof qcRecordsTable.$inferSelect>,
+) {
+  const creatorNames = await getRecordCreatorNames(rows);
+  const strengthStandards = rows.some((row) => row.testType === "Kerb Stone")
+    ? await db.select().from(qcStrengthStandardsTable)
+    : [];
+  return rows.map((row) =>
+    toRecord(
+      evaluateKerbRecordForResponse(row, strengthStandards),
+      creatorNames.get(String(row.id)) ?? null,
+    ),
+  );
+}
+
+async function toRecordWithCreator(
+  row: typeof qcRecordsTable.$inferSelect,
+) {
+  const [record] = await toRecords([row]);
+  return record ?? toRecord(row);
+}
 
 async function refreshRecordEvaluations(testTypes: string[]) {
   const uniqueTestTypes = [...new Set(testTypes)];
   if (!uniqueTestTypes.length) return;
-  const [strengthStandards, sieveStandards, shapeFactors, records] = await Promise.all([
+  const [strengthStandards, sieveStandards, shapeFactors, waterStandards, records] = await Promise.all([
     db.select().from(qcStrengthStandardsTable),
     loadSieveStandards(),
     db.select().from(qcShapeFactorsTable),
+    db.select().from(qcWaterStandardsTable),
     db
       .select()
       .from(qcRecordsTable)
       .where(inArray(qcRecordsTable.testType, uniqueTestTypes)),
   ]);
 
+  const evaluationUpdates: Array<{
+    id: number;
+    status: string;
+    details: Record<string, unknown>;
+  }> = [];
   for (const record of records) {
     const candidate = {
       testType: record.testType,
@@ -723,15 +1598,31 @@ async function refreshRecordEvaluations(testTypes: string[]) {
     const evaluated =
       record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve"
         ? evaluateSieveRecord(candidate, sieveStandards)
+        : record.testType === "Water"
+          ? evaluateWaterQcRecord(candidate, waterStandards)
         : evaluateStrengthRecord(candidate, strengthStandards, shapeFactors);
     if (evaluated.status === undefined) continue;
-    await db
-      .update(qcRecordsTable)
-      .set({
-        status: evaluated.status,
-        details: evaluated.details,
-      })
-      .where(eq(qcRecordsTable.id, record.id));
+    evaluationUpdates.push({
+      id: record.id,
+      status: evaluated.status,
+      details: evaluated.details,
+    });
+  }
+
+  const batchSize = 250;
+  for (let offset = 0; offset < evaluationUpdates.length; offset += batchSize) {
+    const batch = evaluationUpdates.slice(offset, offset + batchSize);
+    const values = batch.map(({ id, status, details }) =>
+      sql`(${id}::integer, ${status}::text, ${JSON.stringify(details)}::jsonb)`,
+    );
+    await db.execute(sql`
+      UPDATE qc_records AS qc_record
+      SET status = batch.status,
+          details = batch.details,
+          updated_at = NOW()
+      FROM (VALUES ${sql.join(values, sql`, `)}) AS batch(id, status, details)
+      WHERE qc_record.id = batch.id
+    `);
   }
 }
 
@@ -796,10 +1687,50 @@ const toStrengthStandard = (row: typeof qcStrengthStandardsTable.$inferSelect) =
   material: row.material,
   blockType: row.blockType,
   blockSize: row.blockSize,
+  cubeAge: row.cubeAge === null ? null : Number(row.cubeAge),
+  kerbClass: row.kerbClass === null ? null : Number(row.kerbClass),
+  kerbMarking: row.kerbMarking,
   bsStandard: row.bsStandard,
   requiredStrength: Number(row.requiredStrength),
+  minimumIndividualStrength:
+    row.minimumIndividualStrength === null ? null : Number(row.minimumIndividualStrength),
+  waterAbsorptionLimit:
+    row.waterAbsorptionLimit === null ? null : Number(row.waterAbsorptionLimit),
+  dammamAverageStrength:
+    row.dammamAverageStrength === null ? null : Number(row.dammamAverageStrength),
+  dammamMinimumStrength:
+    row.dammamMinimumStrength === null ? null : Number(row.dammamMinimumStrength),
   strengthUnit: row.strengthUnit,
 });
+
+const toWaterStandard = (row: typeof qcWaterStandardsTable.$inferSelect) => ({
+  id: row.id,
+  name: row.name,
+  phMin: Number(row.phMin),
+  phMax: Number(row.phMax),
+  chlorideMin: Number(row.chlorideMin),
+  chlorideMax: Number(row.chlorideMax),
+  tdsMin: Number(row.tdsMin),
+  tdsMax: Number(row.tdsMax),
+  so3Min: Number(row.so3Min),
+  so3Max: Number(row.so3Max),
+  isDefault: row.isDefault,
+});
+
+const WATER_LIMIT_PAIRS = [
+  ["phMin", "phMax"],
+  ["chlorideMin", "chlorideMax"],
+  ["tdsMin", "tdsMax"],
+  ["so3Min", "so3Max"],
+] as const;
+
+function waterLimitsAreOrdered(values: Record<string, unknown>) {
+  return WATER_LIMIT_PAIRS.every(([minimumKey, maximumKey]) => {
+    const minimum = Number(values[minimumKey]);
+    const maximum = Number(values[maximumKey]);
+    return Number.isFinite(minimum) && Number.isFinite(maximum) && minimum <= maximum;
+  });
+}
 
 const toShapeFactor = (row: typeof qcShapeFactorsTable.$inferSelect) => ({
   id: row.id,
@@ -862,14 +1793,36 @@ async function listSieveStandards() {
   return (await loadSieveStandards()).map(toSieveStandard);
 }
 
-router.get("/dashboard", async (_req, res): Promise<void> => {
+router.get("/dashboard", async (req, res): Promise<void> => {
+  const query = GetDashboardQueryParams.safeParse(req.query);
+  if (!query.success) {
+    res.status(400).json({ error: query.error.message });
+    return;
+  }
+  await ensureDefaultStrengthStandards();
+
+  const selectedMonthStart = query.data.month
+    ? `${query.data.month}-01`
+    : null;
+  const currentMonth = selectedMonthStart
+    ? sql`
+        ${qcRecordsTable.sampleDate} >= ${selectedMonthStart}::date
+        and ${qcRecordsTable.sampleDate} < ${selectedMonthStart}::date + interval '1 month'
+      `
+    : sql`
+        ${qcRecordsTable.sampleDate} >= date_trunc('month', current_date)
+        and ${qcRecordsTable.sampleDate} < date_trunc('month', current_date) + interval '1 month'
+      `;
   const [totals] = await db
     .select({
       totalRecords: count(),
       passedRecords: sql<number>`count(*) filter (where ${qcRecordsTable.status} = 'Passed')`,
       reviewRecords: sql<number>`count(*) filter (where ${qcRecordsTable.status} = 'Review')`,
       failedRecords: sql<number>`count(*) filter (where ${qcRecordsTable.status} = 'Failed')`,
-      recordsThisMonth: sql<number>`count(*) filter (where ${qcRecordsTable.sampleDate} >= date_trunc('month', current_date))`,
+      recordsThisMonth: sql<number>`count(*) filter (where ${currentMonth})`,
+      passedRecordsThisMonth: sql<number>`count(*) filter (where ${currentMonth} and ${qcRecordsTable.status} = 'Passed')`,
+      reviewRecordsThisMonth: sql<number>`count(*) filter (where ${currentMonth} and ${qcRecordsTable.status} = 'Review')`,
+      failedRecordsThisMonth: sql<number>`count(*) filter (where ${currentMonth} and ${qcRecordsTable.status} = 'Failed')`,
       totalComplaints: sql<number>`(select count(*) from ${complaintsTable})`,
       solvedComplaints: sql<number>`(select count(*) from ${complaintsTable} where ${complaintsTable.status} = 'complete')`,
       openComplaints: sql<number>`(select count(*) from ${complaintsTable} where ${complaintsTable.status} = 'open')`,
@@ -895,6 +1848,9 @@ router.get("/dashboard", async (_req, res): Promise<void> => {
       reviewRecords: Number(totals?.reviewRecords ?? 0),
       failedRecords: Number(totals?.failedRecords ?? 0),
       recordsThisMonth: Number(totals?.recordsThisMonth ?? 0),
+      passedRecordsThisMonth: Number(totals?.passedRecordsThisMonth ?? 0),
+      reviewRecordsThisMonth: Number(totals?.reviewRecordsThisMonth ?? 0),
+      failedRecordsThisMonth: Number(totals?.failedRecordsThisMonth ?? 0),
       totalComplaints: Number(totals?.totalComplaints ?? 0),
       solvedComplaints: Number(totals?.solvedComplaints ?? 0),
       openComplaints: Number(totals?.openComplaints ?? 0),
@@ -902,32 +1858,34 @@ router.get("/dashboard", async (_req, res): Promise<void> => {
         testType: row.testType,
         count: Number(row.count),
       })),
-      recentRecords: recentRows.map(toRecord),
+      recentRecords: await toRecords(recentRows),
     }),
   );
 });
 
 router.get("/lookups", async (_req, res): Promise<void> => {
-  const categories = await listReferenceData();
+  res.setHeader("Cache-Control", "no-store");
+  const values = await listLookupValues();
   res.json(
     GetLookupsResponse.parse({
-      factories: lookupValues(categories, "factories"),
-      plants: lookupValues(categories, "plants"),
-      employees: lookupValues(categories, "employees"),
-      suppliers: lookupValues(categories, "suppliers"),
-      materials: lookupValues(categories, "materials"),
-      locations: lookupValues(categories, "locations"),
-      blockTypes: lookupValues(categories, "blockTypes"),
-      blockSizes: lookupValues(categories, "blockSizes"),
-      mixStrengths: lookupValues(categories, "mixStrengths"),
-      customers: lookupValues(categories, "customers"),
-      customerLocations: lookupValues(categories, "customerLocations"),
-      sieveSizes: lookupValues(categories, "sieveSizes"),
+      factories: values.get("factories"),
+      plants: values.get("plants"),
+      employees: values.get("employees"),
+      suppliers: values.get("suppliers"),
+      materials: values.get("materials"),
+      locations: values.get("locations"),
+      blockTypes: values.get("blockTypes"),
+      blockSizes: values.get("blockSizes"),
+      mixStrengths: values.get("mixStrengths"),
+      customers: values.get("customers"),
+      customerLocations: values.get("customerLocations"),
+      sieveSizes: values.get("sieveSizes"),
     }),
   );
 });
 
 router.get("/reference-data", async (_req, res): Promise<void> => {
+  res.setHeader("Cache-Control", "no-store");
   res.json(GetReferenceDataResponse.parse({ categories: await listReferenceData() }));
 });
 
@@ -952,6 +1910,7 @@ router.post("/reference-data/categories", requireAdministrator, async (req, res)
       res.status(500).json({ error: "Unable to create reference category" });
       return;
     }
+    if (category.key === "blockSizes") invalidateDefaultShapeFactors();
     res.status(201).json(
       CreateReferenceCategoryResponse.parse(await getReferenceCategory(category.id)),
     );
@@ -976,6 +1935,14 @@ router.patch("/reference-data/categories/:id", requireAdministrator, async (req,
     ...(body.data.label ? { label: body.data.label.trim() } : {}),
   };
   try {
+    const [existingCategory] = await db
+      .select({ key: qcReferenceCategoriesTable.key })
+      .from(qcReferenceCategoriesTable)
+      .where(eq(qcReferenceCategoriesTable.id, params.data.id));
+    if (!existingCategory) {
+      res.status(404).json({ error: "Reference category not found" });
+      return;
+    }
     const [category] = await db
       .update(qcReferenceCategoriesTable)
       .set(updates)
@@ -984,6 +1951,12 @@ router.patch("/reference-data/categories/:id", requireAdministrator, async (req,
     if (!category) {
       res.status(404).json({ error: "Reference category not found" });
       return;
+    }
+    if (
+      existingCategory.key === "blockSizes" ||
+      category.key === "blockSizes"
+    ) {
+      invalidateDefaultShapeFactors();
     }
     res.json(
       UpdateReferenceCategoryResponse.parse(await getReferenceCategory(category.id)),
@@ -1007,10 +1980,11 @@ router.delete("/reference-data/categories/:id", requireAdministrator, async (req
     res.status(404).json({ error: "Reference category not found" });
     return;
   }
+  if (category.key === "blockSizes") invalidateDefaultShapeFactors();
   res.sendStatus(204);
 });
 
-router.post("/reference-data/categories/:categoryId/items", requireAdministrator, async (req, res): Promise<void> => {
+router.post("/reference-data/categories/:categoryId/items", requireAuthenticated, async (req, res): Promise<void> => {
   const params = CreateReferenceItemParams.safeParse(req.params);
   const body = CreateReferenceItemBody.safeParse(req.body);
   if (!params.success) {
@@ -1029,6 +2003,17 @@ router.post("/reference-data/categories/:categoryId/items", requireAdministrator
     res.status(404).json({ error: "Reference category not found" });
     return;
   }
+  const isAdministrator = await isConfiguredAdministrator(req.user);
+  if (
+    !isAdministrator &&
+    !canEmployeeAddReferenceCategory(category.key)
+  ) {
+    res.status(403).json({
+      code: "REFERENCE_DATA_ADMIN_REQUIRED",
+      error: "Administrator access is required to add values to this category.",
+    });
+    return;
+  }
   try {
     const [item] = await db
       .insert(qcReferenceItemsTable)
@@ -1038,6 +2023,7 @@ router.post("/reference-data/categories/:categoryId/items", requireAdministrator
       res.status(500).json({ error: "Unable to create reference value" });
       return;
     }
+    if (category.key === "blockSizes") invalidateDefaultShapeFactors();
     res.status(201).json(CreateReferenceItemResponse.parse(item));
   } catch {
     res.status(409).json({ error: "This value already exists in the category" });
@@ -1055,20 +2041,23 @@ router.patch("/reference-data/items/:id", requireAdministrator, async (req, res)
     res.status(400).json({ error: body.error.message });
     return;
   }
+  let item: typeof qcReferenceItemsTable.$inferSelect | undefined;
   try {
-    const [item] = await db
+    [item] = await db
       .update(qcReferenceItemsTable)
       .set({ value: body.data.value.trim() })
       .where(eq(qcReferenceItemsTable.id, params.data.id))
       .returning();
-    if (!item) {
-      res.status(404).json({ error: "Reference value not found" });
-      return;
-    }
-    res.json(UpdateReferenceItemResponse.parse(item));
   } catch {
     res.status(409).json({ error: "This value already exists in the category" });
+    return;
   }
+  if (!item) {
+    res.status(404).json({ error: "Reference value not found" });
+    return;
+  }
+  await invalidateShapeFactorDefaultsForCategory(item.categoryId);
+  res.json(UpdateReferenceItemResponse.parse(item));
 });
 
 router.delete("/reference-data/items/:id", requireAdministrator, async (req, res): Promise<void> => {
@@ -1077,21 +2066,24 @@ router.delete("/reference-data/items/:id", requireAdministrator, async (req, res
     res.status(400).json({ error: params.error.message });
     return;
   }
+  let item: typeof qcReferenceItemsTable.$inferSelect | undefined;
   try {
-    const [item] = await db
+    [item] = await db
       .delete(qcReferenceItemsTable)
       .where(eq(qcReferenceItemsTable.id, params.data.id))
       .returning();
-    if (!item) {
-      res.status(404).json({ error: "Reference value not found" });
-      return;
-    }
-    res.sendStatus(204);
   } catch {
     res.status(409).json({
       error: "This reference value is used by a configured sieve standard and cannot be deleted.",
     });
+    return;
   }
+  if (!item) {
+    res.status(404).json({ error: "Reference value not found" });
+    return;
+  }
+  await invalidateShapeFactorDefaultsForCategory(item.categoryId);
+  res.sendStatus(204);
 });
 
 router.get("/strength-standards", async (_req, res): Promise<void> => {
@@ -1109,16 +2101,46 @@ router.post("/strength-standards", requireAdministrator, async (req, res): Promi
     res.status(400).json({ error: body.error.message });
     return;
   }
+  if (
+    (body.data.testType === "Precast" &&
+      !isSupportedPrecastAge(body.data.cubeAge)) ||
+    (body.data.testType !== "Precast" && body.data.cubeAge != null)
+  ) {
+    res.status(400).json({
+      error: "Precast standards require an age of 1, 7, or 28 days; other strength standards cannot have a cube age.",
+    });
+    return;
+  }
 
+  const blockType = body.data.blockType?.trim() || null;
+  const dammamDefaults = defaultDammamStrengthCriteria(blockType);
+  const isBlockStandard = body.data.testType === "Blocks";
   const [standard] = await db
     .insert(qcStrengthStandardsTable)
     .values({
       testType: body.data.testType,
       material: body.data.material.trim(),
-      blockType: body.data.blockType?.trim() || null,
+      blockType,
       blockSize: body.data.blockSize?.trim() || null,
+      cubeAge: body.data.testType === "Precast" ? String(body.data.cubeAge) : null,
+      kerbClass: body.data.kerbClass == null ? null : String(body.data.kerbClass),
+      kerbMarking: body.data.kerbMarking?.trim() || null,
       bsStandard: body.data.bsStandard.trim(),
       requiredStrength: String(body.data.requiredStrength),
+      minimumIndividualStrength: body.data.minimumIndividualStrength == null
+        ? null
+        : String(body.data.minimumIndividualStrength),
+      waterAbsorptionLimit: body.data.waterAbsorptionLimit == null
+        ? null
+        : String(body.data.waterAbsorptionLimit),
+      dammamAverageStrength: isBlockStandard
+        ? String(body.data.dammamAverageStrength ?? dammamDefaults.average)
+        : null,
+      dammamMinimumStrength: isBlockStandard
+        ? body.data.dammamMinimumStrength == null
+          ? dammamDefaults.minimum
+          : String(body.data.dammamMinimumStrength)
+        : null,
       strengthUnit: body.data.strengthUnit?.trim() || "N/mm²",
     })
     .returning();
@@ -1151,6 +2173,25 @@ router.patch("/strength-standards/:id", requireAdministrator, async (req, res): 
     res.status(404).json({ error: "Strength standard not found" });
     return;
   }
+  const nextTestType = body.data.testType ?? existing.testType;
+  const nextBlockType =
+    body.data.blockType !== undefined
+      ? body.data.blockType?.trim() || null
+      : existing.blockType;
+  const blockCriteriaChanged =
+    nextTestType !== existing.testType || nextBlockType !== existing.blockType;
+  const nextDammamDefaults = defaultDammamStrengthCriteria(nextBlockType);
+  const nextCubeAge =
+    body.data.cubeAge !== undefined ? body.data.cubeAge : existing.cubeAge;
+  if (
+    nextTestType === "Precast" &&
+    !isSupportedPrecastAge(Number(nextCubeAge))
+  ) {
+    res.status(400).json({
+      error: "Precast standards require a cube age of 1, 7, or 28 days.",
+    });
+    return;
+  }
 
   const updates = {
     ...(body.data.testType !== undefined ? { testType: body.data.testType } : {}),
@@ -1161,10 +2202,50 @@ router.patch("/strength-standards/:id", requireAdministrator, async (req, res): 
     ...(body.data.blockSize !== undefined
       ? { blockSize: body.data.blockSize?.trim() || null }
       : {}),
+    cubeAge: nextTestType === "Precast" ? String(nextCubeAge) : null,
+    ...(body.data.kerbClass !== undefined
+      ? { kerbClass: body.data.kerbClass == null ? null : String(body.data.kerbClass) }
+      : {}),
+    ...(body.data.kerbMarking !== undefined
+      ? { kerbMarking: body.data.kerbMarking?.trim() || null }
+      : {}),
     ...(body.data.bsStandard !== undefined ? { bsStandard: body.data.bsStandard.trim() } : {}),
     ...(body.data.requiredStrength !== undefined
       ? { requiredStrength: String(body.data.requiredStrength) }
       : {}),
+    ...(body.data.minimumIndividualStrength !== undefined
+      ? {
+          minimumIndividualStrength:
+            body.data.minimumIndividualStrength == null
+              ? null
+              : String(body.data.minimumIndividualStrength),
+        }
+      : {}),
+    ...(body.data.waterAbsorptionLimit !== undefined
+      ? {
+          waterAbsorptionLimit:
+            body.data.waterAbsorptionLimit == null
+              ? null
+              : String(body.data.waterAbsorptionLimit),
+        }
+      : {}),
+    dammamAverageStrength: nextTestType === "Blocks"
+      ? String(
+          body.data.dammamAverageStrength ??
+            (blockCriteriaChanged
+              ? nextDammamDefaults.average
+              : existing.dammamAverageStrength ?? nextDammamDefaults.average),
+        )
+      : null,
+    dammamMinimumStrength: nextTestType !== "Blocks" ||
+        nextDammamDefaults.minimum === null
+      ? null
+      : String(
+          body.data.dammamMinimumStrength ??
+            (blockCriteriaChanged
+              ? nextDammamDefaults.minimum
+              : existing.dammamMinimumStrength ?? nextDammamDefaults.minimum),
+        ),
     ...(body.data.strengthUnit !== undefined
       ? { strengthUnit: body.data.strengthUnit.trim() || "N/mm²" }
       : {}),
@@ -1204,6 +2285,7 @@ router.delete("/strength-standards/:id", requireAdministrator, async (req, res):
 });
 
 router.get("/shape-factors", async (_req, res): Promise<void> => {
+  res.setHeader("Cache-Control", "no-store");
   await ensureDefaultShapeFactors();
   const shapeFactors = await db
     .select()
@@ -1309,6 +2391,7 @@ router.delete("/shape-factors/:id", requireAdministrator, async (req, res): Prom
     res.status(404).json({ error: "Shape factor not found" });
     return;
   }
+  invalidateDefaultShapeFactors();
   await refreshRecordEvaluations(["Blocks", "Paving Blocks"]);
   res.sendStatus(204);
 });
@@ -1318,6 +2401,244 @@ const toReportLayout = (row: typeof qcReportLayoutsTable.$inferSelect) => ({
   testType: row.testType,
   name: row.name,
   config: row.config,
+});
+
+router.get("/report-templates", async (req, res): Promise<void> => {
+  const query = ListReportTemplatesQueryParams.safeParse(req.query);
+  if (!query.success) {
+    res.status(400).json({ error: query.error.message });
+    return;
+  }
+  await ensureReportTemplates();
+  const templates = await db
+    .select()
+    .from(qcReportTemplatesTable)
+    .where(query.data.testType
+      ? eq(qcReportTemplatesTable.testType, query.data.testType)
+      : undefined)
+    .orderBy(asc(qcReportTemplatesTable.testType), asc(qcReportTemplatesTable.name));
+  res.json(ListReportTemplatesResponse.parse(templates.map(toReportTemplate)));
+});
+
+router.post("/report-templates", requireAdministrator, async (req, res): Promise<void> => {
+  const body = CreateReportTemplateBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+  const designError = validateReportTemplateDesign(body.data.design);
+  if (designError) {
+    res.status(400).json({ error: designError });
+    return;
+  }
+  await ensureReportTemplates();
+  const template = await db.transaction(async (tx) => {
+    if (body.data.isDefault) {
+      await tx.update(qcReportTemplatesTable)
+        .set({ isDefault: false })
+        .where(eq(qcReportTemplatesTable.testType, body.data.testType));
+    }
+    const [created] = await tx.insert(qcReportTemplatesTable).values({
+      testType: body.data.testType,
+      name: body.data.name.trim(),
+      description: body.data.description ?? null,
+      isDefault: body.data.isDefault ?? false,
+      version: 1,
+      design: body.data.design,
+      history: [],
+    }).returning();
+    return created;
+  });
+  res.status(201).json(CreateReportTemplateResponse.parse(toReportTemplate(template)));
+});
+
+router.patch("/report-templates/:id", requireAdministrator, async (req, res): Promise<void> => {
+  const params = UpdateReportTemplateParams.safeParse(req.params);
+  const body = UpdateReportTemplateBody.safeParse(req.body);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+  if (body.data.design) {
+    const designError = validateReportTemplateDesign(body.data.design);
+    if (designError) {
+      res.status(400).json({ error: designError });
+      return;
+    }
+  }
+  const [existing] = await db.select().from(qcReportTemplatesTable)
+    .where(eq(qcReportTemplatesTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Report template not found" });
+    return;
+  }
+  const designChanged = body.data.design !== undefined;
+  const history = Array.isArray(existing.history) ? [...existing.history] : [];
+  if (designChanged) {
+    history.push({
+      version: existing.version,
+      design: existing.design,
+      createdAt: existing.updatedAt.toISOString(),
+    });
+  }
+  const [updated] = await db.update(qcReportTemplatesTable).set({
+    ...(body.data.name !== undefined ? { name: body.data.name.trim() } : {}),
+    ...(body.data.description !== undefined ? { description: body.data.description } : {}),
+    ...(designChanged ? {
+      design: body.data.design,
+      version: existing.version + 1,
+      history,
+    } : {}),
+  }).where(eq(qcReportTemplatesTable.id, existing.id)).returning();
+  res.json(UpdateReportTemplateResponse.parse(toReportTemplate(updated)));
+});
+
+router.delete("/report-templates/:id", requireAdministrator, async (req, res): Promise<void> => {
+  const params = DeleteReportTemplateParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const [existing] = await db.select().from(qcReportTemplatesTable)
+    .where(eq(qcReportTemplatesTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Report template not found" });
+    return;
+  }
+  const templates = await db.select({ id: qcReportTemplatesTable.id })
+    .from(qcReportTemplatesTable)
+    .where(eq(qcReportTemplatesTable.testType, existing.testType));
+  if (templates.length <= 1) {
+    res.status(400).json({ error: "The only template for a report type cannot be deleted." });
+    return;
+  }
+  if (existing.isDefault) {
+    res.status(409).json({ error: "The default template cannot be deleted." });
+    return;
+  }
+  await db.delete(qcReportTemplatesTable).where(eq(qcReportTemplatesTable.id, existing.id));
+  res.sendStatus(204);
+});
+
+router.post("/report-templates/:id/duplicate", requireAdministrator, async (req, res): Promise<void> => {
+  const params = DuplicateReportTemplateParams.safeParse(req.params);
+  const body = DuplicateReportTemplateBody.safeParse(req.body ?? {});
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+  const [existing] = await db.select().from(qcReportTemplatesTable)
+    .where(eq(qcReportTemplatesTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Report template not found" });
+    return;
+  }
+  const duplicatedDesign = body.data.design ?? existing.design;
+  const designError = validateReportTemplateDesign(duplicatedDesign);
+  if (designError) {
+    res.status(400).json({ error: designError });
+    return;
+  }
+  const [created] = await db.insert(qcReportTemplatesTable).values({
+    testType: existing.testType,
+    name: body.data.name?.trim() || `${existing.name} copy`,
+    description: body.data.description === undefined ? existing.description : body.data.description,
+    isDefault: false,
+    version: 1,
+    design: duplicatedDesign,
+    history: [],
+  }).returning();
+  res.status(201).json(DuplicateReportTemplateResponse.parse(toReportTemplate(created)));
+});
+
+router.patch("/report-templates/:id/default", requireAdministrator, async (req, res): Promise<void> => {
+  const params = SetReportTemplateDefaultParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const [existing] = await db.select().from(qcReportTemplatesTable)
+    .where(eq(qcReportTemplatesTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Report template not found" });
+    return;
+  }
+  const updated = await db.transaction(async (tx) => {
+    await tx.update(qcReportTemplatesTable).set({ isDefault: false })
+      .where(eq(qcReportTemplatesTable.testType, existing.testType));
+    const [selected] = await tx.update(qcReportTemplatesTable)
+      .set({ isDefault: true })
+      .where(eq(qcReportTemplatesTable.id, existing.id))
+      .returning();
+    return selected;
+  });
+  res.json(SetReportTemplateDefaultResponse.parse(toReportTemplate(updated)));
+});
+
+router.get("/report-templates/:id/versions", async (req, res): Promise<void> => {
+  const params = ListReportTemplateVersionsParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const [existing] = await db.select().from(qcReportTemplatesTable)
+    .where(eq(qcReportTemplatesTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Report template not found" });
+    return;
+  }
+  const versions = (Array.isArray(existing.history) ? existing.history : [])
+    .map((entry) => ({
+      version: Number((entry as Record<string, unknown>).version),
+      createdAt: String((entry as Record<string, unknown>).createdAt),
+    }))
+    .filter((entry) => Number.isFinite(entry.version) && entry.createdAt !== "undefined");
+  res.json(ListReportTemplateVersionsResponse.parse(versions));
+});
+
+router.post("/report-templates/:id/restore/:version", requireAdministrator, async (req, res): Promise<void> => {
+  const params = RestoreReportTemplateVersionParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const [existing] = await db.select().from(qcReportTemplatesTable)
+    .where(eq(qcReportTemplatesTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Report template not found" });
+    return;
+  }
+  const target = (Array.isArray(existing.history) ? existing.history : [])
+    .find((entry) => Number((entry as Record<string, unknown>).version) === params.data.version);
+  if (!target || typeof (target as Record<string, unknown>).design !== "object") {
+    res.status(404).json({ error: "Report template version not found" });
+    return;
+  }
+  const targetDesign = (target as Record<string, unknown>).design;
+  const designError = validateReportTemplateDesign(targetDesign);
+  if (designError) {
+    res.status(400).json({ error: designError });
+    return;
+  }
+  const history = Array.isArray(existing.history) ? [...existing.history, {
+    version: existing.version,
+    design: existing.design,
+    createdAt: existing.updatedAt.toISOString(),
+  }] : [];
+  const [updated] = await db.update(qcReportTemplatesTable).set({
+    design: targetDesign as Record<string, unknown>,
+    version: existing.version + 1,
+    history,
+  }).where(eq(qcReportTemplatesTable.id, existing.id)).returning();
+  res.json(RestoreReportTemplateVersionResponse.parse(toReportTemplate(updated)));
 });
 
 router.get("/report-layouts", async (_req, res): Promise<void> => {
@@ -1390,6 +2711,143 @@ function validateSieveLimits(
   }
   return null;
 }
+
+router.get("/water-standards", async (_req, res): Promise<void> => {
+  await ensureDefaultWaterStandard();
+  const standards = await db
+    .select()
+    .from(qcWaterStandardsTable)
+    .orderBy(desc(qcWaterStandardsTable.isDefault), asc(qcWaterStandardsTable.name));
+  res.json(ListWaterStandardsResponse.parse(standards.map(toWaterStandard)));
+});
+
+router.post("/water-standards", requireAdministrator, async (req, res): Promise<void> => {
+  const body = CreateWaterStandardBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+  if (!waterLimitsAreOrdered(body.data)) {
+    res.status(400).json({ error: "Each Water minimum must be less than or equal to its maximum." });
+    return;
+  }
+  await ensureDefaultWaterStandard();
+  const [standard] = await db
+    .insert(qcWaterStandardsTable)
+    .values({
+      name: body.data.name.trim(),
+      phMin: String(body.data.phMin),
+      phMax: String(body.data.phMax),
+      chlorideMin: String(body.data.chlorideMin),
+      chlorideMax: String(body.data.chlorideMax),
+      tdsMin: String(body.data.tdsMin),
+      tdsMax: String(body.data.tdsMax),
+      so3Min: String(body.data.so3Min),
+      so3Max: String(body.data.so3Max),
+      isDefault: false,
+    })
+    .returning();
+  if (!standard) {
+    res.status(500).json({ error: "Unable to create Water limit profile" });
+    return;
+  }
+  res.status(201).json(CreateWaterStandardResponse.parse(toWaterStandard(standard)));
+});
+
+router.patch("/water-standards/:id", requireAdministrator, async (req, res): Promise<void> => {
+  const params = UpdateWaterStandardParams.safeParse(req.params);
+  const body = UpdateWaterStandardBody.safeParse(req.body);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+  const [existing] = await db
+    .select()
+    .from(qcWaterStandardsTable)
+    .where(eq(qcWaterStandardsTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Water limit profile not found" });
+    return;
+  }
+  const nextValues: Record<string, unknown> = {
+    phMin: body.data.phMin ?? Number(existing.phMin),
+    phMax: body.data.phMax ?? Number(existing.phMax),
+    chlorideMin: body.data.chlorideMin ?? Number(existing.chlorideMin),
+    chlorideMax: body.data.chlorideMax ?? Number(existing.chlorideMax),
+    tdsMin: body.data.tdsMin ?? Number(existing.tdsMin),
+    tdsMax: body.data.tdsMax ?? Number(existing.tdsMax),
+    so3Min: body.data.so3Min ?? Number(existing.so3Min),
+    so3Max: body.data.so3Max ?? Number(existing.so3Max),
+  };
+  if (!waterLimitsAreOrdered(nextValues)) {
+    res.status(400).json({ error: "Each Water minimum must be less than or equal to its maximum." });
+    return;
+  }
+  const [standard] = await db
+    .update(qcWaterStandardsTable)
+    .set({
+      ...(body.data.name !== undefined ? { name: body.data.name.trim() } : {}),
+      phMin: String(nextValues.phMin),
+      phMax: String(nextValues.phMax),
+      chlorideMin: String(nextValues.chlorideMin),
+      chlorideMax: String(nextValues.chlorideMax),
+      tdsMin: String(nextValues.tdsMin),
+      tdsMax: String(nextValues.tdsMax),
+      so3Min: String(nextValues.so3Min),
+      so3Max: String(nextValues.so3Max),
+    })
+    .where(eq(qcWaterStandardsTable.id, params.data.id))
+    .returning();
+  if (!standard) return;
+  await refreshRecordEvaluations(["Water"]);
+  res.json(UpdateWaterStandardResponse.parse(toWaterStandard(standard)));
+});
+
+router.delete("/water-standards/:id", requireAdministrator, async (req, res): Promise<void> => {
+  const params = DeleteWaterStandardParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const [existing] = await db
+    .select()
+    .from(qcWaterStandardsTable)
+    .where(eq(qcWaterStandardsTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Water limit profile not found" });
+    return;
+  }
+  if (existing.isDefault) {
+    res.status(409).json({ error: "The default Water limit profile cannot be deleted." });
+    return;
+  }
+  const waterRecords = await db
+    .select({ details: qcRecordsTable.details })
+    .from(qcRecordsTable)
+    .where(eq(qcRecordsTable.testType, "Water"));
+  const isLinked = waterRecords.some((record) => {
+    const details =
+      typeof record.details === "object" && record.details !== null
+        ? record.details as Record<string, unknown>
+        : {};
+    return Number(details.waterStandardId) === existing.id;
+  });
+  if (isLinked) {
+    res.status(409).json({
+      error: "This Water limit profile is linked to one or more records and cannot be deleted.",
+    });
+    return;
+  }
+  await db
+    .delete(qcWaterStandardsTable)
+    .where(eq(qcWaterStandardsTable.id, params.data.id));
+  await refreshRecordEvaluations(["Water"]);
+  res.sendStatus(204);
+});
 
 router.get("/sieve-standards", async (_req, res): Promise<void> => {
   res.json(ListSieveStandardsResponse.parse(await listSieveStandards()));
@@ -1548,7 +3006,10 @@ router.get("/records", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  await refreshRecordEvaluations(["Ready Mix", "Blocks"]);
+  await ensureDefaultStrengthStandards();
+  if (!parsed.data.testType || parsed.data.testType === "Water") {
+    await ensureDefaultWaterStandard();
+  }
 
   const filters = [];
   if (parsed.data.testType) {
@@ -1574,7 +3035,7 @@ router.get("/records", async (req, res): Promise<void> => {
     .orderBy(desc(qcRecordsTable.sampleDate), desc(qcRecordsTable.id))
     .limit(parsed.data.limit ?? 50);
 
-  res.json(ListRecordsResponse.parse(rows.map(toRecord)));
+  res.json(ListRecordsResponse.parse(await toRecords(rows)));
 });
 
 router.get("/daily-ready-mix-results", async (req, res): Promise<void> => {
@@ -1667,7 +3128,8 @@ router.get("/daily-ready-mix-results", async (req, res): Promise<void> => {
     if (record.twentyEightDay.averageStrength !== null) current.twentyEightDay.push(record.twentyEightDay);
     mixSummaryMap.set(record.mixDesign, current);
 
-    const location = locationSummaryMap.get(record.location) ?? {
+    const normalizedLocation = canonicalPlantLocation(record.location);
+    const location = locationSummaryMap.get(normalizedLocation) ?? {
       recordCount: 0,
       sevenDay: [],
       twentyEightDay: [],
@@ -1675,7 +3137,7 @@ router.get("/daily-ready-mix-results", async (req, res): Promise<void> => {
     location.recordCount += 1;
     if (record.sevenDay.averageStrength !== null) location.sevenDay.push(record.sevenDay);
     if (record.twentyEightDay.averageStrength !== null) location.twentyEightDay.push(record.twentyEightDay);
-    locationSummaryMap.set(record.location, location);
+    locationSummaryMap.set(normalizedLocation, location);
   }
   const mixes = [...mixSummaryMap.entries()]
     .sort(([left], [right]) => left.localeCompare(right))
@@ -1734,6 +3196,7 @@ router.post("/records", requireQcEditor, async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+  if (parsed.data.testType === "Blocks") await ensureDefaultStrengthStandards();
   if (
     parsed.data.reviewedBy !== undefined &&
     !(await isConfiguredAdministrator(req.user))
@@ -1742,28 +3205,43 @@ router.post("/records", requireQcEditor, async (req, res): Promise<void> => {
     return;
   }
 
-  const [strengthStandards, sieveStandards, shapeFactors] = await Promise.all([
+  const sampleDate = parsed.data.sampleDate.toISOString().slice(0, 10);
+  const dateCalculation = calculateRecordTestingDate(
+    parsed.data.testType,
+    sampleDate,
+    parsed.data.details,
+  );
+  if (dateCalculation.error) {
+    res.status(400).json({ error: dateCalculation.error });
+    return;
+  }
+  const normalizedDetails = normalizeMasonryMachineDetails(
+    parsed.data.testType,
+    dateCalculation.details,
+  );
+  if (parsed.data.testType === "Water") await ensureDefaultWaterStandard();
+  const [strengthStandards, sieveStandards, shapeFactors, waterStandards] = await Promise.all([
     db.select().from(qcStrengthStandardsTable),
     loadSieveStandards(),
     db.select().from(qcShapeFactorsTable),
+    db.select().from(qcWaterStandardsTable),
   ]);
+  const candidate = {
+    testType: parsed.data.testType,
+    material: parsed.data.material,
+    location: parsed.data.location,
+    details: normalizedDetails,
+  };
   const evaluated =
     parsed.data.testType === "Sand Sieve" || parsed.data.testType === "Aggregate Sieve"
       ? evaluateSieveRecord(
-          {
-            testType: parsed.data.testType,
-            material: parsed.data.material,
-            details: parsed.data.details,
-          },
+          candidate,
           sieveStandards,
         )
-      : evaluateStrengthRecord(
-    {
-      testType: parsed.data.testType,
-      material: parsed.data.material,
-      location: parsed.data.location,
-      details: parsed.data.details,
-    },
+      : parsed.data.testType === "Water"
+        ? evaluateWaterQcRecord(candidate, waterStandards)
+        : evaluateStrengthRecord(
+          candidate,
           strengthStandards,
           shapeFactors,
         );
@@ -1778,7 +3256,7 @@ router.post("/records", requireQcEditor, async (req, res): Promise<void> => {
       ...parsed.data,
       status: evaluated.status ?? parsed.data.status,
       details: evaluated.details,
-      sampleDate: parsed.data.sampleDate.toISOString().slice(0, 10),
+      sampleDate,
       recordNo,
     })
     .returning();
@@ -1787,8 +3265,324 @@ router.post("/records", requireQcEditor, async (req, res): Promise<void> => {
     res.status(500).json({ error: "Unable to create record" });
     return;
   }
-  res.status(201).json(CreateRecordResponse.parse(toRecord(record)));
+  const actorEmployeeId = req.user?.id?.startsWith("employee:")
+    ? req.user.id.slice("employee:".length).trim()
+    : "";
+  const createdBy = actorEmployeeId
+    ? getActivityEmployeeName(req.user, actorEmployeeId)
+    : null;
+  if (actorEmployeeId && createdBy) {
+    try {
+      await recordEmployeeActivityChange({
+        employeeId: actorEmployeeId,
+        employeeName: createdBy,
+        action: "created",
+        entityType: "QC record",
+        entityId: String(record.id),
+        path: req.path,
+        submitted: parsed.data,
+      });
+    } catch (error) {
+      req.log.error(
+        { error, recordId: record.id },
+        "Unable to record QC report creator activity",
+      );
+    }
+  }
+  res.status(201).json(CreateRecordResponse.parse(toRecord(record, createdBy)));
 });
+
+router.post(
+  "/records/age-backfill/preview",
+  requireAdministrator,
+  async (req, res): Promise<void> => {
+    const parsed = PreviewRecordAgeBackfillBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+
+    const records = await db
+      .select()
+      .from(qcRecordsTable)
+      .where(inArray(qcRecordsTable.testType, Object.keys(ageDetailKeyForTestType)))
+      .orderBy(asc(qcRecordsTable.sampleDate), asc(qcRecordsTable.id));
+    const preview = previewHistoricalAgeBackfill(records);
+    res.json(PreviewRecordAgeBackfillResponse.parse(preview));
+  },
+);
+
+router.post(
+  "/records/age-backfill/apply",
+  requireAdministrator,
+  async (req, res): Promise<void> => {
+    const parsed = ApplyRecordAgeBackfillBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+
+    const candidateIds = parsed.data.candidates.map((candidate) => candidate.id);
+    if (
+      candidateIds.some((id) => !Number.isSafeInteger(id) || id <= 0) ||
+      new Set(candidateIds).size !== candidateIds.length ||
+      parsed.data.candidates.some((candidate) => !Number.isSafeInteger(candidate.age))
+    ) {
+      res.status(400).json({ error: "Candidates must contain unique record IDs and whole-day ages." });
+      return;
+    }
+
+    const actorEmployeeId = req.user?.id?.startsWith("employee:")
+      ? req.user.id.slice("employee:".length).trim()
+      : "";
+    if (!actorEmployeeId) {
+      res.status(403).json({
+        error: "An employee identity is required to audit historical date corrections.",
+      });
+      return;
+    }
+    const actorEmployeeName = getActivityEmployeeName(req.user, actorEmployeeId);
+    const sessionId = getEmployeeActivityRequestSessionId(req);
+
+    const result = await db.transaction(async (tx) => {
+      const records = await tx
+        .select()
+        .from(qcRecordsTable)
+        .where(inArray(qcRecordsTable.id, candidateIds));
+      const recordsById = new Map(records.map((record) => [record.id, record]));
+      const skipped = [];
+      let applied = 0;
+
+      for (const expected of parsed.data.candidates) {
+        const record = recordsById.get(expected.id);
+        const issue = (reason: string) => ({
+          id: expected.id,
+          recordNo: expected.recordNo,
+          testType: expected.testType,
+          sampleDate: expected.sampleDate,
+          testingDate: expected.testingDate,
+          reason,
+        });
+
+        if (!record) {
+          skipped.push(issue("Record no longer exists. Run a new preview before applying."));
+          continue;
+        }
+
+        const inspection = inspectHistoricalAgeBackfill(record);
+        if (inspection.kind !== "eligible") {
+          skipped.push(
+            issue(
+              inspection.kind === "manualReview"
+                ? inspection.issue.reason
+                : "An age is already saved. Run a new preview to confirm the current record.",
+            ),
+          );
+          continue;
+        }
+
+        const candidate = inspection.candidate;
+        if (
+          candidate.id !== expected.id ||
+          candidate.recordNo !== expected.recordNo ||
+          candidate.testType !== expected.testType ||
+          candidate.sampleDate !== expected.sampleDate ||
+          candidate.testingDate !== expected.testingDate ||
+          candidate.age !== expected.age
+        ) {
+          skipped.push(issue("Record changed after preview. Run a new preview before applying."));
+          continue;
+        }
+
+        const ageKey = ageDetailKeyForTestType[record.testType];
+        if (!ageKey) {
+          skipped.push(issue("This record type does not use an age-based Testing Date."));
+          continue;
+        }
+        const details = {
+          ...record.details,
+          [ageKey]: String(candidate.age),
+          testingDate: candidate.testingDate,
+        };
+        const updated = await tx
+          .update(qcRecordsTable)
+          .set({ details })
+          .where(
+            and(
+              eq(qcRecordsTable.id, record.id),
+              eq(qcRecordsTable.testType, record.testType),
+              eq(qcRecordsTable.sampleDate, record.sampleDate),
+              eq(qcRecordsTable.details, record.details),
+            ),
+          )
+          .returning({ id: qcRecordsTable.id });
+        if (updated.length === 0) {
+          skipped.push(issue("Record changed during apply. Run a new preview before applying."));
+          continue;
+        }
+        await recordEmployeeActivityChange(
+          {
+            employeeId: actorEmployeeId,
+            employeeName: actorEmployeeName,
+            sessionId,
+            action: "updated",
+            entityType: "QC record",
+            entityId: String(record.id),
+            summary: `Backfilled historical age for QC record #${record.id} (${record.recordNo})`,
+            path: req.path,
+            submitted: {
+              operation: "historical age backfill",
+              recordId: record.id,
+              recordNo: record.recordNo,
+              testType: record.testType,
+              sampleDate: record.sampleDate,
+              oldTestingDate: record.details.testingDate,
+              oldAgeValue: record.details[ageKey] ?? null,
+              newTestingDate: details.testingDate,
+              ageField: ageKey,
+              newAgeValue: details[ageKey],
+            },
+          },
+          tx,
+        );
+        applied += 1;
+      }
+
+      return { applied, skipped };
+    });
+
+    res.json(ApplyRecordAgeBackfillResponse.parse(result));
+  },
+);
+
+const KERB_STRENGTH_REFRESH_PAGE_SIZE = 250;
+
+router.post("/records/kerbstone-strength-refresh",
+  requireAdministrator,
+  async (req, res): Promise<void> => {
+    const afterId = req.body?.afterId ?? 0;
+    if (!Number.isSafeInteger(afterId) || afterId < 0) {
+      res.status(400).json({ error: "afterId must be a non-negative whole record ID." });
+      return;
+    }
+
+    const actorEmployeeId = req.user?.id?.startsWith("employee:")
+      ? req.user.id.slice("employee:".length).trim()
+      : "";
+    if (!actorEmployeeId) {
+      res.status(403).json({
+        error: "An employee identity is required to audit historical strength corrections.",
+      });
+      return;
+    }
+    const actorEmployeeName = getActivityEmployeeName(req.user, actorEmployeeId);
+    const sessionId = getEmployeeActivityRequestSessionId(req);
+
+    const result = await db.transaction(async (tx) => {
+      const page = await tx
+        .select()
+        .from(qcRecordsTable)
+        .where(
+          and(
+            eq(qcRecordsTable.testType, "Kerb Stone"),
+            gt(qcRecordsTable.id, afterId),
+          ),
+        )
+        .orderBy(asc(qcRecordsTable.id))
+        .limit(KERB_STRENGTH_REFRESH_PAGE_SIZE + 1);
+      const records = page.slice(0, KERB_STRENGTH_REFRESH_PAGE_SIZE);
+      const hasMore = page.length > KERB_STRENGTH_REFRESH_PAGE_SIZE;
+      const strengthStandards = await tx.select().from(qcStrengthStandardsTable);
+      let refreshed = 0;
+      let ignored = 0;
+      let skipped = 0;
+
+      for (const record of records) {
+        const details = typeof record.details === "object" && record.details !== null
+          ? record.details as Record<string, unknown>
+          : {};
+        const kerbType = String(details.kerbType ?? "").trim().toLocaleLowerCase();
+        if (kerbType !== "road kerb" && kerbType !== "edge kerb") {
+          ignored += 1;
+          continue;
+        }
+
+        const evaluated = evaluateStrengthRecord(
+          {
+            testType: record.testType,
+            material: record.material,
+            location: record.location,
+            details,
+          },
+          strengthStandards,
+        );
+        if (evaluated.status === undefined) {
+          ignored += 1;
+          continue;
+        }
+
+        const [updated] = await tx
+          .update(qcRecordsTable)
+          .set({ status: evaluated.status, details: evaluated.details })
+          .where(
+            and(
+              eq(qcRecordsTable.id, record.id),
+              eq(qcRecordsTable.testType, "Kerb Stone"),
+              eq(qcRecordsTable.status, record.status),
+              eq(qcRecordsTable.details, record.details),
+            ),
+          )
+          .returning({ id: qcRecordsTable.id });
+        if (!updated) {
+          skipped += 1;
+          continue;
+        }
+
+        const oldEvaluation =
+          typeof details.strengthEvaluation === "object" &&
+            details.strengthEvaluation !== null
+            ? details.strengthEvaluation
+            : null;
+        const newDetails = evaluated.details as Record<string, unknown>;
+        await recordEmployeeActivityChange(
+          {
+            employeeId: actorEmployeeId,
+            employeeName: actorEmployeeName,
+            sessionId,
+            action: "updated",
+            entityType: "QC record",
+            entityId: String(record.id),
+            summary: `Recalculated Kerb Stone strength for QC record #${record.id} (${record.recordNo})`,
+            path: req.path,
+            submitted: {
+              operation: "historical Kerb Stone strength refresh",
+              recordId: record.id,
+              recordNo: record.recordNo,
+              kerbType: details.kerbType,
+              oldStatus: record.status,
+              newStatus: evaluated.status,
+              oldStrengthEvaluation: oldEvaluation,
+              newStrengthEvaluation: newDetails.strengthEvaluation ?? null,
+            },
+          },
+          tx,
+        );
+        refreshed += 1;
+      }
+
+      return {
+        scanned: records.length,
+        refreshed,
+        ignored,
+        skipped,
+        hasMore,
+        nextAfterId: hasMore ? records.at(-1)?.id ?? afterId : null,
+      };
+    });
+
+    res.json(result);
+  },
+);
 
 router.get("/records/:id", async (req, res): Promise<void> => {
   const parsed = GetRecordParams.safeParse(req.params);
@@ -1796,6 +3590,7 @@ router.get("/records/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+  await ensureDefaultStrengthStandards();
   const [record] = await db
     .select()
     .from(qcRecordsTable)
@@ -1804,12 +3599,9 @@ router.get("/records/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Record not found" });
     return;
   }
-  await refreshRecordEvaluations([record.testType]);
-  const [currentRecord] = await db
-    .select()
-    .from(qcRecordsTable)
-    .where(eq(qcRecordsTable.id, parsed.data.id));
-  res.json(GetRecordResponse.parse(toRecord(currentRecord ?? record)));
+  res.json(
+    GetRecordResponse.parse(await toRecordWithCreator(record)),
+  );
 });
 
 router.patch("/records/:id", requireQcEditor, async (req, res): Promise<void> => {
@@ -1839,28 +3631,61 @@ router.patch("/records/:id", requireQcEditor, async (req, res): Promise<void> =>
     return;
   }
 
-  const candidate = {
+  const sampleDate =
+    body.data.sampleDate?.toISOString().slice(0, 10) ?? existing.sampleDate;
+  const candidateBase = {
     testType: body.data.testType ?? existing.testType,
     material: body.data.material ?? existing.material,
     location: body.data.location ?? existing.location,
-    details: body.data.details ?? existing.details,
   };
-  const [strengthStandards, sieveStandards, shapeFactors] = await Promise.all([
+  const candidateDetails = normalizeMasonryMachineDetails(
+    candidateBase.testType,
+    body.data.details ?? existing.details,
+  );
+  const dateCalculation = calculateRecordTestingDate(
+    candidateBase.testType,
+    sampleDate,
+    candidateDetails,
+  );
+  const updatesAgeDerivedRecord =
+    body.data.details !== undefined ||
+    body.data.sampleDate !== undefined ||
+    body.data.testType !== undefined;
+  if (dateCalculation.error && updatesAgeDerivedRecord) {
+    res.status(400).json({ error: dateCalculation.error });
+    return;
+  }
+  const candidate = {
+    ...candidateBase,
+    details: dateCalculation.details,
+  };
+  if (candidate.testType === "Blocks") await ensureDefaultStrengthStandards();
+  if (candidate.testType === "Water") await ensureDefaultWaterStandard();
+  const [strengthStandards, sieveStandards, shapeFactors, waterStandards] = await Promise.all([
     db.select().from(qcStrengthStandardsTable),
     loadSieveStandards(),
     db.select().from(qcShapeFactorsTable),
+    db.select().from(qcWaterStandardsTable),
   ]);
   const evaluated =
     candidate.testType === "Sand Sieve" || candidate.testType === "Aggregate Sieve"
       ? evaluateSieveRecord(candidate, sieveStandards)
-      : evaluateStrengthRecord(candidate, strengthStandards, shapeFactors);
-  const { sampleDate, ...rest } = body.data;
+      : candidate.testType === "Water"
+        ? evaluateWaterQcRecord(candidate, waterStandards)
+        : evaluateStrengthRecord(candidate, strengthStandards, shapeFactors);
+  const { sampleDate: submittedSampleDate, ...rest } = body.data;
   const updates = {
     ...rest,
     status: evaluated.status ?? body.data.status ?? existing.status,
-    ...(evaluated.status !== undefined ? { details: evaluated.details } : {}),
-    ...(sampleDate
-      ? { sampleDate: sampleDate.toISOString().slice(0, 10) }
+    ...(evaluated.status !== undefined ||
+        body.data.details !== undefined ||
+        body.data.sampleDate !== undefined ||
+        body.data.testType !== undefined ||
+        dateCalculation.testingDate !== null
+      ? { details: evaluated.details }
+      : {}),
+    ...(submittedSampleDate
+      ? { sampleDate: submittedSampleDate.toISOString().slice(0, 10) }
       : {}),
   };
   const [record] = await db
@@ -1872,7 +3697,7 @@ router.patch("/records/:id", requireQcEditor, async (req, res): Promise<void> =>
     res.status(404).json({ error: "Record not found" });
     return;
   }
-  res.json(UpdateRecordResponse.parse(toRecord(record)));
+  res.json(UpdateRecordResponse.parse(await toRecordWithCreator(record)));
 });
 
 router.delete("/records/:id", requireQcEditor, async (req, res): Promise<void> => {
@@ -1898,7 +3723,8 @@ router.get("/reports/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const [record] = await db
+  await ensureDefaultStrengthStandards();
+  let [record] = await db
     .select()
     .from(qcRecordsTable)
     .where(eq(qcRecordsTable.id, parsed.data.id));
@@ -1906,19 +3732,30 @@ router.get("/reports/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Record not found" });
     return;
   }
+  if (record.testType === "Water") {
+    await ensureDefaultWaterStandard();
+    [record] = await db
+      .select()
+      .from(qcRecordsTable)
+      .where(eq(qcRecordsTable.id, parsed.data.id));
+    if (record) {
+      const waterStandards = await db.select().from(qcWaterStandardsTable);
+      const evaluated = evaluateWaterQcRecord(record, waterStandards);
+      record = {
+        ...record,
+        details: evaluated.details,
+        ...(evaluated.status ? { status: evaluated.status } : {}),
+      };
+    }
+  }
   await ensureReferenceData();
-  await refreshRecordEvaluations([record.testType]);
-  const [currentRecord] = await db
-    .select()
-    .from(qcRecordsTable)
-    .where(eq(qcRecordsTable.id, parsed.data.id));
   const [layout] = await db
     .select()
     .from(qcReportLayoutsTable)
     .where(eq(qcReportLayoutsTable.testType, record.testType));
   res.json(
     GetReportResponse.parse({
-      record: toRecord(currentRecord ?? record),
+      record: await toRecordWithCreator(record),
       companyName: "AL MANARATAIN",
       companySubtitle: "Al Manaratain Company & Ali Shaab Group W.L.L",
       layout: toReportLayout(layout ?? {

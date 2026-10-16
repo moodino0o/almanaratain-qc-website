@@ -5,6 +5,8 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ReportLayoutSectionBorderStyle } from './reportLayoutSectionBorderStyle';
+import type { ReportLayoutSectionFontFamily } from './reportLayoutSectionFontFamily';
 
 export interface ReportLayoutSection {
   /** @minLength 1 */
@@ -14,4 +16,23 @@ export interface ReportLayoutSection {
   visible: boolean;
   /** @minimum 0 */
   order: number;
+  fontFamily?: ReportLayoutSectionFontFamily;
+  /**
+     * @minimum 8
+     * @maximum 24
+     */
+  fontSize?: number;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  textColor?: string;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  backgroundColor?: string;
+  bold?: boolean;
+  borderStyle?: ReportLayoutSectionBorderStyle;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  borderColor?: string;
+  /**
+     * @minimum 0
+     * @maximum 4
+     */
+  borderWidth?: number;
 }

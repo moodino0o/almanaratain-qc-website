@@ -1,4 +1,6 @@
 import { type ReactNode } from 'react';
+import { useAppNavigationTracking } from '@/hooks/use-app-back';
+import { useEnterNavigation } from '@/hooks/use-enter-navigation';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuth } from '@workspace/replit-auth-web';
 import { ErrorBoundary } from '@/components/error-boundary';
@@ -38,7 +40,9 @@ function PrintLayout({ children }: { children: ReactNode }) {
 }
 
 function Router() {
+  useEnterNavigation();
   const [location] = useLocation();
+  useAppNavigationTracking(location);
   const { role } = useAuth();
   const canViewComplaints = role !== "technician";
   const isPrint = location.match(/^\/reports\/\d+$/) || (canViewComplaints && location.match(/^\/complaints\/\d+\/print$/));
@@ -58,6 +62,12 @@ function Router() {
           <Switch>
             <Route path="/" component={Home} />
             <Route path="/records" component={Records} />
+            <Route path="/records/readymix" component={Records} />
+            <Route path="/records/masonry" component={Records} />
+            <Route path="/records/aggregate" component={Records} />
+            <Route path="/records/precast" component={Records} />
+            <Route path="/records/kerb-stone" component={Records} />
+            <Route path="/records/water" component={Records} />
             <Route path="/records/new" component={RecordForm} />
             <Route path="/records/edit-all" component={RecordsBulkEdit} />
             <Route path="/records/:id/edit" component={RecordForm} />

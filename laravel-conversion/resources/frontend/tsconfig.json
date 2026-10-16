@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "types": ["vite/client", "node"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@workspace/api-client-react": ["../standalone-libs/api-client-react/src/index.ts"],
+      "@workspace/replit-auth-web": ["src/lib/standalone-auth.ts"]
+    }
+  },
+  "include": ["src/**/*", "../standalone-libs/api-client-react/src/**/*"],
+  "exclude": ["node_modules", "**/*.test.ts"]
+}

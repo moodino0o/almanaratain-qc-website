@@ -12,4 +12,5 @@ export type UploadUrlRequestPurpose = typeof UploadUrlRequestPurpose[keyof typeo
 export const UploadUrlRequestPurpose = {
   complaint: 'complaint',
   archive: 'archive',
+  'report-template': 'report-template',
 } as const;

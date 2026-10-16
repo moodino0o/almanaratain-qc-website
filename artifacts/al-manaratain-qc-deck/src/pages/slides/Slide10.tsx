@@ -1,30 +1,34 @@
-import { Bullet, SectionTag, SlideFooter, SlideFrame, SlideHeader, SlideTitle } from '../../components/SlideFrame';
+import { Card, ManagementSlide, Note } from '../../components/ManagementSlide';
 
 export default function Slide10() {
   return (
-    <SlideFrame>
-      <SlideHeader section="Product Surface" number="10 / 16" />
-      <div className="absolute left-[5vw] right-[5vw] top-[16vh]">
-        <SlideTitle>Complaint Workflow</SlideTitle>
-        <div className="mt-[7vh] grid grid-cols-[0.8fr_1.2fr] gap-[7vw]">
-          <div className="border border-line bg-soft px-[3vw] py-[4vh]">
-            <SectionTag>Workflow states</SectionTag>
-            <div className="flex items-center gap-[1vw]">
-              <div className="border border-primary px-[1.5vw] py-[1.5vh] font-display text-[1.7vw] font-bold text-primary">Open</div>
-              <div className="h-px w-[3vw] bg-primary" />
-              <div className="border border-primary bg-primary px-[1.5vw] py-[1.5vh] font-display text-[1.7vw] font-bold text-white">Complete</div>
-            </div>
-            <p className="mt-[5vh] text-[1.8vw] leading-[1.35] text-muted">Open and Complete are separate workflow states.</p>
+    <ManagementSlide section="Reporting" page="10" title="Results move into a report-ready view">
+      <div className="grid h-[51vh] grid-cols-[1.12fr_0.88fr] gap-[1.5vw]">
+        <div className="border border-line bg-white p-[1.5vw] shadow-sm">
+          <div className="mb-[1.2vh] flex items-center justify-between border-b border-line pb-[1vh]">
+            <div className="font-display text-[2vw] font-bold text-primary">QC TEST REPORT</div>
+            <div className="font-mono text-[1.5vw] text-[#718096]">ILLUSTRATIVE LAYOUT</div>
           </div>
-          <div className="space-y-[3.5vh]">
-            <Bullet number="01">Complaints are tracked as explicit records</Bullet>
-            <Bullet number="02">Open and Complete are separate workflow states</Bullet>
-            <Bullet number="03">Solution notes support the closeout record</Bullet>
-            <Bullet number="04">Completion does not depend only on whether notes are filled</Bullet>
+          <div className="grid grid-cols-3 gap-[0.8vw] text-[1.5vw] text-muted">
+            <div className="bg-soft p-[0.8vw]">Record / sample</div><div className="bg-soft p-[0.8vw]">Test type</div><div className="bg-soft p-[0.8vw]">Date / location</div>
+            <div className="border border-line p-[0.8vw]">Specimen details</div><div className="border border-line p-[0.8vw]">Measured values</div><div className="border border-line p-[0.8vw]">Calculated results</div>
           </div>
+          <div className="mt-[1.2vh] h-[16vh] border border-line bg-[#FBFCFE] p-[1vw]">
+            <div className="mb-[1vh] h-[1.2vh] w-[82%] bg-[#E2E8F0]" />
+            <div className="mb-[1vh] h-[1.2vh] w-[61%] bg-[#E2E8F0]" />
+            <div className="h-[1.2vh] w-[73%] bg-[#E2E8F0]" />
+          </div>
+          <div className="mt-[1vh] text-[1.5vw] text-muted">Illustrative mockup — not a captured application screenshot</div>
         </div>
+        <Card label="AVAILABLE OUTPUTS" title="Review and share">
+          <div>Printable QC reports</div>
+          <div>Browser print / “Print to PDF”</div>
+          <div>Daily results .xlsx export</div>
+          <div>Configurable layouts / templates</div>
+          <div>Dammam: net-area basis</div>
+        </Card>
       </div>
-      <SlideFooter label="Product Surface / Complaint Workflow" number="10" />
-    </SlideFrame>
+      <Note>The signed-in report screen could not be captured in the unauthenticated preview, so the visual above is explicitly illustrative.</Note>
+    </ManagementSlide>
   );
 }

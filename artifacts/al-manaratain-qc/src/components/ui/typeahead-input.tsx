@@ -25,6 +25,8 @@ export interface TypeaheadInputProps {
   placeholder?: string;
   emptyMessage?: string;
   className?: string;
+  compact?: boolean;
+  createOptionDestination?: string;
   onCreateOption?: (value: string) => Promise<string | void> | string | void;
 }
 
@@ -35,6 +37,8 @@ export function TypeaheadInput({
   placeholder = "Select or type...",
   emptyMessage = "No matches found.",
   className,
+  compact = false,
+  createOptionDestination,
   onCreateOption,
 }: TypeaheadInputProps) {
   const [open, setOpen] = React.useState(false);
@@ -65,7 +69,12 @@ export function TypeaheadInput({
   const hasExactMatch = options.some(
     (option) => option.trim().toLocaleLowerCase() === trimmedInput.toLocaleLowerCase(),
   );
-  const canCreateOption = Boolean(onCreateOption && trimmedInput && !hasExactMatch);
+  const canCreateOption = Boolean(
+    onCreateOption &&
+    trimmedInput &&
+    !hasExactMatch &&
+    filteredOptions.length === 0,
+  );
 
   const handleCreateOption = async () => {
     if (!onCreateOption || !trimmedInput || hasExactMatch || isCreatingOption) return;
@@ -88,7 +97,7 @@ export function TypeaheadInput({
   };
 
   return (
-    <div className={cn("relative w-full", className)}>
+    <div className={cn("relative w-full min-w-0", className)}>
       <Popover
         open={open}
         onOpenChange={(nextOpen) => {
@@ -105,13 +114,16 @@ export function TypeaheadInput({
               onFocus={() => setOpen(true)}
               aria-autocomplete="list"
               aria-expanded={open}
-              className="pr-10"
+              className={compact ? "h-8 px-1 pr-5 text-[10px]" : "pr-10"}
             />
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="absolute right-0 top-0 h-full w-9 px-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
+              className={cn(
+                "absolute right-0 top-0 h-full w-9 px-0 text-muted-foreground hover:bg-transparent hover:text-foreground",
+                compact && "w-5",
+              )}
               onPointerDown={(event) => {
                 event.preventDefault();
                 setShowAllOptions(true);
@@ -123,12 +135,19 @@ export function TypeaheadInput({
               }}
               aria-label={`Show all ${placeholder.toLowerCase().replace("select or type", "").trim() || "options"}`}
             >
-              <ChevronsUpDown className="h-4 w-4 opacity-50" />
+              <ChevronsUpDown
+                className={cn(compact ? "h-3 w-3" : "h-4 w-4", "opacity-50")}
+              />
             </Button>
           </div>
         </PopoverAnchor>
         <PopoverContent
-          className="w-[var(--radix-popover-trigger-width)] p-0"
+          className={cn(
+            "p-0",
+            compact
+              ? "w-[min(20rem,calc(100vw-2rem))]"
+              : "w-[var(--radix-popover-trigger-width)]",
+          )}
           align="start"
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
@@ -140,8 +159,8 @@ export function TypeaheadInput({
                 </div>
               ) : (
                 <>
-                  {canCreateOption && (
-                    <CommandGroup heading="Reference Data">
+                    {canCreateOption && (
+                    <CommandGroup heading={createOptionDestination ? "No matching value" : "Reference Data"}>
                       <CommandItem
                         value={`add-${trimmedInput}`}
                         onSelect={handleCreateOption}
@@ -152,7 +171,7 @@ export function TypeaheadInput({
                         ) : (
                           <Plus className="mr-2 h-4 w-4" />
                         )}
-                        Add “{trimmedInput}” to Reference Data
+                        Add new “{trimmedInput}” to {createOptionDestination ?? "Reference Data"}
                       </CommandItem>
                     </CommandGroup>
                   )}

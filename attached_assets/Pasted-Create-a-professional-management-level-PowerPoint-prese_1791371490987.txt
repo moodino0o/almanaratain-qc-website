@@ -1,0 +1,1053 @@
+Create a professional, management-level PowerPoint presentation explaining the Al Manaratain Quality Control (QC) Testing & Reporting Web Application.
+
+IMPORTANT:
+
+* Do NOT modify or break the existing application.
+* Do NOT change existing calculations, database logic, plant logic, report generation, or UI.
+* This task is primarily to CREATE A POWERPOINT PRESENTATION explaining the existing application.
+* The presentation must be generated as a downloadable `.pptx` file.
+* Use the actual application structure, screens, calculations, terminology, and workflow wherever possible.
+* Do not invent features that do not currently exist.
+* Clearly distinguish between:
+
+  1. CURRENTLY IMPLEMENTED
+  2. CURRENTLY PUBLISHED/DEPLOYED
+  3. FUTURE ENHANCEMENTS / RECOMMENDATIONS
+
+==================================================
+
+1. PRESENTATION OBJECTIVE
+   ==================================================
+
+Create a visually impressive presentation suitable for presenting to:
+
+* General Management
+* Quality & Control Management
+* Plant Management
+* IT Department
+* Technical Management
+
+The presentation should explain:
+
+* What the QC application is
+* Why it was developed
+* What problem it solves
+* How the application works
+* How data flows through the system
+* What information users enter
+* What calculations are performed
+* How test results are generated
+* How reports are produced
+* How different plants are handled
+* How Dammam-specific calculations work
+* How the application is published
+* Current hosting/deployment architecture
+* Current security position
+* Recommended future security architecture
+* Future development possibilities
+* Benefits to Quality Control and management
+
+The presentation should be approximately 15–20 slides.
+
+==================================================
+2. DESIGN STYLE
+===============
+
+Create a modern corporate engineering/technology presentation.
+
+Style:
+
+* Clean
+* Professional
+* Technical but understandable
+* Management-friendly
+* Minimal clutter
+* Strong visual hierarchy
+* Engineering/quality-control theme
+* Use diagrams, icons, flowcharts, screenshots, equations and simple illustrations.
+* Avoid excessive paragraphs.
+* Use short bullet points.
+* Use large readable fonts.
+* Use consistent typography throughout.
+
+Use a professional color palette inspired by:
+
+* Dark blue
+* White
+* Grey
+* Light blue
+* Subtle accent color
+
+Do NOT make the presentation look like a software developer presentation.
+
+It should look like a professional corporate presentation prepared for management.
+
+==================================================
+3. SLIDE 1 — TITLE
+==================
+
+Title:
+
+"Al Manaratain Quality Control
+Digital Testing & Reporting Application"
+
+Subtitle:
+
+"Technical Overview, Workflow, Calculations, Deployment & Future Development"
+
+Include:
+
+* Al Manaratain
+* Quality & Control
+* Web Application
+* Prepared for Management
+
+Use a strong visual showing:
+
+Concrete block / laboratory testing / digital reporting / engineering technology.
+
+==================================================
+4. SLIDE 2 — EXECUTIVE SUMMARY
+==============================
+
+Explain the application in simple management language.
+
+Include:
+
+"The application is a centralized digital QC platform designed to improve the way laboratory and production quality data is entered, calculated, reviewed and reported."
+
+Key benefits:
+
+* Standardized QC calculations
+* Reduced manual calculation
+* Reduced transcription errors
+* Faster report preparation
+* Consistent reporting format
+* Plant-specific testing logic
+* Digital storage and accessibility
+* Easier future data analysis
+* Foundation for centralized QC data management
+
+Use a visual:
+
+Manual Process → Digital QC Application → Standardized Report
+
+==================================================
+5. SLIDE 3 — WHY THE APPLICATION WAS DEVELOPED
+==============================================
+
+Explain the problems with a traditional/manual process.
+
+Show a BEFORE vs AFTER comparison.
+
+BEFORE:
+
+* Manual calculations
+* Repeated Excel work
+* Manual report preparation
+* Risk of calculation errors
+* Repeated data entry
+* Different calculation methods
+* Difficult historical tracking
+* Limited centralized visibility
+
+AFTER:
+
+* Structured data entry
+* Automated calculations
+* Standardized formulas
+* Automatic report generation
+* Consistent results
+* Easier review
+* Scalable digital platform
+* Future analytics capability
+
+Use visual icons and arrows.
+
+==================================================
+6. SLIDE 4 — WHAT THE APPLICATION DOES
+======================================
+
+Create a visual process diagram:
+
+USER
+↓
+TEST DATA ENTRY
+↓
+VALIDATION
+↓
+AUTOMATIC CALCULATIONS
+↓
+RESULT GENERATION
+↓
+QC REVIEW
+↓
+REPORT GENERATION
+↓
+DIGITAL RECORD
+
+Explain that the application converts raw laboratory/test information into standardized QC results and reports.
+
+Mention examples:
+
+* Dimensions
+* Weight
+* Failure Load
+* Strength
+* Aggregate test data
+* Material information
+* Sample information
+* Plant information
+* Test information
+
+Only include fields/features that actually exist in the current application. If uncertain, label them as examples rather than confirmed features.
+
+==================================================
+7. SLIDE 5 — APPLICATION WORKFLOW
+=================================
+
+Create a detailed workflow diagram.
+
+STEP 1:
+Select plant / testing section
+
+STEP 2:
+Enter sample information
+
+STEP 3:
+Enter specimen dimensions
+
+STEP 4:
+Enter test measurements
+
+STEP 5:
+Application validates inputs
+
+STEP 6:
+Application performs calculations
+
+STEP 7:
+Results are displayed
+
+STEP 8:
+QC report is generated
+
+STEP 9:
+Report is reviewed/exported
+
+Make this slide highly visual.
+
+==================================================
+8. SLIDE 6 — USER INPUTS
+========================
+
+Explain what information the user needs to provide.
+
+Organize into categories.
+
+A. SAMPLE INFORMATION
+
+* Plant
+* Product/type
+* Sample identification
+* Date
+* Relevant batch/sample information
+
+B. SPECIMEN INFORMATION
+
+* Length
+* Width
+* Height
+* Face thickness where applicable
+* Web thickness where applicable
+
+C. TEST INFORMATION
+
+* Failure load
+* Weight
+* Test measurements
+* Other applicable laboratory measurements
+
+D. MATERIAL INFORMATION
+Where applicable:
+
+* Aggregate
+* Cement
+* Sand
+* Recycled aggregate
+* Other raw materials
+
+IMPORTANT:
+Inspect the actual application and use its real input fields.
+Do not claim that a field exists if it does not.
+
+Create a visual "Input → Calculation → Result" graphic.
+
+==================================================
+9. SLIDE 7 — AUTOMATIC CALCULATION ENGINE
+=========================================
+
+Explain that the application performs calculations automatically after data entry.
+
+Show equations professionally using equation text or mathematical formatting.
+
+Examples:
+
+Compressive Strength:
+
+Strength = Failure Load / Loaded Area
+
+If load is entered in kN:
+
+Failure Load (N) = Load (kN) × 1000
+
+Therefore:
+
+# Strength (N/mm²)
+
+Load (kN) × 1000 / Area (mm²)
+
+Explain that calculations are performed internally using full precision and formatted for display.
+
+For the existing application, show the actual calculation logic found in the source code.
+
+Do NOT invent formulas.
+
+==================================================
+10. SLIDE 8 — DAMMAM NET & GROSS AREA CALCULATION
+=================================================
+
+Create a dedicated technical slide explaining the Dammam-specific block calculation.
+
+Title:
+
+"Dammam Plant — Gross Area & Net Area Calculation"
+
+Explain:
+
+The Dammam workflow allows the user to enter:
+
+* Face Thickness (mm)
+* Web Thickness (mm)
+
+The system determines the hole configuration according to the selected block type.
+
+Current Dammam configuration:
+
+8-inch → 3 holes
+6-inch → 2 holes
+4-inch → 2 holes
+
+Show the calculation concept.
+
+Gross Area:
+
+Gross Area = Width × Length
+
+Hole Width:
+
+Hole Width =
+[Width − 2(Face) − (Number of Holes − 1)(Web)]
+/ Number of Holes
+
+Hole Length:
+
+Hole Length =
+[Length − 2(Face) − (Number of Holes − 1)(Web)]
+/ Number of Holes
+
+Total Void Area:
+
+Total Void Area =
+Number of Holes × Hole Width × Hole Length
+
+Net Area:
+
+Net Area =
+Gross Area − Total Void Area
+
+Create a simple engineering diagram of a block showing:
+
+* Length
+* Width
+* Face
+* Web
+* Holes
+* Gross area
+* Net area
+
+Use arrows and dimension lines.
+
+IMPORTANT:
+Clearly state that this is the application's implemented calculation model and should be verified against the approved block geometry/standard where required.
+
+==================================================
+11. SLIDE 9 — GROSS VS NET STRENGTH
+===================================
+
+Explain the two calculated strength values used in the Dammam workflow.
+
+Gross Strength:
+
+Gross Strength =
+Failure Load / Gross Area
+
+Net Strength:
+
+Net Strength =
+Failure Load / Net Area
+
+If failure load is in kN:
+
+Strength =
+Failure Load × 1000 / Area
+
+Show a simple numerical example.
+
+Example:
+
+Failure Load = 211.9 kN
+
+Gross Area = 39,600 mm²
+
+Net Area = 36,560 mm²
+
+Gross Strength:
+
+211,900 / 39,600
+≈ 5.4 N/mm²
+
+Net Strength:
+
+211,900 / 36,560
+≈ 5.8 N/mm²
+
+Explain:
+
+"The application retains calculation precision internally and formats the displayed strength to one decimal place."
+
+Area display:
+0 decimal places
+
+Strength display:
+1 decimal place
+
+Use a visually attractive comparison graphic.
+
+==================================================
+12. SLIDE 10 — RESULTS & REPORT GENERATION
+==========================================
+
+Show how raw inputs become a final report.
+
+Example structure:
+
+INPUT
+↓
+Calculated Values
+↓
+Result Table
+↓
+QC Review
+↓
+Final Report
+
+Explain that the report can present calculated results such as:
+
+* Number of holes
+* Face thickness
+* Web thickness
+* Gross area
+* Net area
+* Gross strength
+* Net strength
+* Other applicable test results
+
+Use a mock screenshot or actual screenshot of the application's report screen if accessible.
+
+IMPORTANT:
+If screenshots can be safely captured from the current application, use them.
+Otherwise create clean UI mockups rather than inventing screenshots.
+
+==================================================
+13. SLIDE 11 — PLANT-SPECIFIC LOGIC
+===================================
+
+Explain that not all plants necessarily use the same calculation logic.
+
+Highlight the design principle:
+
+"Plant-specific requirements are isolated so that a change for one plant does not unintentionally change another plant's workflow."
+
+Show:
+
+HIDD
+↓
+Existing Hidd workflow
+
+KHAMIS
+↓
+Existing Khamis workflow
+
+DAMMAM
+↓
+Dammam-specific net/gross area logic
+
+Explain that Dammam-specific features were implemented without changing the existing behavior of other plants.
+
+This is an important software architecture and quality-control principle.
+
+==================================================
+14. SLIDE 12 — TECHNICAL APPLICATION ARCHITECTURE
+=================================================
+
+Inspect the actual repository and determine the current architecture.
+
+Create an architecture diagram showing the actual technologies used.
+
+For example, if applicable:
+
+USER
+↓
+WEB BROWSER
+↓
+FRONT-END APPLICATION
+↓
+BACK-END / API
+↓
+DATABASE
+↓
+REPORT GENERATION
+↓
+HOSTING PLATFORM
+
+Include actual technologies discovered in the project, such as:
+
+* React
+* Vite
+* TypeScript
+* Node.js
+* Express
+* PostgreSQL
+* Drizzle ORM
+* other technologies actually found in the repository
+
+DO NOT assume these technologies exist.
+Inspect package.json, source files and configuration first.
+
+Use the actual architecture.
+
+==================================================
+15. SLIDE 13 — DATA FLOW
+========================
+
+Create a technical data-flow diagram.
+
+Example:
+
+USER INPUT
+↓
+FORM VALIDATION
+↓
+APPLICATION STATE
+↓
+CALCULATION ENGINE
+↓
+DATABASE / STORAGE
+↓
+REPORT GENERATION
+↓
+FINAL QC REPORT
+
+Explain:
+
+* Where data is entered
+* Where validation occurs
+* Where calculations occur
+* Where records are stored
+* How reports are generated
+
+Use actual application architecture.
+
+==================================================
+16. SLIDE 14 — HOW THE APPLICATION IS PUBLISHED
+===============================================
+
+Explain the current publishing/deployment process.
+
+Inspect the actual repository and deployment configuration.
+
+Show:
+
+Developer
+↓
+GitHub Repository
+↓
+Build Process
+↓
+Hosting Platform
+↓
+Production Web Application
+↓
+Users
+
+Explain:
+
+* Source code repository
+* Build process
+* Production deployment
+* Environment variables
+* Domain/application URL
+* Server/runtime
+* Database connection if applicable
+
+If the application is currently hosted on a specific service, identify the actual service from the project/deployment configuration.
+
+DO NOT state that a service is used unless confirmed.
+
+==================================================
+17. SLIDE 15 — CURRENT SECURITY
+===============================
+
+This slide is extremely important.
+
+Do not exaggerate the current security.
+
+Inspect the project and identify what security mechanisms are actually implemented.
+
+Separate the information into:
+
+CURRENTLY IMPLEMENTED
+
+Examples, only if actually present:
+
+* HTTPS
+* Authentication
+* Password protection
+* Session management
+* Input validation
+* Environment variables
+* Database access controls
+* Server-side validation
+* Access restrictions
+* Error handling
+
+NOT YET IMPLEMENTED / NEEDS VERIFICATION
+
+Examples:
+
+* Role-based access control
+* Audit trail
+* MFA
+* Automated backups
+* Advanced monitoring
+* Penetration testing
+* Security logging
+* Data encryption at rest
+* Disaster recovery
+
+Clearly mark uncertain items as:
+
+"Requires verification"
+
+Do NOT claim the site is secure simply because it is hosted online.
+
+==================================================
+18. SLIDE 16 — FUTURE SECURITY ARCHITECTURE
+===========================================
+
+Create a roadmap titled:
+
+"Recommended Security & Governance Roadmap"
+
+Show:
+
+LEVEL 1 — ACCESS CONTROL
+
+* User accounts
+* Role-based permissions
+* QC Technician
+* QC Engineer
+* QC Manager
+* Administrator
+
+LEVEL 2 — DATA SECURITY
+
+* HTTPS
+* Secure database credentials
+* Environment secrets
+* Encryption
+* Input validation
+* Server-side validation
+
+LEVEL 3 — AUDITABILITY
+
+* User ID
+* Timestamp
+* Created/modified records
+* Report revision history
+* Audit logs
+
+LEVEL 4 — RESILIENCE
+
+* Automated backups
+* Database recovery
+* Disaster recovery plan
+* Monitoring
+* Error logging
+
+LEVEL 5 — ENTERPRISE SECURITY
+
+* MFA
+* SSO if required
+* Network restrictions
+* Security testing
+* Vulnerability scanning
+* Penetration testing
+
+Use a maturity-roadmap visual.
+
+==================================================
+19. SLIDE 17 — FUTURE DEVELOPMENT ROADMAP
+=========================================
+
+Create a 3-phase roadmap.
+
+PHASE 1 — DIGITAL QC FOUNDATION
+
+* Complete standardized reports
+* Centralized test records
+* User authentication
+* Role-based permissions
+* Audit trail
+* Database backup
+
+PHASE 2 — ANALYTICS
+
+* Plant dashboards
+* Product performance trends
+* Failure-rate monitoring
+* Aggregate quality trends
+* Cement consumption analysis
+* Water/cement ratio analysis
+* Statistical process control
+* Automatic alerts
+
+PHASE 3 — INTELLIGENT QC PLATFORM
+
+* Automatic abnormal-result detection
+* Trend prediction
+* Material variability analysis
+* Automated management dashboards
+* Mobile/tablet QC entry
+* Automated notifications
+* Integration with production systems
+* ERP integration where appropriate
+
+Present this as a timeline.
+
+==================================================
+20. SLIDE 18 — MANAGEMENT BENEFITS
+==================================
+
+Create a strong summary slide.
+
+Benefits:
+
+QUALITY
+
+* More consistent calculations
+* Standardized reporting
+* Better traceability
+
+EFFICIENCY
+
+* Faster report preparation
+* Reduced repetitive work
+* Less manual calculation
+
+DATA
+
+* Structured digital records
+* Easier historical analysis
+* Better visibility
+
+MANAGEMENT
+
+* Faster decision making
+* Plant comparison
+* Trend monitoring
+* Early identification of quality problems
+
+SCALABILITY
+
+* Additional plants
+* Additional tests
+* Additional users
+* Analytics
+* Integration
+
+==================================================
+21. SLIDE 19 — CURRENT STATUS
+=============================
+
+Create a management-friendly status dashboard.
+
+Use three categories:
+
+CURRENTLY AVAILABLE
+
+List verified application capabilities.
+
+CURRENTLY IN DEVELOPMENT / IMPROVEMENT
+
+List features actually under development if identifiable.
+
+FUTURE RECOMMENDATIONS
+
+* Authentication
+* Role-based access
+* Audit logs
+* Backups
+* Dashboards
+* Analytics
+* Security testing
+* Mobile capability
+
+Do not represent future recommendations as existing features.
+
+==================================================
+22. SLIDE 20 — CONCLUSION
+=========================
+
+Title:
+
+"From Manual QC Reporting to a Digital Quality Platform"
+
+Conclude with:
+
+"The current application establishes the foundation for standardized digital QC testing and reporting. The next stage is to strengthen security, data governance and analytics, allowing the platform to evolve from a reporting tool into a centralized Quality Control information system."
+
+Include a visual:
+
+MANUAL QC
+→
+DIGITAL REPORTING
+→
+CENTRALIZED DATA
+→
+ANALYTICS
+→
+PREDICTIVE QUALITY MANAGEMENT
+
+==================================================
+23. VISUAL REQUIREMENTS
+=======================
+
+The PowerPoint must contain visual elements.
+
+Include where appropriate:
+
+* Engineering diagrams
+* Block diagrams
+* Application workflow diagrams
+* Architecture diagrams
+* Data-flow diagrams
+* Security roadmap
+* Development roadmap
+* Before/after comparison
+* Icons
+* Equations
+* Tables
+* UI screenshots
+* Sample report screenshots
+
+Do NOT use random stock images just to fill space.
+
+Every visual must support the explanation.
+
+==================================================
+24. EQUATIONS
+=============
+
+Equations should be visually formatted and easy to read.
+
+Use mathematical notation where appropriate.
+
+Examples:
+
+Gross Area = W × L
+
+Net Area = Gross Area − Void Area
+
+Failure Load (N) = Load (kN) × 1000
+
+Gross Strength = Failure Load / Gross Area
+
+Net Strength = Failure Load / Net Area
+
+Density = Weight / Volume
+
+Use proper subscripts/superscripts where appropriate.
+
+==================================================
+25. TECHNICAL INSPECTION BEFORE GENERATING THE PPT
+==================================================
+
+Before generating the PowerPoint:
+
+1. Inspect the repository structure.
+2. Inspect package.json.
+3. Inspect front-end source code.
+4. Inspect back-end/API source code if present.
+5. Inspect database/schema files if present.
+6. Inspect report-generation code.
+7. Inspect calculation functions.
+8. Inspect deployment configuration.
+9. Inspect environment-variable usage.
+10. Identify actual hosting/deployment configuration.
+11. Identify actual authentication/security features.
+12. Identify actual database technology.
+13. Identify actual report-generation technology.
+
+Use this inspection to make the presentation technically accurate.
+
+==================================================
+26. POWERPOINT GENERATION
+=========================
+
+Use a suitable PowerPoint generation library available in the project.
+
+Prefer:
+
+PptxGenJS
+
+if the project is JavaScript/TypeScript based.
+
+Create a script such as:
+
+scripts/generate-qc-management-presentation.ts
+
+or
+
+scripts/generate-qc-management-presentation.js
+
+Generate:
+
+Al-Manaratain-QC-Application-Management-Presentation.pptx
+
+The presentation should be downloadable from the application or generated directly into a suitable output directory.
+
+==================================================
+27. PRESENTATION QUALITY
+========================
+
+The presentation must:
+
+* Have consistent margins
+* Have consistent headers/footers
+* Use slide numbers
+* Use consistent typography
+* Avoid overcrowding
+* Use high-resolution visuals
+* Have readable equations
+* Have readable diagrams
+* Have professional tables
+* Have no overlapping objects
+* Have no text outside slide boundaries
+* Have no placeholder text
+* Have no broken images
+* Have no empty slides
+
+Use speaker-friendly wording.
+
+Management should be able to understand the system without being a software engineer.
+
+==================================================
+28. IMPORTANT TECHNICAL ACCURACY RULE
+=====================================
+
+Do not make the presentation claim:
+
+"Secure"
+
+"Fully secure"
+
+"Production-ready"
+
+"Enterprise-grade"
+
+unless the repository actually demonstrates the necessary controls.
+
+Instead use wording such as:
+
+"Current security controls"
+
+"Security measures currently implemented"
+
+"Recommended security enhancements"
+
+"Security controls requiring verification"
+
+This distinction is essential for presenting the application professionally to management.
+
+==================================================
+29. ADD AN APPENDIX
+===================
+
+After the main management presentation, add 3–5 appendix slides.
+
+APPENDIX A:
+Detailed calculation formulas
+
+APPENDIX B:
+Application architecture
+
+APPENDIX C:
+Database/data structure overview
+
+APPENDIX D:
+Deployment architecture
+
+APPENDIX E:
+Security roadmap
+
+These slides can be more technical than the main presentation.
+
+==================================================
+30. FINAL DELIVERABLES
+======================
+
+Create:
+
+1. PowerPoint file:
+   Al-Manaratain-QC-Application-Management-Presentation.pptx
+
+2. PowerPoint generation source code:
+   scripts/generate-qc-management-presentation.ts
+
+3. Any required presentation assets in:
+   presentation-assets/
+
+4. A README:
+   presentation-assets/README.md
+
+The README should explain:
+
+* How to regenerate the presentation
+* Required dependencies
+* Where screenshots/assets are stored
+* How to modify slide content
+* How to generate a new version
+
+Do not modify the existing QC application's functionality.
+
+At the end, provide a clear summary:
+
+A. What was found in the existing application
+B. What was included in the presentation
+C. Current deployment architecture
+D. Current security controls
+E. Security gaps/recommendations
+F. Future development roadmap
+G. Exact location of the generated PowerPoint file

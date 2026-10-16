@@ -4,12 +4,17 @@ import type {
   QcStrengthStandardRow,
 } from "@workspace/db";
 
-export type StrengthEvaluationStatus = "Passed" | "Review" | "Failed";
+export type StrengthEvaluationStatus =
+  | "Passed"
+  | "Review"
+  | "Failed"
+  | "Waiting for results";
 
 export type StrengthEvaluation = {
   status: StrengthEvaluationStatus;
   bsStandard: string | null;
   requiredStrength: number | null;
+  minimumRequiredStrength?: number | null;
   averageStrength: number | null;
   minimumStrength: number | null;
   maximumStrength: number | null;
@@ -56,11 +61,32 @@ export type BlockDimensions = {
 };
 
 export function isDammamLocation(value: unknown) {
-  return normalizedText(value) === "dammam";
+  const location = textValue(value)?.toLocaleLowerCase().replace(/\s+/g, " ");
+  return location === "dammam" || location === "dammam plant";
 }
 
-const AUTOMATED_TEST_TYPES = new Set(["Ready Mix", "Blocks", "Paving Blocks"]);
+function isSandwichBlockType(value: unknown) {
+  return textValue(value)?.toLocaleLowerCase().includes("sandwich") ?? false;
+}
+
+const AUTOMATED_TEST_TYPES = new Set([
+  "Ready Mix",
+  "Blocks",
+  "Paving Blocks",
+  "Precast",
+  "Kerb Stone",
+]);
 const DEFAULT_STRENGTH_UNIT = "N/mm²";
+export const PRECAST_AGE_STRENGTH_CRITERIA = [
+  {
+    age: 1,
+    minimumStrength: 30,
+    passOutcome: "Approved for demolding",
+    failOutcome: "Not approved for demolding",
+  },
+  { age: 7, minimumStrength: 52, passOutcome: "Pass", failOutcome: "Fail" },
+  { age: 28, minimumStrength: 65, passOutcome: "Pass", failOutcome: "Fail" },
+] as const;
 
 function numericValue(value: unknown): number | null {
   if (typeof value === "number") {
@@ -69,6 +95,140 @@ function numericValue(value: unknown): number | null {
   if (typeof value !== "string" || value.trim() === "") return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function getDammamBlockHoleCount(blockSize: unknown): number | null {
+  const width = blockDimensionsFromSize(blockSize)?.width;
+  if (width === 100 || width === 150) return 2;
+  if (width === 200) return 3;
+  return null;
+}
+
+function dammamBlockThicknessDefaults(blockSize: unknown) {
+  const width = blockDimensionsFromSize(blockSize)?.width;
+  return {
+    faceThickness: 30,
+    webThickness: width === 100 || width === 150 ? 25 : 30,
+  };
+}
+
+export function calculateDammamBlockResults(
+  row: unknown,
+  details: Record<string, unknown>,
+) {
+  if (typeof row !== "object" || row === null) return null;
+  const values = row as Record<string, unknown>;
+  const length = numericValue(values.length);
+  const width = numericValue(values.width);
+  const load = numericValue(values.load ?? values.failureLoad);
+  if (
+    length === null || width === null || length <= 0 || width <= 0 ||
+    (load !== null && load <= 0)
+  ) {
+    return null;
+  }
+
+  const grossArea = width * length;
+  const failureLoadN = load === null ? null : load * 1000;
+  if (isSandwichBlockType(details.blockType)) {
+    return {
+      numberOfHoles: null,
+      failureLoadN,
+      grossArea,
+      netArea: null,
+      grossStrength: failureLoadN === null ? null : failureLoadN / grossArea,
+      netStrength: null,
+    };
+  }
+
+  const thicknessDefaults = dammamBlockThicknessDefaults(details.blockSize);
+  const face = numericValue(
+    values.faceThickness ?? details.faceThickness ?? thicknessDefaults.faceThickness,
+  );
+  const web = numericValue(
+    values.webThickness ?? details.webThickness ?? thicknessDefaults.webThickness,
+  );
+  const holes = getDammamBlockHoleCount(details.blockSize);
+
+  if (
+    length === null || width === null || face === null || web === null ||
+    holes === null || length <= 0 || width <= 0 || face <= 0 || web <= 0 ||
+    (load !== null && load <= 0)
+  ) {
+    return null;
+  }
+
+  const holeWidth = width - (2 * face);
+  const holeLength = (length - (2 * face) - ((holes - 1) * web)) / holes;
+  if (holeWidth <= 0 || holeLength <= 0) return null;
+
+  const netArea = grossArea - (holes * holeWidth * holeLength);
+  if (netArea <= 0 || netArea >= grossArea) return null;
+
+  return {
+    numberOfHoles: holes,
+    failureLoadN,
+    grossArea,
+    netArea,
+    grossStrength: failureLoadN === null ? null : failureLoadN / grossArea,
+    netStrength: failureLoadN === null ? null : failureLoadN / netArea,
+  };
+}
+
+function normalizeDammamBlockDetails(details: Record<string, unknown>) {
+  const isSandwich = isSandwichBlockType(details.blockType);
+  const thicknessDefaults = dammamBlockThicknessDefaults(details.blockSize);
+  const normalized: Record<string, unknown> = { ...details };
+  if (isSandwich) {
+    delete normalized.faceThickness;
+    delete normalized.webThickness;
+    delete normalized.numberOfHoles;
+  } else {
+    normalized.faceThickness =
+      details.faceThickness ?? thicknessDefaults.faceThickness;
+    normalized.webThickness =
+      details.webThickness ?? thicknessDefaults.webThickness;
+  }
+  const numberOfHoles = isSandwich
+    ? null
+    : getDammamBlockHoleCount(normalized.blockSize);
+  const rows: unknown[] = Array.isArray(normalized.testRows) ? normalized.testRows : [];
+  return {
+    ...normalized,
+    ...(isSandwich ? {} : { numberOfHoles }),
+    testRows: rows.map((row) => {
+      if (typeof row !== "object" || row === null) return row;
+      const values = row as Record<string, unknown>;
+      const normalizedRow: Record<string, unknown> = { ...values };
+      if (isSandwich) {
+        delete normalizedRow.faceThickness;
+        delete normalizedRow.webThickness;
+        delete normalizedRow.numberOfHoles;
+        delete normalizedRow.netArea;
+        delete normalizedRow.netStrength;
+      } else {
+        normalizedRow.faceThickness =
+          values.faceThickness ?? normalized.faceThickness;
+        normalizedRow.webThickness =
+          values.webThickness ?? normalized.webThickness;
+      }
+      const results = calculateDammamBlockResults(normalizedRow, normalized);
+      return {
+        ...normalizedRow,
+        failureLoad: values.load ?? values.failureLoad ?? "",
+        failureLoadN: results?.failureLoadN ?? null,
+        grossArea: results?.grossArea ?? null,
+        grossStrength: results?.grossStrength ?? null,
+        ...(isSandwich
+          ? {}
+          : {
+              numberOfHoles,
+              netArea: results?.netArea ?? null,
+              netStrength: results?.netStrength ?? null,
+            }),
+      };
+    }),
+  };
 }
 
 function rounded(value: number) {
@@ -256,6 +416,8 @@ export function normalizePavingDetails(
   shapeFactors: QcShapeFactorRow[] = [],
 ) {
   const pavingBlockSize = textValue(details.pavingBlockSize ?? details.blockSize);
+  const dimensions = blockDimensionsFromSize(pavingBlockSize);
+  const rows = Array.isArray(details.testRows) ? details.testRows : null;
   const configuredCorrectionFactor = numericValue(details.correctionFactor);
   const configuredSizeFactor =
     configuredCorrectionFactor === null && pavingBlockSize
@@ -274,6 +436,18 @@ export function normalizePavingDetails(
     ...(defaultCorrectionFactor !== null
       ? { correctionFactor: defaultCorrectionFactor }
       : {}),
+    ...(rows
+      ? {
+          testRows: rows.map((row) => {
+            if (typeof row !== "object" || row === null || !dimensions) return row;
+            const values = { ...(row as Record<string, unknown>) };
+            if (numericValue(values.length) === null) values.length = dimensions.length;
+            if (numericValue(values.width) === null) values.width = dimensions.width;
+            if (numericValue(values.height) === null) values.height = dimensions.height;
+            return values;
+          }),
+        }
+      : {}),
   };
 }
 
@@ -283,16 +457,20 @@ function standardMatchesRecord(
 ) {
   const blockType = textValue(record.details.blockType);
   const blockSize = textValue(record.details.blockSize);
-  if (
-    standard.testType !== record.testType ||
-    !blockMaterialMatches(
-      standard.material,
-      record.material,
-      blockType,
-    )
-  ) {
-    return false;
+  if (standard.testType !== record.testType) return false;
+  if (record.testType === "Blocks") {
+    return (
+      blockTypeMatches(standard.blockType, blockType) &&
+      blockSizeMatches(standard.blockSize, blockSize)
+    );
   }
+  if (record.testType === "Kerb Stone") {
+    return (
+      blockMaterialMatches(standard.material, record.material, blockType) &&
+      blockTypeMatches(standard.blockType, textValue(record.details.kerbType))
+    );
+  }
+  if (!blockMaterialMatches(standard.material, record.material, blockType)) return false;
   if (record.testType === "Paving Blocks") {
     const pavingBlockSize = textValue(
       record.details.pavingBlockSize ?? record.details.blockSize,
@@ -300,11 +478,7 @@ function standardMatchesRecord(
     return !standard.blockSize ||
       (Boolean(pavingBlockSize) && blockSizeMatches(standard.blockSize, pavingBlockSize));
   }
-  if (record.testType !== "Blocks") return true;
-  return (
-    blockTypeMatches(standard.blockType, blockType) &&
-    blockSizeMatches(standard.blockSize, blockSize)
-  );
+  return true;
 }
 
 function matchingStandard(
@@ -318,7 +492,9 @@ function matchingStandard(
         standard.id === selectedStandardId && standardMatchesRecord(standard, record),
     );
   }
-  return standards.find((standard) => standardMatchesRecord(standard, record));
+  return standards
+    .filter((standard) => standardMatchesRecord(standard, record))
+    .sort((left, right) => left.id - right.id)[0];
 }
 
 function dayAge(value: unknown) {
@@ -328,12 +504,33 @@ function dayAge(value: unknown) {
   return match ? Number(match[0]) : null;
 }
 
+function hasReadyMixResultInput(row: unknown) {
+  if (typeof row !== "object" || row === null) return false;
+  const values = row as Record<string, unknown>;
+  return [
+    "length",
+    "width",
+    "height",
+    "load",
+    "calculatedStrength",
+    "strength",
+    "compressiveStrength",
+    "waterStrength",
+  ].some((key) => {
+    const value = values[key];
+    return value !== undefined && value !== null && String(value).trim() !== "";
+  });
+}
+
 function calculateRow(
   row: unknown,
   shapeFactorValue?: unknown,
   correctionFactorValue?: unknown,
   isPaving = false,
   isDammam = false,
+  isPrecast = false,
+  precastWeightIsGrams = false,
+  isDammamSandwich = false,
 ) {
   if (typeof row !== "object" || row === null) {
     return { row, calculatedStrength: null, loadedFaceArea: null, complete: false };
@@ -343,22 +540,37 @@ function calculateRow(
   const load = numericValue(values.load);
   const length = numericValue(values.length);
   const width = numericValue(values.width);
+  const height = numericValue(values.height);
   const loadedFaceArea =
-    length !== null && width !== null && length > 0 && width > 0
-      ? rounded(length * width)
+    length !== null &&
+    (isPaving
+      ? height !== null && length > 0 && height > 0
+      : width !== null && length > 0 && width > 0)
+      ? rounded(length * (isPaving ? height! : width!))
       : null;
-  const directStrength = isPaving
-    ? numericValue(values.compressiveStrength ?? values.strength)
+  const directPavingStrength = isPaving
+    ? numericValue(values.tensileStrength ?? values.correctedStrength ?? values.strength)
     : null;
-  const calculatedStrength =
+  const directPavingRawStrength = isPaving
+    ? numericValue(values.compressiveStrength)
+    : null;
+  const hasLoadBasedStrength =
     load !== null &&
     load >= 0 &&
     loadedFaceArea !== null &&
-    loadedFaceArea > 0
-      ? rounded((load * 1000) / loadedFaceArea)
-      : directStrength;
+    loadedFaceArea > 0;
+  const loadBasedStrength =
+    hasLoadBasedStrength
+      ? (load! * 1000 * (isPaving ? 0.637 : 1)) / loadedFaceArea!
+      : null;
+  const calculatedStrength =
+    loadBasedStrength !== null
+      ? rounded(loadBasedStrength)
+      : isPaving
+        ? directPavingRawStrength ?? directPavingStrength
+        : null;
   const airDryStrength =
-    calculatedStrength !== null
+    !isPaving && calculatedStrength !== null
       ? roundedToOneDecimal(isDammam ? calculatedStrength : calculatedStrength * 1.2)
       : null;
   const shapeFactor = numericValue(shapeFactorValue);
@@ -370,25 +582,38 @@ function calculateRow(
       : null;
   const correctionFactor = numericValue(correctionFactorValue);
   const correctedStrength =
-    isPaving &&
-    calculatedStrength !== null &&
-    correctionFactor !== null &&
-    correctionFactor >= 0
-      ? roundedToOneDecimal(calculatedStrength * correctionFactor)
+    isPaving && calculatedStrength !== null
+      ? loadBasedStrength !== null
+        ? correctionFactor !== null && correctionFactor >= 0
+          ? rounded(loadBasedStrength * correctionFactor)
+          : null
+        : directPavingStrength ??
+          (correctionFactor !== null && correctionFactor >= 0
+            ? rounded(calculatedStrength * correctionFactor)
+            : null)
       : null;
   const dryWeight = numericValue(values.dryWeight);
   const wetWeight = numericValue(values.wetWeight);
+  const precastWeight = numericValue(values.weight);
+  const densityWeight = isPrecast
+    ? precastWeight !== null
+      ? precastWeight * (precastWeightIsGrams ? 1 : 1000)
+      : wetWeight === null
+        ? null
+        : wetWeight * 1000
+    : wetWeight;
+  const densityMultiplier = isPrecast ? 1_000_000 : 1_000_000_000;
   const density =
-    wetWeight !== null &&
+    densityWeight !== null &&
     length !== null &&
     width !== null &&
     numericValue(values.height) !== null &&
-    wetWeight >= 0 &&
+    densityWeight >= 0 &&
     length > 0 &&
     width > 0 &&
     numericValue(values.height)! > 0
       ? rounded(
-          (wetWeight * 1_000_000_000) /
+          (densityWeight * densityMultiplier) /
           (length * width * numericValue(values.height)!),
         )
       : null;
@@ -403,34 +628,291 @@ function calculateRow(
     row: {
       ...values,
       ...(loadedFaceArea !== null ? { loadedFaceArea } : {}),
+      ...(isPaving
+        ? {
+            calculatedStrength,
+            tensileStrength:
+              correctedStrength === null ? "" : correctedStrength.toFixed(2),
+            correctedStrength: correctedStrength ?? "",
+            strength:
+              correctedStrength === null ? "" : correctedStrength.toFixed(2),
+          }
+        : {}),
       ...(waterAbsorption !== null
         ? { waterAbsorption: waterAbsorption.toFixed(2) }
         : { waterAbsorption: "" }),
-      ...(calculatedStrength !== null
+      ...(!isPaving && calculatedStrength !== null
         ? {
             calculatedStrength,
-            ...(isPaving
-              ? { compressiveStrength: calculatedStrength.toFixed(2) }
-              : {
-                  waterStrength: calculatedStrength.toFixed(2),
-                  strength: calculatedStrength.toFixed(2),
-                }),
+            waterStrength: (
+              isDammamSandwich ? calculatedStrength / 1.2 : calculatedStrength
+            ).toFixed(2),
+            strength: calculatedStrength.toFixed(2),
           }
         : {}),
       ...(airDryStrength !== null ? { airDryStrength } : {}),
       ...(normalizedStrength !== null ? { normalizedStrength } : {}),
-      ...(correctedStrength !== null
+      ...(!isPaving && correctedStrength !== null
         ? {
             correctedStrength,
             strength: correctedStrength.toFixed(2),
           }
         : {}),
-      ...(density !== null ? { density: density.toFixed(2) } : {}),
+      ...(density !== null || isPrecast
+        ? { density: density === null ? "" : density.toFixed(2) }
+        : {}),
     },
     calculatedStrength,
     loadedFaceArea,
-    complete: calculatedStrength !== null,
+    complete: isPaving
+      ? hasLoadBasedStrength &&
+        correctionFactor !== null &&
+        correctionFactor >= 0 &&
+        correctedStrength !== null &&
+        width !== null &&
+        width > 0 &&
+        density !== null &&
+        waterAbsorption !== null
+      : calculatedStrength !== null,
   };
+}
+
+function evaluatePrecastStrengthRecord(
+  record: RecordForStrength,
+  standards: QcStrengthStandardRow[],
+) {
+  const sourceRows = Array.isArray(record.details.testRows)
+    ? record.details.testRows
+    : [];
+  const precastWeightIsGrams =
+    textValue(record.details.cubeWeightUnit)?.toLocaleLowerCase() === "g";
+  const calculatedRows = sourceRows.map((row) =>
+    calculateRow(row, undefined, undefined, false, false, true, precastWeightIsGrams),
+  );
+  const matchingPrecastStandards = standards.filter(
+    (standard) =>
+      standard.testType === "Precast" &&
+      standard.material.trim().toLocaleLowerCase() ===
+        record.material.trim().toLocaleLowerCase(),
+  );
+  const ageEvaluations = PRECAST_AGE_STRENGTH_CRITERIA.map((criterion) => {
+    const ageStandard = matchingPrecastStandards.find(
+      (standard) => Number(standard.cubeAge) === criterion.age,
+    );
+    const minimumStrength =
+      numericValue(ageStandard?.requiredStrength) ?? criterion.minimumStrength;
+    const ageRows = calculatedRows.filter((row) => {
+      const values = typeof row.row === "object" && row.row !== null
+        ? row.row as Record<string, unknown>
+        : {};
+      return dayAge(
+        values.testAge ?? values.sampleAge ?? values.cubeAge ?? values.age,
+      ) === criterion.age;
+    });
+    const measuredStrengths = ageRows
+      .map((row) => row.calculatedStrength)
+      .filter((strength): strength is number => strength !== null);
+    const averageStrength = measuredStrengths.length
+      ? rounded(
+          measuredStrengths.reduce((sum, strength) => sum + strength, 0) /
+            measuredStrengths.length,
+        )
+      : null;
+    const complete =
+      ageRows.length > 0 && ageRows.every((row) => row.complete);
+    const outcome =
+      !complete || averageStrength === null
+        ? "Pending"
+        : averageStrength >= minimumStrength
+          ? criterion.passOutcome
+          : criterion.failOutcome;
+    return {
+      age: criterion.age,
+      minimumStrength,
+      standardId: ageStandard?.id ?? null,
+      bsStandard: ageStandard?.bsStandard ?? null,
+      averageStrength,
+      outcome,
+    };
+  });
+  const finalAgeEvaluation = ageEvaluations.find((evaluation) => evaluation.age === 28);
+  const finalAgeStandard = matchingPrecastStandards.find(
+    (standard) => Number(standard.cubeAge) === 28,
+  );
+  const finalAgeRows = calculatedRows.filter((row) => {
+    const values = typeof row.row === "object" && row.row !== null
+      ? row.row as Record<string, unknown>
+      : {};
+    return dayAge(
+      values.testAge ?? values.sampleAge ?? values.cubeAge ?? values.age,
+    ) === 28;
+  });
+  const finalAgeStrengths = finalAgeRows
+    .map((row) => row.calculatedStrength)
+    .filter((strength): strength is number => strength !== null);
+  const status: StrengthEvaluationStatus =
+    finalAgeEvaluation?.outcome === "Pass"
+      ? "Passed"
+      : finalAgeEvaluation?.outcome === "Fail"
+        ? "Failed"
+        : "Review";
+  const reason =
+    status === "Review"
+      ? "Complete 28-day Precast cube results are required for final approval."
+      : status === "Failed"
+        ? `The average 28-day Precast strength is below ${finalAgeEvaluation?.minimumStrength ?? 65} N/mm².`
+        : null;
+  const strengthEvaluation: StrengthEvaluation = {
+    status,
+    bsStandard:
+      finalAgeStandard?.bsStandard ??
+      "BS 1881 : PART 116 : 1983",
+    requiredStrength: finalAgeEvaluation?.minimumStrength ?? 65,
+    averageStrength: finalAgeEvaluation?.averageStrength ?? null,
+    minimumStrength: finalAgeStrengths.length
+      ? Math.min(...finalAgeStrengths)
+      : null,
+    maximumStrength: finalAgeStrengths.length
+      ? Math.max(...finalAgeStrengths)
+      : null,
+    strengthUnit: finalAgeStandard?.strengthUnit ?? DEFAULT_STRENGTH_UNIT,
+    reason,
+  };
+  const details = {
+    ...record.details,
+    testRows: calculatedRows.map((item) => item.row),
+    precastAgeEvaluations: ageEvaluations,
+    strengthEvaluation,
+  };
+
+  return { details, status, evaluation: strengthEvaluation };
+}
+
+function evaluateKerbStrengthRecord(
+  record: RecordForStrength,
+  standards: QcStrengthStandardRow[],
+) {
+  const standard = matchingStandard(record, standards);
+  const sourceRows = Array.isArray(record.details.testRows) ? record.details.testRows : [];
+  const limit = numericValue(standard?.waterAbsorptionLimit);
+  let hasIncompleteStrength = sourceRows.length === 0;
+  let hasIncompleteAbsorption = false;
+  let strengthFailed = false;
+  let absorptionFailed = false;
+  const strengths: number[] = [];
+  const requiredStrength = numericValue(standard?.requiredStrength);
+  const minimumRequiredStrength = numericValue(standard?.minimumIndividualStrength);
+  const kerbFactors: Record<string, { y: number; secondMoment: number }> = {
+    "road kerb": { y: 60.3, secondMoment: 37_300_000 },
+    "edge kerb": { y: 25, secondMoment: 2_600_000 },
+  };
+  const factors = kerbFactors[String(record.details.kerbType ?? "").trim().toLocaleLowerCase()];
+  const calculatedRows = sourceRows.map((row) => {
+    if (typeof row !== "object" || row === null) {
+      hasIncompleteStrength = true;
+      return row;
+    }
+    const values = row as Record<string, unknown>;
+    const load = numericValue(values.failureLoad ?? values.load);
+    const span = numericValue(values.spanLength);
+    const y = factors?.y;
+    const secondMoment = factors?.secondMoment;
+    const completeStrength =
+      load !== null && load > 0 &&
+      span !== null && span > 0 && y !== undefined && secondMoment !== undefined;
+    const rawStrength = completeStrength
+      ? (load! * 1_000 * span! * y!) / (4 * secondMoment!)
+      : null;
+    const bendingStrength = rawStrength === null ? null : rounded(rawStrength);
+    if (bendingStrength === null) hasIncompleteStrength = true;
+    else strengths.push(bendingStrength);
+    const wetWeight = values.wetWeight;
+    const hasWetWeight = wetWeight !== undefined && wetWeight !== null &&
+      String(wetWeight).trim() !== "";
+    let waterAbsorption: number | null = null;
+    let waterAbsorptionStatus: "Pass" | "Fail" | "Review" | "" = "";
+    if (hasWetWeight) {
+      const dry = numericValue(values.weight);
+      const wet = numericValue(wetWeight);
+      if (dry === null || dry <= 0 || wet === null || limit === null || limit < 0) {
+        hasIncompleteAbsorption = true;
+        waterAbsorptionStatus = "Review";
+      } else {
+        waterAbsorption = ((wet - dry) / dry) * 100;
+        waterAbsorptionStatus = waterAbsorption < limit ? "Pass" : "Fail";
+        if (waterAbsorptionStatus === "Fail") absorptionFailed = true;
+      }
+    }
+    return {
+      ...values,
+      bendingStrength: bendingStrength === null ? "" : bendingStrength.toFixed(2),
+      bendingStrengthOutcome: bendingStrength === null || minimumRequiredStrength === null
+        ? "Review"
+        : bendingStrength >= minimumRequiredStrength ? "Pass" : "Fail",
+      waterAbsorption: waterAbsorption === null ? "" : waterAbsorption.toFixed(2),
+      waterAbsorptionStatus,
+    };
+  });
+  const averageStrength = strengths.length
+    ? rounded(strengths.reduce((sum, strength) => sum + strength, 0) / strengths.length)
+    : null;
+  const minimumStrength = strengths.length ? Math.min(...strengths) : null;
+  const maximumStrength = strengths.length ? Math.max(...strengths) : null;
+  if (
+    requiredStrength !== null &&
+    averageStrength !== null &&
+    averageStrength < requiredStrength
+  ) strengthFailed = true;
+  if (
+    minimumRequiredStrength !== null &&
+    minimumStrength !== null &&
+    minimumStrength < minimumRequiredStrength
+  ) strengthFailed = true;
+
+  const status: StrengthEvaluationStatus =
+    strengthFailed || absorptionFailed
+      ? "Failed"
+      : !standard ||
+          requiredStrength === null ||
+          minimumRequiredStrength === null ||
+          hasIncompleteStrength ||
+          hasIncompleteAbsorption
+        ? "Review"
+        : "Passed";
+  const reason = status === "Passed"
+    ? null
+    : status === "Failed"
+      ? strengthFailed
+        ? "The average or minimum individual bending strength is below the configured Kerbstone standard."
+        : "One or more specimens exceed the configured water absorption limit."
+      : !standard
+        ? "No matching Kerbstone standard was configured for this Kerb Type."
+        : requiredStrength === null
+          ? "The matching Kerbstone standard has no average bending-strength limit."
+          : minimumRequiredStrength === null
+            ? "The matching Kerbstone standard has no minimum individual bending-strength limit."
+            : hasIncompleteStrength
+                ? "Enter each specimen's span length and failure load."
+              : hasIncompleteAbsorption
+                ? "Water absorption was entered, but its dry weight, wet weight, or configured limit is missing."
+                : "Kerbstone results need review.";
+  const strengthEvaluation: StrengthEvaluation = {
+    status,
+    bsStandard: standard?.bsStandard ?? null,
+    requiredStrength,
+    minimumRequiredStrength,
+    averageStrength,
+    minimumStrength,
+    maximumStrength,
+    strengthUnit: standard?.strengthUnit || "MPa",
+    reason,
+  };
+  const details = {
+    ...record.details,
+    testRows: calculatedRows,
+    strengthEvaluation,
+  };
+  return { details, status, evaluation: strengthEvaluation };
 }
 
 export function evaluateStrengthRecord(
@@ -446,16 +928,42 @@ export function evaluateStrengthRecord(
     };
   }
 
-  const normalizedDetails: Record<string, unknown> =
+  if (record.testType === "Precast") {
+    return evaluatePrecastStrengthRecord(record, standards);
+  }
+  if (record.testType === "Kerb Stone") {
+    return evaluateKerbStrengthRecord(record, standards);
+  }
+
+  const baseNormalizedDetails: Record<string, unknown> =
     record.testType === "Blocks"
       ? normalizeBlockDetails(record.details, shapeFactors)
       : record.testType === "Paving Blocks"
         ? normalizePavingDetails(record.details, shapeFactors)
       : record.details;
+  const normalizedDetails: Record<string, unknown> =
+    record.testType === "Blocks" && isDammamLocation(record.location)
+      ? normalizeDammamBlockDetails(baseNormalizedDetails)
+      : baseNormalizedDetails;
+  const isDammamSandwich =
+    record.testType === "Blocks" &&
+    isDammamLocation(record.location) &&
+    isSandwichBlockType(normalizedDetails.blockType);
+  const isDammamBlock =
+    record.testType === "Blocks" && isDammamLocation(record.location);
   const normalizedRecord = { ...record, details: normalizedDetails };
   const standard = matchingStandard(normalizedRecord, standards);
-  const requiredStrength =
-    standard === undefined ? null : numericValue(standard.requiredStrength);
+  const requiredStrength = standard === undefined
+    ? null
+    : numericValue(
+        isDammamBlock
+          ? standard.dammamAverageStrength
+          : standard.requiredStrength,
+      );
+  const minimumRequiredStrength =
+    standard !== undefined && isDammamBlock && !isDammamSandwich
+      ? numericValue(standard.dammamMinimumStrength)
+      : null;
   const rows = Array.isArray(normalizedDetails.testRows) ? normalizedDetails.testRows : [];
   const calculatedRows = rows.map((row) =>
     calculateRow(
@@ -468,6 +976,9 @@ export function evaluateStrengthRecord(
         : undefined,
       record.testType === "Paving Blocks",
       record.testType === "Blocks" && isDammamLocation(record.location),
+      record.testType === "Precast",
+      false,
+      isDammamSandwich,
     )
   );
   const evaluatedRows =
@@ -478,16 +989,38 @@ export function evaluateStrengthRecord(
           (row.row as Record<string, unknown>).age
         : null) === 28)
       : calculatedRows;
+  const readyMixHasMissingAge =
+    record.testType === "Ready Mix" &&
+    calculatedRows.some((item) => {
+      const values = typeof item.row === "object" && item.row !== null
+        ? item.row as Record<string, unknown>
+        : {};
+      return dayAge(
+        values.testAge ?? values.cubeAge ?? values.age ?? values.sampleAge,
+      ) === null;
+    });
+  const readyMixHasResultInput =
+    record.testType === "Ready Mix" &&
+    evaluatedRows.some((item) => hasReadyMixResultInput(item.row));
+  const readyMixWaitingForResults =
+    record.testType === "Ready Mix" &&
+    !readyMixHasMissingAge &&
+    !readyMixHasResultInput;
   const measuredStrengths = evaluatedRows
     .map((row) => {
       const values = typeof row.row === "object" && row.row !== null
         ? row.row as Record<string, unknown>
         : {};
       if (record.testType === "Paving Blocks") {
-        return numericValue(values.correctedStrength) ?? row.calculatedStrength;
+        return numericValue(values.tensileStrength) ??
+          numericValue(values.correctedStrength);
       }
       if (record.testType === "Blocks") {
-        return numericValue(values.airDryStrength ?? values.dryAirStrength);
+        return isDammamSandwich
+          ? numericValue(values.airDryStrength ?? values.dryAirStrength)
+          : isDammamLocation(record.location)
+            ? numericValue(values.netStrength)
+            : numericValue(values.airDryStrength ?? values.dryAirStrength);
       }
       return row.calculatedStrength;
     })
@@ -504,7 +1037,11 @@ export function evaluateStrengthRecord(
         const values = typeof row.row === "object" && row.row !== null
           ? row.row as Record<string, unknown>
           : {};
-        return numericValue(values.airDryStrength ?? values.dryAirStrength) === null;
+        return (isDammamSandwich
+          ? numericValue(values.airDryStrength ?? values.dryAirStrength)
+          : isDammamLocation(record.location)
+            ? numericValue(values.netStrength)
+            : numericValue(values.airDryStrength ?? values.dryAirStrength)) === null;
       }
       return !row.complete;
     }) ||
@@ -514,14 +1051,20 @@ export function evaluateStrengthRecord(
     requiredStrength !== null &&
     averageStrength !== null &&
     averageStrength < requiredStrength;
+  const minimumBelowRequired =
+    minimumRequiredStrength !== null &&
+    minimumStrength !== null &&
+    minimumStrength < minimumRequiredStrength - 1e-9;
 
   let status: StrengthEvaluationStatus = "Review";
   let reason: string | null =
     record.testType === "Ready Mix"
       ? "A complete 28-day cube result is required."
       : record.testType === "Blocks"
-        ? "Complete specimen load, dimensions, air-dry strength, and Block age are required."
-        : "Complete paving specimen dimensions and compressive strength are required.";
+          ? isDammamLocation(record.location) && !isDammamSandwich
+            ? "Complete specimen load, dimensions, net strength, and Block age are required."
+            : "Complete specimen load, dimensions, air-dry strength, and Block age are required."
+        : "Enter each paving specimen's dimensions, dry and wet weights, load, and correction factor.";
   if (!standard) {
       reason =
         record.testType === "Blocks"
@@ -530,16 +1073,32 @@ export function evaluateStrengthRecord(
             ? "No matching standard was configured for this paving block size."
             : "No matching standard was configured for this material.";
   } else if (requiredStrength === null) {
-    reason = "The configured minimum strength is invalid.";
-  } else if (averageBelowRequired) {
+    reason = isDammamBlock
+      ? "The linked standard is missing a Dammam average-strength limit."
+      : "The configured minimum strength is invalid.";
+  } else if (isDammamBlock && !isDammamSandwich && minimumRequiredStrength === null) {
+    reason = "The linked standard is missing a Dammam minimum specimen-strength limit.";
+  } else if (readyMixHasMissingAge) {
+    reason = "Enter an age for every Ready Mix specimen.";
+  } else if (readyMixWaitingForResults) {
+    status = "Waiting for results";
+    reason = "Waiting for 28-day cube results.";
+  } else if (record.testType === "Ready Mix" && hasIncompleteMeasurements) {
+    reason = "Complete each 28-day cube's dimensions and load.";
+  } else if (averageBelowRequired || minimumBelowRequired) {
     status = "Failed";
-    reason =
-      record.testType === "Blocks"
-        ? isDammamLocation(record.location)
-          ? "The average Block air-dry strength is below the configured minimum."
-          : "The average Block air-dry strength is below the configured minimum."
+    reason = isDammamBlock
+      ? isDammamSandwich
+        ? "The average Dammam Sandwich air-dry strength is below the linked standard's limit."
+        : averageBelowRequired && minimumBelowRequired
+          ? "The average or minimum Dammam Net Strength is below the linked standard's limit."
+          : averageBelowRequired
+            ? "The average Dammam Net Strength is below the linked standard's limit."
+            : "The minimum Dammam specimen Net Strength is below the linked standard's limit."
+      : record.testType === "Blocks"
+        ? "The average Block air-dry strength is below the configured minimum."
         : record.testType === "Paving Blocks"
-          ? "The corrected paving block strength is below the configured minimum."
+          ? "The average paving block tensile strength is below the configured minimum."
           : "The measured strength is below the configured minimum.";
   } else if (!hasIncompleteMeasurements) {
     status = "Passed";
@@ -553,6 +1112,7 @@ export function evaluateStrengthRecord(
       status,
       bsStandard: standard?.bsStandard ?? null,
       requiredStrength,
+      minimumRequiredStrength,
       averageStrength,
       minimumStrength,
       maximumStrength,

@@ -30,8 +30,8 @@ function expiryStatus(value: string | null | undefined) {
   if (daysRemaining < 0) {
     return {
       label: "Expired",
-      className: "bg-destructive/10 text-destructive",
-      dotClassName: "bg-destructive",
+      className: "bg-destructive text-destructive-foreground",
+      dotClassName: "bg-destructive-foreground",
     };
   }
   if (daysRemaining <= 30) {

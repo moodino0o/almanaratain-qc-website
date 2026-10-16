@@ -1,0 +1,32 @@
+- [Archive retirement authorization](archive-retirement-authorization.md) — keep archive retirement fail-closed behind the configured manager email allowlist.
+- [Reference-data seeding](reference-data-seeding.md) — startup seed reconciliation must add missing categories and items to existing databases instead of returning early.
+- [QC lookup freshness](qc-lookup-freshness.md) — cache idempotent setup, not editable lookup responses; invalidate shape defaults when Block-size references change.
+- [OpenAPI query dates](openapi-query-dates.md) — date query parameters need string validation because generated Zod query schemas do not coerce them to Date.
+- [OpenAPI Zod compatibility](openapi-zod-compatibility.md) — avoid integer schemas when the pinned generator emits unsupported `z.int()` calls.
+- [Block defaults compatibility](block-defaults-compatibility.md) — new Block defaults use canonical material/type/size labels while legacy labels and dimensions remain readable.
+- [Sieve passing calculation](sieve-passing-calculation.md) — passing mass subtracts cumulative retained amounts; blank reference-only rows are skipped.
+- [Employee access identity](employee-access-identity.md) — the active login directory uses registered employee IDs, so approvals and administrator allowlists must key off IDs rather than email.
+- [Employee role authorization](employee-role-authorization.md) — enforce role permissions on the server and keep legacy administrator flags and configured allowlists effective.
+- [Employee provisioning](employee-provisioning.md) — adding an employee must create or reactivate the directory identity before granting role-based access.
+- [Complaint completion workflow](complaint-completion-workflow.md) — complaint completion is an explicit Open/Complete status, independent of whether solution notes are filled.
+- [Complaint review sign-off](complaint-review-signoff.md) — reviewer name and review date persist on complaint records and appear on printouts.
+- [Complaint material categories](complaint-material-categories.md) — derive complaint categories from material labels using OPC/SRC, inch sizes, and 60/80mm rules.
+- [Block derived strengths](block-derived-strengths.md) — use Net Strength everywhere Dammam Blocks appear, including registers and exports; retain air-dry elsewhere.
+- [Block net area](block-net-area.md) — use Dammam hole deductions for Net Area; keep width × length for other Blocks and Paving separate.
+- [Dammam-only Block reporting](dammam-only-block-reporting.md) — restrict new geometry inputs/results and report columns to Dammam; leave other plants unchanged.
+- [Shape factor defaults](shape-factor-defaults.md) — seed one editable row per Block size, but keep the numeric value empty until an approved standard is provided.
+- [Report layout safety](report-layout-safety.md) — preserve saved layouts and account for absolute section positions when enforcing report order.
+- [QC register typography](qc-register-typography.md) — verify effective CSS for per-column sizes; shared readable-table rules can override utility classes.
+- [Precast workflow and criteria](precast-workflow-differences.md) — match standards per product and age; use fallbacks only for missing pairs and never auto-create sibling-age rows.
+- [Eastern plant location aliases](plant-location-aliases.md) — group EASTERN Hidd, EASTERN Aker, and EASTERN system under canonical EASTERN while retaining record labels.
+- [QC location settings](qc-location-settings.md) — keep Ready Mix options ELBA/EASTERN separate from the shared non-Ready-Mix plant list.
+- [Machine settings](machine-settings.md) — add new Masonry Machine choices alongside existing shared options unless the user requests replacement.
+- [Paving correction factors](paving-correction-factors.md) — use the reference tensile formula, apply size factors, and evaluate the average against the matching standard.
+- [Employee activity audit](employee-activity-audit.md) — never expose session bearer IDs; distinguish explicit sign-out from expiry and last confirmed activity.
+- [Dashboard month status](dashboard-month-status.md) — QC Test Status groups records by sample/test date for the selected calendar month.
+- [PowerPoint runtime compatibility](powerpoint-runtime-compatibility.md) — PptxGenJS ESM imports can behave differently in native Node and tsx; execute generators to verify compatibility.
+- [Data-entry keyboard behavior](entry-keyboard-behavior.md) — Enter advances through editable fields in visual order and selects existing values; skip hidden and non-editable fields and buttons.
+- [Batched SQL value typing](batched-sql-value-typing.md) — explicitly cast interpolated IDs in PostgreSQL `VALUES` updates to avoid `integer = text` failures.
+- [Kerbstone read evaluation](kerbstone-read-evaluation.md) — recompute Kerbstone results for read responses so list, detail, and report views cannot display stale saved summaries.
+- [Precast specimen cube size](precast-row-cube-size.md) — new Precast rows own their cube size; use the saved shared size only to hydrate legacy rows.
+- [Primary-surface text contrast](primary-surface-contrast.md) — every text element on solid burgundy primary surfaces needs the high-contrast foreground, including nested helper text.

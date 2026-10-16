@@ -1,0 +1,3168 @@
+{
+  "backupCreatedAt": "2026-09-28T00:00:00+03:00",
+  "sourceEnvironment": "development",
+  "tables": {
+    "qc_records": [
+      {
+        "id": 25,
+        "status": "Passed",
+        "details": {
+          "slump": "190",
+          "testRows": [
+            {
+              "load": "459.2",
+              "rowNo": 1,
+              "width": "100",
+              "height": "100",
+              "length": "100",
+              "density": "2507000.00",
+              "testAge": "7",
+              "strength": "45.92",
+              "dryWeight": "2487",
+              "wetWeight": "2507",
+              "waterStrength": "45.92",
+              "airDryStrength": 55.1,
+              "loadedFaceArea": 10000,
+              "waterAbsorption": "0.80",
+              "calculatedStrength": 45.92
+            },
+            {
+              "load": "444.1",
+              "rowNo": 2,
+              "width": "100",
+              "height": "100",
+              "length": "100",
+              "density": "2510000.00",
+              "testAge": "7",
+              "strength": "44.41",
+              "dryWeight": "2490",
+              "wetWeight": "2510",
+              "waterStrength": "44.41",
+              "airDryStrength": 53.3,
+              "loadedFaceArea": 10000,
+              "waterAbsorption": "0.80",
+              "calculatedStrength": 44.41
+            },
+            {
+              "load": "563.1",
+              "rowNo": 3,
+              "width": "100",
+              "height": "100",
+              "length": "100",
+              "density": "2503000.00",
+              "testAge": "28",
+              "strength": "56.31",
+              "dryWeight": "2485",
+              "wetWeight": "2503",
+              "waterStrength": "56.31",
+              "airDryStrength": 67.6,
+              "loadedFaceArea": 10000,
+              "waterAbsorption": "0.72",
+              "calculatedStrength": 56.31
+            },
+            {
+              "load": "572.6",
+              "rowNo": 4,
+              "width": "100",
+              "height": "100",
+              "length": "100",
+              "density": "2505000.00",
+              "testAge": "28",
+              "strength": "57.26",
+              "dryWeight": "2487",
+              "wetWeight": "2505",
+              "waterStrength": "57.26",
+              "airDryStrength": 68.7,
+              "loadedFaceArea": 10000,
+              "waterAbsorption": "0.72",
+              "calculatedStrength": 57.26
+            }
+          ],
+          "temperature": "32",
+          "customerName": "IMAN KAFIL",
+          "referenceNumber": "H.666",
+          "customerLocation": "GALALI",
+          "strengthEvaluation": {
+            "reason": null,
+            "status": "Passed",
+            "bsStandard": "BS EN 12390-3:2009",
+            "strengthUnit": "N/mm²",
+            "averageStrength": 56.79,
+            "maximumStrength": 57.26,
+            "minimumStrength": 56.31,
+            "requiredStrength": 45
+          },
+          "strengthStandardId": 20
+        },
+        "remarks": "",
+        "location": "ELBA",
+        "material": "45 N OPC",
+        "record_no": "REA-2026-296234",
+        "test_type": "Ready Mix",
+        "tested_by": "RAJA GOUD BANDI",
+        "created_at": "2026-08-31T05:14:56.235125+00:00",
+        "updated_at": "2026-09-28T09:24:39.967+00:00",
+        "reviewed_by": null,
+        "sample_date": "2026-08-01"
+      },
+      {
+        "id": 26,
+        "status": "Passed",
+        "details": {
+          "slump": "200",
+          "testRows": [
+            {
+              "load": "",
+              "rowNo": 1,
+              "width": "",
+              "height": "",
+              "length": "",
+              "testAge": "",
+              "dryWeight": "",
+              "wetWeight": "",
+              "waterAbsorption": ""
+            },
+            {
+              "load": 461.2,
+              "rowNo": 2,
+              "width": 100,
+              "height": 100,
+              "length": 100,
+              "density": "2437000.00",
+              "testAge": 28,
+              "strength": "46.12",
+              "dryWeight": 2422,
+              "wetWeight": 2437,
+              "waterStrength": "46.12",
+              "airDryStrength": 55.3,
+              "loadedFaceArea": 10000,
+              "waterAbsorption": "0.62",
+              "calculatedStrength": 46.12
+            },
+            {
+              "load": 482.4,
+              "rowNo": 3,
+              "width": 100,
+              "height": 100,
+              "length": 100,
+              "density": "2443000.00",
+              "testAge": 28,
+              "strength": "48.24",
+              "dryWeight": 2428,
+              "wetWeight": 2443,
+              "waterStrength": "48.24",
+              "airDryStrength": 57.9,
+              "loadedFaceArea": 10000,
+              "waterAbsorption": "0.62",
+              "calculatedStrength": 48.24
+            }
+          ],
+          "temperature": "33",
+          "customerName": "AL ASRIA",
+          "referenceNumber": "H.667",
+          "customerLocation": "DUMISTAN",
+          "strengthEvaluation": {
+            "reason": null,
+            "status": "Passed",
+            "bsStandard": "BS EN 12390-3:2009",
+            "strengthUnit": "N/mm²",
+            "averageStrength": 47.18,
+            "maximumStrength": 48.24,
+            "minimumStrength": 46.12,
+            "requiredStrength": 35
+          },
+          "strengthStandardId": 4
+        },
+        "remarks": "",
+        "location": "ELBA",
+        "material": "35 N OPC",
+        "record_no": "REA-2026-350586",
+        "test_type": "Ready Mix",
+        "tested_by": "RAJA GOUD BANDI",
+        "created_at": "2026-08-31T05:15:50.587156+00:00",
+        "updated_at": "2026-09-28T09:24:39.964+00:00",
+        "reviewed_by": null,
+        "sample_date": "2026-08-01"
+      },
+      {
+        "id": 27,
+        "status": "Passed",
+        "details": {
+          "slump": "120",
+          "testRows": [
+            {
+              "load": "",
+              "rowNo": 1,
+              "width": "",
+              "height": "",
+              "length": "",
+              "testAge": "",
+              "dryWeight": "",
+              "wetWeight": "",
+              "waterAbsorption": ""
+            },
+            {
+              "load": 563.6,
+              "rowNo": 2,
+              "width": 100,
+              "height": 100,
+              "length": 100,
+              "density": "2468000.00",
+              "testAge": 28,
+              "strength": "56.36",
+              "dryWeight": 2448,
+              "wetWeight": 2468,
+              "waterStrength": "56.36",
+              "airDryStrength": 67.6,
+              "loadedFaceArea": 10000,
+              "waterAbsorption": "0.82",
+              "calculatedStrength": 56.36
+            },
+            {
+              "load": 572.4,
+              "rowNo": 3,
+              "width": 100,
+              "height": 100,
+              "length": 100,
+              "density": "2467000.00",
+              "testAge": 28,
+              "strength": "57.24",
+              "dryWeight": 2447,
+              "wetWeight": 2467,
+              "waterStrength": "57.24",
+              "airDryStrength": 68.7,
+              "loadedFaceArea": 10000,
+              "waterAbsorption": "0.82",
+              "calculatedStrength": 57.24
+            }
+          ],
+          "temperature": "33",
+          "customerName": "IMAN KAFIL",
+          "referenceNumber": "S.470",
+          "customerLocation": "GALALI",
+          "strengthEvaluation": {
+            "reason": null,
+            "status": "Passed",
+            "bsStandard": "BS EN 12390-3:2009",
+            "strengthUnit": "N/mm²",
+            "averageStrength": 56.8,
+            "maximumStrength": 57.24,
+            "minimumStrength": 56.36,
+            "requiredStrength": 45
+          },
+          "strengthStandardId": 20
+        },
+        "remarks": "",
+        "location": "ELBA",
+        "material": "45 N OPC",
+        "record_no": "REA-2026-442523",
+        "test_type": "Ready Mix",
+        "tested_by": "ZIA ULLAH BACHA",
+        "created_at": "2026-08-31T05:17:22.524142+00:00",
+        "updated_at": "2026-09-28T09:24:39.97+00:00",
+        "reviewed_by": null,
+        "sample_date": "2026-08-01"
+      },
+      {
+        "id": 28,
+        "status": "Passed",
+        "details": {
+          "slump": "120",
+          "testRows": [
+            {
+              "load": "",
+              "rowNo": 1,
+              "width": "",
+              "height": "",
+              "length": "",
+              "testAge": "",
+              "dryWeight": "",
+              "wetWeight": "",
+              "waterAbsorption": ""
+            },
+            {
+              "load": 549.6,
+              "rowNo": 2,
+              "width": 100,
+              "height": 100,
+              "length": 100,
+              "density": "2460000.00",
+              "testAge": 28,
+              "strength": "54.96",
+              "dryWeight": 2440,
+              "wetWeight": 2460,
+              "waterStrength": "54.96",
+              "airDryStrength": 66,
+              "loadedFaceArea": 10000,
+              "waterAbsorption": "0.82",
+              "calculatedStrength": 54.96
+            },
+            {
+              "load": 572.2,
+              "rowNo": 3,
+              "width": 100,
+              "height": 100,
+              "length": 100,
+              "density": "2487000.00",
+              "testAge": 28,
+              "strength": "57.22",
+              "dryWeight": 2468,
+              "wetWeight": 2487,
+              "waterStrength": "57.22",
+              "airDryStrength": 68.7,
+              "loadedFaceArea": 10000,
+              "waterAbsorption": "0.77",
+              "calculatedStrength": 57.22
+            }
+          ],
+          "temperature": "33",
+          "customerName": "CONSTRUCTION BOOSTER",
+          "referenceNumber": "S.471 B",
+          "customerLocation": "DAR KULEEB",
+          "strengthEvaluation": {
+            "reason": null,
+            "status": "Passed",
+            "bsStandard": "BS EN 12390-3:2009",
+            "strengthUnit": "N/mm²",
+            "averageStrength": 56.09,
+            "maximumStrength": 57.22,
+            "minimumStrength": 54.96,
+            "requiredStrength": 45
+          },
+          "strengthStandardId": 21
+        },
+        "remarks": "",
+        "location": "EASTERN",
+        "material": "45 N OPC Ice",
+        "record_no": "REA-2026-523358",
+        "test_type": "Ready Mix",
+        "tested_by": "AMMAR JAFFER",
+        "created_at": "2026-08-31T05:18:43.358691+00:00",
+        "updated_at": "2026-09-28T09:24:39.961+00:00",
+        "reviewed_by": null,
+        "sample_date": "2026-08-01"
+      },
+      {
+        "id": 29,
+        "status": "Failed",
+        "details": {
+          "machine": "masa",
+          "blockAge": "9",
+          "testRows": [
+            {
+              "load": "390.6",
+              "rowNo": 1,
+              "width": "200",
+              "height": "197",
+              "length": "400",
+              "density": "1251.90",
+              "strength": "4.88",
+              "dryWeight": "",
+              "wetWeight": "19.73",
+              "waterStrength": "4.88",
+              "airDryStrength": 5.9,
+              "loadedFaceArea": 80000,
+              "waterAbsorption": "",
+              "calculatedStrength": 4.88,
+              "normalizedStrength": 6.8
+            },
+            {
+              "load": "409.9",
+              "rowNo": 2,
+              "width": "200",
+              "height": "197",
+              "length": "400",
+              "density": "1262.06",
+              "strength": "5.12",
+              "dryWeight": "",
+              "wetWeight": "19.89",
+              "waterStrength": "5.12",
+              "airDryStrength": 6.1,
+              "loadedFaceArea": 80000,
+              "waterAbsorption": "",
+              "calculatedStrength": 5.12,
+              "normalizedStrength": 7
+            },
+            {
+              "load": "432.6",
+              "rowNo": 3,
+              "width": "200",
+              "height": "197",
+              "length": "400",
+              "density": "1262.69",
+              "strength": "5.41",
+              "dryWeight": "",
+              "wetWeight": "19.9",
+              "waterStrength": "5.41",
+              "airDryStrength": 6.5,
+              "loadedFaceArea": 80000,
+              "waterAbsorption": "",
+              "calculatedStrength": 5.41,
+              "normalizedStrength": 7.5
+            },
+            {
+              "load": "388.3",
+              "rowNo": 4,
+              "width": "200",
+              "height": "197",
+              "length": "400",
+              "density": "1270.30",
+              "strength": "4.85",
+              "dryWeight": "",
+              "wetWeight": "20.02",
+              "waterStrength": "4.85",
+              "airDryStrength": 5.8,
+              "loadedFaceArea": 80000,
+              "waterAbsorption": "",
+              "calculatedStrength": 4.85,
+              "normalizedStrength": 6.7
+            },
+            {
+              "load": "384.4",
+              "rowNo": 5,
+              "width": "200",
+              "height": "197",
+              "length": "400",
+              "density": "1277.28",
+              "strength": "4.81",
+              "dryWeight": "",
+              "wetWeight": "20.13",
+              "waterStrength": "4.81",
+              "airDryStrength": 5.8,
+              "loadedFaceArea": 80000,
+              "waterAbsorption": "",
+              "calculatedStrength": 4.81,
+              "normalizedStrength": 6.7
+            }
+          ],
+          "blockSize": "8\"",
+          "blockType": "Plain Block",
+          "sampleType": "CUBER",
+          "shapeFactor": "1.150",
+          "preparationMethod": "GRINDING",
+          "conditioningMethod": "WATER at 20±5 C",
+          "strengthEvaluation": {
+            "reason": "The average Block air-dry strength is below the configured minimum.",
+            "status": "Failed",
+            "bsStandard": "BS EN 771-3",
+            "strengthUnit": "N/mm²",
+            "averageStrength": 6.02,
+            "maximumStrength": 6.5,
+            "minimumStrength": 5.8,
+            "requiredStrength": 7.5
+          }
+        },
+        "remarks": "",
+        "location": "HIDD",
+        "material": "Plain Block",
+        "record_no": "BLO-2026-958014",
+        "test_type": "Blocks",
+        "tested_by": "RAJA GOUD BANDI",
+        "created_at": "2026-08-31T06:15:58.014692+00:00",
+        "updated_at": "2026-09-28T09:24:39.975+00:00",
+        "reviewed_by": "ADEL ABBAS EBRAHIM",
+        "sample_date": "2026-08-18"
+      },
+      {
+        "id": 31,
+        "status": "Passed",
+        "details": {
+          "condition": "Single Washed",
+          "dryWeight": "2171.9",
+          "sieveRows": [
+            {
+              "rowNo": 1,
+              "sieveSize": "20 mm",
+              "sieveSizeReferenceItemId": 104
+            },
+            {
+              "rowNo": 2,
+              "sieveSize": "10 mm",
+              "sieveSizeReferenceItemId": 103
+            },
+            {
+              "rowNo": 3,
+              "sieveSize": "5 mm",
+              "passingAmount": 299.1,
+              "amountReturned": 0,
+              "passingPercentage": 100,
+              "sieveSizeReferenceItemId": 102
+            },
+            {
+              "rowNo": 4,
+              "sieveSize": "2.36 mm",
+              "passingAmount": 297.9,
+              "amountReturned": 1.2,
+              "passingPercentage": 99.6,
+              "sieveSizeReferenceItemId": 161
+            },
+            {
+              "rowNo": 5,
+              "sieveSize": "2 mm",
+              "sieveSizeReferenceItemId": 2008
+            },
+            {
+              "rowNo": 6,
+              "sieveSize": "1.18 mm",
+              "passingAmount": 288.9,
+              "amountReturned": 9,
+              "passingPercentage": 96.59,
+              "sieveSizeReferenceItemId": 162
+            },
+            {
+              "rowNo": 7,
+              "sieveSize": "1 mm",
+              "sieveSizeReferenceItemId": 2007
+            },
+            {
+              "rowNo": 8,
+              "sieveSize": "0.6 mm",
+              "passingAmount": 270.2,
+              "amountReturned": 18.7,
+              "passingPercentage": 90.34,
+              "sieveSizeReferenceItemId": 163
+            },
+            {
+              "rowNo": 9,
+              "sieveSize": "0.5 mm",
+              "sieveSizeReferenceItemId": 2006
+            },
+            {
+              "rowNo": 10,
+              "sieveSize": "0.3 mm",
+              "passingAmount": 226.6,
+              "amountReturned": 43.6,
+              "passingPercentage": 75.76,
+              "sieveSizeReferenceItemId": 164
+            },
+            {
+              "rowNo": 11,
+              "sieveSize": "0.25 mm",
+              "sieveSizeReferenceItemId": 2005
+            },
+            {
+              "rowNo": 12,
+              "sieveSize": "0.15 mm",
+              "sieveSizeReferenceItemId": 166
+            },
+            {
+              "rowNo": 13,
+              "sieveSize": "0.125 mm",
+              "sieveSizeReferenceItemId": 2004
+            },
+            {
+              "rowNo": 14,
+              "sieveSize": "0.075 mm",
+              "passingAmount": 198.5,
+              "amountReturned": 28.1,
+              "passingPercentage": 66.37,
+              "sieveSizeReferenceItemId": 167
+            },
+            {
+              "rowNo": 15,
+              "sieveSize": "0.063 mm",
+              "sieveSizeReferenceItemId": 2003
+            },
+            {
+              "rowNo": 16,
+              "sieveSize": "0",
+              "passingAmount": 165,
+              "amountReturned": 33.5,
+              "passingPercentage": 55.17,
+              "sieveSizeReferenceItemId": 168
+            },
+            {
+              "rowNo": 17,
+              "sieveSize": "2 mm",
+              "sieveSizeReferenceItemId": 445
+            },
+            {
+              "rowNo": 18,
+              "sieveSize": "1 mm",
+              "sieveSizeReferenceItemId": 444
+            },
+            {
+              "rowNo": 19,
+              "sieveSize": "0.5 mm",
+              "sieveSizeReferenceItemId": 443
+            },
+            {
+              "rowNo": 20,
+              "sieveSize": "0.25 mm",
+              "sieveSizeReferenceItemId": 442
+            },
+            {
+              "rowNo": 21,
+              "sieveSize": "0.125 mm",
+              "passingAmount": 0,
+              "amountReturned": 165,
+              "passingPercentage": 0,
+              "sieveSizeReferenceItemId": 441
+            },
+            {
+              "rowNo": 22,
+              "sieveSize": "0.063 mm",
+              "sieveSizeReferenceItemId": 440
+            }
+          ],
+          "siltAfter": "297.1",
+          "wetWeight": "2270",
+          "siltBefore": "300",
+          "sampleWeight": 299.1,
+          "crucibleWeight": "41.3297",
+          "sieveEvaluation": {
+            "type": "sieve",
+            "reason": null,
+            "status": "Passed",
+            "criteria": [
+              {
+                "unit": "%",
+                "rowNo": 3,
+                "maximum": 100,
+                "minimum": 100,
+                "sieveSize": "5 mm",
+                "standardId": 7,
+                "withinLimits": true,
+                "measuredValue": 100,
+                "measurementType": "percentage"
+              },
+              {
+                "unit": "%",
+                "rowNo": 4,
+                "maximum": 100,
+                "minimum": 80,
+                "sieveSize": "2.36 mm",
+                "standardId": 8,
+                "withinLimits": true,
+                "measuredValue": 99.6,
+                "measurementType": "percentage"
+              },
+              {
+                "unit": "%",
+                "rowNo": 6,
+                "maximum": 100,
+                "minimum": 70,
+                "sieveSize": "1.18 mm",
+                "standardId": 9,
+                "withinLimits": true,
+                "measuredValue": 96.59,
+                "measurementType": "percentage"
+              },
+              {
+                "unit": "%",
+                "rowNo": 8,
+                "maximum": 100,
+                "minimum": 55,
+                "sieveSize": "0.6 mm",
+                "standardId": 10,
+                "withinLimits": true,
+                "measuredValue": 90.34,
+                "measurementType": "percentage"
+              }
+            ],
+            "standardReference": "BS 812"
+          },
+          "crucibleAshWeight": "41.3427",
+          "materialCondition": "Single Washed",
+          "silverNitrateContent": "6",
+          "materialReferenceItemId": 23,
+          "firstChlorideTitrationPoint": "21.4",
+          "secondChlorideTitrationPoint": "27.2"
+        },
+        "remarks": "",
+        "location": "HIDD",
+        "material": "Sand",
+        "record_no": "SAN-2026-019110",
+        "test_type": "Sand Sieve",
+        "tested_by": "SAYED AHMED ALALAWI",
+        "created_at": "2026-09-01T05:20:19.111181+00:00",
+        "updated_at": "2026-09-28T08:33:58.661+00:00",
+        "reviewed_by": "ADEL ABBAS EBRAHIM",
+        "sample_date": "2026-08-31"
+      },
+      {
+        "id": 32,
+        "status": "Review",
+        "details": {
+          "machine": "masa",
+          "testRows": [
+            {
+              "load": "60.79",
+              "rowNo": 1,
+              "width": "100",
+              "height": "60",
+              "length": "200",
+              "density": "2166.67",
+              "strength": "2.81",
+              "dryWeight": "2.51",
+              "wetWeight": "2.6",
+              "loadedFaceArea": 12000,
+              "tensileStrength": "2.81",
+              "waterAbsorption": "3.59",
+              "correctionFactor": "0.87",
+              "correctedStrength": 2.81,
+              "calculatedStrength": 3.23
+            }
+          ],
+          "sampleType": "CUBER",
+          "testingDate": "2026-09-20",
+          "pavingBlockSize": "200*100*60",
+          "correctionFactor": "0.87",
+          "strengthEvaluation": {
+            "reason": "No matching standard was configured for this paving block size.",
+            "status": "Review",
+            "bsStandard": null,
+            "strengthUnit": "N/mm²",
+            "averageStrength": 2.81,
+            "maximumStrength": 2.81,
+            "minimumStrength": 2.81,
+            "requiredStrength": null
+          }
+        },
+        "remarks": "",
+        "location": "HIDD",
+        "material": "200*100*60",
+        "record_no": "PAV-2026-895472",
+        "test_type": "Paving Blocks",
+        "tested_by": "AMMAR JAFFER",
+        "created_at": "2026-09-27T12:24:55.473347+00:00",
+        "updated_at": "2026-09-28T05:44:21.426+00:00",
+        "reviewed_by": "ADEL ABBAS EBRAHIM",
+        "sample_date": "2026-09-12"
+      }
+    ],
+    "complaints": [
+      {
+        "id": 1,
+        "status": "complete",
+        "details": "VERY WEAK & NOT INCOHERENT",
+        "solution": "The customer complained that a few blocks were received with cracks. The issue was related to the initial stage of production when the machine was starting up. After production started the machine settings were adjusted and the issue was corrected. The labour should have inspected the blocks coming out of the machine and removed any blocks with visible cracks before they were sent for delivery. The customer has already used the blocks.",
+        "created_at": "2026-09-20T06:45:32.873817+00:00",
+        "created_by": null,
+        "updated_at": "2026-09-20T07:03:14.966+00:00",
+        "complaint_no": "CMP-IMPORTED-0001",
+        "customer_name": "GK CONTRACTING W.L.L",
+        "delivery_date": "2026-08-10",
+        "material_type": "8\" PLAIN & 8\" SANDWICH",
+        "picture_paths": [],
+        "complaint_type": "Product",
+        "recommendation": ""
+      },
+      {
+        "id": 2,
+        "status": "complete",
+        "details": "BAD QUALITY",
+        "solution": "Damaged Quantity: Approximately 5–6 pieces During the inspection, a few pavers were found to be brittle and prone to crumbling. The reason is believed to be that these pavers were relatively dry, which may have occurred during the production start-up stage due to water adjustment at the beginning of production. In addition, loading and unloading activities may have contributed to some of the observed damage. A sample of the same paver product was subsequently tested at the Hidd Yard, and the compressive strength was found to comply with the applicable standards. Based on the test results, the customer was reassured and agreed to proceed with using the material. Conclusion: At this stage, no replacement is required, as the damaged quantity is very limited and the material has already been used by the customer without any reported issues.",
+        "created_at": "2026-09-20T06:45:32.873817+00:00",
+        "created_by": null,
+        "updated_at": "2026-09-20T07:03:14.974+00:00",
+        "complaint_no": "CMP-IMPORTED-0002",
+        "customer_name": "AL RAWACHED CONSTRUCTION",
+        "delivery_date": "2026-07-22",
+        "material_type": "SEBAGO 60MM BUFF EDGE",
+        "picture_paths": [],
+        "complaint_type": "Product",
+        "recommendation": "there are no steps."
+      },
+      {
+        "id": 3,
+        "status": "complete",
+        "details": "Different colors in interlock",
+        "solution": "The site was visited and approximately 2 sqm of paving blocks were found to have a slightly whitish/lighter color compared to the rest of the supplied material.",
+        "created_at": "2026-09-20T06:45:32.873817+00:00",
+        "created_by": null,
+        "updated_at": "2026-09-21T10:50:28.101+00:00",
+        "complaint_no": "CMP-IMPORTED-0003",
+        "customer_name": "INSHA W.L.L",
+        "delivery_date": "2026-08-23",
+        "material_type": "LARGE RECTANGULAR - BUFF",
+        "picture_paths": [
+          {
+            "size": 1926518,
+            "mimeType": "image/png",
+            "objectPath": "/objects/uploads/a7619585-e3e1-4bcd-b5da-e9ca211f357f",
+            "originalName": "14dcd6a9-afc5-4c9b-9f6c-9d0221463ca1.png"
+          },
+          {
+            "size": 45816,
+            "mimeType": "image/jpeg",
+            "objectPath": "/objects/uploads/a81da2a2-4f0d-4417-a66f-4f09374cefac",
+            "originalName": "signeture.jpeg"
+          }
+        ],
+        "complaint_type": "Product",
+        "recommendation": ""
+      },
+      {
+        "id": 657,
+        "status": "complete",
+        "details": "Cracks",
+        "solution": "Site has been visited and we found 19 blocks with crack the customer asked to return the blocks This happen coz of the cuber attender didint remove the rejected clocks and it has been supplayed to the customer",
+        "created_at": "2026-09-20T06:45:32.955016+00:00",
+        "created_by": null,
+        "updated_at": "2026-09-20T07:03:16.62+00:00",
+        "complaint_no": "CMP-IMPORTED-0657",
+        "customer_name": "JEHAN ABDULMAJEED HASAN ABDULLA",
+        "delivery_date": "2026-04-01",
+        "material_type": "8\" LINED BLOCKS",
+        "picture_paths": [],
+        "complaint_type": "Product",
+        "recommendation": "We have informed the cuber attender to double check."
+      },
+      {
+        "id": 658,
+        "status": "complete",
+        "details": "Different size in interlock",
+        "solution": "Site has been visited, and the customer was taking second-quality materials at a special price. That is why there was a difference from batch to batch. I convinced the customer to mix and use the materials, and he agreed. After that, he requested an extra 100 m. I informed him that this would not match the existing line, and he agreed to proceed with the supply and use.",
+        "created_at": "2026-09-20T06:45:32.955016+00:00",
+        "created_by": null,
+        "updated_at": "2026-09-20T07:03:16.623+00:00",
+        "complaint_no": "CMP-IMPORTED-0658",
+        "customer_name": "BANI JAMRAH CHARITY SOCIETY",
+        "delivery_date": "2026-01-27",
+        "material_type": "80mm Grey ( Grade 2).",
+        "picture_paths": [],
+        "complaint_type": "Product",
+        "recommendation": "there are no steps."
+      },
+      {
+        "id": 659,
+        "status": "complete",
+        "details": "Too much dust in D.W. sand",
+        "solution": "The site was visited, and the customer reported that shell smaller than 2 mm were present in the sand, which was causing cracks in the plaster work. Action taken: 5 ton were replaced with new sand",
+        "created_at": "2026-09-20T06:45:32.955016+00:00",
+        "created_by": null,
+        "updated_at": "2026-09-20T07:03:16.626+00:00",
+        "complaint_no": "CMP-IMPORTED-0659",
+        "customer_name": "QASSIM ALI",
+        "delivery_date": "2026-03-30",
+        "material_type": "DOUBLE WASHED SAND",
+        "picture_paths": [],
+        "complaint_type": "Product",
+        "recommendation": "Plaster sand has been received from other suppliers."
+      },
+      {
+        "id": 660,
+        "status": "complete",
+        "details": "Receiving 100mm slump Only.",
+        "solution": "Our technician was present at site, and the slump was checked and accepted by the clinet as per the customer request (120 mm). This slump is requires proper vibration to ensure good compaction. The honeycombing observed is mainly due to insufficient vibration during casting, not the concrete itself.",
+        "created_at": "2026-09-20T06:45:32.955016+00:00",
+        "created_by": null,
+        "updated_at": "2026-09-20T07:03:16.628+00:00",
+        "complaint_no": "CMP-IMPORTED-0660",
+        "customer_name": "TOP JUSOOR",
+        "delivery_date": "2026-04-16",
+        "material_type": "35N OPC",
+        "picture_paths": [],
+        "complaint_type": "Product",
+        "recommendation": "He should take steps from his side."
+      }
+    ],
+    "archive_documents": [
+      {
+        "id": 1,
+        "size": 824007,
+        "category": "Test reports",
+        "mime_type": "application/pdf",
+        "created_at": "2026-08-30T07:13:22.768039+00:00",
+        "updated_at": "2026-08-30T07:47:39.909+00:00",
+        "description": "Sand test report",
+        "expiry_date": null,
+        "object_path": "/objects/uploads/4297e59b-b4a9-4c14-a3ac-6a3372742a23",
+        "subcategory": "Al hoty",
+        "uploaded_by": "64651079",
+        "document_date": "2024-11-27",
+        "original_name": "Sand"
+      },
+      {
+        "id": 2,
+        "size": 2546550,
+        "category": "Test reports",
+        "mime_type": "application/pdf",
+        "created_at": "2026-08-30T07:40:17.37385+00:00",
+        "updated_at": "2026-08-30T07:46:41.945+00:00",
+        "description": "4,6,8 in solid blocks",
+        "expiry_date": null,
+        "object_path": "/objects/uploads/c3640fd8-0a10-4958-b83a-8b2dab08aea1",
+        "subcategory": "Al hoty",
+        "uploaded_by": "64651079",
+        "document_date": "2025-10-26",
+        "original_name": "Solid Blocks"
+      },
+      {
+        "id": 3,
+        "size": 623901,
+        "category": "MCRs",
+        "mime_type": "application/pdf",
+        "created_at": "2026-08-30T07:49:46.425048+00:00",
+        "updated_at": "2026-08-30T08:03:22.794+00:00",
+        "description": "",
+        "expiry_date": "2027-04-08",
+        "object_path": "/objects/uploads/23dbc1a0-3c44-44a3-9fe8-afa3fc95c846",
+        "subcategory": "Readymix",
+        "uploaded_by": "64651079",
+        "document_date": "2026-05-12",
+        "original_name": "35 N OPC"
+      },
+      {
+        "id": 4,
+        "size": 710525,
+        "category": "MCRs",
+        "mime_type": "application/pdf",
+        "created_at": "2026-08-30T08:07:37.438944+00:00",
+        "updated_at": "2026-08-30T08:08:05.826+00:00",
+        "description": "",
+        "expiry_date": "2026-08-25",
+        "object_path": "/objects/uploads/26ed17b1-3950-4abb-81c3-6101d6a64276",
+        "subcategory": "Readymix",
+        "uploaded_by": "64651079",
+        "document_date": "2025-08-26",
+        "original_name": "Paving Block"
+      }
+    ],
+    "qc_reference_categories": [
+      {
+        "id": 1,
+        "key": "factories",
+        "label": "Factories",
+        "created_at": "2026-08-30T06:56:28.69731+00:00",
+        "updated_at": "2026-08-30T06:56:28.69731+00:00"
+      },
+      {
+        "id": 2,
+        "key": "plants",
+        "label": "Plants",
+        "created_at": "2026-08-30T06:56:28.711896+00:00",
+        "updated_at": "2026-08-30T06:56:28.711896+00:00"
+      },
+      {
+        "id": 3,
+        "key": "employees",
+        "label": "Technicians",
+        "created_at": "2026-08-30T06:56:28.72024+00:00",
+        "updated_at": "2026-08-30T06:56:28.72024+00:00"
+      },
+      {
+        "id": 4,
+        "key": "suppliers",
+        "label": "Suppliers",
+        "created_at": "2026-08-30T06:56:28.727911+00:00",
+        "updated_at": "2026-08-30T06:56:28.727911+00:00"
+      },
+      {
+        "id": 5,
+        "key": "materials",
+        "label": "Materials",
+        "created_at": "2026-08-30T06:56:28.735312+00:00",
+        "updated_at": "2026-08-30T06:56:28.735312+00:00"
+      },
+      {
+        "id": 6,
+        "key": "locations",
+        "label": "Plant Locations",
+        "created_at": "2026-08-30T06:56:28.742653+00:00",
+        "updated_at": "2026-08-30T06:56:28.742653+00:00"
+      },
+      {
+        "id": 7,
+        "key": "blockTypes",
+        "label": "Block Types",
+        "created_at": "2026-08-30T06:56:28.751942+00:00",
+        "updated_at": "2026-08-30T06:56:28.751942+00:00"
+      },
+      {
+        "id": 8,
+        "key": "blockSizes",
+        "label": "Block Sizes",
+        "created_at": "2026-08-30T06:56:28.760342+00:00",
+        "updated_at": "2026-08-30T06:56:28.760342+00:00"
+      },
+      {
+        "id": 9,
+        "key": "mixStrengths",
+        "label": "Mix Strengths",
+        "created_at": "2026-08-30T06:56:28.766911+00:00",
+        "updated_at": "2026-08-30T07:00:26.76+00:00"
+      },
+      {
+        "id": 10,
+        "key": "customers",
+        "label": "Customers",
+        "created_at": "2026-08-30T06:56:28.773627+00:00",
+        "updated_at": "2026-08-30T06:56:28.773627+00:00"
+      },
+      {
+        "id": 11,
+        "key": "customerLocations",
+        "label": "Customer Locations",
+        "created_at": "2026-08-30T06:56:28.776053+00:00",
+        "updated_at": "2026-08-30T06:56:28.776053+00:00"
+      },
+      {
+        "id": 22,
+        "key": "sieveSizes",
+        "label": "Sieve / Pore Sizes",
+        "created_at": "2026-08-30T08:32:04.648935+00:00",
+        "updated_at": "2026-08-30T08:32:04.648935+00:00"
+      },
+      {
+        "id": 595,
+        "key": "complaintTypes",
+        "label": "Complaint Types",
+        "created_at": "2026-09-20T05:46:19.515332+00:00",
+        "updated_at": "2026-09-20T05:46:19.515332+00:00"
+      },
+      {
+        "id": 596,
+        "key": "complaintMaterials",
+        "label": "Complaint Materials",
+        "created_at": "2026-09-20T05:46:19.579445+00:00",
+        "updated_at": "2026-09-20T05:46:19.579445+00:00"
+      },
+      {
+        "id": 843,
+        "key": "sampleTypes",
+        "label": "Block Sample Types",
+        "created_at": "2026-09-22T10:17:32.826002+00:00",
+        "updated_at": "2026-09-22T10:17:32.826002+00:00"
+      },
+      {
+        "id": 844,
+        "key": "conditioningMethods",
+        "label": "Block Conditioning Methods",
+        "created_at": "2026-09-22T10:17:32.834914+00:00",
+        "updated_at": "2026-09-22T10:17:32.834914+00:00"
+      },
+      {
+        "id": 845,
+        "key": "preparationMethods",
+        "label": "Block Preparation Methods",
+        "created_at": "2026-09-22T10:17:32.846093+00:00",
+        "updated_at": "2026-09-22T10:17:32.846093+00:00"
+      }
+    ],
+    "qc_reference_items": [
+      {
+        "id": 1,
+        "value": "HAFFERA",
+        "created_at": "2026-08-30T06:56:28.706098+00:00",
+        "updated_at": "2026-08-30T06:56:28.706098+00:00",
+        "category_id": 1
+      },
+      {
+        "id": 2,
+        "value": "HIDD",
+        "created_at": "2026-08-30T06:56:28.706098+00:00",
+        "updated_at": "2026-08-30T06:56:28.706098+00:00",
+        "category_id": 1
+      },
+      {
+        "id": 3,
+        "value": "AKER",
+        "created_at": "2026-08-30T06:56:28.706098+00:00",
+        "updated_at": "2026-08-30T06:56:28.706098+00:00",
+        "category_id": 1
+      },
+      {
+        "id": 4,
+        "value": "KHAMIS",
+        "created_at": "2026-08-30T06:56:28.706098+00:00",
+        "updated_at": "2026-08-30T06:56:28.706098+00:00",
+        "category_id": 1
+      },
+      {
+        "id": 5,
+        "value": "COLUMBIA",
+        "created_at": "2026-08-30T06:56:28.715197+00:00",
+        "updated_at": "2026-08-30T06:56:28.715197+00:00",
+        "category_id": 2
+      },
+      {
+        "id": 6,
+        "value": "MASA",
+        "created_at": "2026-08-30T06:56:28.715197+00:00",
+        "updated_at": "2026-08-30T06:56:28.715197+00:00",
+        "category_id": 2
+      },
+      {
+        "id": 7,
+        "value": "HENKI I",
+        "created_at": "2026-08-30T06:56:28.715197+00:00",
+        "updated_at": "2026-08-30T06:56:28.715197+00:00",
+        "category_id": 2
+      },
+      {
+        "id": 8,
+        "value": "HENKI II",
+        "created_at": "2026-08-30T06:56:28.715197+00:00",
+        "updated_at": "2026-08-30T06:56:28.715197+00:00",
+        "category_id": 2
+      },
+      {
+        "id": 10,
+        "value": "ADEL ABBAS EBRAHIM",
+        "created_at": "2026-08-30T06:56:28.724492+00:00",
+        "updated_at": "2026-08-30T06:56:28.724492+00:00",
+        "category_id": 3
+      },
+      {
+        "id": 11,
+        "value": "AHMED ABDULLA",
+        "created_at": "2026-08-30T06:56:28.724492+00:00",
+        "updated_at": "2026-08-30T06:56:28.724492+00:00",
+        "category_id": 3
+      },
+      {
+        "id": 12,
+        "value": "AHMED HUSHAM",
+        "created_at": "2026-08-30T06:56:28.724492+00:00",
+        "updated_at": "2026-08-30T06:56:28.724492+00:00",
+        "category_id": 3
+      },
+      {
+        "id": 13,
+        "value": "AMIT ANIL",
+        "created_at": "2026-08-30T06:56:28.724492+00:00",
+        "updated_at": "2026-08-30T06:56:28.724492+00:00",
+        "category_id": 3
+      },
+      {
+        "id": 14,
+        "value": "AMMAR JAFFER",
+        "created_at": "2026-08-30T06:56:28.724492+00:00",
+        "updated_at": "2026-08-30T06:56:28.724492+00:00",
+        "category_id": 3
+      },
+      {
+        "id": 15,
+        "value": "Al Manaratain",
+        "created_at": "2026-08-30T06:56:28.73116+00:00",
+        "updated_at": "2026-08-30T06:56:28.73116+00:00",
+        "category_id": 4
+      },
+      {
+        "id": 16,
+        "value": "AL HASANAIN",
+        "created_at": "2026-08-30T06:56:28.73116+00:00",
+        "updated_at": "2026-08-30T06:56:28.73116+00:00",
+        "category_id": 4
+      },
+      {
+        "id": 17,
+        "value": "AL NAMAL",
+        "created_at": "2026-08-30T06:56:28.73116+00:00",
+        "updated_at": "2026-08-30T06:56:28.73116+00:00",
+        "category_id": 4
+      },
+      {
+        "id": 18,
+        "value": "AZELON",
+        "created_at": "2026-08-30T06:56:28.73116+00:00",
+        "updated_at": "2026-08-30T06:56:28.73116+00:00",
+        "category_id": 4
+      },
+      {
+        "id": 19,
+        "value": "HAFFERA CRUSHER",
+        "created_at": "2026-08-30T06:56:28.73116+00:00",
+        "updated_at": "2026-08-30T06:56:28.73116+00:00",
+        "category_id": 4
+      },
+      {
+        "id": 20,
+        "value": "Ready Mix Concrete",
+        "created_at": "2026-08-30T06:56:28.738589+00:00",
+        "updated_at": "2026-08-30T06:56:28.738589+00:00",
+        "category_id": 5
+      },
+      {
+        "id": 21,
+        "value": "Concrete Block",
+        "created_at": "2026-08-30T06:56:28.738589+00:00",
+        "updated_at": "2026-08-30T06:56:28.738589+00:00",
+        "category_id": 5
+      },
+      {
+        "id": 22,
+        "value": "Paving Block",
+        "created_at": "2026-08-30T06:56:28.738589+00:00",
+        "updated_at": "2026-08-30T06:56:28.738589+00:00",
+        "category_id": 5
+      },
+      {
+        "id": 23,
+        "value": "Sand",
+        "created_at": "2026-08-30T06:56:28.738589+00:00",
+        "updated_at": "2026-08-30T06:56:28.738589+00:00",
+        "category_id": 5
+      },
+      {
+        "id": 24,
+        "value": "Dust",
+        "created_at": "2026-08-30T06:56:28.738589+00:00",
+        "updated_at": "2026-08-30T06:56:28.738589+00:00",
+        "category_id": 5
+      },
+      {
+        "id": 25,
+        "value": "10 mm Aggregate",
+        "created_at": "2026-08-30T06:56:28.738589+00:00",
+        "updated_at": "2026-08-30T06:56:28.738589+00:00",
+        "category_id": 5
+      },
+      {
+        "id": 26,
+        "value": "20 mm Aggregate",
+        "created_at": "2026-08-30T06:56:28.738589+00:00",
+        "updated_at": "2026-08-30T06:56:28.738589+00:00",
+        "category_id": 5
+      },
+      {
+        "id": 27,
+        "value": "Water",
+        "created_at": "2026-08-30T06:56:28.738589+00:00",
+        "updated_at": "2026-08-30T06:56:28.738589+00:00",
+        "category_id": 5
+      },
+      {
+        "id": 28,
+        "value": "HAFFERA",
+        "created_at": "2026-08-30T06:56:28.74658+00:00",
+        "updated_at": "2026-08-30T06:56:28.74658+00:00",
+        "category_id": 6
+      },
+      {
+        "id": 29,
+        "value": "HIDD",
+        "created_at": "2026-08-30T06:56:28.74658+00:00",
+        "updated_at": "2026-08-30T06:56:28.74658+00:00",
+        "category_id": 6
+      },
+      {
+        "id": 30,
+        "value": "AKER",
+        "created_at": "2026-08-30T06:56:28.74658+00:00",
+        "updated_at": "2026-08-30T06:56:28.74658+00:00",
+        "category_id": 6
+      },
+      {
+        "id": 31,
+        "value": "KHAMIS",
+        "created_at": "2026-08-30T06:56:28.74658+00:00",
+        "updated_at": "2026-08-30T06:56:28.74658+00:00",
+        "category_id": 6
+      },
+      {
+        "id": 38,
+        "value": "200*200*80",
+        "created_at": "2026-08-30T06:56:28.764016+00:00",
+        "updated_at": "2026-08-30T06:56:28.764016+00:00",
+        "category_id": 8
+      },
+      {
+        "id": 39,
+        "value": "400*100*200",
+        "created_at": "2026-08-30T06:56:28.764016+00:00",
+        "updated_at": "2026-08-30T06:56:28.764016+00:00",
+        "category_id": 8
+      },
+      {
+        "id": 40,
+        "value": "400*150*200",
+        "created_at": "2026-08-30T06:56:28.764016+00:00",
+        "updated_at": "2026-08-30T06:56:28.764016+00:00",
+        "category_id": 8
+      },
+      {
+        "id": 41,
+        "value": "400*200*200",
+        "created_at": "2026-08-30T06:56:28.764016+00:00",
+        "updated_at": "2026-08-30T06:56:28.764016+00:00",
+        "category_id": 8
+      },
+      {
+        "id": 42,
+        "value": "400*250*200",
+        "created_at": "2026-08-30T06:56:28.764016+00:00",
+        "updated_at": "2026-08-30T06:56:28.764016+00:00",
+        "category_id": 8
+      },
+      {
+        "id": 43,
+        "value": "20 N OPC",
+        "created_at": "2026-08-30T06:56:28.769753+00:00",
+        "updated_at": "2026-08-30T06:56:28.769753+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 44,
+        "value": "20 N SRC",
+        "created_at": "2026-08-30T06:56:28.769753+00:00",
+        "updated_at": "2026-08-30T06:56:28.769753+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 45,
+        "value": "25 N OPC",
+        "created_at": "2026-08-30T06:56:28.769753+00:00",
+        "updated_at": "2026-08-30T06:56:28.769753+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 46,
+        "value": "30 N SRC",
+        "created_at": "2026-08-30T06:56:28.769753+00:00",
+        "updated_at": "2026-08-30T06:56:28.769753+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 47,
+        "value": "40 N OPC",
+        "created_at": "2026-08-30T06:56:28.769753+00:00",
+        "updated_at": "2026-08-30T06:56:28.769753+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 57,
+        "value": "LIEBHERR",
+        "created_at": "2026-08-30T08:32:04.620951+00:00",
+        "updated_at": "2026-08-30T08:32:04.620951+00:00",
+        "category_id": 2
+      },
+      {
+        "id": 102,
+        "value": "5 mm",
+        "created_at": "2026-08-30T08:32:04.65396+00:00",
+        "updated_at": "2026-08-30T08:32:04.65396+00:00",
+        "category_id": 22
+      },
+      {
+        "id": 103,
+        "value": "10 mm",
+        "created_at": "2026-08-30T08:32:04.65396+00:00",
+        "updated_at": "2026-08-30T08:32:04.65396+00:00",
+        "category_id": 22
+      },
+      {
+        "id": 104,
+        "value": "20 mm",
+        "created_at": "2026-08-30T08:32:04.65396+00:00",
+        "updated_at": "2026-08-30T08:32:04.65396+00:00",
+        "category_id": 22
+      },
+      {
+        "id": 161,
+        "value": "2.36 mm",
+        "created_at": "2026-08-30T08:49:09.945837+00:00",
+        "updated_at": "2026-08-30T08:49:19.929+00:00",
+        "category_id": 22
+      },
+      {
+        "id": 162,
+        "value": "1.18 mm",
+        "created_at": "2026-08-30T08:49:34.60611+00:00",
+        "updated_at": "2026-08-30T08:49:34.60611+00:00",
+        "category_id": 22
+      },
+      {
+        "id": 163,
+        "value": "0.6 mm",
+        "created_at": "2026-08-30T08:49:45.266784+00:00",
+        "updated_at": "2026-08-30T08:49:45.266784+00:00",
+        "category_id": 22
+      },
+      {
+        "id": 164,
+        "value": "0.3 mm",
+        "created_at": "2026-08-30T08:49:56.507877+00:00",
+        "updated_at": "2026-08-30T08:49:56.507877+00:00",
+        "category_id": 22
+      },
+      {
+        "id": 166,
+        "value": "0.15 mm",
+        "created_at": "2026-08-30T08:50:49.091657+00:00",
+        "updated_at": "2026-08-30T08:50:49.091657+00:00",
+        "category_id": 22
+      },
+      {
+        "id": 167,
+        "value": "0.075 mm",
+        "created_at": "2026-08-30T08:51:03.22708+00:00",
+        "updated_at": "2026-08-30T08:51:03.22708+00:00",
+        "category_id": 22
+      },
+      {
+        "id": 168,
+        "value": "0",
+        "created_at": "2026-08-30T08:51:10.231317+00:00",
+        "updated_at": "2026-08-30T08:51:10.231317+00:00",
+        "category_id": 22
+      },
+      {
+        "id": 726,
+        "value": "20 N OPC Ice",
+        "created_at": "2026-08-30T20:13:37.235167+00:00",
+        "updated_at": "2026-08-30T20:13:37.235167+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 728,
+        "value": "20 N SRC Ice",
+        "created_at": "2026-08-30T20:13:37.235167+00:00",
+        "updated_at": "2026-08-30T20:13:37.235167+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 730,
+        "value": "25 N OPC Ice",
+        "created_at": "2026-08-30T20:13:37.235167+00:00",
+        "updated_at": "2026-08-30T20:13:37.235167+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 731,
+        "value": "25 N SRC",
+        "created_at": "2026-08-30T20:13:37.235167+00:00",
+        "updated_at": "2026-08-30T20:13:37.235167+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 732,
+        "value": "25 N SRC Ice",
+        "created_at": "2026-08-30T20:13:37.235167+00:00",
+        "updated_at": "2026-08-30T20:13:37.235167+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 733,
+        "value": "30 N OPC",
+        "created_at": "2026-08-30T20:13:37.235167+00:00",
+        "updated_at": "2026-08-30T20:13:37.235167+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 734,
+        "value": "30 N OPC Ice",
+        "created_at": "2026-08-30T20:13:37.235167+00:00",
+        "updated_at": "2026-08-30T20:13:37.235167+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 736,
+        "value": "30 N SRC Ice",
+        "created_at": "2026-08-30T20:13:37.235167+00:00",
+        "updated_at": "2026-08-30T20:13:37.235167+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 737,
+        "value": "35 N OPC",
+        "created_at": "2026-08-30T20:13:37.235167+00:00",
+        "updated_at": "2026-08-30T20:13:37.235167+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 738,
+        "value": "35 N OPC Ice",
+        "created_at": "2026-08-30T20:13:37.235167+00:00",
+        "updated_at": "2026-08-30T20:13:37.235167+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 739,
+        "value": "35 N SRC",
+        "created_at": "2026-08-30T20:13:37.235167+00:00",
+        "updated_at": "2026-08-30T20:13:37.235167+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 740,
+        "value": "35 N SRC Ice",
+        "created_at": "2026-08-30T20:13:37.235167+00:00",
+        "updated_at": "2026-08-30T20:13:37.235167+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 741,
+        "value": "45 N OPC",
+        "created_at": "2026-08-30T20:13:37.235167+00:00",
+        "updated_at": "2026-08-30T20:13:37.235167+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 742,
+        "value": "45 N OPC Ice",
+        "created_at": "2026-08-30T20:13:37.235167+00:00",
+        "updated_at": "2026-08-30T20:13:37.235167+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 743,
+        "value": "45 N OPC Fiber",
+        "created_at": "2026-08-30T20:13:37.235167+00:00",
+        "updated_at": "2026-08-30T20:13:37.235167+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 744,
+        "value": "45 N OPC Fiber Ice",
+        "created_at": "2026-08-30T20:13:37.235167+00:00",
+        "updated_at": "2026-08-30T20:13:37.235167+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 745,
+        "value": "45 N SRC",
+        "created_at": "2026-08-30T20:13:37.235167+00:00",
+        "updated_at": "2026-08-30T20:13:37.235167+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 746,
+        "value": "45 N SRC Ice",
+        "created_at": "2026-08-30T20:13:37.235167+00:00",
+        "updated_at": "2026-08-30T20:13:37.235167+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 747,
+        "value": "45 N SRC Fiber",
+        "created_at": "2026-08-30T20:13:37.235167+00:00",
+        "updated_at": "2026-08-30T20:13:37.235167+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 748,
+        "value": "45 N SRC Fiber Ice",
+        "created_at": "2026-08-30T20:13:37.235167+00:00",
+        "updated_at": "2026-08-30T20:13:37.235167+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 749,
+        "value": "50 N OPC",
+        "created_at": "2026-08-30T20:13:37.235167+00:00",
+        "updated_at": "2026-08-30T20:13:37.235167+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 750,
+        "value": "50 N OPC Ice",
+        "created_at": "2026-08-30T20:13:37.235167+00:00",
+        "updated_at": "2026-08-30T20:13:37.235167+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 751,
+        "value": "50 N SRC",
+        "created_at": "2026-08-30T20:13:37.235167+00:00",
+        "updated_at": "2026-08-30T20:13:37.235167+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 752,
+        "value": "50 N SRC Ice",
+        "created_at": "2026-08-30T20:13:37.235167+00:00",
+        "updated_at": "2026-08-30T20:13:37.235167+00:00",
+        "category_id": 9
+      },
+      {
+        "id": 1315,
+        "value": "IMAN KAFIL",
+        "created_at": "2026-08-31T05:04:36.653721+00:00",
+        "updated_at": "2026-08-31T05:04:36.653721+00:00",
+        "category_id": 10
+      },
+      {
+        "id": 1316,
+        "value": "ELBA",
+        "created_at": "2026-08-31T05:13:52.090464+00:00",
+        "updated_at": "2026-08-31T05:13:52.090464+00:00",
+        "category_id": 6
+      },
+      {
+        "id": 1317,
+        "value": "RAJA GOUD BANDI",
+        "created_at": "2026-08-31T05:14:13.649353+00:00",
+        "updated_at": "2026-08-31T05:14:13.649353+00:00",
+        "category_id": 3
+      },
+      {
+        "id": 1318,
+        "value": "GALALI",
+        "created_at": "2026-08-31T05:14:39.2597+00:00",
+        "updated_at": "2026-08-31T05:14:39.2597+00:00",
+        "category_id": 11
+      },
+      {
+        "id": 1319,
+        "value": "AL ASRIA",
+        "created_at": "2026-08-31T05:15:27.874844+00:00",
+        "updated_at": "2026-08-31T05:15:27.874844+00:00",
+        "category_id": 10
+      },
+      {
+        "id": 1320,
+        "value": "DUMISTAN",
+        "created_at": "2026-08-31T05:15:37.49031+00:00",
+        "updated_at": "2026-08-31T05:15:37.49031+00:00",
+        "category_id": 11
+      },
+      {
+        "id": 1321,
+        "value": "ZIA ULLAH BACHA",
+        "created_at": "2026-08-31T05:16:52.386729+00:00",
+        "updated_at": "2026-08-31T05:16:52.386729+00:00",
+        "category_id": 3
+      },
+      {
+        "id": 1322,
+        "value": "EASTERN",
+        "created_at": "2026-08-31T05:17:50.228436+00:00",
+        "updated_at": "2026-08-31T05:17:50.228436+00:00",
+        "category_id": 6
+      },
+      {
+        "id": 1481,
+        "value": "8\" Plain Block",
+        "created_at": "2026-08-31T06:11:37.845733+00:00",
+        "updated_at": "2026-08-31T06:11:37.845733+00:00",
+        "category_id": 7
+      },
+      {
+        "id": 1515,
+        "value": "Plain Block",
+        "created_at": "2026-08-31T06:30:05.53297+00:00",
+        "updated_at": "2026-08-31T06:30:05.53297+00:00",
+        "category_id": 7
+      },
+      {
+        "id": 1516,
+        "value": "Lined Block",
+        "created_at": "2026-08-31T06:30:05.53297+00:00",
+        "updated_at": "2026-08-31T06:30:05.53297+00:00",
+        "category_id": 7
+      },
+      {
+        "id": 1522,
+        "value": "4\"",
+        "created_at": "2026-08-31T06:30:05.537822+00:00",
+        "updated_at": "2026-08-31T06:30:05.537822+00:00",
+        "category_id": 8
+      },
+      {
+        "id": 1523,
+        "value": "6\"",
+        "created_at": "2026-08-31T06:30:05.537822+00:00",
+        "updated_at": "2026-08-31T06:30:05.537822+00:00",
+        "category_id": 8
+      },
+      {
+        "id": 1524,
+        "value": "8\"",
+        "created_at": "2026-08-31T06:30:05.537822+00:00",
+        "updated_at": "2026-08-31T06:30:05.537822+00:00",
+        "category_id": 8
+      },
+      {
+        "id": 1525,
+        "value": "12\"",
+        "created_at": "2026-08-31T06:30:05.537822+00:00",
+        "updated_at": "2026-08-31T06:30:05.537822+00:00",
+        "category_id": 8
+      },
+      {
+        "id": 1925,
+        "value": "SAYED AHMED ALALAWI",
+        "created_at": "2026-09-01T05:17:51.705101+00:00",
+        "updated_at": "2026-09-01T05:17:51.705101+00:00",
+        "category_id": 3
+      },
+      {
+        "id": 2003,
+        "value": "0.063 mm",
+        "created_at": "2026-09-01T05:35:51.775022+00:00",
+        "updated_at": "2026-09-01T05:35:51.775022+00:00",
+        "category_id": 22
+      },
+      {
+        "id": 2004,
+        "value": "0.125 mm",
+        "created_at": "2026-09-01T05:35:51.775022+00:00",
+        "updated_at": "2026-09-01T05:35:51.775022+00:00",
+        "category_id": 22
+      },
+      {
+        "id": 2005,
+        "value": "0.25 mm",
+        "created_at": "2026-09-01T05:35:51.775022+00:00",
+        "updated_at": "2026-09-01T05:35:51.775022+00:00",
+        "category_id": 22
+      },
+      {
+        "id": 2006,
+        "value": "0.5 mm",
+        "created_at": "2026-09-01T05:35:51.775022+00:00",
+        "updated_at": "2026-09-01T05:35:51.775022+00:00",
+        "category_id": 22
+      },
+      {
+        "id": 2007,
+        "value": "1 mm",
+        "created_at": "2026-09-01T05:35:51.775022+00:00",
+        "updated_at": "2026-09-01T05:35:51.775022+00:00",
+        "category_id": 22
+      },
+      {
+        "id": 2008,
+        "value": "2 mm",
+        "created_at": "2026-09-01T05:35:51.775022+00:00",
+        "updated_at": "2026-09-01T05:35:51.775022+00:00",
+        "category_id": 22
+      },
+      {
+        "id": 3560,
+        "value": "Damage",
+        "created_at": "2026-09-20T05:46:19.573066+00:00",
+        "updated_at": "2026-09-20T05:46:19.573066+00:00",
+        "category_id": 595
+      },
+      {
+        "id": 3561,
+        "value": "Crack",
+        "created_at": "2026-09-20T05:46:19.573066+00:00",
+        "updated_at": "2026-09-20T05:46:19.573066+00:00",
+        "category_id": 595
+      },
+      {
+        "id": 3562,
+        "value": "Missing item",
+        "created_at": "2026-09-20T05:46:19.573066+00:00",
+        "updated_at": "2026-09-20T05:46:19.573066+00:00",
+        "category_id": 595
+      },
+      {
+        "id": 3563,
+        "value": "Block",
+        "created_at": "2026-09-20T05:46:19.58255+00:00",
+        "updated_at": "2026-09-20T05:46:19.58255+00:00",
+        "category_id": 596
+      },
+      {
+        "id": 3564,
+        "value": "Paving",
+        "created_at": "2026-09-20T05:46:19.58255+00:00",
+        "updated_at": "2026-09-20T05:46:19.58255+00:00",
+        "category_id": 596
+      },
+      {
+        "id": 3565,
+        "value": "Ready Mix",
+        "created_at": "2026-09-20T05:46:19.58255+00:00",
+        "updated_at": "2026-09-20T05:46:19.58255+00:00",
+        "category_id": 596
+      },
+      {
+        "id": 4149,
+        "value": "B.D.F",
+        "created_at": "2026-09-21T08:41:11.124744+00:00",
+        "updated_at": "2026-09-21T08:41:11.124744+00:00",
+        "category_id": 6
+      },
+      {
+        "id": 4150,
+        "value": "Diplomatic Area",
+        "created_at": "2026-09-21T08:41:11.124744+00:00",
+        "updated_at": "2026-09-21T08:41:11.124744+00:00",
+        "category_id": 6
+      },
+      {
+        "id": 5165,
+        "value": "Sandwich Insulation Block",
+        "created_at": "2026-09-22T10:17:32.817244+00:00",
+        "updated_at": "2026-09-22T10:17:32.817244+00:00",
+        "category_id": 7
+      },
+      {
+        "id": 5166,
+        "value": "8'' Two Piston Block",
+        "created_at": "2026-09-22T10:17:32.817244+00:00",
+        "updated_at": "2026-09-22T10:17:32.817244+00:00",
+        "category_id": 7
+      },
+      {
+        "id": 5167,
+        "value": "8'' Three Piston Block",
+        "created_at": "2026-09-22T10:17:32.817244+00:00",
+        "updated_at": "2026-09-22T10:17:32.817244+00:00",
+        "category_id": 7
+      },
+      {
+        "id": 5168,
+        "value": "8'' Solid Block",
+        "created_at": "2026-09-22T10:17:32.817244+00:00",
+        "updated_at": "2026-09-22T10:17:32.817244+00:00",
+        "category_id": 7
+      },
+      {
+        "id": 5169,
+        "value": "8'' Slotted Insulation Block",
+        "created_at": "2026-09-22T10:17:32.817244+00:00",
+        "updated_at": "2026-09-22T10:17:32.817244+00:00",
+        "category_id": 7
+      },
+      {
+        "id": 5179,
+        "value": "CUBER",
+        "created_at": "2026-09-22T10:17:32.830064+00:00",
+        "updated_at": "2026-09-22T10:17:32.830064+00:00",
+        "category_id": 843
+      },
+      {
+        "id": 5180,
+        "value": "MANUAL",
+        "created_at": "2026-09-22T10:17:32.830064+00:00",
+        "updated_at": "2026-09-22T10:17:32.830064+00:00",
+        "category_id": 843
+      },
+      {
+        "id": 5181,
+        "value": "WATER at 20±5 C",
+        "created_at": "2026-09-22T10:17:32.841854+00:00",
+        "updated_at": "2026-09-22T10:17:32.841854+00:00",
+        "category_id": 844
+      },
+      {
+        "id": 5182,
+        "value": "GRINDING",
+        "created_at": "2026-09-22T10:17:32.849829+00:00",
+        "updated_at": "2026-09-22T10:17:32.849829+00:00",
+        "category_id": 845
+      },
+      {
+        "id": 5802,
+        "value": "DAMMAM",
+        "created_at": "2026-09-22T11:04:56.72858+00:00",
+        "updated_at": "2026-09-22T11:04:56.72858+00:00",
+        "category_id": 6
+      }
+    ],
+    "qc_sieve_standards": [
+      {
+        "id": 7,
+        "unit": "%",
+        "maximum": 100,
+        "minimum": 100,
+        "test_type": "Sand Sieve",
+        "created_at": "2026-08-30T08:52:34.774554+00:00",
+        "updated_at": "2026-08-30T08:52:34.774554+00:00",
+        "measurement_type": "percentage",
+        "standard_reference": "BS 812",
+        "material_reference_item_id": 23,
+        "sieve_size_reference_item_id": 102
+      },
+      {
+        "id": 8,
+        "unit": "%",
+        "maximum": 100,
+        "minimum": 80,
+        "test_type": "Sand Sieve",
+        "created_at": "2026-08-30T08:52:34.869394+00:00",
+        "updated_at": "2026-08-30T08:52:34.869394+00:00",
+        "measurement_type": "percentage",
+        "standard_reference": "BS 812",
+        "material_reference_item_id": 23,
+        "sieve_size_reference_item_id": 161
+      },
+      {
+        "id": 9,
+        "unit": "%",
+        "maximum": 100,
+        "minimum": 70,
+        "test_type": "Sand Sieve",
+        "created_at": "2026-08-30T08:52:34.942578+00:00",
+        "updated_at": "2026-08-30T08:52:34.942578+00:00",
+        "measurement_type": "percentage",
+        "standard_reference": "BS 812",
+        "material_reference_item_id": 23,
+        "sieve_size_reference_item_id": 162
+      },
+      {
+        "id": 10,
+        "unit": "%",
+        "maximum": 100,
+        "minimum": 55,
+        "test_type": "Sand Sieve",
+        "created_at": "2026-08-30T08:52:35.025018+00:00",
+        "updated_at": "2026-08-30T08:52:35.025018+00:00",
+        "measurement_type": "percentage",
+        "standard_reference": "BS 812",
+        "material_reference_item_id": 23,
+        "sieve_size_reference_item_id": 163
+      }
+    ],
+    "qc_strength_standards": [
+      {
+        "id": 4,
+        "material": "35 N OPC",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-30T08:19:13.592111+00:00",
+        "updated_at": "2026-08-31T06:00:45.284+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 35
+      },
+      {
+        "id": 6,
+        "material": "20 N OPC",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-30T20:13:37.40562+00:00",
+        "updated_at": "2026-08-30T20:13:37.40562+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 20
+      },
+      {
+        "id": 7,
+        "material": "20 N OPC Ice",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-30T20:13:37.409294+00:00",
+        "updated_at": "2026-08-30T20:13:37.409294+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 20
+      },
+      {
+        "id": 8,
+        "material": "20 N SRC",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-30T20:13:37.412608+00:00",
+        "updated_at": "2026-08-30T20:13:37.412608+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 20
+      },
+      {
+        "id": 9,
+        "material": "20 N SRC Ice",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-30T20:13:37.41554+00:00",
+        "updated_at": "2026-08-30T20:13:37.41554+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 20
+      },
+      {
+        "id": 10,
+        "material": "25 N OPC",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-30T20:13:37.418771+00:00",
+        "updated_at": "2026-08-30T20:13:37.418771+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 25
+      },
+      {
+        "id": 11,
+        "material": "25 N OPC Ice",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-30T20:13:37.420886+00:00",
+        "updated_at": "2026-08-30T20:13:37.420886+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 25
+      },
+      {
+        "id": 12,
+        "material": "25 N SRC",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-30T20:13:37.422986+00:00",
+        "updated_at": "2026-08-30T20:13:37.422986+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 25
+      },
+      {
+        "id": 13,
+        "material": "25 N SRC Ice",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-30T20:13:37.425058+00:00",
+        "updated_at": "2026-08-30T20:13:37.425058+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 25
+      },
+      {
+        "id": 14,
+        "material": "30 N OPC",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-30T20:13:37.428346+00:00",
+        "updated_at": "2026-08-30T20:13:37.428346+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 30
+      },
+      {
+        "id": 15,
+        "material": "30 N OPC Ice",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-30T20:13:37.432348+00:00",
+        "updated_at": "2026-08-30T20:13:37.432348+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 30
+      },
+      {
+        "id": 16,
+        "material": "30 N SRC Ice",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-30T20:13:37.434568+00:00",
+        "updated_at": "2026-08-30T20:13:37.434568+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 30
+      },
+      {
+        "id": 17,
+        "material": "35 N OPC Ice",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-30T20:13:37.437073+00:00",
+        "updated_at": "2026-08-30T20:13:37.437073+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 35
+      },
+      {
+        "id": 18,
+        "material": "35 N SRC",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-30T20:13:37.439838+00:00",
+        "updated_at": "2026-08-31T05:59:54.546+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 35
+      },
+      {
+        "id": 19,
+        "material": "35 N SRC Ice",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-30T20:13:37.442188+00:00",
+        "updated_at": "2026-08-30T20:13:37.442188+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 35
+      },
+      {
+        "id": 20,
+        "material": "45 N OPC",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-30T20:13:37.444412+00:00",
+        "updated_at": "2026-08-30T20:13:37.444412+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 45
+      },
+      {
+        "id": 21,
+        "material": "45 N OPC Ice",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-30T20:13:37.447368+00:00",
+        "updated_at": "2026-08-30T20:13:37.447368+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 45
+      },
+      {
+        "id": 22,
+        "material": "45 N OPC Fiber",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-30T20:13:37.450303+00:00",
+        "updated_at": "2026-08-30T20:13:37.450303+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 45
+      },
+      {
+        "id": 23,
+        "material": "45 N OPC Fiber Ice",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-30T20:13:37.452784+00:00",
+        "updated_at": "2026-08-30T20:13:37.452784+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 45
+      },
+      {
+        "id": 24,
+        "material": "45 N SRC",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-30T20:13:37.45502+00:00",
+        "updated_at": "2026-08-30T20:13:37.45502+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 45
+      },
+      {
+        "id": 25,
+        "material": "45 N SRC Ice",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-30T20:13:37.458268+00:00",
+        "updated_at": "2026-08-30T20:13:37.458268+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 45
+      },
+      {
+        "id": 26,
+        "material": "45 N SRC Fiber",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-30T20:13:37.46073+00:00",
+        "updated_at": "2026-08-30T20:13:37.46073+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 45
+      },
+      {
+        "id": 27,
+        "material": "45 N SRC Fiber Ice",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-30T20:13:37.462864+00:00",
+        "updated_at": "2026-08-30T20:13:37.462864+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 45
+      },
+      {
+        "id": 28,
+        "material": "50 N OPC",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-30T20:13:37.465007+00:00",
+        "updated_at": "2026-08-30T20:13:37.465007+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 50
+      },
+      {
+        "id": 29,
+        "material": "50 N OPC Ice",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-30T20:13:37.468848+00:00",
+        "updated_at": "2026-08-30T20:13:37.468848+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 50
+      },
+      {
+        "id": 30,
+        "material": "50 N SRC",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-30T20:13:37.471606+00:00",
+        "updated_at": "2026-08-30T20:13:37.471606+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 50
+      },
+      {
+        "id": 31,
+        "material": "50 N SRC Ice",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-30T20:13:37.474368+00:00",
+        "updated_at": "2026-08-30T20:13:37.474368+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 50
+      },
+      {
+        "id": 33,
+        "material": "30 N SRC",
+        "test_type": "Ready Mix",
+        "block_size": null,
+        "block_type": null,
+        "created_at": "2026-08-31T06:08:57.774963+00:00",
+        "updated_at": "2026-08-31T06:08:57.774963+00:00",
+        "bs_standard": "BS EN 12390-3:2009",
+        "strength_unit": "N/mm²",
+        "required_strength": 30
+      },
+      {
+        "id": 34,
+        "material": "Concrete Block",
+        "test_type": "Blocks",
+        "block_size": "4\"",
+        "block_type": "Plain Block",
+        "created_at": "2026-08-31T06:30:05.333466+00:00",
+        "updated_at": "2026-08-31T06:30:05.333466+00:00",
+        "bs_standard": "BS EN 771-3",
+        "strength_unit": "N/mm²",
+        "required_strength": 7.5
+      },
+      {
+        "id": 35,
+        "material": "Concrete Block",
+        "test_type": "Blocks",
+        "block_size": "6\"",
+        "block_type": "Plain Block",
+        "created_at": "2026-08-31T06:30:05.511282+00:00",
+        "updated_at": "2026-08-31T06:30:05.511282+00:00",
+        "bs_standard": "BS EN 771-3",
+        "strength_unit": "N/mm²",
+        "required_strength": 7.5
+      },
+      {
+        "id": 36,
+        "material": "Concrete Block",
+        "test_type": "Blocks",
+        "block_size": "8\"",
+        "block_type": "Plain Block",
+        "created_at": "2026-08-31T06:30:05.518328+00:00",
+        "updated_at": "2026-08-31T06:30:05.518328+00:00",
+        "bs_standard": "BS EN 771-3",
+        "strength_unit": "N/mm²",
+        "required_strength": 7.5
+      },
+      {
+        "id": 37,
+        "material": "Concrete Block",
+        "test_type": "Blocks",
+        "block_size": "12\"",
+        "block_type": "Plain Block",
+        "created_at": "2026-08-31T06:30:05.521301+00:00",
+        "updated_at": "2026-08-31T06:30:05.521301+00:00",
+        "bs_standard": "BS EN 771-3",
+        "strength_unit": "N/mm²",
+        "required_strength": 7.5
+      },
+      {
+        "id": 38,
+        "material": "Concrete Block",
+        "test_type": "Blocks",
+        "block_size": "8\"",
+        "block_type": "Lined Block",
+        "created_at": "2026-08-31T06:30:05.525269+00:00",
+        "updated_at": "2026-08-31T06:30:05.525269+00:00",
+        "bs_standard": "BS EN 771-3",
+        "strength_unit": "N/mm²",
+        "required_strength": 7.5
+      },
+      {
+        "id": 39,
+        "material": "Concrete Block",
+        "test_type": "Blocks",
+        "block_size": "8\"",
+        "block_type": "Sandwich Insulation Block",
+        "created_at": "2026-08-31T06:30:05.527858+00:00",
+        "updated_at": "2026-08-31T06:30:05.527858+00:00",
+        "bs_standard": "BS EN 771-3",
+        "strength_unit": "N/mm²",
+        "required_strength": 5
+      },
+      {
+        "id": 40,
+        "material": "Concrete Block",
+        "test_type": "Blocks",
+        "block_size": "12\"",
+        "block_type": "Sandwich Insulation Block",
+        "created_at": "2026-08-31T06:30:05.531154+00:00",
+        "updated_at": "2026-08-31T06:30:05.531154+00:00",
+        "bs_standard": "BS EN 771-3",
+        "strength_unit": "N/mm²",
+        "required_strength": 5
+      }
+    ],
+    "qc_shape_factors": [
+      {
+        "id": 1,
+        "block_size": null,
+        "block_type": "Plain Block",
+        "created_at": "2026-09-22T10:08:57.239801+00:00",
+        "updated_at": "2026-09-22T10:08:57.239801+00:00",
+        "shape_factor": null,
+        "correction_factor": null
+      },
+      {
+        "id": 2,
+        "block_size": null,
+        "block_type": "Lined Block",
+        "created_at": "2026-09-22T10:08:57.293556+00:00",
+        "updated_at": "2026-09-22T10:08:57.293556+00:00",
+        "shape_factor": null,
+        "correction_factor": null
+      },
+      {
+        "id": 3,
+        "block_size": null,
+        "block_type": "Sandwich Insulation Block",
+        "created_at": "2026-09-22T10:08:57.304673+00:00",
+        "updated_at": "2026-09-22T10:08:57.304673+00:00",
+        "shape_factor": null,
+        "correction_factor": null
+      },
+      {
+        "id": 4,
+        "block_size": null,
+        "block_type": "8'' Two Piston Block",
+        "created_at": "2026-09-22T10:08:57.307743+00:00",
+        "updated_at": "2026-09-22T10:08:57.307743+00:00",
+        "shape_factor": null,
+        "correction_factor": null
+      },
+      {
+        "id": 5,
+        "block_size": null,
+        "block_type": "8'' Three Piston Block",
+        "created_at": "2026-09-22T10:08:57.311255+00:00",
+        "updated_at": "2026-09-22T10:08:57.311255+00:00",
+        "shape_factor": null,
+        "correction_factor": null
+      },
+      {
+        "id": 6,
+        "block_size": null,
+        "block_type": "8'' Solid Block",
+        "created_at": "2026-09-22T10:08:57.315265+00:00",
+        "updated_at": "2026-09-22T10:08:57.315265+00:00",
+        "shape_factor": null,
+        "correction_factor": null
+      },
+      {
+        "id": 7,
+        "block_size": null,
+        "block_type": "8'' Slotted Insulation Block",
+        "created_at": "2026-09-22T10:08:57.320825+00:00",
+        "updated_at": "2026-09-22T10:08:57.320825+00:00",
+        "shape_factor": null,
+        "correction_factor": null
+      },
+      {
+        "id": 8,
+        "block_size": "200*200*80",
+        "block_type": null,
+        "created_at": "2026-09-22T10:17:32.875502+00:00",
+        "updated_at": "2026-09-22T11:06:38.723+00:00",
+        "shape_factor": null,
+        "correction_factor": 1
+      },
+      {
+        "id": 9,
+        "block_size": "400*100*200",
+        "block_type": null,
+        "created_at": "2026-09-22T10:17:32.879634+00:00",
+        "updated_at": "2026-09-22T10:55:38.852+00:00",
+        "shape_factor": 1.35,
+        "correction_factor": null
+      },
+      {
+        "id": 10,
+        "block_size": "400*150*200",
+        "block_type": null,
+        "created_at": "2026-09-22T10:17:32.88317+00:00",
+        "updated_at": "2026-09-22T10:55:38.86+00:00",
+        "shape_factor": 1.25,
+        "correction_factor": null
+      },
+      {
+        "id": 11,
+        "block_size": "400*200*200",
+        "block_type": null,
+        "created_at": "2026-09-22T10:17:32.886013+00:00",
+        "updated_at": "2026-09-22T10:55:38.865+00:00",
+        "shape_factor": 1.15,
+        "correction_factor": null
+      },
+      {
+        "id": 12,
+        "block_size": "400*250*200",
+        "block_type": null,
+        "created_at": "2026-09-22T10:17:32.891726+00:00",
+        "updated_at": "2026-09-22T10:55:38.877+00:00",
+        "shape_factor": 1.1,
+        "correction_factor": null
+      },
+      {
+        "id": 13,
+        "block_size": "4\"",
+        "block_type": null,
+        "created_at": "2026-09-22T10:17:32.895421+00:00",
+        "updated_at": "2026-09-22T10:55:38.882+00:00",
+        "shape_factor": 1.35,
+        "correction_factor": null
+      },
+      {
+        "id": 14,
+        "block_size": "6\"",
+        "block_type": null,
+        "created_at": "2026-09-22T10:17:32.899013+00:00",
+        "updated_at": "2026-09-22T10:55:38.886+00:00",
+        "shape_factor": 1.25,
+        "correction_factor": null
+      },
+      {
+        "id": 15,
+        "block_size": "8\"",
+        "block_type": null,
+        "created_at": "2026-09-22T10:17:32.903726+00:00",
+        "updated_at": "2026-09-22T10:55:38.891+00:00",
+        "shape_factor": 1.15,
+        "correction_factor": null
+      },
+      {
+        "id": 16,
+        "block_size": "12\"",
+        "block_type": null,
+        "created_at": "2026-09-22T10:17:32.906067+00:00",
+        "updated_at": "2026-09-22T10:55:38.897+00:00",
+        "shape_factor": 1.1,
+        "correction_factor": null
+      }
+    ],
+    "qc_report_layouts": [
+      {
+        "id": 1,
+        "name": "Ready Mix report",
+        "config": {
+          "title": "Readymix Cube Test Report",
+          "columns": {
+            "readyMixResults": [
+              {
+                "key": "age",
+                "label": "Age",
+                "order": 0,
+                "width": 12,
+                "visible": true
+              },
+              {
+                "key": "size",
+                "label": "Size",
+                "order": 1,
+                "width": 16,
+                "visible": true
+              },
+              {
+                "key": "load",
+                "label": "Load",
+                "order": 2,
+                "width": 18,
+                "visible": true
+              },
+              {
+                "key": "strength",
+                "label": "Strength",
+                "order": 3,
+                "width": 20,
+                "visible": true
+              }
+            ]
+          },
+          "fontSize": 11,
+          "sections": [
+            {
+              "key": "header",
+              "label": "Header",
+              "order": 0,
+              "visible": true
+            },
+            {
+              "key": "standard",
+              "label": "Standard",
+              "order": 1,
+              "visible": true
+            },
+            {
+              "key": "results",
+              "label": "Results",
+              "order": 2,
+              "visible": true
+            },
+            {
+              "key": "remarks",
+              "label": "Remarks",
+              "order": 3,
+              "visible": true
+            },
+            {
+              "key": "signatures",
+              "label": "Signatures",
+              "order": 4,
+              "visible": true
+            }
+          ],
+          "textColor": "#1f2937",
+          "fontFamily": "Arial",
+          "accentColor": "#be0055",
+          "paperPadding": 14
+        },
+        "test_type": "Ready Mix",
+        "created_at": "2026-09-22T10:29:16.324546+00:00",
+        "updated_at": "2026-09-22T10:29:16.324546+00:00"
+      },
+      {
+        "id": 2,
+        "name": "Blocks report",
+        "config": {
+          "title": "Block Compression Test",
+          "columns": {
+            "blockCompression": [
+              {
+                "key": "no",
+                "label": "No.",
+                "order": 0,
+                "width": 7,
+                "visible": true
+              },
+              {
+                "key": "length",
+                "label": "Length (mm)",
+                "order": 1,
+                "width": 10,
+                "visible": true
+              },
+              {
+                "key": "width",
+                "label": "Width (mm)",
+                "order": 2,
+                "width": 10,
+                "visible": true
+              },
+              {
+                "key": "height",
+                "label": "Height (mm)",
+                "order": 3,
+                "width": 10,
+                "visible": true
+              },
+              {
+                "key": "load",
+                "label": "Load (kN)",
+                "order": 4,
+                "width": 10,
+                "visible": true
+              },
+              {
+                "key": "water",
+                "label": "Water (N/mm2)",
+                "order": 5,
+                "width": 12,
+                "visible": true
+              },
+              {
+                "key": "airDry",
+                "label": "Air Dry (N/mm2)",
+                "order": 6,
+                "width": 12,
+                "visible": true
+              },
+              {
+                "key": "normalized",
+                "label": "Normalized (N/mm2)",
+                "order": 7,
+                "width": 13,
+                "visible": true
+              },
+              {
+                "key": "density",
+                "label": "Density (kg/m3)",
+                "order": 8,
+                "width": 13,
+                "visible": true
+              },
+              {
+                "key": "wetWeight",
+                "label": "Wet Weight (kg)",
+                "order": 9,
+                "width": 13,
+                "visible": true
+              }
+            ]
+          },
+          "fontSize": 12,
+          "sections": [
+            {
+              "key": "header",
+              "label": "Header",
+              "order": 0,
+              "visible": true
+            },
+            {
+              "key": "standard",
+              "label": "Standard",
+              "order": 1,
+              "visible": true
+            },
+            {
+              "key": "context",
+              "label": "Block details",
+              "order": 2,
+              "visible": true
+            },
+            {
+              "key": "results",
+              "label": "Results",
+              "order": 3,
+              "visible": true
+            },
+            {
+              "key": "remarks",
+              "label": "Remarks",
+              "order": 4,
+              "visible": true
+            },
+            {
+              "key": "signatures",
+              "label": "Signatures",
+              "order": 5,
+              "visible": true
+            }
+          ],
+          "textColor": "#1f2937",
+          "fontFamily": "Arial",
+          "accentColor": "#be0055",
+          "paperPadding": 14
+        },
+        "test_type": "Blocks",
+        "created_at": "2026-09-22T10:29:16.330453+00:00",
+        "updated_at": "2026-09-22T11:36:32.177+00:00"
+      },
+      {
+        "id": 3,
+        "name": "Paving Blocks report",
+        "config": {
+          "title": "Paving Block Test Report",
+          "columns": {
+            "pavingResults": [
+              {
+                "key": "no",
+                "label": "No.",
+                "order": 0,
+                "width": 7,
+                "visible": true
+              },
+              {
+                "key": "age",
+                "label": "Test Age",
+                "order": 1,
+                "width": 9,
+                "visible": true
+              },
+              {
+                "key": "length",
+                "label": "Length (mm)",
+                "order": 2,
+                "width": 10,
+                "visible": true
+              },
+              {
+                "key": "width",
+                "label": "Width (mm)",
+                "order": 3,
+                "width": 10,
+                "visible": true
+              },
+              {
+                "key": "height",
+                "label": "Height (mm)",
+                "order": 4,
+                "width": 10,
+                "visible": true
+              },
+              {
+                "key": "dryWeight",
+                "label": "Dry Weight",
+                "order": 5,
+                "width": 10,
+                "visible": true
+              },
+              {
+                "key": "wetWeight",
+                "label": "Wet Weight",
+                "order": 6,
+                "width": 10,
+                "visible": true
+              },
+              {
+                "key": "load",
+                "label": "Load (kN)",
+                "order": 7,
+                "width": 10,
+                "visible": true
+              },
+              {
+                "key": "strength",
+                "label": "Calculated Strength",
+                "order": 8,
+                "width": 14,
+                "visible": true
+              }
+            ]
+          },
+          "fontSize": 11,
+          "sections": [
+            {
+              "key": "header",
+              "label": "Header",
+              "order": 0,
+              "visible": true
+            },
+            {
+              "key": "standard",
+              "label": "Standard",
+              "order": 1,
+              "visible": true
+            },
+            {
+              "key": "results",
+              "label": "Results",
+              "order": 2,
+              "visible": true
+            },
+            {
+              "key": "remarks",
+              "label": "Remarks",
+              "order": 3,
+              "visible": true
+            },
+            {
+              "key": "signatures",
+              "label": "Signatures",
+              "order": 4,
+              "visible": true
+            }
+          ],
+          "textColor": "#1f2937",
+          "fontFamily": "Arial",
+          "accentColor": "#be0055",
+          "paperPadding": 14
+        },
+        "test_type": "Paving Blocks",
+        "created_at": "2026-09-22T10:29:16.333637+00:00",
+        "updated_at": "2026-09-22T10:31:42.231+00:00"
+      },
+      {
+        "id": 4,
+        "name": "Sand Sieve report",
+        "config": {
+          "title": "Sand Sieve Test Report",
+          "columns": {
+            "sieveResults": [
+              {
+                "key": "no",
+                "label": "No.",
+                "order": 0,
+                "width": 7,
+                "visible": true
+              },
+              {
+                "key": "size",
+                "label": "Sieve / Pore Size",
+                "order": 1,
+                "width": 26,
+                "visible": true
+              },
+              {
+                "key": "returned",
+                "label": "Amount Returned",
+                "order": 2,
+                "width": 22,
+                "visible": true
+              },
+              {
+                "key": "passing",
+                "label": "Amount Passing",
+                "order": 3,
+                "width": 22,
+                "visible": true
+              },
+              {
+                "key": "percentage",
+                "label": "% Passing",
+                "order": 4,
+                "width": 23,
+                "visible": true
+              },
+              {
+                "key": "retained",
+                "label": "Retained (%)",
+                "order": 5,
+                "width": 9,
+                "visible": true
+              },
+              {
+                "key": "lower",
+                "label": "Lower Limit",
+                "order": 6,
+                "width": 12,
+                "visible": true
+              },
+              {
+                "key": "upper",
+                "label": "Upper Limit",
+                "order": 7,
+                "width": 12,
+                "visible": true
+              },
+              {
+                "key": "remarks",
+                "label": "Remarks",
+                "order": 8,
+                "width": 18,
+                "visible": true
+              }
+            ]
+          },
+          "fontSize": 11,
+          "sections": [
+            {
+              "key": "header",
+              "label": "Header",
+              "order": 0,
+              "visible": true
+            },
+            {
+              "key": "standard",
+              "label": "Standard",
+              "order": 1,
+              "visible": true
+            },
+            {
+              "key": "results",
+              "label": "Results",
+              "order": 2,
+              "visible": true
+            },
+            {
+              "key": "remarks",
+              "label": "Remarks",
+              "order": 3,
+              "visible": true
+            },
+            {
+              "key": "signatures",
+              "label": "Signatures",
+              "order": 4,
+              "visible": true
+            }
+          ],
+          "textColor": "#1f2937",
+          "fontFamily": "Arial",
+          "accentColor": "#be0055",
+          "paperPadding": 14
+        },
+        "test_type": "Sand Sieve",
+        "created_at": "2026-09-22T10:29:16.337566+00:00",
+        "updated_at": "2026-09-28T07:43:45.075+00:00"
+      },
+      {
+        "id": 5,
+        "name": "Aggregate Sieve report",
+        "config": {
+          "title": "Aggregate Sieve Test Report",
+          "columns": {
+            "sieveResults": [
+              {
+                "key": "no",
+                "label": "No.",
+                "order": 0,
+                "width": 7,
+                "visible": true
+              },
+              {
+                "key": "size",
+                "label": "Sieve / Pore Size",
+                "order": 1,
+                "width": 26,
+                "visible": true
+              },
+              {
+                "key": "returned",
+                "label": "Amount Returned",
+                "order": 2,
+                "width": 22,
+                "visible": true
+              },
+              {
+                "key": "passing",
+                "label": "Amount Passing",
+                "order": 3,
+                "width": 22,
+                "visible": true
+              },
+              {
+                "key": "percentage",
+                "label": "% Passing",
+                "order": 4,
+                "width": 23,
+                "visible": true
+              },
+              {
+                "key": "retained",
+                "label": "Retained (%)",
+                "order": 5,
+                "width": 9,
+                "visible": true
+              },
+              {
+                "key": "lower",
+                "label": "Lower Limit",
+                "order": 6,
+                "width": 12,
+                "visible": true
+              },
+              {
+                "key": "upper",
+                "label": "Upper Limit",
+                "order": 7,
+                "width": 12,
+                "visible": true
+              },
+              {
+                "key": "remarks",
+                "label": "Remarks",
+                "order": 8,
+                "width": 18,
+                "visible": true
+              }
+            ]
+          },
+          "fontSize": 12,
+          "sections": [
+            {
+              "key": "header",
+              "label": "Header",
+              "order": 0,
+              "visible": true
+            },
+            {
+              "key": "standard",
+              "label": "Standard",
+              "order": 1,
+              "visible": true
+            },
+            {
+              "key": "results",
+              "label": "Results",
+              "order": 2,
+              "visible": true
+            },
+            {
+              "key": "remarks",
+              "label": "Remarks",
+              "order": 3,
+              "visible": true
+            },
+            {
+              "key": "signatures",
+              "label": "Signatures",
+              "order": 4,
+              "visible": true
+            }
+          ],
+          "textColor": "#1f2937",
+          "fontFamily": "Arial",
+          "accentColor": "#be0055",
+          "paperPadding": 14
+        },
+        "test_type": "Aggregate Sieve",
+        "created_at": "2026-09-22T10:29:16.34891+00:00",
+        "updated_at": "2026-09-28T07:43:45.133+00:00"
+      },
+      {
+        "id": 6,
+        "name": "Water report",
+        "config": {
+          "title": "Water Test Report",
+          "columns": {},
+          "fontSize": 11,
+          "sections": [
+            {
+              "key": "header",
+              "label": "Header",
+              "order": 0,
+              "visible": true
+            },
+            {
+              "key": "standard",
+              "label": "Standard",
+              "order": 1,
+              "visible": true
+            },
+            {
+              "key": "results",
+              "label": "Results",
+              "order": 2,
+              "visible": true
+            },
+            {
+              "key": "remarks",
+              "label": "Remarks",
+              "order": 3,
+              "visible": true
+            },
+            {
+              "key": "signatures",
+              "label": "Signatures",
+              "order": 4,
+              "visible": true
+            }
+          ],
+          "textColor": "#1f2937",
+          "fontFamily": "Arial",
+          "accentColor": "#be0055",
+          "paperPadding": 14
+        },
+        "test_type": "Water",
+        "created_at": "2026-09-22T10:29:16.352833+00:00",
+        "updated_at": "2026-09-22T10:29:16.352833+00:00"
+      },
+      {
+        "id": 103,
+        "name": "Flakiness & Elongation report",
+        "config": {
+          "title": "Flakiness & Elongation Test Report",
+          "columns": {},
+          "fontSize": 11,
+          "sections": [
+            {
+              "key": "header",
+              "label": "Header",
+              "order": 0,
+              "visible": true
+            },
+            {
+              "key": "standard",
+              "label": "Standard",
+              "order": 1,
+              "visible": true
+            },
+            {
+              "key": "results",
+              "label": "Results",
+              "order": 2,
+              "visible": true
+            },
+            {
+              "key": "remarks",
+              "label": "Remarks",
+              "order": 3,
+              "visible": true
+            },
+            {
+              "key": "signatures",
+              "label": "Signatures",
+              "order": 4,
+              "visible": true
+            }
+          ],
+          "textColor": "#1f2937",
+          "fontFamily": "Arial",
+          "accentColor": "#be0055",
+          "paperPadding": 14
+        },
+        "test_type": "Flakiness & Elongation",
+        "created_at": "2026-09-22T10:32:34.546125+00:00",
+        "updated_at": "2026-09-22T10:32:34.546125+00:00"
+      },
+      {
+        "id": 104,
+        "name": "RMX Trial report",
+        "config": {
+          "title": "RMX Trial Report",
+          "columns": {},
+          "fontSize": 11,
+          "sections": [
+            {
+              "key": "header",
+              "label": "Header",
+              "order": 0,
+              "visible": true
+            },
+            {
+              "key": "standard",
+              "label": "Standard",
+              "order": 1,
+              "visible": true
+            },
+            {
+              "key": "results",
+              "label": "Results",
+              "order": 2,
+              "visible": true
+            },
+            {
+              "key": "remarks",
+              "label": "Remarks",
+              "order": 3,
+              "visible": true
+            },
+            {
+              "key": "signatures",
+              "label": "Signatures",
+              "order": 4,
+              "visible": true
+            }
+          ],
+          "textColor": "#1f2937",
+          "fontFamily": "Arial",
+          "accentColor": "#be0055",
+          "paperPadding": 14
+        },
+        "test_type": "RMX Trial",
+        "created_at": "2026-09-22T10:32:34.551584+00:00",
+        "updated_at": "2026-09-22T10:32:34.551584+00:00"
+      }
+    ]
+  }
+}

@@ -35,10 +35,14 @@ import type {
   EmployeeAccessInput,
   EmployeeAccessList,
   EmployeeAccessUpdate,
+  EmployeeActivityResponse,
   GetDailyReadyMixResultsParams,
+  GetDashboardParams,
+  GetEmployeeActivityParams,
   HealthStatus,
   ListComplaintsParams,
   ListRecordsParams,
+  ListReportTemplatesParams,
   LogoutBrowserSessionParams,
   LogoutSuccess,
   Lookups,
@@ -47,6 +51,10 @@ import type {
   QcRecord,
   QcRecordInput,
   QcRecordUpdate,
+  RecordAgeBackfillApplyInput,
+  RecordAgeBackfillApplyResult,
+  RecordAgeBackfillPreview,
+  RecordAgeBackfillPreviewInput,
   ReferenceCategory,
   ReferenceCategoryInput,
   ReferenceCategoryUpdate,
@@ -56,6 +64,11 @@ import type {
   Report,
   ReportLayout,
   ReportLayoutUpdate,
+  ReportTemplate,
+  ReportTemplateDuplicate,
+  ReportTemplateInput,
+  ReportTemplateUpdate,
+  ReportTemplateVersion,
   ShapeFactor,
   ShapeFactorInput,
   ShapeFactorUpdate,
@@ -66,7 +79,10 @@ import type {
   StrengthStandardInput,
   StrengthStandardUpdate,
   UploadUrlRequest,
-  UploadUrlResponse
+  UploadUrlResponse,
+  WaterStandard,
+  WaterStandardInput,
+  WaterStandardUpdate
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -174,20 +190,27 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
 
 
-export const getGetDashboardUrl = () => {
+export const getGetDashboardUrl = (params?: GetDashboardParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/dashboard`
+  return stringifiedParams.length > 0 ? `/api/dashboard?${stringifiedParams}` : `/api/dashboard`
 }
 
 /**
  * @summary Get QC dashboard summary
  */
-export const getDashboard = async ( options?: Parameters<typeof customFetch>[1]): Promise<Dashboard> => {
+export const getDashboard = async (params?: GetDashboardParams, options?: Parameters<typeof customFetch>[1]): Promise<Dashboard> => {
 
-  return customFetch<Dashboard>(getGetDashboardUrl(),
+  return customFetch<Dashboard>(getGetDashboardUrl(params),
   {
     ...options,
     method: 'GET'
@@ -200,23 +223,23 @@ export const getDashboard = async ( options?: Parameters<typeof customFetch>[1])
 
 
 
-export const getGetDashboardQueryKey = () => {
+export const getGetDashboardQueryKey = (params?: GetDashboardParams,) => {
     return [
-    `/api/dashboard`
+    `/api/dashboard`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetDashboardQueryOptions = <TData = Awaited<ReturnType<typeof getDashboard>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetDashboardQueryOptions = <TData = Awaited<ReturnType<typeof getDashboard>>, TError = ErrorType<unknown>>(params?: GetDashboardParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetDashboardQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetDashboardQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDashboard>>> = ({ signal }) => getDashboard({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDashboard>>> = ({ signal }) => getDashboard(params, { signal, ...requestOptions });
 
 
 
@@ -234,11 +257,11 @@ export type GetDashboardQueryError = ErrorType<unknown>
  */
 
 export function useGetDashboard<TData = Awaited<ReturnType<typeof getDashboard>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: GetDashboardParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetDashboardQueryOptions(options)
+  const queryOptions = getGetDashboardQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -316,6 +339,90 @@ export function useGetLookups<TData = Awaited<ReturnType<typeof getLookups>>, TE
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetLookupsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetEmployeeActivityUrl = (params: GetEmployeeActivityParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/employee-activity?${stringifiedParams}` : `/api/employee-activity`
+}
+
+/**
+ * @summary Get employee activity for an inclusive date range
+ */
+export const getEmployeeActivity = async (params: GetEmployeeActivityParams, options?: Parameters<typeof customFetch>[1]): Promise<EmployeeActivityResponse> => {
+
+  return customFetch<EmployeeActivityResponse>(getGetEmployeeActivityUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEmployeeActivityQueryKey = (params?: GetEmployeeActivityParams,) => {
+    return [
+    `/api/employee-activity`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetEmployeeActivityQueryOptions = <TData = Awaited<ReturnType<typeof getEmployeeActivity>>, TError = ErrorType<void>>(params: GetEmployeeActivityParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEmployeeActivity>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEmployeeActivityQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEmployeeActivity>>> = ({ signal }) => getEmployeeActivity(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEmployeeActivity>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetEmployeeActivityQueryResult = NonNullable<Awaited<ReturnType<typeof getEmployeeActivity>>>
+export type GetEmployeeActivityQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get employee activity for an inclusive date range
+ */
+
+export function useGetEmployeeActivity<TData = Awaited<ReturnType<typeof getEmployeeActivity>>, TError = ErrorType<void>>(
+ params: GetEmployeeActivityParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEmployeeActivity>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetEmployeeActivityQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -2841,6 +2948,297 @@ export const useDeleteSieveStandard = <TError = ErrorType<unknown>,
       return useMutation(getDeleteSieveStandardMutationOptions(options));
     }
 
+export const getListWaterStandardsUrl = () => {
+
+
+
+
+  return `/api/water-standards`
+}
+
+/**
+ * @summary List configurable Water limits
+ */
+export const listWaterStandards = async ( options?: Parameters<typeof customFetch>[1]): Promise<WaterStandard[]> => {
+
+  return customFetch<WaterStandard[]>(getListWaterStandardsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWaterStandardsQueryKey = () => {
+    return [
+    `/api/water-standards`
+    ] as const;
+    }
+
+
+export const getListWaterStandardsQueryOptions = <TData = Awaited<ReturnType<typeof listWaterStandards>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWaterStandards>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWaterStandardsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWaterStandards>>> = ({ signal }) => listWaterStandards({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWaterStandards>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWaterStandardsQueryResult = NonNullable<Awaited<ReturnType<typeof listWaterStandards>>>
+export type ListWaterStandardsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List configurable Water limits
+ */
+
+export function useListWaterStandards<TData = Awaited<ReturnType<typeof listWaterStandards>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWaterStandards>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWaterStandardsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateWaterStandardUrl = () => {
+
+
+
+
+  return `/api/water-standards`
+}
+
+/**
+ * @summary Create a Water limit profile
+ */
+export const createWaterStandard = async (waterStandardInput: WaterStandardInput, options?: Parameters<typeof customFetch>[1]): Promise<WaterStandard> => {
+
+  return customFetch<WaterStandard>(getCreateWaterStandardUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(waterStandardInput)
+  }
+);}
+
+
+
+
+
+export const getCreateWaterStandardMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWaterStandard>>, TError,{data: BodyType<WaterStandardInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createWaterStandard>>, TError,{data: BodyType<WaterStandardInput>}, TContext> => {
+
+const mutationKey = ['createWaterStandard'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createWaterStandard>>, {data: BodyType<WaterStandardInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createWaterStandard(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateWaterStandardMutationResult = NonNullable<Awaited<ReturnType<typeof createWaterStandard>>>
+    export type CreateWaterStandardMutationBody = BodyType<WaterStandardInput>
+    export type CreateWaterStandardMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a Water limit profile
+ */
+export const useCreateWaterStandard = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWaterStandard>>, TError,{data: BodyType<WaterStandardInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createWaterStandard>>,
+        TError,
+        {data: BodyType<WaterStandardInput>},
+        TContext
+      > => {
+      return useMutation(getCreateWaterStandardMutationOptions(options));
+    }
+
+export const getUpdateWaterStandardUrl = (id: number,) => {
+
+
+
+
+  return `/api/water-standards/${id}`
+}
+
+/**
+ * @summary Update a Water limit profile
+ */
+export const updateWaterStandard = async (id: number,
+    waterStandardUpdate: WaterStandardUpdate, options?: Parameters<typeof customFetch>[1]): Promise<WaterStandard> => {
+
+  return customFetch<WaterStandard>(getUpdateWaterStandardUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(waterStandardUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateWaterStandardMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWaterStandard>>, TError,{id: number;data: BodyType<WaterStandardUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateWaterStandard>>, TError,{id: number;data: BodyType<WaterStandardUpdate>}, TContext> => {
+
+const mutationKey = ['updateWaterStandard'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateWaterStandard>>, {id: number;data: BodyType<WaterStandardUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateWaterStandard(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateWaterStandardMutationResult = NonNullable<Awaited<ReturnType<typeof updateWaterStandard>>>
+    export type UpdateWaterStandardMutationBody = BodyType<WaterStandardUpdate>
+    export type UpdateWaterStandardMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update a Water limit profile
+ */
+export const useUpdateWaterStandard = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWaterStandard>>, TError,{id: number;data: BodyType<WaterStandardUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateWaterStandard>>,
+        TError,
+        {id: number;data: BodyType<WaterStandardUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateWaterStandardMutationOptions(options));
+    }
+
+export const getDeleteWaterStandardUrl = (id: number,) => {
+
+
+
+
+  return `/api/water-standards/${id}`
+}
+
+/**
+ * @summary Delete a Water limit profile
+ */
+export const deleteWaterStandard = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteWaterStandardUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteWaterStandardMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWaterStandard>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteWaterStandard>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteWaterStandard'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteWaterStandard>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteWaterStandard(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteWaterStandardMutationResult = NonNullable<Awaited<ReturnType<typeof deleteWaterStandard>>>
+
+    export type DeleteWaterStandardMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a Water limit profile
+ */
+export const useDeleteWaterStandard = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWaterStandard>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteWaterStandard>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteWaterStandardMutationOptions(options));
+    }
+
 export const getListShapeFactorsUrl = () => {
 
 
@@ -3285,6 +3683,148 @@ export const useCreateRecord = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCreateRecordMutationOptions(options));
+    }
+
+export const getPreviewRecordAgeBackfillUrl = () => {
+
+
+
+
+  return `/api/records/age-backfill/preview`
+}
+
+/**
+ * @summary Preview age values for historical QC records
+ */
+export const previewRecordAgeBackfill = async (recordAgeBackfillPreviewInput: RecordAgeBackfillPreviewInput, options?: Parameters<typeof customFetch>[1]): Promise<RecordAgeBackfillPreview> => {
+
+  return customFetch<RecordAgeBackfillPreview>(getPreviewRecordAgeBackfillUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(recordAgeBackfillPreviewInput)
+  }
+);}
+
+
+
+
+
+export const getPreviewRecordAgeBackfillMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewRecordAgeBackfill>>, TError,{data: BodyType<RecordAgeBackfillPreviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewRecordAgeBackfill>>, TError,{data: BodyType<RecordAgeBackfillPreviewInput>}, TContext> => {
+
+const mutationKey = ['previewRecordAgeBackfill'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewRecordAgeBackfill>>, {data: BodyType<RecordAgeBackfillPreviewInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  previewRecordAgeBackfill(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewRecordAgeBackfillMutationResult = NonNullable<Awaited<ReturnType<typeof previewRecordAgeBackfill>>>
+    export type PreviewRecordAgeBackfillMutationBody = BodyType<RecordAgeBackfillPreviewInput>
+    export type PreviewRecordAgeBackfillMutationError = ErrorType<void>
+
+    /**
+ * @summary Preview age values for historical QC records
+ */
+export const usePreviewRecordAgeBackfill = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewRecordAgeBackfill>>, TError,{data: BodyType<RecordAgeBackfillPreviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewRecordAgeBackfill>>,
+        TError,
+        {data: BodyType<RecordAgeBackfillPreviewInput>},
+        TContext
+      > => {
+      return useMutation(getPreviewRecordAgeBackfillMutationOptions(options));
+    }
+
+export const getApplyRecordAgeBackfillUrl = () => {
+
+
+
+
+  return `/api/records/age-backfill/apply`
+}
+
+/**
+ * @summary Apply previewed age values to historical QC records
+ */
+export const applyRecordAgeBackfill = async (recordAgeBackfillApplyInput: RecordAgeBackfillApplyInput, options?: Parameters<typeof customFetch>[1]): Promise<RecordAgeBackfillApplyResult> => {
+
+  return customFetch<RecordAgeBackfillApplyResult>(getApplyRecordAgeBackfillUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(recordAgeBackfillApplyInput)
+  }
+);}
+
+
+
+
+
+export const getApplyRecordAgeBackfillMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyRecordAgeBackfill>>, TError,{data: BodyType<RecordAgeBackfillApplyInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof applyRecordAgeBackfill>>, TError,{data: BodyType<RecordAgeBackfillApplyInput>}, TContext> => {
+
+const mutationKey = ['applyRecordAgeBackfill'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof applyRecordAgeBackfill>>, {data: BodyType<RecordAgeBackfillApplyInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  applyRecordAgeBackfill(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApplyRecordAgeBackfillMutationResult = NonNullable<Awaited<ReturnType<typeof applyRecordAgeBackfill>>>
+    export type ApplyRecordAgeBackfillMutationBody = BodyType<RecordAgeBackfillApplyInput>
+    export type ApplyRecordAgeBackfillMutationError = ErrorType<void>
+
+    /**
+ * @summary Apply previewed age values to historical QC records
+ */
+export const useApplyRecordAgeBackfill = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyRecordAgeBackfill>>, TError,{data: BodyType<RecordAgeBackfillApplyInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof applyRecordAgeBackfill>>,
+        TError,
+        {data: BodyType<RecordAgeBackfillApplyInput>},
+        TContext
+      > => {
+      return useMutation(getApplyRecordAgeBackfillMutationOptions(options));
     }
 
 export const getGetDailyReadyMixResultsUrl = (params: GetDailyReadyMixResultsParams,) => {
@@ -4190,5 +4730,596 @@ export const useUpdateReportLayout = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getUpdateReportLayoutMutationOptions(options));
+    }
+
+export const getListReportTemplatesUrl = (params?: ListReportTemplatesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/report-templates?${stringifiedParams}` : `/api/report-templates`
+}
+
+/**
+ * @summary List reusable report templates
+ */
+export const listReportTemplates = async (params?: ListReportTemplatesParams, options?: Parameters<typeof customFetch>[1]): Promise<ReportTemplate[]> => {
+
+  return customFetch<ReportTemplate[]>(getListReportTemplatesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListReportTemplatesQueryKey = (params?: ListReportTemplatesParams,) => {
+    return [
+    `/api/report-templates`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListReportTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof listReportTemplates>>, TError = ErrorType<unknown>>(params?: ListReportTemplatesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listReportTemplates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListReportTemplatesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listReportTemplates>>> = ({ signal }) => listReportTemplates(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listReportTemplates>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListReportTemplatesQueryResult = NonNullable<Awaited<ReturnType<typeof listReportTemplates>>>
+export type ListReportTemplatesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List reusable report templates
+ */
+
+export function useListReportTemplates<TData = Awaited<ReturnType<typeof listReportTemplates>>, TError = ErrorType<unknown>>(
+ params?: ListReportTemplatesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listReportTemplates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListReportTemplatesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateReportTemplateUrl = () => {
+
+
+
+
+  return `/api/report-templates`
+}
+
+/**
+ * @summary Create a reusable report template
+ */
+export const createReportTemplate = async (reportTemplateInput: ReportTemplateInput, options?: Parameters<typeof customFetch>[1]): Promise<ReportTemplate> => {
+
+  return customFetch<ReportTemplate>(getCreateReportTemplateUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(reportTemplateInput)
+  }
+);}
+
+
+
+
+
+export const getCreateReportTemplateMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createReportTemplate>>, TError,{data: BodyType<ReportTemplateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createReportTemplate>>, TError,{data: BodyType<ReportTemplateInput>}, TContext> => {
+
+const mutationKey = ['createReportTemplate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createReportTemplate>>, {data: BodyType<ReportTemplateInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createReportTemplate(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateReportTemplateMutationResult = NonNullable<Awaited<ReturnType<typeof createReportTemplate>>>
+    export type CreateReportTemplateMutationBody = BodyType<ReportTemplateInput>
+    export type CreateReportTemplateMutationError = ErrorType<void>
+
+    /**
+ * @summary Create a reusable report template
+ */
+export const useCreateReportTemplate = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createReportTemplate>>, TError,{data: BodyType<ReportTemplateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createReportTemplate>>,
+        TError,
+        {data: BodyType<ReportTemplateInput>},
+        TContext
+      > => {
+      return useMutation(getCreateReportTemplateMutationOptions(options));
+    }
+
+export const getUpdateReportTemplateUrl = (id: number,) => {
+
+
+
+
+  return `/api/report-templates/${id}`
+}
+
+/**
+ * @summary Update a reusable report template
+ */
+export const updateReportTemplate = async (id: number,
+    reportTemplateUpdate: ReportTemplateUpdate, options?: Parameters<typeof customFetch>[1]): Promise<ReportTemplate> => {
+
+  return customFetch<ReportTemplate>(getUpdateReportTemplateUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(reportTemplateUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateReportTemplateMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateReportTemplate>>, TError,{id: number;data: BodyType<ReportTemplateUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateReportTemplate>>, TError,{id: number;data: BodyType<ReportTemplateUpdate>}, TContext> => {
+
+const mutationKey = ['updateReportTemplate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateReportTemplate>>, {id: number;data: BodyType<ReportTemplateUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateReportTemplate(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateReportTemplateMutationResult = NonNullable<Awaited<ReturnType<typeof updateReportTemplate>>>
+    export type UpdateReportTemplateMutationBody = BodyType<ReportTemplateUpdate>
+    export type UpdateReportTemplateMutationError = ErrorType<void>
+
+    /**
+ * @summary Update a reusable report template
+ */
+export const useUpdateReportTemplate = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateReportTemplate>>, TError,{id: number;data: BodyType<ReportTemplateUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateReportTemplate>>,
+        TError,
+        {id: number;data: BodyType<ReportTemplateUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateReportTemplateMutationOptions(options));
+    }
+
+export const getDeleteReportTemplateUrl = (id: number,) => {
+
+
+
+
+  return `/api/report-templates/${id}`
+}
+
+/**
+ * @summary Delete a reusable report template
+ */
+export const deleteReportTemplate = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteReportTemplateUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteReportTemplateMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteReportTemplate>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteReportTemplate>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteReportTemplate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteReportTemplate>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteReportTemplate(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteReportTemplateMutationResult = NonNullable<Awaited<ReturnType<typeof deleteReportTemplate>>>
+
+    export type DeleteReportTemplateMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete a reusable report template
+ */
+export const useDeleteReportTemplate = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteReportTemplate>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteReportTemplate>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteReportTemplateMutationOptions(options));
+    }
+
+export const getDuplicateReportTemplateUrl = (id: number,) => {
+
+
+
+
+  return `/api/report-templates/${id}/duplicate`
+}
+
+/**
+ * @summary Duplicate a reusable report template
+ */
+export const duplicateReportTemplate = async (id: number,
+    reportTemplateDuplicate?: ReportTemplateDuplicate, options?: Parameters<typeof customFetch>[1]): Promise<ReportTemplate> => {
+
+  return customFetch<ReportTemplate>(getDuplicateReportTemplateUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(reportTemplateDuplicate)
+  }
+);}
+
+
+
+
+
+export const getDuplicateReportTemplateMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof duplicateReportTemplate>>, TError,{id: number;data?: BodyType<ReportTemplateDuplicate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof duplicateReportTemplate>>, TError,{id: number;data?: BodyType<ReportTemplateDuplicate>}, TContext> => {
+
+const mutationKey = ['duplicateReportTemplate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof duplicateReportTemplate>>, {id: number;data?: BodyType<ReportTemplateDuplicate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  duplicateReportTemplate(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DuplicateReportTemplateMutationResult = NonNullable<Awaited<ReturnType<typeof duplicateReportTemplate>>>
+    export type DuplicateReportTemplateMutationBody = BodyType<ReportTemplateDuplicate> | undefined
+    export type DuplicateReportTemplateMutationError = ErrorType<void>
+
+    /**
+ * @summary Duplicate a reusable report template
+ */
+export const useDuplicateReportTemplate = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof duplicateReportTemplate>>, TError,{id: number;data?: BodyType<ReportTemplateDuplicate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof duplicateReportTemplate>>,
+        TError,
+        {id: number;data?: BodyType<ReportTemplateDuplicate>},
+        TContext
+      > => {
+      return useMutation(getDuplicateReportTemplateMutationOptions(options));
+    }
+
+export const getSetReportTemplateDefaultUrl = (id: number,) => {
+
+
+
+
+  return `/api/report-templates/${id}/default`
+}
+
+/**
+ * @summary Set a report template as the default for its report type
+ */
+export const setReportTemplateDefault = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<ReportTemplate> => {
+
+  return customFetch<ReportTemplate>(getSetReportTemplateDefaultUrl(id),
+  {
+    ...options,
+    method: 'PATCH'
+
+
+  }
+);}
+
+
+
+
+
+export const getSetReportTemplateDefaultMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setReportTemplateDefault>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setReportTemplateDefault>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['setReportTemplateDefault'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setReportTemplateDefault>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  setReportTemplateDefault(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetReportTemplateDefaultMutationResult = NonNullable<Awaited<ReturnType<typeof setReportTemplateDefault>>>
+
+    export type SetReportTemplateDefaultMutationError = ErrorType<void>
+
+    /**
+ * @summary Set a report template as the default for its report type
+ */
+export const useSetReportTemplateDefault = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setReportTemplateDefault>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setReportTemplateDefault>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getSetReportTemplateDefaultMutationOptions(options));
+    }
+
+export const getListReportTemplateVersionsUrl = (id: number,) => {
+
+
+
+
+  return `/api/report-templates/${id}/versions`
+}
+
+/**
+ * @summary List prior report template versions
+ */
+export const listReportTemplateVersions = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<ReportTemplateVersion[]> => {
+
+  return customFetch<ReportTemplateVersion[]>(getListReportTemplateVersionsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListReportTemplateVersionsQueryKey = (id: number,) => {
+    return [
+    `/api/report-templates/${id}/versions`
+    ] as const;
+    }
+
+
+export const getListReportTemplateVersionsQueryOptions = <TData = Awaited<ReturnType<typeof listReportTemplateVersions>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listReportTemplateVersions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListReportTemplateVersionsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listReportTemplateVersions>>> = ({ signal }) => listReportTemplateVersions(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listReportTemplateVersions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListReportTemplateVersionsQueryResult = NonNullable<Awaited<ReturnType<typeof listReportTemplateVersions>>>
+export type ListReportTemplateVersionsQueryError = ErrorType<void>
+
+
+/**
+ * @summary List prior report template versions
+ */
+
+export function useListReportTemplateVersions<TData = Awaited<ReturnType<typeof listReportTemplateVersions>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listReportTemplateVersions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListReportTemplateVersionsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRestoreReportTemplateVersionUrl = (id: number,
+    version: number,) => {
+
+
+
+
+  return `/api/report-templates/${id}/restore/${version}`
+}
+
+/**
+ * @summary Restore a prior report template version
+ */
+export const restoreReportTemplateVersion = async (id: number,
+    version: number, options?: Parameters<typeof customFetch>[1]): Promise<ReportTemplate> => {
+
+  return customFetch<ReportTemplate>(getRestoreReportTemplateVersionUrl(id,version),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRestoreReportTemplateVersionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreReportTemplateVersion>>, TError,{id: number;version: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof restoreReportTemplateVersion>>, TError,{id: number;version: number}, TContext> => {
+
+const mutationKey = ['restoreReportTemplateVersion'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restoreReportTemplateVersion>>, {id: number;version: number}> = (props) => {
+          const {id,version} = props ?? {};
+
+          return  restoreReportTemplateVersion(id,version,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestoreReportTemplateVersionMutationResult = NonNullable<Awaited<ReturnType<typeof restoreReportTemplateVersion>>>
+
+    export type RestoreReportTemplateVersionMutationError = ErrorType<void>
+
+    /**
+ * @summary Restore a prior report template version
+ */
+export const useRestoreReportTemplateVersion = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreReportTemplateVersion>>, TError,{id: number;version: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof restoreReportTemplateVersion>>,
+        TError,
+        {id: number;version: number},
+        TContext
+      > => {
+      return useMutation(getRestoreReportTemplateVersionMutationOptions(options));
     }
 

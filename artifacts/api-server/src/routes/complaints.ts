@@ -30,6 +30,8 @@ function toComplaint(row: typeof complaintsTable.$inferSelect) {
     details: row.details,
     solution: row.solution,
     recommendation: row.recommendation,
+    qcReviewerName: row.qcReviewerName,
+    reviewDate: row.reviewDate,
     status: row.status === "complete" ? "complete" : "open",
     picturePaths: row.picturePaths ?? [],
     createdAt: row.createdAt,
@@ -93,6 +95,8 @@ router.post("/complaints", requireComplaintEditor, async (req, res): Promise<voi
       details: parsed.data.details.trim(),
       solution: parsed.data.solution.trim(),
       recommendation: parsed.data.recommendation.trim(),
+      qcReviewerName: parsed.data.qcReviewerName?.trim() || null,
+      reviewDate: parsed.data.reviewDate?.toISOString().slice(0, 10) ?? null,
       status: "open",
       picturePaths: parsed.data.picturePaths,
       createdBy: getEmployeeIdFromUser(req.user),
@@ -165,6 +169,12 @@ router.patch("/complaints/:id", requireComplaintEditor, async (req, res): Promis
       ...(parsed.data.recommendation === undefined
         ? {}
         : { recommendation: parsed.data.recommendation.trim() }),
+      ...(parsed.data.qcReviewerName === undefined
+        ? {}
+        : { qcReviewerName: parsed.data.qcReviewerName?.trim() || null }),
+      ...(parsed.data.reviewDate === undefined
+        ? {}
+        : { reviewDate: parsed.data.reviewDate?.toISOString().slice(0, 10) ?? null }),
       ...(parsed.data.status === undefined ? {} : { status: parsed.data.status }),
       ...(parsed.data.picturePaths === undefined
         ? {}

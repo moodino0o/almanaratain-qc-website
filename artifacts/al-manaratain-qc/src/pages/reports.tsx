@@ -1,4 +1,4 @@
-import { useMemo, useState, type KeyboardEvent } from "react";
+import { useMemo, useState } from "react";
 import {
   TestType,
   getGetDashboardQueryKey,
@@ -17,6 +17,7 @@ import {
   dailyReportProductOptions,
   downloadDailyReportWorkbook,
   sortByReferenceNumber,
+  type DailyReadyMixReferenceFilter,
   type DailyReportProductOption,
 } from "./reports-utils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -41,7 +42,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 const today = () => new Date().toISOString().slice(0, 10);
 
 function formatStrength(value: number | null | undefined, unit = "N/mm²") {
-  return value == null ? "Missing" : `${value.toFixed(1)} ${unit}`;
+  return value == null ? "Missing" : `${value.toFixed(2)} ${unit}`;
 }
 
 function detailValue(details: Record<string, unknown>, keys: string[]) {
@@ -113,30 +114,6 @@ const cubeRowFromSaved = (row: unknown): CubeResultRow => {
   };
 };
 
-const handleCubeInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-  if (event.key !== "Enter") return;
-
-  event.preventDefault();
-  const currentRow = event.currentTarget.closest<HTMLElement>("[data-cube-result-row]");
-  if (!currentRow) return;
-
-  const rows = Array.from(
-    document.querySelectorAll<HTMLElement>("[data-cube-result-row]"),
-  );
-  const currentRowIndex = rows.indexOf(currentRow);
-  if (currentRowIndex < 0) return;
-
-  const getNavigableInputs = (row: HTMLElement) =>
-    Array.from(row.querySelectorAll<HTMLInputElement>("[data-cube-navigation-input]"));
-  const currentRowInputs = getNavigableInputs(currentRow);
-  const currentInputIndex = currentRowInputs.indexOf(event.currentTarget);
-  const candidateInputs = [
-    ...currentRowInputs.slice(currentInputIndex + 1),
-    ...rows.slice(currentRowIndex + 1).flatMap(getNavigableInputs),
-  ];
-  candidateInputs.find((input) => input.value.trim() === "")?.focus();
-};
-
 export default function Reports() {
   const queryClient = useQueryClient();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -147,7 +124,10 @@ export default function Reports() {
     startDate: string;
     endDate: string;
     products: string[];
+    readyMixReferenceFilter: DailyReadyMixReferenceFilter;
   } | null>(null);
+  const [draftReadyMixReferenceFilter, setDraftReadyMixReferenceFilter] =
+    useState<DailyReadyMixReferenceFilter>(null);
   const [isAddResultsOpen, setIsAddResultsOpen] = useState(false);
   const [addResultsStep, setAddResultsStep] = useState<"setup" | "results">("setup");
   const [castingDate, setCastingDate] = useState(today);
@@ -329,6 +309,7 @@ export default function Reports() {
     setDraftStartDate(filters?.startDate ?? today());
     setDraftEndDate(filters?.endDate ?? filters?.startDate ?? today());
     setDraftProducts(filters?.products ?? []);
+    setDraftReadyMixReferenceFilter(filters?.readyMixReferenceFilter ?? null);
     setIsFilterOpen(true);
   };
 
@@ -341,6 +322,7 @@ export default function Reports() {
       startDate: draftStartDate,
       endDate: draftEndDate,
       products: draftProducts,
+      readyMixReferenceFilter: draftReadyMixReferenceFilter,
     });
     setIsFilterOpen(false);
   };
@@ -359,6 +341,7 @@ export default function Reports() {
       filters?.startDate ?? today(),
       filters?.endDate ?? today(),
       filters?.products ?? [],
+      filters?.readyMixReferenceFilter ?? null,
     ),
     [allRecords, filters],
   );
@@ -410,7 +393,7 @@ export default function Reports() {
                   <CardTitle className="text-lg">Daily results</CardTitle>
                   <CardDescription>
                     {hasFilters
-                      ? `${formatDate(filters.startDate)}${filters.startDate !== filters.endDate ? ` – ${formatDate(filters.endDate)}` : ""} · ${filters.products.length ? `${filters.products.length} product groups` : "All product groups"}`
+                      ? `${formatDate(filters.startDate)}${filters.startDate !== filters.endDate ? ` – ${formatDate(filters.endDate)}` : ""} · ${filters.products.length ? `${filters.products.length} product groups` : "All product groups"} · Ready Mix: ${filters.readyMixReferenceFilter === "site" ? "Site refs (S)" : filters.readyMixReferenceFilter === "plant" ? "Plant refs (H)" : "overall"}`
                       : "Choose a date range and one or more product groups to view daily summaries."}
                   </CardDescription>
                 </div>
@@ -434,7 +417,7 @@ export default function Reports() {
                   <CalendarDays className="mb-4 h-10 w-10 text-primary/60" />
                   <h2 className="text-lg font-semibold">Start with a daily result search</h2>
                   <p className="mt-2 max-w-md text-sm text-muted-foreground">
-                    Select an inclusive date range and optionally choose multiple products. Results are summarized by date, category, plant, and product group.
+                    Select an inclusive testing-date range and optionally choose multiple products. Results are summarized by date, category, plant, machine type, and product group.
                   </p>
                   <Button className="mt-5" onClick={openFilters}>Choose dates and products</Button>
                 </div>
@@ -452,46 +435,60 @@ export default function Reports() {
                   <Search className="mb-3 h-10 w-10 text-muted-foreground/40" />
                   <p className="font-semibold">No matching QC results</p>
                   <p className="mt-1 max-w-lg text-sm text-muted-foreground">
-                    No strength results matched the selected dates and product groups.
+                    No strength results matched the selected testing dates and product groups.
                   </p>
                 </div>
               ) : (
                 <div>
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                    <h3 className="text-sm font-semibold text-foreground">
-                      By category, plant, product, and date
-                    </h3>
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground">
+                         By category, plant, machine type, product, and date
+                      </h3>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Dammam Blocks: Net Strength. Other Blocks: Air-dry Strength.
+                      </p>
+                    </div>
                     <span className="text-xs text-muted-foreground">
                       One summary per day and group
                     </span>
                   </div>
-                  <div className="overflow-x-auto rounded-md border">
-                     <Table className="min-w-[1180px]">
+                   <div className="rounded-md border">
+                     <Table className="w-full table-fixed text-[11px] leading-tight">
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Category</TableHead>
-                           <TableHead className="text-center">Age (days)</TableHead>
-                           <TableHead>Date</TableHead>
-                          <TableHead>Plant</TableHead>
-                          <TableHead>Type / Mix Design</TableHead>
-                          <TableHead className="border-l bg-emerald-50 text-right text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">Average</TableHead>
-                          <TableHead className="bg-amber-50 text-right text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">Minimum</TableHead>
-                          <TableHead className="bg-sky-50 text-right text-sky-900 dark:bg-sky-950/30 dark:text-sky-200">Maximum</TableHead>
-                           <TableHead className="bg-violet-50 text-right text-violet-900 dark:bg-violet-950/30 dark:text-violet-200">Std. Dev.</TableHead>
+                           <TableHead className="w-[8%] px-1.5 py-2 text-[10px] leading-tight">Category</TableHead>
+                           <TableHead className="w-[5%] px-1 py-2 text-center text-[10px] leading-tight">Age</TableHead>
+                           <TableHead className="w-[8%] px-1 py-2 text-[10px] leading-tight">Casting Date</TableHead>
+                            <TableHead className="w-[8%] px-1 py-2 text-[10px] leading-tight">Machine Type</TableHead>
+                           <TableHead className="w-[9%] px-1.5 py-2 text-[10px] leading-tight">Plant</TableHead>
+                           <TableHead className="w-[12%] px-1.5 py-2 text-[10px] leading-tight">Type / Mix Design</TableHead>
+                           <TableHead className="w-[12%] border-l bg-emerald-50 px-1 py-2 text-right text-[10px] leading-tight text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">Average</TableHead>
+                           <TableHead className="w-[12%] bg-amber-50 px-1 py-2 text-right text-[10px] leading-tight text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">Minimum</TableHead>
+                           <TableHead className="w-[12%] bg-sky-50 px-1 py-2 text-right text-[10px] leading-tight text-sky-900 dark:bg-sky-950/30 dark:text-sky-200">Maximum</TableHead>
+                           <TableHead className="w-[14%] bg-violet-50 px-1 py-2 text-right text-[10px] leading-tight text-violet-900 dark:bg-violet-950/30 dark:text-violet-200">Std. Dev.</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {dailyReportRows.map((row) => (
-                           <TableRow key={`${row.date}-${row.category}-${row.plant}-${row.product}-${row.cubeAge ?? "none"}`}>
-                            <TableCell className="font-medium">{row.category}</TableCell>
-                             <TableCell className="text-center">{row.cubeAge === null ? "—" : row.cubeAge}</TableCell>
-                             <TableCell className="whitespace-nowrap">{formatDate(row.date)}</TableCell>
-                            <TableCell>{row.plant}</TableCell>
-                            <TableCell>{row.product}</TableCell>
-                            <TableCell className="border-l bg-emerald-50/50 text-right font-semibold text-emerald-900 dark:bg-emerald-950/10 dark:text-emerald-200">{formatStrength(row.averageStrength, row.strengthUnit)}</TableCell>
-                            <TableCell className="bg-amber-50/50 text-right text-amber-900 dark:bg-amber-950/10 dark:text-amber-200">{formatStrength(row.minimumStrength, row.strengthUnit)}</TableCell>
-                            <TableCell className="bg-sky-50/50 text-right text-sky-900 dark:bg-sky-950/10 dark:text-sky-200">{formatStrength(row.maximumStrength, row.strengthUnit)}</TableCell>
-                             <TableCell className="bg-violet-50/50 text-right text-violet-900 dark:bg-violet-950/10 dark:text-violet-200">{formatStrength(row.standardDeviation, row.strengthUnit)}</TableCell>
+                         {dailyReportRows.map((row) => (
+                               <TableRow
+                                 key={`${row.date}-${row.castingDate}-${row.testingDate}-${row.category}-${row.plant}-${row.machineType}-${row.product}-${row.cubeAge ?? "none"}`}
+                                 className={row.status === "Passed"
+                                   ? "daily-results-row-passed"
+                                   : row.status === "Failed"
+                                     ? "daily-results-row-failed"
+                                     : "daily-results-row-neutral"}
+                               >
+                             <TableCell className="whitespace-normal break-words px-1.5 py-2 text-[10px] leading-tight font-medium">{row.category}</TableCell>
+                             <TableCell className="whitespace-normal break-words px-1 py-2 text-center text-[10px] leading-tight">{row.cubeAge === null ? "—" : row.cubeAge}</TableCell>
+                             <TableCell className="whitespace-normal break-words px-1 py-2 text-[10px] leading-tight">{formatDate(row.castingDate)}</TableCell>
+                              <TableCell className="whitespace-normal break-words px-1 py-2 text-[10px] leading-tight">{row.machineType || "—"}</TableCell>
+                             <TableCell className="whitespace-normal break-words px-1.5 py-2 text-[10px] leading-tight">{row.plant}</TableCell>
+                             <TableCell className="whitespace-normal break-words px-1.5 py-2 text-[10px] leading-tight">{row.product}</TableCell>
+                              <TableCell className="whitespace-normal break-words border-l px-1 py-2 text-right text-[10px] leading-tight font-semibold tabular-nums">{formatStrength(row.averageStrength, row.strengthUnit)}</TableCell>
+                              <TableCell className="whitespace-normal break-words px-1 py-2 text-right text-[10px] leading-tight tabular-nums">{formatStrength(row.minimumStrength, row.strengthUnit)}</TableCell>
+                              <TableCell className="whitespace-normal break-words px-1 py-2 text-right text-[10px] leading-tight tabular-nums">{formatStrength(row.maximumStrength, row.strengthUnit)}</TableCell>
+                              <TableCell className="whitespace-normal break-words px-1 py-2 text-right text-[10px] leading-tight tabular-nums">{formatStrength(row.standardDeviation, row.strengthUnit)}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -534,13 +531,13 @@ export default function Reports() {
           <DialogHeader>
             <DialogTitle>Choose daily results</DialogTitle>
               <DialogDescription>
-                Choose an inclusive date range and optionally select multiple product groups. Ready Mix results are grouped by the first three words of the mix design.
+                Choose an inclusive testing-date range and optionally select product groups. Ready Mix results are grouped by the first three words of the mix design; you can calculate them from Site (S) or Plant (H) references, or include all references.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-5 py-2">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
-                <Label htmlFor="daily-result-start-date">Start date</Label>
+                <Label htmlFor="daily-result-start-date">Testing date from</Label>
                 <Input
                   id="daily-result-start-date"
                   type="date"
@@ -549,7 +546,7 @@ export default function Reports() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="daily-result-end-date">End date</Label>
+                <Label htmlFor="daily-result-end-date">Testing date to</Label>
                 <Input
                   id="daily-result-end-date"
                   type="date"
@@ -558,6 +555,49 @@ export default function Reports() {
                   onChange={(event) => setDraftEndDate(event.target.value)}
                 />
               </div>
+            </div>
+            <div className="grid gap-2">
+              <Label>Ready Mix calculation basis</Label>
+              <div
+                className="flex flex-wrap gap-2"
+                role="group"
+                aria-label="Ready Mix reference type"
+              >
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={draftReadyMixReferenceFilter === null ? "default" : "outline"}
+                  aria-pressed={draftReadyMixReferenceFilter === null}
+                  onClick={() => setDraftReadyMixReferenceFilter(null)}
+                >
+                  Overall
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={draftReadyMixReferenceFilter === "site" ? "default" : "outline"}
+                  aria-pressed={draftReadyMixReferenceFilter === "site"}
+                  onClick={() => setDraftReadyMixReferenceFilter((current) =>
+                    current === "site" ? null : "site"
+                  )}
+                >
+                  Site (S)
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={draftReadyMixReferenceFilter === "plant" ? "default" : "outline"}
+                  aria-pressed={draftReadyMixReferenceFilter === "plant"}
+                  onClick={() => setDraftReadyMixReferenceFilter((current) =>
+                    current === "plant" ? null : "plant"
+                  )}
+                >
+                  Plant (H)
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Site includes Ready Mix references starting with S; Plant includes references starting with H. Overall includes all references.
+              </p>
             </div>
             <div className="grid gap-2">
               <div className="flex items-center justify-between gap-3">
@@ -749,8 +789,7 @@ export default function Reports() {
                                     min={0}
                                     step="any"
                                     value={row[key]}
-                                    onKeyDown={handleCubeInputKeyDown}
-                                    data-cube-navigation-input={key === "dryWeight" || key === "wetWeight" || key === "load" ? "true" : undefined}
+                                    data-enter-skip={["length", "width", "height"].includes(key) ? "true" : undefined}
                                     onChange={(event) => updateResultRow(
                                       entry.record.id,
                                       rowIndex as 0 | 1,
@@ -779,6 +818,7 @@ export default function Reports() {
                   Back
                 </Button>
                 <Button
+                  data-cube-results-save
                   onClick={saveResults}
                   disabled={!resultEntries.length || isSavingResults}
                 >

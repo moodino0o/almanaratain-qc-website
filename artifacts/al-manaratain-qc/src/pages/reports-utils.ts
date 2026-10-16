@@ -3,6 +3,9 @@ import type {
   DailyReadyMixStrengthSummary,
   QcRecord,
 } from "@workspace/api-client-react";
+import { filterRowsWithLoad } from "./report-print-utils";
+import { dammamBlockDisplayResults } from "./record-detail-utils";
+import { isSandwichBlockType } from "./record-form-utils";
 
 export type GroupedDailyLocation = {
   location: string;
@@ -33,8 +36,12 @@ export type DailyStrengthTableRow = {
 
 export type DailyReportRow = {
   date: string;
+  castingDate: string;
+  testingDate: string;
   category: string;
+  status: "Passed" | "Failed" | null;
   plant: string;
+  machineType: string;
   product: string;
   cubeAge: number | null;
   averageStrength: number;
@@ -50,14 +57,47 @@ export type DailyReportProductOption = {
   product: string;
 };
 
+export type RecordStrengthSummary = {
+  averageStrength: number;
+  minimumStrength: number;
+  maximumStrength: number;
+};
+
+export type DailyReadyMixReferenceFilter = "site" | "plant" | null;
+
 type StrengthGroup = {
   date: string;
+  castingDate: string;
+  testingDate: string;
   category: string;
   plant: string;
+  machineType: string;
   product: string;
   cubeAge: number | null;
   strengths: number[];
+  statuses: ("Passed" | "Failed" | null)[];
   strengthUnit: string;
+};
+
+type DailyResultStatus = "Passed" | "Failed" | null;
+
+const recordResultStatus = (
+  record: QcRecord,
+  details: Record<string, unknown>,
+): DailyResultStatus => {
+  const strengthEvaluation =
+    typeof details.strengthEvaluation === "object" && details.strengthEvaluation !== null
+      ? details.strengthEvaluation as Record<string, unknown>
+      : {};
+  const sieveEvaluation =
+    typeof details.sieveEvaluation === "object" && details.sieveEvaluation !== null
+      ? details.sieveEvaluation as Record<string, unknown>
+      : {};
+  const rawStatus = strengthEvaluation.status ?? sieveEvaluation.status ?? record.status;
+  const normalizedStatus = String(rawStatus).trim().toLocaleLowerCase();
+  if (normalizedStatus === "passed") return "Passed";
+  if (normalizedStatus === "failed") return "Failed";
+  return null;
 };
 
 const numericValue = (value: unknown) => {
@@ -65,6 +105,27 @@ const numericValue = (value: unknown) => {
   if (typeof value !== "string") return null;
   const parsed = Number.parseFloat(value.replace(/,/g, ""));
   return Number.isFinite(parsed) ? parsed : null;
+};
+const isDammamLocation = (location: string) => {
+  const normalizedLocation = location.trim().toLocaleLowerCase().replace(/\s+/g, " ");
+  return normalizedLocation === "dammam" || normalizedLocation === "dammam plant";
+};
+
+export const canonicalPlantLocation = (location: string) => {
+  const normalized = location.trim().toLocaleLowerCase().replace(/\s+/g, " ");
+  return ["eastern", "eastern hidd", "eastern aker", "eastern system"].includes(
+    normalized,
+  )
+    ? "EASTERN"
+    : location;
+};
+
+const firstNumericValue = (values: Record<string, unknown>, keys: string[]) => {
+  for (const key of keys) {
+    const parsed = numericValue(values[key]);
+    if (parsed !== null) return parsed;
+  }
+  return null;
 };
 
 const populationStandardDeviation = (values: number[]) => {
@@ -96,9 +157,20 @@ const addDays = (value: string, days: number) => {
   return date.toISOString().slice(0, 10);
 };
 
+const dateOnly = (value: unknown) => {
+  const match = String(value ?? "").trim().match(/^\d{4}-\d{2}-\d{2}/);
+  return match?.[0] ?? "";
+};
+
 const recordProduct = (record: QcRecord, details: Record<string, unknown>) => {
   if (record.testType === "Ready Mix") {
     return firstWords(detailsValue(details, ["designStrength", "mixStrength", "mixType"]) || record.material, 3);
+  }
+  if (record.testType === "Blocks") {
+    return detailsValue(details, ["productName", "blockType"]) || String(record.material ?? "").trim() || "Unspecified";
+  }
+  if (record.testType === "Paving Blocks") {
+    return detailsValue(details, ["productName", "product"]) || String(record.material ?? "").trim() || "Unspecified";
   }
   return firstWords(
     detailsValue(details, ["blockType", "blockSize", "sampleType", "sieveSize", "materialCondition"])
@@ -107,68 +179,136 @@ const recordProduct = (record: QcRecord, details: Record<string, unknown>) => {
   );
 };
 
-const recordAge = (record: QcRecord, details: Record<string, unknown>) =>
-  record.testType === "Blocks" || record.testType === "Paving Blocks"
-    ? numericValue(detailsValue(details, ["blockAge"]))
-    : null;
-
-const rowStrength = (row: unknown) => {
-  if (typeof row !== "object" || row === null) return null;
-  const values = row as Record<string, unknown>;
-  return numericValue(
-    values.correctedStrength ??
-    values.normalizedStrength ??
-    values.airDryStrength ??
-    values.calculatedStrength ??
-    values.strength ??
-    values.compressiveStrength,
-  );
+const recordAge = (record: QcRecord, details: Record<string, unknown>) => {
+  const ageKey =
+    record.testType === "Blocks" || record.testType === "Paving Blocks"
+      ? "blockAge"
+      : record.testType === "Sand Sieve" || record.testType === "Aggregate Sieve"
+        ? "sampleAge"
+        : null;
+  if (!ageKey) return null;
+  const configuredAge = numericValue(detailsValue(details, [ageKey]));
+  if (configuredAge !== null && configuredAge > 0) return configuredAge;
+  const rows = Array.isArray(details.testRows) ? details.testRows : [];
+  return rows.reduce<number | null>((age, row) => {
+    if (age !== null || typeof row !== "object" || row === null) return age;
+    const rowAge = numericValue((row as Record<string, unknown>).sampleAge);
+    return rowAge !== null && rowAge > 0 ? rowAge : null;
+  }, null);
 };
 
-const blockAirDryStrength = (row: unknown, location: string) => {
+const rowStrength = (row: unknown, testType: QcRecord["testType"]) => {
   if (typeof row !== "object" || row === null) return null;
   const values = row as Record<string, unknown>;
-  const storedAirDryStrength = numericValue(values.airDryStrength ?? values.dryAirStrength);
+  const strengthKeys = testType === "Ready Mix"
+    ? ["calculatedStrength", "strength", "compressiveStrength"]
+    : testType === "Paving Blocks"
+      ? ["tensileStrength", "correctedStrength", "calculatedStrength", "strength", "compressiveStrength"]
+      : [
+          "correctedStrength",
+          "normalizedStrength",
+          "airDryStrength",
+          "calculatedStrength",
+          "strength",
+          "compressiveStrength",
+        ];
+  return firstNumericValue(values, strengthKeys);
+};
+
+const blockSummaryStrength = (row: unknown) => {
+  if (typeof row !== "object" || row === null) return null;
+  const values = row as Record<string, unknown>;
+  const waterStrength = firstNumericValue(values, [
+    "waterStrength",
+    "calculatedStrength",
+    "strength",
+    "compressiveStrength",
+  ]);
+  const storedAirDryStrength = firstNumericValue(values, ["airDryStrength", "dryAirStrength"]);
   if (storedAirDryStrength !== null) return storedAirDryStrength;
-  const waterStrength = numericValue(
-    values.calculatedStrength ??
-    values.strength ??
-    values.compressiveStrength,
-  );
   if (waterStrength === null) return null;
-  return Number((waterStrength * (location.trim().toLocaleLowerCase() === "dammam" ? 1 : 1.2)).toFixed(1));
+  return Number((waterStrength * 1.2).toFixed(1));
 };
 
 const recordStrengths = (record: QcRecord, details: Record<string, unknown>) => {
-  const rows = Array.isArray(details.testRows) ? details.testRows : [];
+  const savedRows = Array.isArray(details.testRows) ? details.testRows : [];
+  if (record.testType === "Blocks" && isDammamLocation(record.location)) {
+    // Recalculate from geometry/load, not stale air-dry or generic evaluation averages.
+    // The register, daily table and workbook share this same result source.
+    const specimens = filterRowsWithLoad((savedRows.length ? savedRows : [details]).map((row) => {
+      const values = typeof row === "object" && row !== null ? row as Record<string, unknown> : {};
+      return { ...values, load: values.load ?? values.failureLoad };
+    }));
+    const isSandwich = isSandwichBlockType(details.blockType);
+    const strengths = specimens
+      .map((row) => {
+        const results = dammamBlockDisplayResults(row, details.blockSize, details);
+        return isSandwich ? results.airDryStrength : results.netStrength;
+      })
+      .filter((value): value is number => value !== null);
+    if (savedRows.length || strengths.length) return strengths;
+    if (isSandwich) {
+      const explicitlyAirDry = firstNumericValue(details, ["averageStrength", "airDryStrength"]);
+      return explicitlyAirDry === null ? [] : [explicitlyAirDry];
+    }
+    const explicitlyNet = firstNumericValue(details, ["averageNetStrength", "netStrength"]);
+    return explicitlyNet === null ? [] : [explicitlyNet];
+  }
+  const loadRequired =
+    record.testType === "Ready Mix" ||
+    record.testType === "Blocks" ||
+    record.testType === "Paving Blocks";
+  const rows = loadRequired ? filterRowsWithLoad(savedRows) : savedRows;
   const strengths = rows
     .map((row) => record.testType === "Blocks"
-      ? blockAirDryStrength(row, record.location)
-      : rowStrength(row))
+      ? blockSummaryStrength(row)
+      : rowStrength(row, record.testType))
     .filter((value): value is number => value !== null);
   if (strengths.length) return strengths;
-  const directStrength = numericValue(
-    record.testType === "Blocks"
-      ? details.averageStrength ??
-        details.airDryStrength ??
-        details.dryAirStrength ??
-        details.calculatedStrength ??
-        details.strength ??
-        details.compressiveStrength
-      : details.averageStrength ??
-        details.correctedStrength ??
-        details.normalizedStrength ??
-        details.airDryStrength ??
-        details.calculatedStrength ??
-        details.strength ??
-        details.compressiveStrength,
-  );
+  if (loadRequired && savedRows.length > 0 && rows.length === 0) return [];
+  const directStrengthKeys = record.testType === "Ready Mix"
+    ? ["averageStrength", "calculatedStrength", "strength", "compressiveStrength"]
+    : record.testType === "Blocks"
+      ? ["averageStrength", "airDryStrength", "dryAirStrength", "calculatedStrength", "strength", "compressiveStrength"]
+      : record.testType === "Paving Blocks"
+        ? [
+            "averageStrength",
+              "tensileStrength",
+            "correctedStrength",
+            "calculatedStrength",
+            "compressiveStrength",
+            "strength",
+          ]
+        : [
+            "averageStrength",
+            "correctedStrength",
+            "normalizedStrength",
+            "airDryStrength",
+            "calculatedStrength",
+            "strength",
+            "compressiveStrength",
+          ];
+  const directStrength = firstNumericValue(details, directStrengthKeys);
   if (directStrength === null) return [];
-  if (record.testType !== "Blocks" || details.averageStrength !== undefined || details.airDryStrength !== undefined) {
+  if (
+    record.testType !== "Blocks" ||
+    isDammamLocation(record.location) ||
+    firstNumericValue(details, ["averageStrength", "airDryStrength", "dryAirStrength"]) !== null
+  ) {
     return [directStrength];
   }
-  return [Number((directStrength * (record.location.trim().toLocaleLowerCase() === "dammam" ? 1 : 1.2)).toFixed(1))];
+  return [Number((directStrength * 1.2).toFixed(1))];
 };
+
+export function summarizeRecordStrengths(record: QcRecord): RecordStrengthSummary | null {
+  const strengths = recordStrengths(record, record.details as Record<string, unknown>);
+  if (!strengths.length) return null;
+  return {
+    averageStrength: strengths.reduce((sum, value) => sum + value, 0) / strengths.length,
+    minimumStrength: Math.min(...strengths),
+    maximumStrength: Math.max(...strengths),
+  };
+}
 
 export function dailyReportProductOptions(records: QcRecord[]): DailyReportProductOption[] {
   const options = new Map<string, DailyReportProductOption>();
@@ -191,6 +331,7 @@ export function buildDailyReportRows(
   startDate: string,
   endDate: string,
   selectedProducts: string[] = [],
+  readyMixReferenceFilter: DailyReadyMixReferenceFilter = null,
 ): DailyReportRow[] {
   const groups = new Map<string, StrengthGroup>();
   const selected = new Set(selectedProducts);
@@ -199,39 +340,62 @@ export function buildDailyReportRows(
   const addStrengths = (
     record: QcRecord,
     date: string | null,
+    testingDate: string | null,
     product: string,
     cubeAge: number | null,
     strengths: number[],
   ) => {
-    if (!date || !inRange(date) || !strengths.length) return;
+    if (!date || !testingDate || !inRange(date) || !strengths.length) return;
+    const castingDate = record.sampleDate.slice(0, 10);
     const category = record.testType;
-    const key = `${date}\u0000${category}\u0000${record.location}\u0000${product}\u0000${cubeAge ?? ""}`;
+    const details = record.details as Record<string, unknown>;
+    const machineType =
+      record.testType === "Blocks" || record.testType === "Paving Blocks"
+        ? detailsValue(details, ["machineType", "machine"])
+        : "";
+    const plant = canonicalPlantLocation(record.location);
+    const key = `${date}\u0000${castingDate}\u0000${testingDate}\u0000${category}\u0000${plant}\u0000${machineType}\u0000${product}\u0000${cubeAge ?? ""}`;
     if (selected.size && !selected.has(`${category}\u0000${product}`)) return;
     const current = groups.get(key) ?? {
       date,
+      castingDate,
+      testingDate,
       category,
-      plant: record.location,
+      plant,
+      machineType,
       product,
       cubeAge,
       strengths: [],
+      statuses: [],
       strengthUnit: "N/mm²",
     };
     current.strengths.push(...strengths);
+    current.statuses.push(recordResultStatus(record, details));
     groups.set(key, current);
   };
 
   for (const record of records) {
     const details = record.details as Record<string, unknown>;
+    if (record.testType === "Ready Mix" && readyMixReferenceFilter) {
+      const referenceNumber =
+        detailsValue(details, ["referenceNumber"]) || record.recordNo;
+      const requiredPrefix = readyMixReferenceFilter === "site" ? "S" : "H";
+      if (!referenceNumber.trim().toLocaleUpperCase().startsWith(requiredPrefix)) {
+        continue;
+      }
+    }
     const product = recordProduct(record, details);
     if (record.testType === "Ready Mix") {
-      const rows = Array.isArray(details.testRows) ? details.testRows : [];
+      const rows = filterRowsWithLoad(
+        Array.isArray(details.testRows) ? details.testRows : [],
+      );
       const ageGroups = new Map<number, number[]>();
       for (const row of rows) {
         if (typeof row !== "object" || row === null) continue;
         const age = numericValue((row as Record<string, unknown>).testAge ??
           (row as Record<string, unknown>).cubeAge ??
           (row as Record<string, unknown>).age);
-        const strength = rowStrength(row);
+        const strength = rowStrength(row, record.testType);
         if (age === null || strength === null) continue;
         const current = ageGroups.get(age) ?? [];
         current.push(strength);
@@ -239,18 +403,34 @@ export function buildDailyReportRows(
       }
       if (ageGroups.size) {
         for (const [age, strengths] of ageGroups) {
-          addStrengths(record, addDays(record.sampleDate, age), product, age, strengths);
+          const testingDate = addDays(record.sampleDate, age);
+          addStrengths(record, testingDate, testingDate, product, age, strengths);
         }
       } else {
-        addStrengths(record, record.sampleDate.slice(0, 10), product, null, recordStrengths(record, details));
+        const castingDate = record.sampleDate.slice(0, 10);
+        addStrengths(
+          record,
+          castingDate,
+          castingDate,
+          product,
+          null,
+          recordStrengths(record, details),
+        );
       }
       continue;
     }
+    const castingDate = record.sampleDate.slice(0, 10);
+    const age = recordAge(record, details);
+    const testingDate =
+      (age === null ? null : addDays(castingDate, age)) ||
+      dateOnly(detailsValue(details, ["testingDate"])) ||
+      castingDate;
     addStrengths(
       record,
-      record.sampleDate.slice(0, 10),
+      testingDate,
+      testingDate,
       product,
-      recordAge(record, details),
+      age,
       recordStrengths(record, details),
     );
   }
@@ -258,8 +438,16 @@ export function buildDailyReportRows(
   return [...groups.values()]
     .map((group) => ({
       date: group.date,
+      castingDate: group.castingDate,
+      testingDate: group.testingDate,
       category: group.category,
+      status: group.statuses.includes("Failed")
+        ? "Failed" as const
+        : group.statuses.length > 0 && group.statuses.every((status) => status === "Passed")
+          ? "Passed" as const
+          : null,
       plant: group.plant,
+      machineType: group.machineType,
       product: group.product,
       cubeAge: group.cubeAge,
       averageStrength: group.strengths.reduce((sum, value) => sum + value, 0) / group.strengths.length,
@@ -395,8 +583,8 @@ const createZip = (files: Array<{ name: string; content: string }>) => {
 
 export function downloadDailyReportWorkbook(rows: DailyReportRow[]) {
   if (!rows.length) return;
-  const headers = ["Category", "Age (days)", "Date", "Plant", "Type / Mix Design", "Average", "Minimum", "Maximum", "Std. Dev."];
-  const columns = ["A", "B", "C", "D", "E", "F", "G", "H", "I"];
+  const headers = ["Category", "Age (days)", "Casting Date", "Machine Type", "Plant", "Type / Mix Design", "Average", "Minimum", "Maximum", "Std. Dev."];
+  const columns = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
   const sheetRows = [
     `<row r="1">${inlineStringCell("A1", "Al Manaratain Daily QC Results", 1)}</row>`,
     `<row r="2">${inlineStringCell("A2", `Generated ${new Date().toLocaleDateString("en-GB")}`)}</row>`,
@@ -408,29 +596,31 @@ export function downloadDailyReportWorkbook(rows: DailyReportRow[]) {
         (row.cubeAge === null
           ? inlineStringCell(`B${rowNumber}`, "—")
           : numberCell(`B${rowNumber}`, row.cubeAge, 0)) +
-        inlineStringCell(`C${rowNumber}`, row.date) +
-        inlineStringCell(`D${rowNumber}`, row.plant) +
-        inlineStringCell(`E${rowNumber}`, row.product) +
-        numberCell(`F${rowNumber}`, row.averageStrength) +
-        numberCell(`G${rowNumber}`, row.minimumStrength) +
-        numberCell(`H${rowNumber}`, row.maximumStrength) +
-        numberCell(`I${rowNumber}`, row.standardDeviation)
+        inlineStringCell(`C${rowNumber}`, row.castingDate) +
+        inlineStringCell(`D${rowNumber}`, row.machineType || "—") +
+        inlineStringCell(`E${rowNumber}`, row.plant) +
+        inlineStringCell(`F${rowNumber}`, row.product) +
+        numberCell(`G${rowNumber}`, row.averageStrength) +
+        numberCell(`H${rowNumber}`, row.minimumStrength) +
+        numberCell(`I${rowNumber}`, row.maximumStrength) +
+        numberCell(`J${rowNumber}`, row.standardDeviation)
       }</row>`;
     }),
   ].join("");
   const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <dimension ref="A1:I${rows.length + 4}"/>
+  <dimension ref="A1:J${rows.length + 4}"/>
   <cols>
     <col min="1" max="1" width="18" customWidth="1"/>
     <col min="2" max="2" width="12" customWidth="1"/>
     <col min="3" max="3" width="14" customWidth="1"/>
-    <col min="4" max="4" width="18" customWidth="1"/>
-    <col min="5" max="5" width="24" customWidth="1"/>
-    <col min="6" max="9" width="15" customWidth="1"/>
+    <col min="4" max="4" width="14" customWidth="1"/>
+    <col min="5" max="5" width="18" customWidth="1"/>
+    <col min="6" max="6" width="24" customWidth="1"/>
+    <col min="7" max="10" width="15" customWidth="1"/>
   </cols>
   <sheetData>${sheetRows}</sheetData>
-  <mergeCells count="1"><mergeCell ref="A1:I1"/></mergeCells>
+  <mergeCells count="1"><mergeCell ref="A1:J1"/></mergeCells>
 </worksheet>`;
   const files = [
     {
@@ -617,13 +807,14 @@ export function groupDailyResults(records: DailyReadyMixResult[]): GroupedDailyM
       group.twentyEightDay.push(record.twentyEightDay);
     }
 
-    let location = group.locations.get(record.location);
+    const plant = canonicalPlantLocation(record.location);
+    let location = group.locations.get(plant);
     if (!location) {
       location = {
         ...createDailyStrengthAccumulator(),
         strengthUnit: record.strengthUnit,
       };
-      group.locations.set(record.location, location);
+      group.locations.set(plant, location);
     }
     location.recordCount += 1;
     if (record.sevenDay.averageStrength !== null) {

@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import {
   getListComplaintsQueryKey,
   getListRecordsQueryKey,
+  RecordStatus,
   useGetDashboard,
   useListComplaints,
   useListRecords,
@@ -32,6 +33,8 @@ import {
 } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { RecordTableActions } from "@/components/record-table-actions";
+import { RecordNumberCell } from "@/components/record-number-cell";
 import {
   Card,
   CardContent,
@@ -50,6 +53,7 @@ import {
 } from "@/components/ui/table";
 import { formatDate } from "@/lib/utils";
 import { useAuth } from "@workspace/replit-auth-web";
+import { dashboardStatusRegisterUrl } from "./records-utils";
 
 function StatusSummary({
   label,
@@ -57,12 +61,14 @@ function StatusSummary({
   detail,
   icon: Icon,
   tone,
+  href,
 }: {
   label: string;
   value: number;
   detail: string;
   icon: typeof FileText;
   tone: "neutral" | "success" | "warning" | "danger";
+  href: string;
 }) {
   const iconClasses = {
     neutral: "bg-muted text-muted-foreground",
@@ -78,7 +84,11 @@ function StatusSummary({
   };
 
   return (
-    <div className="flex items-center gap-3 rounded-md border border-border/70 bg-muted/20 p-3">
+    <Link
+      href={href}
+      aria-label={`Open QC register: ${label}`}
+      className="flex items-center gap-3 rounded-md border border-border/70 bg-muted/20 p-3 text-left transition-colors hover:border-primary/40 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
       <span className={`rounded-md p-2 ${iconClasses[tone]}`}>
         <Icon className="h-4 w-4" />
       </span>
@@ -89,7 +99,7 @@ function StatusSummary({
         </p>
         <p className="truncate text-[11px] text-muted-foreground">{detail}</p>
       </div>
-    </div>
+    </Link>
   );
 }
 
@@ -107,6 +117,15 @@ function StatusBadge({ status }: { status: string }) {
           <AlertTriangle className="mr-1 h-3 w-3" /> Review
         </Badge>
       );
+    case "Waiting for results":
+      return (
+        <Badge
+          variant="outline"
+          className="border-lime-300 bg-lime-100 text-lime-800 dark:border-lime-700 dark:bg-lime-950 dark:text-lime-200"
+        >
+          <Clock3 className="mr-1 h-3 w-3" /> Waiting
+        </Badge>
+      );
     case "Failed":
       return (
         <Badge variant="destructive">
@@ -121,8 +140,19 @@ function StatusBadge({ status }: { status: string }) {
 export default function Home() {
   const { role } = useAuth();
   const canViewComplaints = role !== "technician";
-  const dashboardQuery = useGetDashboard();
+  const [selectedQcMonth, setSelectedQcMonth] = useState(() => {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const dashboardQuery = useGetDashboard({ month: selectedQcMonth });
   const [recordSearch, setRecordSearch] = useState("");
+  const [selectedYear, selectedMonthNumber] = selectedQcMonth
+    .split("-")
+    .map(Number);
+  const selectedQcMonthLabel = new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    year: "numeric",
+  }).format(new Date(selectedYear, selectedMonthNumber - 1, 1));
   const searchTerm = recordSearch.trim();
   const recordsSearchParams = { search: searchTerm || undefined, limit: 100 };
   const complaintsSearchParams = { search: searchTerm || undefined };
@@ -185,7 +215,7 @@ export default function Home() {
   }
 
   const passRate =
-    (dashboard.passedRecords / Math.max(dashboard.totalRecords, 1)) * 100;
+    (dashboard.passedRecordsThisMonth / Math.max(dashboard.recordsThisMonth, 1)) * 100;
   const records = recordsQuery.data ?? [];
   const complaints = canViewComplaints ? complaintsQuery.data ?? [] : [];
   const searchLoading = recordsQuery.isLoading || (canViewComplaints && complaintsQuery.isLoading);
@@ -314,45 +344,63 @@ export default function Home() {
               <div>
                 <CardTitle id="qc-heading" className="text-base">QC test status</CardTitle>
               </div>
-              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <CalendarDays className="h-3.5 w-3.5" /> {dashboard.recordsThisMonth.toLocaleString()} records this month
-              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  {selectedQcMonthLabel}
+                </span>
+                <Input
+                  type="month"
+                  value={selectedQcMonth}
+                  onChange={(event) => {
+                    if (event.target.value) {
+                      setSelectedQcMonth(event.target.value);
+                    }
+                  }}
+                  aria-label="Choose month for QC test status"
+                  className="h-8 w-[156px] px-2 text-xs"
+                />
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4 p-4">
             <div className="grid gap-3 sm:grid-cols-2">
               <StatusSummary
-                label="All records"
-                value={dashboard.totalRecords}
+                label="Records in selected month"
+                value={dashboard.recordsThisMonth}
                 detail="In the QC register"
                 icon={FileText}
                 tone="neutral"
+                href={dashboardStatusRegisterUrl(selectedQcMonth)}
               />
               <StatusSummary
                 label="Passed"
-                value={dashboard.passedRecords}
+                value={dashboard.passedRecordsThisMonth}
                 detail={`${passRate.toFixed(1)}% pass rate`}
                 icon={CheckCircle2}
                 tone="success"
+                href={dashboardStatusRegisterUrl(selectedQcMonth, RecordStatus.Passed)}
               />
               <StatusSummary
                 label="Needs review"
-                value={dashboard.reviewRecords}
+                value={dashboard.reviewRecordsThisMonth}
                 detail="Supervisor approval needed"
                 icon={AlertTriangle}
                 tone="warning"
+                href={dashboardStatusRegisterUrl(selectedQcMonth, RecordStatus.Review)}
               />
               <StatusSummary
                 label="Failed"
-                value={dashboard.failedRecords}
+                value={dashboard.failedRecordsThisMonth}
                 detail="Immediate action required"
                 icon={XCircle}
                 tone="danger"
+                href={dashboardStatusRegisterUrl(selectedQcMonth, RecordStatus.Failed)}
               />
             </div>
             <div>
               <div className="mb-1.5 flex items-center justify-between text-xs text-muted-foreground">
-                <span>Overall pass rate</span>
+                <span>Pass rate for selected month</span>
                 <span className="font-semibold text-foreground">{passRate.toFixed(1)}%</span>
               </div>
               <div className="h-3 overflow-hidden rounded-full bg-muted">
@@ -486,7 +534,7 @@ export default function Home() {
             </CardDescription>
           </CardHeader>
           <CardContent className="overflow-x-auto p-0">
-            <Table className="min-w-[640px]">
+            <Table className="qc-table-readable min-w-[640px]">
               <TableHeader>
                 <TableRow>
                   <TableHead className="pl-5">Reference</TableHead>
@@ -512,9 +560,12 @@ export default function Home() {
                     const details = record.details as Record<string, unknown>;
                     return (
                       <TableRow key={record.id}>
-                        <TableCell className="pl-5 font-semibold text-primary">
-                          {String(details.referenceNumber || record.recordNo)}
-                        </TableCell>
+                        <RecordNumberCell
+                          record={record}
+                          recordNumber={String(details.referenceNumber || record.recordNo)}
+                          isAdmin={role === "administrator"}
+                          className="pl-5"
+                        />
                         <TableCell>{record.testType}</TableCell>
                         <TableCell>{record.material}</TableCell>
                         <TableCell className="whitespace-nowrap text-muted-foreground">
@@ -523,13 +574,8 @@ export default function Home() {
                         <TableCell>
                           <StatusBadge status={record.status} />
                         </TableCell>
-                        <TableCell className="pr-5 text-right">
-                          <Button asChild variant="ghost" size="sm">
-                            <Link href={`/records/${record.id}`}>
-                              View{" "}
-                              <ArrowUpRight className="ml-1.5 h-3.5 w-3.5" />
-                            </Link>
-                          </Button>
+                        <TableCell className="pr-5">
+                          <RecordTableActions recordId={record.id} showPrint={false} />
                         </TableCell>
                       </TableRow>
                     );

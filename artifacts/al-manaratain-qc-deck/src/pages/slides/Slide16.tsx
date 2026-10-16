@@ -1,20 +1,28 @@
-import { Bullet, SlideFooter, SlideFrame, SlideHeader, SlideTitle } from '../../components/SlideFrame';
+import { Card, ManagementSlide } from '../../components/ManagementSlide';
 
 export default function Slide16() {
   return (
-    <SlideFrame dark>
-      <SlideHeader section="Delivery" number="16 / 16" dark />
-      <div className="absolute bottom-[16vh] left-[5vw] right-[5vw]">
-        <SlideTitle dark>Next Steps</SlideTitle>
-        <div className="mt-[7vh] grid grid-cols-2 gap-x-[7vw] gap-y-[4vh]">
-          <Bullet number="01" dark>Publish the verified web application</Bullet>
-          <Bullet number="02" dark>Confirm production data and reference standards</Bullet>
-          <Bullet number="03" dark>Train administrators on access and reference-data controls</Bullet>
-          <Bullet number="04" dark>Add regression coverage for employee access workflows</Bullet>
-          <Bullet number="05" dark>Expand reporting needs as usage grows</Bullet>
-        </div>
+    <ManagementSlide section="Security Recommendations" page="16" title="Recommended security and governance roadmap">
+      <div className="grid h-[52vh] grid-cols-3 gap-[1.3vw]">
+        <Card label="01 · STRENGTHEN ACCESS" title="Build on current roles">
+          Assess MFA or SSO requirements
+          <div>Review employee lifecycle, role assignment and periodic access checks</div>
+          <div>Confirm password and session policies fit company requirements</div>
+        </Card>
+        <Card label="02 · IMPROVE TRACEABILITY" title="Make changes reviewable" soft>
+          Add field-level QC record history
+          <div>Keep report revision and approval evidence</div>
+          <div>Define retention and access rules for uploaded documents</div>
+        </Card>
+        <Card label="03 · PROVE RESILIENCE" title="Test recovery">
+          Confirm managed database backup settings
+          <div>Run and document a restore exercise</div>
+          <div>Define monitoring, incident owners and escalation path</div>
+        </Card>
       </div>
-      <SlideFooter label="Delivery / Next Steps" number="16" dark />
-    </SlideFrame>
+      <div className="mt-[2.6vh] border border-line px-[1.5vw] py-[1.3vh] text-[1.8vw] leading-[1.2] text-muted">
+        Prioritize verification of existing provider controls before implementing new controls or making assurance claims.
+      </div>
+    </ManagementSlide>
   );
 }

@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { StrengthStandardUpdateCubeAge } from './strengthStandardUpdateCubeAge';
 import type { TestType } from './testType';
 
 export interface StrengthStandardUpdate {
@@ -15,9 +16,38 @@ export interface StrengthStandardUpdate {
   blockType?: string | null;
   /** @nullable */
   blockSize?: string | null;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  kerbClass?: number | null;
+  /** @nullable */
+  kerbMarking?: string | null;
+  /** @nullable */
+  cubeAge?: StrengthStandardUpdateCubeAge;
   /** @minLength 1 */
   bsStandard?: string;
   /** @minimum 0 */
   requiredStrength?: number;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  minimumIndividualStrength?: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  waterAbsorptionLimit?: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  dammamAverageStrength?: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  dammamMinimumStrength?: number | null;
   strengthUnit?: string;
 }

@@ -19,6 +19,8 @@ export interface QcRecord {
   status: RecordStatus;
   testedBy: string;
   /** @nullable */
+  createdBy?: string | null;
+  /** @nullable */
   reviewedBy?: string | null;
   /** @nullable */
   remarks?: string | null;

@@ -1,8 +1,20 @@
 import crypto from 'crypto';
 import type { AuthUser } from '@workspace/api-zod';
-import { db, employeeAccessTable, sessionsTable } from '@workspace/db';
+import {
+  db,
+  employeeAccessTable,
+  employeeActivitySessionsTable,
+  sessionsTable,
+} from '@workspace/db';
 import { and, eq } from 'drizzle-orm';
 import { type Request, type Response } from 'express';
+import {
+  closeEmployeeActivitySession,
+  fingerprintSessionId,
+  getActivityEmployeeName,
+  touchEmployeeActivitySession,
+  type ActivitySessionEndReason,
+} from './employee-activity';
 
 export const EMPLOYEE_ROLES = [
   'technician',
@@ -25,10 +37,25 @@ export interface SessionData {
 
 export async function createSession(data: SessionData): Promise<string> {
   const sid = crypto.randomBytes(32).toString('hex');
-  await db.insert(sessionsTable).values({
-    sid,
-    sess: data as unknown as Record<string, unknown>,
-    expire: new Date(Date.now() + SESSION_TTL),
+  const expire = new Date(Date.now() + SESSION_TTL);
+  const employeeId = getEmployeeIdFromUser(data.user);
+  const now = new Date();
+  await db.transaction(async (transaction) => {
+    await transaction.insert(sessionsTable).values({
+      sid,
+      sess: data as unknown as Record<string, unknown>,
+      expire,
+    });
+    if (employeeId) {
+      await transaction.insert(employeeActivitySessionsTable).values({
+        sessionFingerprint: fingerprintSessionId(sid),
+        employeeId,
+        employeeName: getActivityEmployeeName(data.user, employeeId),
+        startedAt: now,
+        lastSeenAt: now,
+        expiresAt: expire,
+      });
+    }
   });
   return sid;
 }
@@ -40,7 +67,7 @@ export async function getSession(sid: string): Promise<SessionData | null> {
     .where(eq(sessionsTable.sid, sid));
 
   if (!row || row.expire < new Date()) {
-    if (row) await deleteSession(sid);
+    if (row) await deleteSession(sid, 'expired', row.expire);
     return null;
   }
 
@@ -51,21 +78,36 @@ export async function updateSession(
   sid: string,
   data: SessionData,
 ): Promise<void> {
+  const expire = new Date(Date.now() + SESSION_TTL);
   await db
     .update(sessionsTable)
     .set({
       sess: data as unknown as Record<string, unknown>,
-      expire: new Date(Date.now() + SESSION_TTL),
+      expire,
     })
     .where(eq(sessionsTable.sid, sid));
+  await touchEmployeeActivitySession(sid, expire);
 }
 
-export async function deleteSession(sid: string): Promise<void> {
+export async function deleteSession(
+  sid: string,
+  endReason: ActivitySessionEndReason = 'revoked',
+  endedAt?: Date,
+): Promise<void> {
   await db.delete(sessionsTable).where(eq(sessionsTable.sid, sid));
+  try {
+    await closeEmployeeActivitySession(sid, endReason, endedAt);
+  } catch {
+    // Revocation must succeed even if activity-history persistence fails.
+  }
 }
 
-export async function clearSession(res: Response, sid?: string): Promise<void> {
-  if (sid) await deleteSession(sid);
+export async function clearSession(
+  res: Response,
+  sid?: string,
+  endReason: ActivitySessionEndReason = 'logout',
+): Promise<void> {
+  if (sid) await deleteSession(sid, endReason);
   res.clearCookie(SESSION_COOKIE, { path: '/' });
 }
 

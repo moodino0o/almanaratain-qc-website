@@ -9,19 +9,23 @@ import {
   useDeleteReferenceItem,
   getGetReferenceDataQueryKey,
   getGetLookupsQueryKey,
+  getListShapeFactorsQueryKey,
   getGetEmployeeAccessQueryKey,
   useGetEmployeeAccess,
   useCreateEmployeeAccess,
   useUpdateEmployeeAccess,
+  useGetEmployeeActivity,
+  getGetEmployeeActivityQueryKey,
   EmployeeAccess,
+  type EmployeeActivityDay,
+  type EmployeeActivityChange,
   UserRole,
   ReferenceCategory,
   ReferenceItem,
-  ReportLayout,
-  ReportLayoutColumn,
-  useListReportLayouts,
-  useUpdateReportLayout,
-  getListReportLayoutsQueryKey,
+  usePreviewRecordAgeBackfill,
+  useApplyRecordAgeBackfill,
+  type RecordAgeBackfillPreview,
+  type RecordAgeBackfillApplyResult,
 } from "@workspace/api-client-react";
 import { useAuth } from "@workspace/replit-auth-web";
 import { useQueryClient } from "@tanstack/react-query";
@@ -31,7 +35,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
   Settings2, Building2, Users, Package, MapPin, Truck, Plus, Trash2, Edit2, KeyRound,
-  Database, Check, X, Search, MoreVertical, UserPlus, ShieldAlert, Mail, ChevronDown
+  Database, Check, X, Search, MoreVertical, UserPlus, ShieldAlert, Mail, ChevronDown,
+  Activity, CalendarDays, RefreshCw, Clock3, FileJson, LogIn, LogOut,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -49,6 +54,26 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ReportLayoutsEditor } from "./ReportLayoutsEditor";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 function getCategoryIcon(key: string) {
   const k = key.toLowerCase();
@@ -67,6 +92,220 @@ function formatAccessDate(value: string) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+}
+
+function HistoricalAgeBackfillSection() {
+  const queryClient = useQueryClient();
+  const previewMutation = usePreviewRecordAgeBackfill();
+  const applyMutation = useApplyRecordAgeBackfill();
+  const [preview, setPreview] = useState<RecordAgeBackfillPreview | null>(null);
+  const [applyResult, setApplyResult] = useState<RecordAgeBackfillApplyResult | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const createPreview = async () => {
+    setPreview(null);
+    setApplyResult(null);
+    try {
+      setPreview(await previewMutation.mutateAsync({ data: {} }));
+    } catch {
+      toast.error("Unable to preview historical records. Try again.");
+    }
+  };
+
+  const applyPreview = async () => {
+    if (!preview?.eligible.length) return;
+    try {
+      const result = await applyMutation.mutateAsync({
+        data: { candidates: preview.eligible },
+      });
+      setApplyResult(result);
+      setConfirmOpen(false);
+      await queryClient.invalidateQueries({
+        predicate: (query) =>
+          String(query.queryKey[0] ?? "").startsWith("/api/records"),
+      });
+      setPreview(await previewMutation.mutateAsync({ data: {} }));
+      toast.success(`Added ages to ${result.applied} historical record${result.applied === 1 ? "" : "s"}.`);
+    } catch {
+      toast.error("Unable to apply the previewed ages. Generate a new preview and try again.");
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Historical age backfill</CardTitle>
+        <CardDescription>
+          Find older Blocks, Paving Blocks, Sand Sieve, and Aggregate Sieve records
+          that have a saved Testing Date but no matching age field.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="max-w-3xl text-sm text-muted-foreground">
+            Preview the proposed ages first. Applying adds only the age value, keeps
+            the saved Testing Date, and leaves ambiguous records unchanged for manual review.
+          </p>
+          <Button
+            variant="outline"
+            onClick={() => void createPreview()}
+            disabled={previewMutation.isPending || applyMutation.isPending}
+          >
+            {previewMutation.isPending ? "Previewing…" : preview ? "Refresh preview" : "Preview records"}
+          </Button>
+        </div>
+
+        {applyResult && (
+          <div className="rounded-md border bg-muted/30 p-3 text-sm">
+            <strong>{applyResult.applied} age value{applyResult.applied === 1 ? "" : "s"} applied.</strong>
+            {applyResult.skipped.length > 0 && (
+              <span className="ml-1 text-muted-foreground">
+                {applyResult.skipped.length} record{applyResult.skipped.length === 1 ? "" : "s"} changed after preview and were left unchanged.
+              </span>
+            )}
+          </div>
+        )}
+
+        {preview && (
+          <div className="space-y-6">
+            <section className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold">Ready to update ({preview.eligible.length})</h3>
+                  <p className="text-sm text-muted-foreground">
+                    The age shown is the whole-day difference between Sample Date and saved Testing Date.
+                  </p>
+                </div>
+                <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+                  <AlertDialogTrigger asChild>
+                    <Button disabled={!preview.eligible.length || applyMutation.isPending}>
+                      Apply age values
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Apply the previewed ages?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will add an age field to {preview.eligible.length} records.
+                        Each record is checked again before saving; records that changed
+                        since this preview will be skipped.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={applyMutation.isPending}>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        disabled={applyMutation.isPending}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          void applyPreview();
+                        }}
+                      >
+                        {applyMutation.isPending ? "Applying…" : "Confirm apply"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+
+              {preview.eligible.length === 0 ? (
+                <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                  No historical records are ready for an age update.
+                </p>
+              ) : (
+                <div className="max-h-80 overflow-auto rounded-md border">
+                  <Table className="min-w-[780px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Record</TableHead>
+                        <TableHead>Test type</TableHead>
+                        <TableHead>Sample date</TableHead>
+                        <TableHead>Testing date</TableHead>
+                        <TableHead className="text-right">Age (days)</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {preview.eligible.map((record) => (
+                        <TableRow key={record.id}>
+                          <TableCell>{record.recordNo}</TableCell>
+                          <TableCell>{record.testType}</TableCell>
+                          <TableCell>{record.sampleDate}</TableCell>
+                          <TableCell>{record.testingDate}</TableCell>
+                          <TableCell className="text-right font-medium">{record.age}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </section>
+
+            <section className="space-y-3">
+              <div>
+                <h3 className="font-semibold">Manual review ({preview.manualReview.length})</h3>
+                <p className="text-sm text-muted-foreground">
+                  These records are not changed because their dates or existing age values are missing, invalid, or conflicting.
+                </p>
+              </div>
+              {preview.manualReview.length === 0 ? (
+                <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                  No records need manual review.
+                </p>
+              ) : (
+                <div className="max-h-72 overflow-auto rounded-md border">
+                  <Table className="min-w-[780px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Record</TableHead>
+                        <TableHead>Test type</TableHead>
+                        <TableHead>Sample date</TableHead>
+                        <TableHead>Saved testing date</TableHead>
+                        <TableHead>Why it needs review</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {preview.manualReview.map((record) => (
+                        <TableRow key={record.id}>
+                          <TableCell>{record.recordNo}</TableCell>
+                          <TableCell>{record.testType}</TableCell>
+                          <TableCell>{record.sampleDate ?? "—"}</TableCell>
+                          <TableCell>{record.testingDate ?? "—"}</TableCell>
+                          <TableCell className="min-w-64 whitespace-normal">{record.reason}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </section>
+
+            {applyResult && applyResult.skipped.length > 0 && (
+              <section className="space-y-3">
+                <h3 className="font-semibold">Skipped after preview ({applyResult.skipped.length})</h3>
+                <div className="max-h-60 overflow-auto rounded-md border">
+                  <Table className="min-w-[780px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Record</TableHead>
+                        <TableHead>Why it was skipped</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {applyResult.skipped.map((record) => (
+                        <TableRow key={record.id}>
+                          <TableCell>{record.recordNo}</TableCell>
+                          <TableCell className="whitespace-normal">{record.reason}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </section>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 const employeeRoleOptions: Array<{ value: UserRole; label: string }> = [
@@ -218,6 +457,7 @@ function EmployeeAccessCard({ isAdmin }: { isAdmin: boolean }) {
         <CardDescription>
           Add the employee names and IDs that are allowed to enter the QC system.
           Disabled employees cannot log in.
+          Passwords cannot be viewed; use the password action to set or change one.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 p-4">
@@ -331,6 +571,9 @@ function CategoryCard({ category }: { category: ReferenceCategory }) {
   const invalidateData = () => {
     queryClient.invalidateQueries({ queryKey: getGetReferenceDataQueryKey() });
     queryClient.invalidateQueries({ queryKey: getGetLookupsQueryKey() });
+    if (category.key === "blockSizes") {
+      queryClient.invalidateQueries({ queryKey: getListShapeFactorsQueryKey() });
+    }
   };
 
   const handleUpdateCategory = () => {
@@ -632,281 +875,719 @@ function CategoryCard({ category }: { category: ReferenceCategory }) {
   );
 }
 
-const REPORT_LAYOUT_COLUMN_OPTIONS: Record<
-  string,
-  Array<{ key: string; label: string }>
-> = {
-  blockCompression: [
-    { key: "no", label: "No." },
-    { key: "length", label: "Length (mm)" },
-    { key: "width", label: "Width (mm)" },
-    { key: "height", label: "Height (mm)" },
-    { key: "load", label: "Load (kN)" },
-    { key: "water", label: "Water (N/mm2)" },
-    { key: "airDry", label: "Air Dry (N/mm2)" },
-    { key: "normalized", label: "Normalized (N/mm2)" },
-    { key: "density", label: "Density (kg/m3)" },
-    { key: "wetWeight", label: "Wet Weight (kg)" },
-  ],
-  readyMixResults: [
-    { key: "no", label: "No." },
-    { key: "age", label: "Test Age" },
-    { key: "length", label: "Length (mm)" },
-    { key: "width", label: "Width (mm)" },
-    { key: "height", label: "Height (mm)" },
-    { key: "dryWeight", label: "Dry Weight" },
-    { key: "wetWeight", label: "Wet Weight" },
-    { key: "absorption", label: "Water Absorption (%)" },
-    { key: "load", label: "Load (kN)" },
-    { key: "strength", label: "Calculated Strength" },
-  ],
-  sieveResults: [
-    { key: "no", label: "No." },
-    { key: "size", label: "Sieve / Pore Size" },
-    { key: "returned", label: "Amount Returned" },
-    { key: "passing", label: "Amount Passing" },
-    { key: "percentage", label: "% Passing" },
-  ],
-  pavingResults: [
-    { key: "no", label: "No." },
-    { key: "age", label: "Test Age" },
-    { key: "length", label: "Length (mm)" },
-    { key: "width", label: "Width (mm)" },
-    { key: "height", label: "Height (mm)" },
-    { key: "dryWeight", label: "Dry Weight" },
-    { key: "wetWeight", label: "Wet Weight" },
-    { key: "load", label: "Load (kN)" },
-    { key: "strength", label: "Calculated Strength" },
-  ],
-};
-
-const REPORT_LAYOUT_TABLE_LABELS: Record<string, string> = {
-  blockCompression: "Block compression results",
-  readyMixResults: "Ready Mix specimen results",
-  sieveResults: "Sieve results",
-  pavingResults: "Paving Block specimen results",
-};
-
 function ReportLayoutsSection() {
-  const { data: layouts = [], isLoading, isError } = useListReportLayouts();
+  return <ReportLayoutsEditor />;
+}
+
+const EMPLOYEE_REFERENCE_VALUE_OPTIONS = [
+  { key: "customers", label: "Customer name", placeholder: "Enter customer name" },
+  {
+    key: "customerLocations",
+    label: "Customer location",
+    placeholder: "Enter customer location",
+  },
+  {
+    key: "locations",
+    label: "Plant / production location",
+    placeholder: "Enter plant or production location",
+  },
+  { key: "mixStrengths", label: "Mix design", placeholder: "Enter mix design" },
+] as const;
+
+function EmployeeSharedValues({
+  categories,
+  isLoading,
+  isError,
+  onRetry,
+}: {
+  categories: ReferenceCategory[];
+  isLoading: boolean;
+  isError: boolean;
+  onRetry: () => void;
+}) {
   const queryClient = useQueryClient();
-  const updateLayout = useUpdateReportLayout();
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [draft, setDraft] = useState<ReportLayout | null>(null);
-  const selectedLayout = layouts.find((layout) => layout.id === selectedId) ?? layouts[0];
-
-  useEffect(() => {
-    if (selectedLayout) {
-      setSelectedId(selectedLayout.id);
-      setDraft(selectedLayout);
-    }
-  }, [selectedLayout?.id]);
-
-  if (isLoading) {
-    return <Card><CardContent className="p-6 text-sm text-muted-foreground">Loading report layouts...</CardContent></Card>;
-  }
-  if (isError) {
-    return (
-      <Card>
-        <CardContent className="space-y-2 p-6">
-          <p className="font-medium">Report editor could not be loaded.</p>
-          <p className="text-sm text-muted-foreground">
-            Sign in as an administrator to edit and save report forms.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-  if (!draft) {
-    return <Card><CardContent className="p-6 text-sm text-muted-foreground">No report layouts are configured.</CardContent></Card>;
-  }
-
-  const config = draft.config;
-  const tableKey = draft.testType === "Blocks"
-    ? "blockCompression"
-    : draft.testType === "Ready Mix"
-      ? "readyMixResults"
-      : draft.testType === "Sand Sieve" || draft.testType === "Aggregate Sieve"
-        ? "sieveResults"
-        : draft.testType === "Paving Blocks"
-          ? "pavingResults"
-          : "";
-  const configuredColumns = tableKey ? (config.columns[tableKey] ?? []) : [];
-  const columnOptions = REPORT_LAYOUT_COLUMN_OPTIONS[tableKey] ?? [];
-  const availableColumns = columnOptions.filter(
-    (option) => !configuredColumns.some((column) => column.key === option.key),
+  const createItem = useCreateReferenceItem();
+  const [categoryKey, setCategoryKey] = useState<string>("customers");
+  const [value, setValue] = useState("");
+  const availableOptions = EMPLOYEE_REFERENCE_VALUE_OPTIONS.flatMap((option) => {
+    const category = categories.find((item) => item.key === option.key);
+    return category ? [{ ...option, category }] : [];
+  });
+  const selectedOption = availableOptions.find(
+    (option) => option.key === categoryKey,
   );
-  const setConfig = (patch: Partial<ReportLayout["config"]>) => {
-    setDraft((current) => current ? {
-      ...current,
-      config: { ...current.config, ...patch },
-    } : current);
-  };
-  const updateColumn = (columnKey: string, patch: Partial<ReportLayoutColumn>) => {
-    setConfig({
-      columns: {
-        ...config.columns,
-        [tableKey]: configuredColumns.map((column) =>
-          column.key === columnKey ? { ...column, ...patch } : column,
-        ),
-      },
-    });
-  };
-  const save = () => {
-    updateLayout.mutate(
-      { id: draft.id, data: { name: draft.name, config } },
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const normalizedValue = value.trim();
+    if (!selectedOption || !normalizedValue) return;
+    createItem.mutate(
       {
-        onSuccess: (saved) => {
-          setDraft(saved);
-          queryClient.invalidateQueries({ queryKey: getListReportLayoutsQueryKey() });
-          toast.success(`${saved.testType} report layout saved`);
+        categoryId: selectedOption.category.id,
+        data: { value: normalizedValue },
+      },
+      {
+        onSuccess: (createdItem) => {
+          setValue("");
+          toast.success(`Added “${createdItem.value}” for everyone to use.`);
+          void queryClient.invalidateQueries({
+            queryKey: getGetReferenceDataQueryKey(),
+          });
+          void queryClient.invalidateQueries({
+            queryKey: getGetLookupsQueryKey(),
+          });
         },
-        onError: () => toast.error("Unable to save report layout"),
+        onError: () =>
+          toast.error("Could not add this value. It may already exist."),
       },
     );
   };
 
   return (
-    <Card className="mt-4">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2"><Settings2 className="h-5 w-5 text-primary" /> Report layouts</CardTitle>
-        <CardDescription>
-          Customize each report type. Changes affect new and existing printable reports and are limited to approved data fields.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <label className="flex-1 space-y-1 text-sm font-medium">
-            Report type
-            <select
-              value={draft.id}
-              onChange={(event) => setSelectedId(Number(event.target.value))}
-              className="h-10 w-full rounded-md border border-input bg-background px-3 font-normal"
-            >
-              {layouts.map((layout) => <option key={layout.id} value={layout.id}>{layout.testType}</option>)}
-            </select>
-          </label>
-          <label className="flex-1 space-y-1 text-sm font-medium">
-            Report title
-            <Input
-              value={draft.config.title}
-              onChange={(event) => setConfig({ title: event.target.value })}
-            />
-          </label>
-          <Button onClick={save} disabled={updateLayout.isPending}>Save layout</Button>
+    <div className="mx-auto mt-8 w-full max-w-3xl">
+      <Card>
+        <div className="border-b p-6">
+          <h1 className="text-xl font-semibold">Add shared values</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Any approved employee can add customer names, customer and plant
+            locations, or Ready Mix mix designs. New values become available
+            to everyone.
+          </p>
         </div>
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <label className="space-y-1 text-sm font-medium">
-            Font family
-            <select
-              value={config.fontFamily}
-              onChange={(event) => setConfig({ fontFamily: event.target.value as ReportLayout["config"]["fontFamily"] })}
-              className="h-10 w-full rounded-md border border-input bg-background px-3 font-normal"
+        <div className="p-6">
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground">
+              Loading shared values…
+            </p>
+          ) : isError ? (
+            <div className="space-y-3">
+              <p className="text-sm text-destructive">
+                Shared values could not be loaded.
+              </p>
+              <Button type="button" variant="outline" onClick={onRetry}>
+                Try again
+              </Button>
+            </div>
+          ) : (
+            <form
+              onSubmit={handleSubmit}
+              className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto]"
             >
-              {["Arial", "Calibri", "Times New Roman", "Helvetica"].map((font) => <option key={font}>{font}</option>)}
-            </select>
-          </label>
-          <label className="space-y-1 text-sm font-medium">
-            Font size
-            <Input type="number" min={8} max={24} value={config.fontSize} onChange={(event) => setConfig({ fontSize: Number(event.target.value) })} />
-          </label>
-          <label className="space-y-1 text-sm font-medium">
-            Text color
-            <Input type="color" value={config.textColor} onChange={(event) => setConfig({ textColor: event.target.value })} className="h-10 p-1" />
-          </label>
-          <label className="space-y-1 text-sm font-medium">
-            Accent color
-            <Input type="color" value={config.accentColor} onChange={(event) => setConfig({ accentColor: event.target.value })} className="h-10 p-1" />
-          </label>
-          <label className="space-y-1 text-sm font-medium">
-            Paper padding (mm)
-            <Input type="number" min={5} max={30} value={config.paperPadding} onChange={(event) => setConfig({ paperPadding: Number(event.target.value) })} />
-          </label>
-        </div>
-
-        <div>
-          <h3 className="mb-2 text-sm font-semibold">Sections and position</h3>
-          <div className="grid gap-2 md:grid-cols-2">
-            {[...config.sections].sort((left, right) => left.order - right.order).map((section) => (
-              <div key={section.key} className="flex items-center gap-2 rounded-md border p-2">
-                <input
-                  type="checkbox"
-                  checked={section.visible}
-                  onChange={(event) => setConfig({
-                    sections: config.sections.map((item) => item.key === section.key ? { ...item, visible: event.target.checked } : item),
-                  })}
-                />
-                <span className="min-w-0 flex-1 text-sm">{section.label}</span>
+              <div className="space-y-2">
+                <label
+                  htmlFor="shared-reference-category"
+                  className="text-sm font-medium"
+                >
+                  Value type
+                </label>
+                <select
+                  id="shared-reference-category"
+                  value={categoryKey}
+                  onChange={(event) => setCategoryKey(event.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  disabled={!availableOptions.length}
+                >
+                  {availableOptions.map((option) => (
+                    <option key={option.key} value={option.key}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label
+                  htmlFor="shared-reference-value"
+                  className="text-sm font-medium"
+                >
+                  New value
+                </label>
                 <Input
-                  type="number"
-                  min={0}
-                  value={section.order}
-                  className="h-8 w-20"
-                  onChange={(event) => setConfig({
-                    sections: config.sections.map((item) => item.key === section.key ? { ...item, order: Number(event.target.value) } : item),
-                  })}
+                  id="shared-reference-value"
+                  value={value}
+                  onChange={(event) => setValue(event.target.value)}
+                  placeholder={
+                    selectedOption?.placeholder ?? "Enter a new value"
+                  }
+                  maxLength={120}
+                  required
+                  disabled={!selectedOption}
                 />
               </div>
+              <div className="flex items-end">
+                <Button
+                  type="submit"
+                  className="w-full sm:w-auto"
+                  disabled={
+                    !selectedOption ||
+                    !value.trim() ||
+                    createItem.isPending
+                  }
+                >
+                  {createItem.isPending ? "Adding…" : "Add value"}
+                </Button>
+              </div>
+              {!availableOptions.length && (
+                <p className="text-sm text-destructive sm:col-span-3">
+                  The shared-value categories are not configured. Ask an
+                  administrator to restore them.
+                </p>
+              )}
+            </form>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function toDateInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatActivityDate(value: string, includeDate = false) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not recorded";
+  return new Intl.DateTimeFormat("en-GB", includeDate
+    ? { dateStyle: "medium", timeStyle: "short" }
+    : { timeStyle: "short" }).format(date);
+}
+
+function formatActivityDay(value: string) {
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+function activitySessionExit(session: EmployeeActivityDay["sessions"][number]) {
+  if (session.endedAt) return formatActivityDate(session.endedAt);
+  if (session.endReason === "expired") return "Ended at expiry (inferred)";
+  if (session.endReason === "revoked") return "Ended when revoked (inferred)";
+  return "Open / no exit recorded";
+}
+
+function activityEndReasonLabel(
+  reason: EmployeeActivityDay["sessions"][number]["endReason"],
+  hasEndedAt = false,
+) {
+  if (reason === "logout") return "Logged out";
+  if (reason === "expired") return "Expired";
+  if (reason === "revoked") return "Revoked";
+  return hasEndedAt ? "Ended" : "Open";
+}
+
+function sanitizeActivityValue(value: unknown, key?: string): unknown {
+  if (key && /password|token|secret|authorization|cookie|credential/i.test(key)) {
+    return "[redacted]";
+  }
+  if (Array.isArray(value)) return value.map((item) => sanitizeActivityValue(item));
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([entryKey, entryValue]) => [
+        entryKey,
+        sanitizeActivityValue(entryValue, entryKey),
+      ]),
+    );
+  }
+  return value;
+}
+
+const activityFieldLabels: Record<string, string> = {
+  bsStandard: "BS standard",
+  blockSize: "Block size",
+  blockType: "Block type",
+  cubeAge: "Cube age",
+  employeeId: "Employee ID",
+  employeeName: "Employee name",
+  material: "Material",
+  requiredStrength: "Required strength",
+  strengthUnit: "Strength unit",
+  testType: "Test type",
+};
+
+function activityFieldLabel(key: string) {
+  return activityFieldLabels[key] ??
+    key
+      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+      .replace(/[_-]+/g, " ")
+      .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function activitySubmittedFields(details: Record<string, unknown>) {
+  const safeDetails = sanitizeActivityValue(details) as Record<string, unknown>;
+  const submitted = safeDetails.submitted;
+  if (submitted && typeof submitted === "object" && !Array.isArray(submitted)) {
+    return Object.entries(submitted as Record<string, unknown>);
+  }
+  if (submitted !== undefined && submitted !== null) {
+    return [["Submitted value", submitted] as [string, unknown]];
+  }
+  return [];
+}
+
+function ActivityValue({ value }: { value: unknown }) {
+  if (value === null || value === undefined) {
+    return <span className="text-muted-foreground">Not set</span>;
+  }
+  if (typeof value === "boolean") return <span>{value ? "Yes" : "No"}</span>;
+  if (Array.isArray(value)) {
+    if (!value.length) return <span className="text-muted-foreground">None</span>;
+    return (
+      <div className="space-y-2">
+        {value.map((entry, index) => (
+          <div key={index} className="rounded-md bg-muted/40 px-2.5 py-2">
+            {typeof entry === "object" && entry !== null ? (
+              <ActivityValue value={entry} />
+            ) : (
+              <div className="flex gap-2">
+                <span className="shrink-0 text-muted-foreground">Item {index + 1}</span>
+                <ActivityValue value={entry} />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  }
+  if (typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>);
+    if (!entries.length) return <span className="text-muted-foreground">No details</span>;
+    return (
+      <dl className="space-y-2">
+        {entries.map(([key, entry]) => (
+          <div key={key} className="grid gap-1 sm:grid-cols-[minmax(8rem,0.8fr)_minmax(0,1.5fr)] sm:gap-3">
+            <dt className="text-xs font-medium text-muted-foreground">{activityFieldLabel(key)}</dt>
+            <dd className="min-w-0 break-words text-sm"><ActivityValue value={entry} /></dd>
+          </div>
+        ))}
+      </dl>
+    );
+  }
+  return <span className="break-words">{String(value)}</span>;
+}
+
+function EmployeeActivitySection({ isAdmin }: { isAdmin: boolean }) {
+  const today = useMemo(() => new Date(), []);
+  const defaultTo = toDateInputValue(today);
+  const defaultFrom = toDateInputValue(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6));
+  const [from, setFrom] = useState(defaultFrom);
+  const [to, setTo] = useState(defaultTo);
+  const [appliedRange, setAppliedRange] = useState({ from: defaultFrom, to: defaultTo });
+  const [selectedDay, setSelectedDay] = useState<EmployeeActivityDay | null>(null);
+  const [rangeError, setRangeError] = useState("");
+  const { data, isLoading, isFetching, isError, error, refetch } = useGetEmployeeActivity(
+    appliedRange,
+    {
+      query: {
+        enabled: isAdmin,
+        queryKey: getGetEmployeeActivityQueryKey(appliedRange),
+      },
+    },
+  );
+
+  if (!isAdmin) return null;
+
+  const records = data?.records ?? [];
+  const loginTotal = records.reduce((total, record) => total + record.loginCount, 0);
+  const changeTotal = records.reduce((total, record) => total + record.changes.length, 0);
+  const sessionTotal = records.reduce((total, record) => total + record.sessions.length, 0);
+  const loginAttempts = records
+    .flatMap((record) =>
+      record.loginAttempts.map((attempt) => ({
+        ...attempt,
+        employeeId: record.employeeId,
+        employeeName: record.employeeName,
+      })),
+    )
+    .sort(
+      (left, right) =>
+        new Date(right.occurredAt).getTime() -
+        new Date(left.occurredAt).getTime(),
+    );
+  const uniqueIpCount = new Set(
+    loginAttempts
+      .map((attempt) => attempt.ipAddress)
+      .filter((ipAddress) => ipAddress !== "Unknown"),
+  ).size;
+
+  const applyRange = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!from || !to) {
+      setRangeError("Choose both a start date and an end date.");
+      return;
+    }
+    if (from > to) {
+      setRangeError("The start date must be on or before the end date.");
+      return;
+    }
+    setRangeError("");
+    setAppliedRange({ from, to });
+  };
+
+  const setPreset = (days: number) => {
+    const end = new Date();
+    const start = new Date(end.getFullYear(), end.getMonth(), end.getDate() - days + 1);
+    setFrom(toDateInputValue(start));
+    setTo(toDateInputValue(end));
+    setRangeError("");
+    setAppliedRange({
+      from: toDateInputValue(start),
+      to: toDateInputValue(end),
+    });
+  };
+
+  return (
+    <section className="space-y-4" data-testid="section-employee-activity">
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+        <div>
+          <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-foreground">
+            <Activity className="h-6 w-6 text-primary" /> Employee activity
+          </h2>
+          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+            Audit sign-ins, confirmed requests, session endings, and changes made by each employee.
+            Times are shown in your browser&apos;s local time.
+          </p>
+        </div>
+        <Badge variant="outline" className="w-fit gap-1.5 text-muted-foreground">
+          <ShieldAlert className="h-3.5 w-3.5" /> Administrator view
+        </Badge>
+      </div>
+
+      <Card className="border-primary/15 shadow-sm">
+        <CardContent className="space-y-4 p-4 sm:p-5">
+          <form className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]" onSubmit={applyRange}>
+            <label className="space-y-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              From
+              <div className="relative">
+                <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+                <Input
+                  type="date"
+                  value={from}
+                  onChange={(event) => setFrom(event.target.value)}
+                  className="pl-9 font-normal tracking-normal"
+                  aria-label="Activity from date"
+                  data-testid="input-activity-from"
+                />
+              </div>
+            </label>
+            <label className="space-y-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              To
+              <div className="relative">
+                <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+                <Input
+                  type="date"
+                  value={to}
+                  onChange={(event) => setTo(event.target.value)}
+                  className="pl-9 font-normal tracking-normal"
+                  aria-label="Activity to date"
+                  data-testid="input-activity-to"
+                />
+              </div>
+            </label>
+            <Button type="submit" className="self-end" disabled={isFetching} data-testid="button-apply-activity-range">
+              <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+              Apply range
+            </Button>
+          </form>
+          <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
+            <span className="mr-1 text-xs font-medium text-muted-foreground">Quick range</span>
+            {[1, 7, 30].map((days) => (
+              <Button
+                key={days}
+                type="button"
+                variant={days === 7 && from === appliedRange.from && to === appliedRange.to ? "secondary" : "outline"}
+                size="sm"
+                onClick={() => setPreset(days)}
+                data-testid={`button-activity-preset-${days}`}
+              >
+                {days === 1 ? "Today" : `${days} days`}
+              </Button>
+            ))}
+            <span className="ml-auto text-xs text-muted-foreground">
+              Showing {formatActivityDay(appliedRange.from)} – {formatActivityDay(appliedRange.to)}
+            </span>
+          </div>
+          {rangeError && <p className="text-sm text-destructive" role="alert" data-testid="status-activity-range-error">{rangeError}</p>}
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        {[
+          { label: "Daily login count", value: loginTotal, icon: LogIn },
+          { label: "Sign-in attempts", value: loginAttempts.length, icon: ShieldAlert },
+          { label: "Unique IP addresses", value: uniqueIpCount, icon: MapPin },
+          { label: "Tracked sessions", value: sessionTotal, icon: Clock3 },
+          { label: "Recorded changes", value: changeTotal, icon: FileJson },
+        ].map(({ label, value, icon: Icon }) => (
+          <Card key={label} className="bg-card/80">
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className="rounded-md bg-primary/10 p-2 text-primary"><Icon className="h-4 w-4" /></div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">{label}</p>
+                <p className="mt-0.5 text-2xl font-semibold tabular-nums" data-testid={`text-activity-total-${label.toLowerCase().replaceAll(" ", "-")}`}>{value}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card className="overflow-hidden">
+        <CardHeader className="border-b border-border/60 bg-muted/20 px-4 py-4 sm:px-5">
+          <CardTitle className="text-base">Sign-in attempts</CardTitle>
+          <CardDescription className="mt-1">
+            Successful and failed sign-ins in the selected range. Location is unavailable because no outside geolocation service is used.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loginAttempts.length === 0 ? (
+            <p className="p-5 text-sm text-muted-foreground">
+              No sign-in attempts were recorded in this date range.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table className="min-w-[720px]" data-testid="table-login-attempts">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Time</TableHead>
+                    <TableHead>Employee / attempted ID</TableHead>
+                    <TableHead>IP address</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Outcome</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loginAttempts.map((attempt, index) => (
+                    <TableRow key={`${attempt.occurredAt}-${attempt.employeeId}-${index}`}>
+                      <TableCell className="whitespace-nowrap">
+                        {formatActivityDate(attempt.occurredAt, true)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="break-words font-medium">{attempt.employeeName}</div>
+                        <div className="break-all text-xs text-muted-foreground">{attempt.employeeId}</div>
+                      </TableCell>
+                      <TableCell className="break-all font-mono text-xs">
+                        {attempt.ipAddress}
+                      </TableCell>
+                      <TableCell>{attempt.location}</TableCell>
+                      <TableCell>
+                        <Badge variant={attempt.outcome === "success" ? "default" : "destructive"}>
+                          {attempt.outcome === "success" ? "Successful" : "Failed"}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="overflow-hidden">
+        <CardHeader className="border-b border-border/60 bg-muted/20 px-4 py-4 sm:px-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <CardTitle className="text-base">Daily activity register</CardTitle>
+              <CardDescription className="mt-1">
+                One row per employee per day. Select a change count to inspect sanitized request and response details.
+              </CardDescription>
+            </div>
+            {isFetching && !isLoading && <span className="text-xs text-muted-foreground">Refreshing…</span>}
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="space-y-2 p-4" aria-label="Loading employee activity">
+              {[1, 2, 3, 4].map((item) => <div key={item} className="h-16 animate-pulse rounded-md bg-muted" />)}
+            </div>
+          ) : isError ? (
+            <div className="flex min-h-[230px] flex-col items-center justify-center gap-3 p-6 text-center">
+              <ShieldAlert className="h-8 w-8 text-destructive" />
+              <div>
+                <h3 className="font-semibold">Employee activity could not be loaded</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {errorStatus(error) === 403
+                    ? "This audit register is restricted to administrators."
+                    : "Check the connection and try the selected date range again."}
+                </p>
+              </div>
+              {errorStatus(error) !== 403 && (
+                <Button variant="outline" onClick={() => void refetch()} data-testid="button-retry-activity">
+                  Try again
+                </Button>
+              )}
+            </div>
+          ) : records.length === 0 ? (
+            <div className="flex min-h-[230px] flex-col items-center justify-center gap-2 p-6 text-center">
+              <div className="rounded-full bg-primary/10 p-3 text-primary"><Activity className="h-6 w-6" /></div>
+              <h3 className="font-semibold">No activity in this range</h3>
+              <p className="max-w-md text-sm text-muted-foreground">
+                No employee sign-ins or recorded changes were found from {formatActivityDay(appliedRange.from)} to {formatActivityDay(appliedRange.to)}.
+              </p>
+            </div>
+          ) : (
+            <div className="w-full overflow-hidden">
+              <table className="employee-activity-table w-full table-fixed text-xs" data-testid="table-employee-activity">
+                <colgroup>
+                  <col className="w-[22%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[29%]" />
+                  <col className="w-[17%]" />
+                  <col className="w-[11%]" />
+                </colgroup>
+                <thead className="bg-muted/35">
+                  <tr className="border-b text-left text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
+                    <th className="font-semibold">Employee</th>
+                    <th className="font-semibold">Date</th>
+                    <th className="font-semibold">Logins</th>
+                    <th className="font-semibold">Entry / exit</th>
+                    <th className="font-semibold">Last confirmed</th>
+                    <th className="text-right font-semibold">Changes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {records.map((record) => (
+                    <tr key={`${record.employeeId}-${record.date}`} className="border-b align-top last:border-0 hover:bg-muted/20" data-testid={`row-activity-${record.employeeId}-${record.date}`}>
+                      <td>
+                        <div className="break-words font-semibold text-foreground">{record.employeeName}</div>
+                        <div className="mt-0.5 break-all text-[10px] text-muted-foreground">{record.employeeId}</div>
+                      </td>
+                      <td className="break-words text-muted-foreground">{formatActivityDay(record.date)}</td>
+                      <td className="font-semibold tabular-nums">{record.loginCount}</td>
+                      <td>
+                        {record.sessions.length === 0 ? (
+                          <span className="text-muted-foreground">No session recorded</span>
+                        ) : (
+                          <div className="space-y-2">
+                            {record.sessions.map((session, index) => (
+                              <div key={`${session.startedAt}-${index}`} className="space-y-0.5">
+                                <div className="flex items-start gap-1.5">
+                                  <LogIn className="mt-0.5 h-3 w-3 shrink-0 text-success" />
+                                  <span className="break-words">In {formatActivityDate(session.startedAt)}</span>
+                                </div>
+                                <div className="flex items-start gap-1.5 text-muted-foreground">
+                                  <LogOut className="mt-0.5 h-3 w-3 shrink-0" />
+                                  <span className="break-words">
+                                    {activitySessionExit(session)}
+                                    <span className="ml-1">({activityEndReasonLabel(session.endReason, Boolean(session.endedAt))})</span>
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        {record.sessions.length === 0 ? (
+                          <span className="text-muted-foreground">No confirmed request</span>
+                        ) : (
+                          <div className="space-y-2">
+                            {record.sessions.map((session, index) => (
+                              <div key={`${session.lastSeenAt}-${index}`} className="space-y-0.5">
+                                <div className="flex items-start gap-1.5">
+                                  <Clock3 className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
+                                  <span className="break-words">{formatActivityDate(session.lastSeenAt)}</span>
+                                </div>
+                                <span className="block break-words text-[10px] text-muted-foreground">
+                                  Expires {formatActivityDate(session.expiresAt)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                      <td className="text-right">
+                        {record.changes.length ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 max-w-full whitespace-normal px-2 text-[11px]"
+                            onClick={() => setSelectedDay(record)}
+                            data-testid={`button-view-changes-${record.employeeId}-${record.date}`}
+                          >
+                            View {record.changes.length}
+                          </Button>
+                        ) : (
+                          <span className="text-muted-foreground">None</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={selectedDay !== null} onOpenChange={(open) => { if (!open) setSelectedDay(null); }}>
+        <DialogContent className="max-h-[calc(100vh-2rem)] w-[calc(100%-2rem)] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Changes by {selectedDay?.employeeName}</DialogTitle>
+            <DialogDescription>
+              {selectedDay && `${formatActivityDay(selectedDay.date)} · ${selectedDay.employeeId}`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {selectedDay?.changes.map((change) => (
+              <ActivityChangeItem key={change.id} change={change} />
             ))}
           </div>
-        </div>
+        </DialogContent>
+      </Dialog>
+    </section>
+  );
+}
 
-        {tableKey && (
-          <div>
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-semibold">{REPORT_LAYOUT_TABLE_LABELS[tableKey]}</h3>
-                <p className="text-xs text-muted-foreground">Change order, width, visibility, and labels. Add only supported fields.</p>
-              </div>
-              <select
-                disabled={!availableColumns.length}
-                value=""
-                onChange={(event) => {
-                  const option = columnOptions.find((item) => item.key === event.target.value);
-                  if (!option) return;
-                  setConfig({
-                    columns: {
-                      ...config.columns,
-                      [tableKey]: [
-                        ...configuredColumns,
-                        { ...option, visible: true, order: configuredColumns.length, width: 10 },
-                      ],
-                    },
-                  });
-                }}
-                className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-              >
-                <option value="">Add column…</option>
-                {availableColumns.map((option) => <option key={option.key} value={option.key}>{option.label}</option>)}
-              </select>
-            </div>
-            <div className="space-y-2">
-              {configuredColumns.map((column) => (
-                <div key={column.key} className="grid items-center gap-2 rounded-md border p-2 sm:grid-cols-[auto_1fr_90px_90px_auto]">
-                  <input
-                    type="checkbox"
-                    checked={column.visible}
-                    onChange={(event) => updateColumn(column.key, { visible: event.target.checked })}
-                  />
-                  <Input value={column.label} onChange={(event) => updateColumn(column.key, { label: event.target.value })} />
-                  <Input type="number" min={0} value={column.order} onChange={(event) => updateColumn(column.key, { order: Number(event.target.value) })} aria-label={`${column.label} order`} />
-                  <Input type="number" min={1} max={100} value={column.width} onChange={(event) => updateColumn(column.key, { width: Number(event.target.value) })} aria-label={`${column.label} width`} />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setConfig({ columns: { ...config.columns, [tableKey]: configuredColumns.filter((item) => item.key !== column.key) } })}
-                    aria-label={`Remove ${column.label}`}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              ))}
-            </div>
+function ActivityChangeItem({ change }: { change: EmployeeActivityChange }) {
+  const actionLabel = change.action.charAt(0).toUpperCase() + change.action.slice(1);
+  const submittedFields = activitySubmittedFields(change.details);
+  return (
+    <article className="rounded-lg border bg-muted/15 p-3" data-testid={`activity-change-${change.id}`}>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={change.action === "deleted" ? "destructive" : change.action === "created" ? "default" : "secondary"}>
+              {actionLabel}
+            </Badge>
+            <span className="break-words font-medium">{change.entityType}{change.entityId ? ` #${change.entityId}` : ""}</span>
           </div>
+          <p className="mt-2 break-words text-sm">{change.summary}</p>
+        </div>
+        <time className="shrink-0 text-xs text-muted-foreground">{formatActivityDate(change.occurredAt, true)}</time>
+      </div>
+      <div className="mt-3 rounded-md border border-dashed bg-background/70 p-2.5">
+        <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+          <FileJson className="h-3.5 w-3.5" /> Fields submitted
+        </div>
+        {submittedFields.length ? (
+          <dl className="divide-y rounded-md border bg-background px-3">
+            {submittedFields.map(([key, value]) => (
+              <div key={key} className="grid gap-1 py-2.5 sm:grid-cols-[minmax(8rem,0.8fr)_minmax(0,1.5fr)] sm:gap-3">
+                <dt className="text-xs font-medium text-muted-foreground">{activityFieldLabel(key)}</dt>
+                <dd className="min-w-0 break-words text-sm"><ActivityValue value={value} /></dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No field values were included with this change. Use the item type and ID above to identify the affected entry.
+          </p>
         )}
-      </CardContent>
-    </Card>
+        {change.details.truncated === true || typeof change.details.submittedPreview === "string" ? (
+          <p className="mt-2 text-xs text-muted-foreground">
+            This change contained more detail than the audit record can store; some submitted values were shortened.
+          </p>
+        ) : null}
+      </div>
+    </article>
   );
 }
 
@@ -922,14 +1603,12 @@ export default function Settings() {
 
   if (!isAdmin) {
     return (
-      <Card className="mx-auto mt-12 max-w-lg text-center">
-        <CardContent className="space-y-3 p-10">
-          <h1 className="text-lg font-semibold">Administrator access required</h1>
-          <p className="text-sm text-muted-foreground">
-            Settings and employee access are only available to administrators.
-          </p>
-        </CardContent>
-      </Card>
+      <EmployeeSharedValues
+        categories={referenceData?.categories ?? []}
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => void refetch()}
+      />
     );
   }
 
@@ -983,7 +1662,7 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="report-layouts" className="flex min-h-0 flex-1 flex-col">
-        <TabsList className="grid h-auto w-full max-w-2xl shrink-0 grid-cols-3">
+        <TabsList className="grid h-auto w-full max-w-5xl shrink-0 grid-cols-2 sm:grid-cols-4">
           <TabsTrigger value="reference-data" className="gap-2 py-2.5">
             <Database className="h-4 w-4" /> Settings
           </TabsTrigger>
@@ -992,6 +1671,9 @@ export default function Settings() {
           </TabsTrigger>
           <TabsTrigger value="report-layouts" className="gap-2 py-2.5">
             <Settings2 className="h-4 w-4" /> Report Layouts
+          </TabsTrigger>
+          <TabsTrigger value="employee-activity" className="gap-2 py-2.5">
+            <Activity className="h-4 w-4" /> Activity
           </TabsTrigger>
         </TabsList>
 
@@ -1033,6 +1715,10 @@ export default function Settings() {
 
         <TabsContent value="report-layouts" className="mt-4 min-h-0 flex-1 overflow-y-auto">
           <ReportLayoutsSection />
+        </TabsContent>
+
+        <TabsContent value="employee-activity" className="mt-4 min-h-0 flex-1 overflow-y-auto">
+          <EmployeeActivitySection isAdmin={isAdmin} />
         </TabsContent>
       </Tabs>
 

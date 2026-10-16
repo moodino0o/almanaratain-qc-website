@@ -1,8 +1,9 @@
 import { useEffect } from "react";
-import { Link, useParams } from "wouter";
+import { useParams } from "wouter";
 import { ArrowLeft, Printer } from "lucide-react";
 import { useGetComplaint } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
+import { useAppBack } from "@/hooks/use-app-back";
 
 function displayDate(value: string) {
   const date = new Date(value);
@@ -17,6 +18,7 @@ function PrintRow({ label, children }: { label: string; children: React.ReactNod
 export default function ComplaintPrint() {
   const { id } = useParams();
   const complaintId = Number(id);
+  const goBack = useAppBack(`/complaints/${complaintId}`);
   const complaintQuery = useGetComplaint(complaintId);
   useEffect(() => {
     if (complaintQuery.data) {
@@ -30,10 +32,8 @@ export default function ComplaintPrint() {
   return (
     <main className="complaint-print-shell min-h-screen bg-muted/50 p-4 sm:p-8">
       <div className="print-hide mx-auto mb-4 flex max-w-[210mm] items-center justify-between gap-3">
-        <Button variant="outline" asChild>
-          <Link href={`/complaints/${complaintId}`}>
-            <ArrowLeft className="mr-2 h-4 w-4" />Back to complaint
-          </Link>
+        <Button variant="outline" onClick={goBack}>
+          <ArrowLeft className="mr-2 h-4 w-4" />Back
         </Button>
         <Button onClick={() => window.print()}>
           <Printer className="mr-2 h-4 w-4" />Print form
@@ -76,8 +76,18 @@ export default function ComplaintPrint() {
           ) : <p className="text-sm text-muted-foreground">No pictures attached.</p>}
         </section>
         <footer className="mt-16 grid gap-12 border-t pt-5 text-sm sm:grid-cols-2">
-          <div><p className="border-b border-foreground pb-8">QC reviewer</p><p className="mt-2 text-xs text-muted-foreground">Name / signature</p></div>
-          <div><p className="border-b border-foreground pb-8">Review date</p><p className="mt-2 text-xs text-muted-foreground">Date</p></div>
+          <div className="space-y-2">
+            <p className="font-semibold">QC reviewer</p>
+            <p className="min-h-8 border-b border-foreground pb-1">
+              {complaint.qcReviewerName || "\u00a0"}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <p className="font-semibold">Review date</p>
+            <p className="min-h-8 border-b border-foreground pb-1">
+              {complaint.reviewDate ? displayDate(complaint.reviewDate) : "\u00a0"}
+            </p>
+          </div>
         </footer>
       </article>
     </main>

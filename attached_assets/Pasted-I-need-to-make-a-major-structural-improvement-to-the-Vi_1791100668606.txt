@@ -1,0 +1,769 @@
+I need to make a major structural improvement to the Visual Report Designer.
+
+The current designer treats each SECTION almost like one single object. This is not what I want.
+
+I want each SECTION to be a container only.
+
+EVERY ELEMENT INSIDE A SECTION MUST BE AN INDEPENDENT OBJECT that can be individually added, moved, edited, resized, duplicated, hidden, locked, or deleted.
+
+Also, I currently cannot properly add rows to tables from the Inspector. Fix this as part of the same implementation.
+
+==================================================
+1. SECTION MUST ONLY BE A CONTAINER
+==================================================
+
+A section should NOT behave as one giant object.
+
+For example:
+
+TEST RESULTS SECTION
+
+Instead of:
+
+[ ONE TEST RESULTS OBJECT ]
+
+I want:
+
+Test Results Section
+    ├── Section Title
+    ├── Table
+    │    ├── Header Row
+    │    ├── Data Row 1
+    │    ├── Data Row 2
+    │    ├── Data Row 3
+    │    └── Data Row 4
+    ├── Notes
+    └── Bottom Line
+
+Each of these must be independently editable.
+
+The section only defines the general area/container.
+
+==================================================
+2. INDIVIDUAL OBJECTS INSIDE SECTION
+==================================================
+
+Every element inside a section must have its own object ID.
+
+Supported objects:
+
+- Text
+- Dynamic Field
+- Image
+- Line
+- Shape
+- Table
+- Table Row
+- Table Cell
+- Signature
+- Formula/Calculated Field
+
+Each object must have its own:
+
+id
+type
+x
+y
+width
+height
+rotation
+zIndex
+visible
+locked
+properties
+
+Do NOT store the entire section as one flattened object.
+
+==================================================
+3. MOVE INDIVIDUAL ELEMENTS
+==================================================
+
+If I select:
+
+"Sample Date"
+
+I should be able to move ONLY Sample Date.
+
+If I select:
+
+"Supplier"
+
+I should be able to move ONLY Supplier.
+
+If I select:
+
+"Report Number"
+
+I should be able to move ONLY Report Number.
+
+Moving one object must NOT move the entire section.
+
+The section itself should remain fixed unless I explicitly select the section container and move it.
+
+==================================================
+4. DELETE INDIVIDUAL ELEMENTS
+==================================================
+
+If I select a text field:
+
+[Delete]
+
+should delete only that text field.
+
+It must NOT delete the whole section.
+
+For example:
+
+Test Results
+----------------------
+Sieve Size
+Amount Retained
+Amount Passing
+% Passing
+
+If I delete "Amount Retained":
+
+Test Results
+----------------------
+Sieve Size
+Amount Passing
+% Passing
+
+The other elements remain untouched.
+
+==================================================
+5. ADD ELEMENTS TO EXISTING SECTIONS
+==================================================
+
+I should be able to select a section and then:
+
++ Text
++ Field
++ Line
++ Shape
++ Image
++ Table
+
+The new object should be added INSIDE the selected section.
+
+Example:
+
+Select "Test Results"
+
+Click:
+
++ Text
+
+Then add:
+
+"Average Result"
+
+The new text should become a child of Test Results but remain an independent editable object.
+
+==================================================
+6. TABLE ROW MANAGEMENT
+==================================================
+
+IMPORTANT:
+
+I currently cannot add rows properly using the Inspector.
+
+Fix this.
+
+When I select a table, the Inspector must provide:
+
+TABLE
+
+Rows: 10
+Columns: 8
+
+Buttons:
+
+[ + Add Row ]
+
+[ + Add Column ]
+
+[ Duplicate Row ]
+
+[ Delete Row ]
+
+[ Duplicate Column ]
+
+[ Delete Column ]
+
+Rows must be real objects/data structures, not just visual lines.
+
+==================================================
+7. ADD ROW FROM INSPECTOR
+==================================================
+
+When I click:
+
++ Add Row
+
+a new row must immediately appear in the table.
+
+The new row must inherit the formatting of the previous row:
+
+- Font
+- Font size
+- Alignment
+- Borders
+- Background
+- Padding
+- Row height
+
+But it must remain independently editable.
+
+==================================================
+8. ROW PROPERTIES
+==================================================
+
+When I select a row, the Inspector should show:
+
+Row Name
+Row Height
+Background Color
+Border
+Border Thickness
+Font
+Font Size
+Alignment
+Padding
+
+And:
+
+[Duplicate Row]
+[Delete Row]
+
+==================================================
+9. CELL PROPERTIES
+==================================================
+
+Each table cell must be independently editable.
+
+When I click a cell, the Inspector should show:
+
+Cell Value
+Dynamic Field
+Formula
+Font
+Font Size
+Bold
+Italic
+Text Color
+Background Color
+Alignment
+Border
+Padding
+Width
+Height
+
+The cell should support either:
+
+Static value:
+
+"Average"
+
+or:
+
+Dynamic field:
+
+{{AVERAGE}}
+
+or:
+
+Formula:
+
+=AVERAGE({{RESULT_1}}, {{RESULT_2}}, {{RESULT_3}})
+
+==================================================
+10. EQUATIONS / FORMULAS
+==================================================
+
+I want to be able to assign an equation/formula to a row or cell when required.
+
+Add a Formula option in the Inspector.
+
+For example:
+
+Cell:
+
+% Passing
+
+Formula:
+
+=({{AMOUNT_PASSING}} / {{TOTAL_AMOUNT}}) * 100
+
+Another example:
+
+Average:
+
+=AVERAGE({{TEST_1}}, {{TEST_2}}, {{TEST_3}})
+
+Another example:
+
+Total:
+
+=SUM({{ROW_1}}, {{ROW_2}}, {{ROW_3}})
+
+The formula should be evaluated when the actual report is generated.
+
+The visual designer should show the formula field as:
+
+[Formula: % Passing]
+
+or:
+
+{{CALCULATED_PERCENT_PASSING}}
+
+rather than displaying an incorrect hard-coded result.
+
+==================================================
+11. FORMULA BUILDER
+==================================================
+
+Do not force users to type complex formulas manually if it can be avoided.
+
+Create a Formula Builder in the Inspector.
+
+Example:
+
+Formula:
+
+[ Amount Passing ]
+
+Operator:
+
+[ ÷ ]
+
+Value:
+
+[ Total Amount ]
+
+Operator:
+
+[ × ]
+
+Value:
+
+[ 100 ]
+
+Result:
+
+% Passing
+
+Allow operators:
+
++
+-
+×
+÷
+=
+()
+%
+
+And functions:
+
+SUM
+AVERAGE
+MIN
+MAX
+ROUND
+ABS
+
+==================================================
+12. DYNAMIC TABLE ROWS
+==================================================
+
+The system must support tables where the number of rows comes from the actual report data.
+
+For example, a sieve analysis may contain:
+
+75 mm
+63 mm
+50 mm
+37.5 mm
+20 mm
+14 mm
+10 mm
+5 mm
+2.36 mm
+1.18 mm
+600 μm
+300 μm
+150 μm
+
+The template should define ONE row as a dynamic row template.
+
+The actual report generator should repeat that row for every database result.
+
+Example:
+
+Sieve | Retained | Passing | % Passing
+----------------------------------------
+{{SIEVE_SIZE}} | {{RETAINED}} | {{PASSING}} | {{PASS_PERCENT}}
+
+At report generation:
+
+5 mm | 120 | 880 | 88%
+2.36 mm | 150 | 730 | 73%
+1.18 mm | 200 | 530 | 53%
+
+Do NOT create static rows for every possible result.
+
+==================================================
+13. INDEPENDENT OBJECT TREE
+==================================================
+
+The Layers/Object panel should show the actual hierarchy.
+
+Example:
+
+REPORT
+│
+├── Company Header
+│   ├── Logo
+│   ├── Company Name
+│   ├── Report Title
+│   └── Report Number
+│
+├── Sample Details
+│   ├── Sample Date
+│   ├── Supplier
+│   ├── Material
+│   └── Sample Description
+│
+├── Test Results
+│   ├── Table
+│   │   ├── Header Row
+│   │   │   ├── Sieve Size
+│   │   │   ├── Retained
+│   │   │   ├── Passing
+│   │   │   └── % Passing
+│   │   │
+│   │   └── Dynamic Data Row
+│   │       ├── Sieve Size
+│   │       ├── Retained
+│   │       ├── Passing
+│   │       └── % Passing
+│   │
+│   └── Test Remark
+│
+├── Remarks
+│   └── Remark Text
+│
+└── Signatures
+    ├── Prepared By
+    ├── Checked By
+    └── Approved By
+
+Every child must be independently selectable.
+
+==================================================
+14. SECTION COLLAPSE / EXPAND
+==================================================
+
+In the Layers panel, allow:
+
+▼ Test Results
+
+to expand and show its objects.
+
+Clicking:
+
+▼
+
+should collapse the children.
+
+The section itself remains a container.
+
+==================================================
+15. SECTION MOVEMENT
+==================================================
+
+If I select the SECTION itself, I can move the entire section and its children together.
+
+But:
+
+If I select an individual child:
+
+ONLY THAT CHILD MOVES.
+
+This distinction is extremely important.
+
+Implement:
+
+Select Section → move entire section
+
+Select Child → move only child
+
+==================================================
+16. GROUP / UNGROUP
+==================================================
+
+Add:
+
+Group
+
+Ungroup
+
+If I select multiple objects:
+
+[Group]
+
+they can temporarily be grouped.
+
+If I select a group:
+
+[Ungroup]
+
+returns all children as independent objects.
+
+==================================================
+17. COPY / PASTE / DUPLICATE
+==================================================
+
+Every object should support:
+
+Copy
+Paste
+Duplicate
+Delete
+
+For rows:
+
+Duplicate Row
+
+For cells:
+
+Duplicate Cell
+
+For sections:
+
+Duplicate Section
+
+When duplicating, create new unique IDs.
+
+==================================================
+18. LOCKING
+==================================================
+
+Each object should have:
+
+🔓 Unlocked
+🔒 Locked
+
+Locked objects cannot be moved or edited accidentally.
+
+The section can also be locked independently.
+
+==================================================
+19. DO NOT BREAK DYNAMIC REPORT DATA
+==================================================
+
+This is critical.
+
+Do not convert the existing dynamic report data into static designer objects.
+
+The designer should define the layout.
+
+The database should continue providing the actual values.
+
+Example:
+
+Template:
+
+{{SUPPLIER}}
+
+Generated report:
+
+Bahrain Aggregate Supplier
+
+Template:
+
+{{SIEVE_SIZE}}
+
+Generated report:
+
+5.00 mm
+
+Template:
+
+{{PASSING}}
+
+Generated report:
+
+850 g
+
+==================================================
+20. DATABASE STRUCTURE
+==================================================
+
+If the current schema does not support independent objects, modify it.
+
+A suitable structure is:
+
+report_templates
+    id
+    name
+    report_type
+    page_settings
+    created_at
+    updated_at
+
+report_sections
+    id
+    template_id
+    name
+    x
+    y
+    width
+    height
+    z_index
+    properties
+
+report_elements
+    id
+    section_id
+    parent_id
+    type
+    name
+    x
+    y
+    width
+    height
+    z_index
+    locked
+    visible
+    properties
+
+report_tables
+    id
+    element_id
+    properties
+
+report_table_rows
+    id
+    table_id
+    row_index
+    row_type
+    properties
+
+report_table_cells
+    id
+    row_id
+    column_index
+    value
+    dynamic_field
+    formula
+    properties
+
+If the current project already has equivalent tables, adapt them rather than creating unnecessary duplicate structures.
+
+==================================================
+21. INSPECTOR
+==================================================
+
+The Inspector must change according to what is selected.
+
+If nothing is selected:
+
+Show:
+
+Page Settings
+
+If Section selected:
+
+Show:
+
+Section Properties
+
+If Text selected:
+
+Show:
+
+Text Properties
+
+If Table selected:
+
+Show:
+
+Table Properties
+
+If Row selected:
+
+Show:
+
+Row Properties
+
+If Cell selected:
+
+Show:
+
+Cell Properties
+
+If Formula selected:
+
+Show:
+
+Formula Builder
+
+This should make the Inspector context-sensitive.
+
+==================================================
+22. TEST CASE
+==================================================
+
+Use the existing Aggregate Sieve Test report to test the implementation.
+
+I should be able to:
+
+1. Select Test Results section.
+2. Open the table.
+3. Add a row.
+4. Delete a row.
+5. Duplicate a row.
+6. Add a column.
+7. Delete a column.
+8. Select one cell.
+9. Change the cell text.
+10. Assign a dynamic field.
+11. Assign a formula.
+12. Move the cell/element where appropriate.
+13. Move the whole table.
+14. Move the whole Test Results section.
+15. Delete one individual element.
+16. Add a new text element.
+17. Add a line.
+18. Move only that line.
+19. Save the template.
+20. Reload it.
+21. Generate the actual PDF.
+22. Confirm the PDF matches the designer.
+
+==================================================
+FINAL REQUIREMENT
+==================================================
+
+The fundamental architecture must be:
+
+SECTION = CONTAINER
+
+ELEMENT = INDEPENDENT OBJECT
+
+TABLE = CONTAINER
+
+ROW = INDEPENDENT OBJECT
+
+CELL = INDEPENDENT OBJECT
+
+FORMULA = PROPERTY / CALCULATION OF AN OBJECT
+
+Do NOT make the entire section one object.
+
+Do NOT make the entire table one uneditable object.
+
+Everything that appears on the report must be individually controllable whenever technically appropriate.
+
+The final designer should behave like a simplified professional document/layout editor, not like a form where each section is a single block.
