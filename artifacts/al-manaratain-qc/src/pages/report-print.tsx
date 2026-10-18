@@ -2547,7 +2547,30 @@ function ReadyMixReport({
         .map((saved) => ({
           ...resultColumnDefaults.find((fallback) => fallback.key === saved.key)!,
           ...saved,
-        })))
+        })));
+  if (
+    savedResultColumns !== undefined &&
+    !resultColumns.some((column) => column.key === "absorption")
+  ) {
+    const absorptionColumn = resultColumnDefaults.find(
+      (column) => column.key === "absorption",
+    )!;
+    resultColumns.push({
+      ...absorptionColumn,
+      visible: true,
+      order: Math.max(-1, ...resultColumns.map((column) => column.order)) + 1,
+    });
+  }
+  const visibleColumnWidth = resultColumns.reduce(
+    (total, column) => total + (column.visible ? column.width : 0),
+    0,
+  );
+  const adjustedResultColumns = visibleColumnWidth > 100
+    ? resultColumns.map((column) => column.visible
+      ? { ...column, width: column.width * 100 / visibleColumnWidth }
+      : column)
+    : resultColumns;
+  const visibleResultColumns = adjustedResultColumns
     .filter((column) => column.visible)
     .sort((left, right) => left.order - right.order);
   const customerName = detailRawValue(details, ["customerName", "customer"], "-");
@@ -2619,7 +2642,7 @@ function ReadyMixReport({
       <section className="report-ready-mix-results">
         <table className="report-table report-results-table">
           <thead>
-            <tr>{resultColumns.map((column) => <th key={column.key} style={{ width: `${column.width}%` }}>{column.label}</th>)}</tr>
+            <tr>{visibleResultColumns.map((column) => <th key={column.key} style={{ width: `${column.width}%` }}>{column.label}</th>)}</tr>
           </thead>
           <tbody>
             {orderedTestRows.map((row, index) => {
@@ -2645,7 +2668,7 @@ function ReadyMixReport({
                 wetWeight: values.wetWeight,
               };
               return (
-                <tr key={index}>{resultColumns.map((column) => {
+                <tr key={index}>{visibleResultColumns.map((column) => {
                   const value = column.key === "testingDate"
                     ? readyMixTestingDate(row, record.sampleDate)
                     : column.key === "age"

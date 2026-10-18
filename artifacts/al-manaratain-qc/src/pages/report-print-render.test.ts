@@ -203,6 +203,54 @@ function renderDocument(
   return renderToStaticMarkup(createElement(ReportDocument, props));
 }
 
+test("adds Water Absorption to older saved Ready Mix result layouts", () => {
+  const record = {
+    ...reportFixture(),
+    details: {
+      testRows: [{
+        age: 28,
+        dryWeight: 700,
+        wetWeight: 750,
+        load: 550,
+      }],
+    },
+  } as QcRecord;
+  const layout = {
+    id: 1,
+    testType: "Ready Mix",
+    name: "Older Ready Mix layout",
+    config: {
+      title: "Ready Mix",
+      fontFamily: "Arial",
+      fontSize: 13,
+      textColor: "#20252b",
+      accentColor: "#9b1739",
+      paperPadding: 13,
+      sections: [],
+      columns: {
+        readyMixResults: [
+          { key: "testingDate", label: "Testing Date", width: 20, visible: true, order: 0 },
+          { key: "age", label: "Cube Age", width: 20, visible: true, order: 1 },
+          { key: "weight", label: "Cube Weight (g)", width: 20, visible: true, order: 2 },
+          { key: "load", label: "Load (kN)", width: 20, visible: true, order: 3 },
+          { key: "strength", label: "Strength (N/mm²)", width: 20, visible: true, order: 4 },
+        ],
+      },
+      elements: [],
+    },
+  } as NonNullable<ReportDocumentProps["report"]["layout"]>;
+  const markup = renderDocument(record, undefined, layout);
+  const tableStart = markup.indexOf('class="report-ready-mix-results"');
+  const tableEnd = markup.indexOf("</section>", tableStart);
+  const table = markup.slice(tableStart, tableEnd);
+
+  assert.match(table, /Water Absorption \(%\)/);
+  assert.match(table, /<td>7\.1<\/td>/);
+  const widths = [...table.matchAll(/width:([\d.]+)%/g)]
+    .map((match) => Number(match[1]));
+  assert.ok(widths.reduce((total, width) => total + width, 0) <= 100.001);
+});
+
 test("prints Water reports with dates, limits, exact SO3 choice, chloride, and derived conductivity", () => {
   const record = {
     ...reportFixture(),
