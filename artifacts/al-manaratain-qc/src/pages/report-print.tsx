@@ -42,6 +42,7 @@ import {
   evaluateKerbWaterAbsorption,
   calculateChlorideContent,
   calculateCubeDensity,
+  calculatePavingDensity,
   calculateDammamBlockResults,
   cubeWeightInGrams,
   calculateRetainedPercentage,
@@ -1401,7 +1402,7 @@ function calculatedDensity(values: ValueMap) {
   ) {
     return "-";
   }
-  return formatNumber((dryWeight * 1_000_000_000) / (length * width * height));
+  return formatNumber((dryWeight * 1_000_000) / (length * width * height));
 }
 
 function calculatedWaterAbsorption(values: ValueMap) {
@@ -1997,16 +1998,15 @@ function SpecimenRowsTable({
             const height = numericValue(values.height);
             const dryWeight = numericValue(values.dryWeight);
             const wetWeight = numericValue(values.wetWeight);
-            const density = numericValue(values.density) ??
-              (wetWeight !== null &&
-              length !== null &&
-              width !== null &&
-              height !== null &&
-              length > 0 &&
-              width > 0 &&
-              height > 0
-                ? (wetWeight * 1_000_000_000) / (length * width * height)
-                : null);
+            const calculatedPavingDensity = numericValue(
+              calculatePavingDensity({
+                length: values.length,
+                width: values.width,
+                height: values.height,
+                wetWeight: values.wetWeight,
+              }),
+            );
+            const density = calculatedPavingDensity ?? numericValue(values.density);
             const absorption = numericValue(values.waterAbsorption) ??
               (dryWeight !== null &&
               wetWeight !== null &&

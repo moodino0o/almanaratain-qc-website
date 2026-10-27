@@ -570,6 +570,14 @@ export const calculateBlockDensity = ({
   ).toFixed(2);
 };
 
+export const calculatePavingDensity = ({
+  length,
+  width,
+  height,
+  wetWeight,
+}: Pick<TestRow, "length" | "width" | "height" | "wetWeight">) =>
+  calculateCubeDensity(`${length}*${width}*${height}`, wetWeight);
+
 export const calculateBlockStrengths = (
   row: Pick<TestRow, "length" | "width" | "load">,
   shapeFactorValue: unknown,
