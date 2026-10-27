@@ -203,14 +203,17 @@ function renderDocument(
   return renderToStaticMarkup(createElement(ReportDocument, props));
 }
 
-test("adds Water Absorption to older saved Ready Mix result layouts", () => {
+test("adds Density and Water Absorption to older saved Ready Mix result layouts", () => {
   const record = {
     ...reportFixture(),
     details: {
+      length: 150,
+      width: 150,
+      height: 150,
       testRows: [{
         age: 28,
-        dryWeight: 700,
-        wetWeight: 750,
+        dryWeight: 7800,
+        wetWeight: 7850,
         load: 550,
       }],
     },
@@ -244,8 +247,10 @@ test("adds Water Absorption to older saved Ready Mix result layouts", () => {
   const tableEnd = markup.indexOf("</section>", tableStart);
   const table = markup.slice(tableStart, tableEnd);
 
+  assert.match(table, /Density \(kg\/m³\)/);
+  assert.match(table, /<td>2311\.1<\/td>/);
   assert.match(table, /Water Absorption \(%\)/);
-  assert.match(table, /<td>7\.1<\/td>/);
+  assert.match(table, /<td>0\.6<\/td>/);
   const widths = [...table.matchAll(/width:([\d.]+)%/g)]
     .map((match) => Number(match[1]));
   assert.ok(widths.reduce((total, width) => total + width, 0) <= 100.001);

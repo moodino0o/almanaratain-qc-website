@@ -838,6 +838,11 @@ function reportTemplateTableRows(record: QcRecord, tableKey: string): ValueMap[]
                 cubeSize:
                   row.cubeSize ?? details.cubeSize ?? "100*100*100",
               }
+            : tableKey === "readyMixResults" && record.testType === "Ready Mix"
+              ? {
+                  ...row,
+                  density: calculatedReadyMixDensity(row, details),
+                }
             : row;
         });
     }
@@ -1407,6 +1412,19 @@ function calculatedWaterAbsorption(values: ValueMap) {
   }
   const storedAbsorption = numericValue(values.waterAbsorption ?? values.absorption);
   return storedAbsorption === null ? "-" : formatNumber(storedAbsorption);
+}
+
+function calculatedReadyMixDensity(values: ValueMap, details: DetailMap) {
+  const storedDensity = numericValue(
+    values.density ?? values.densityKgM3 ??
+      details.density ?? details.densityKgM3,
+  );
+  if (storedDensity !== null) return formatNumber(storedDensity);
+
+  const density = numericValue(
+    calculateCubeDensity(readyMixCubeSize(details, [values]), values.dryWeight),
+  );
+  return density === null ? "-" : formatNumber(density);
 }
 
 function hasSpecimenMeasurements(rows: unknown[]) {
@@ -2535,9 +2553,10 @@ function ReadyMixReport({
     { key: "testingDate", label: "Testing Date", visible: true, order: 0, width: 18 },
     { key: "age", label: "Cube Age", visible: true, order: 1, width: 12 },
     { key: "weight", label: "Cube Weight (g)", visible: true, order: 2, width: 16 },
-    { key: "load", label: "Load (kN)", visible: true, order: 3, width: 16 },
-    { key: "strength", label: "Strength (N/mm²)", visible: true, order: 4, width: 19 },
-    { key: "absorption", label: "Water Absorption (%)", visible: true, order: 5, width: 19 },
+    { key: "density", label: "Density (kg/m³)", visible: true, order: 3, width: 12 },
+    { key: "load", label: "Load (kN)", visible: true, order: 4, width: 16 },
+    { key: "strength", label: "Strength (N/mm²)", visible: true, order: 5, width: 19 },
+    { key: "absorption", label: "Water Absorption (%)", visible: true, order: 6, width: 19 },
   ];
   const savedResultColumns = layout?.config.columns.readyMixResults;
   const resultColumns = (savedResultColumns === undefined
@@ -2548,18 +2567,18 @@ function ReadyMixReport({
           ...resultColumnDefaults.find((fallback) => fallback.key === saved.key)!,
           ...saved,
         })));
-  if (
-    savedResultColumns !== undefined &&
-    !resultColumns.some((column) => column.key === "absorption")
-  ) {
-    const absorptionColumn = resultColumnDefaults.find(
-      (column) => column.key === "absorption",
-    )!;
-    resultColumns.push({
-      ...absorptionColumn,
-      visible: true,
-      order: Math.max(-1, ...resultColumns.map((column) => column.order)) + 1,
-    });
+  if (savedResultColumns !== undefined) {
+    for (const key of ["density", "absorption"]) {
+      if (resultColumns.some((column) => column.key === key)) continue;
+      const requiredColumn = resultColumnDefaults.find(
+        (column) => column.key === key,
+      )!;
+      resultColumns.push({
+        ...requiredColumn,
+        visible: true,
+        order: Math.max(-1, ...resultColumns.map((column) => column.order)) + 1,
+      });
+    }
   }
   const visibleColumnWidth = resultColumns.reduce(
     (total, column) => total + (column.visible ? column.width : 0),
@@ -2651,6 +2670,7 @@ function ReadyMixReport({
                 : {};
               const weight = firstPresentValue([values.dryWeight, values.wetWeight]);
               const strength = cubeRowStrength(row);
+              const density = calculatedReadyMixDensity(values, details);
               const displayValues: ValueMap = {
                 ...values,
                 testAge: firstPresentValue([
@@ -2664,6 +2684,7 @@ function ReadyMixReport({
                 weight,
                 load: firstPresentValue([values.load]),
                 calculatedStrength: strength,
+                density,
                 dryWeight: values.dryWeight,
                 wetWeight: values.wetWeight,
               };
@@ -2675,6 +2696,8 @@ function ReadyMixReport({
                       ? textValue(displayValues.testAge)
                     : column.key === "weight"
                       ? readyMixWeightInGrams(displayValues.weight)
+                      : column.key === "density"
+                        ? textValue(displayValues.density)
                       : column.key === "strength"
                         ? strength === null ? "-" : formatNumber(strength)
                         : column.key === "absorption"
