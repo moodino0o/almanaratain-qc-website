@@ -256,6 +256,49 @@ test("adds Density and Water Absorption to older saved Ready Mix result layouts"
   assert.ok(widths.reduce((total, width) => total + width, 0) <= 100.001);
 });
 
+test("recalculates Paving density from gram weights instead of showing legacy 1000x values", () => {
+  const record = {
+    ...reportFixture(),
+    testType: "Paving Blocks",
+    details: {
+      testRows: [{
+        rowNo: 1,
+        length: 100,
+        width: 100,
+        height: 100,
+        dryWeight: 2430,
+        wetWeight: 2450,
+        load: 484.1,
+        density: 2450000,
+      }],
+    },
+  } as QcRecord;
+  const object = templateObject({
+    id: "paving-density",
+    tableKey: "pavingResults",
+    name: "Paving density",
+  });
+  const design = {
+    layout: {
+      title: "Paving",
+      columns: {
+        pavingResults: [
+          { key: "density", label: "Density (kg/m³)", width: 100, visible: true, order: 0 },
+        ],
+      },
+    },
+    objects: [object],
+  } as ReportTemplateDesign;
+
+  const tableMarkup = renderTable(design, object, record);
+  const reportMarkup = renderDocument(record);
+
+  assert.match(tableMarkup, /<td[^>]*>2450\.0<\/td>/);
+  assert.match(reportMarkup, /<td>2450\.0<\/td>/);
+  assert.doesNotMatch(tableMarkup, /2450000/);
+  assert.doesNotMatch(reportMarkup, /2450000/);
+});
+
 test("prints Water reports with dates, limits, exact SO3 choice, chloride, and derived conductivity", () => {
   const record = {
     ...reportFixture(),

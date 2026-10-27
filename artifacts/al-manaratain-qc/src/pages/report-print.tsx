@@ -928,6 +928,7 @@ function reportTemplateTableCell(
   columnKey: string,
   rowIndex: number,
   isBlockCompression: boolean,
+  isPavingBlocks = false,
 ): string {
   if (columnKey === "no" && !Object.hasOwn(row, "no") &&
     !Object.hasOwn(row, "rowNo") && !Object.hasOwn(row, "rowNumber")) {
@@ -949,6 +950,15 @@ function reportTemplateTableCell(
   if (isBlockCompression && ["length", "width", "height"].includes(columnKey)) {
     return formatWholeNumber(value, "");
   }
+  if (isPavingBlocks && columnKey === "density") {
+    const density = numericValue(calculatePavingDensity({
+      length: row.length,
+      width: row.width,
+      height: row.height,
+      wetWeight: row.wetWeight,
+    }));
+    if (density !== null) return formatNumber(density);
+  }
   return value === undefined || value === null ? "" : textValue(value, "");
 }
 
@@ -961,6 +971,13 @@ function reportTemplateCellField(
   isBlockCompression: boolean,
 ): string {
   if (
+    row &&
+    record.testType === "Paving Blocks" &&
+    reportColumnKey(key) === "density"
+  ) {
+    return reportTemplateTableCell(row, "density", rowIndex, isBlockCompression, true);
+  }
+  if (
     record.testType === "Blocks" &&
     isDammamLocation(record.location) &&
     reportColumnKey(key) === "numberofholes"
@@ -968,7 +985,13 @@ function reportTemplateCellField(
     return "";
   }
   if (row && key.startsWith("details.")) {
-    return reportTemplateTableCell(row, key.slice("details.".length), rowIndex, isBlockCompression);
+    return reportTemplateTableCell(
+      row,
+      key.slice("details.".length),
+      rowIndex,
+      isBlockCompression,
+      record.testType === "Paving Blocks",
+    );
   }
   if (Object.hasOwn(fieldValues, key)) return fieldValues[key];
   return resolveReportTemplateDynamicField(record, key, fieldValues);
@@ -1346,7 +1369,13 @@ export function ReportTemplateDataTable({
               padding: "2px 3px",
               verticalAlign: "top",
               overflowWrap: "anywhere",
-            }}>{reportTemplateTableCell(row, column.key, rowIndex, blockCompression)}</td>
+            }}>{reportTemplateTableCell(
+              row,
+              column.key,
+              rowIndex,
+              blockCompression,
+              record.testType === "Paving Blocks",
+            )}</td>
           ))}</tr>
         )) : (
           <tr><td colSpan={columns.length} style={{ border: `1px solid ${borderColor}`, padding: 4 }}>No saved row data.</td></tr>

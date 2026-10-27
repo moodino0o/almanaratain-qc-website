@@ -575,8 +575,16 @@ export const calculatePavingDensity = ({
   width,
   height,
   wetWeight,
-}: Pick<TestRow, "length" | "width" | "height" | "wetWeight">) =>
-  calculateCubeDensity(`${length}*${width}*${height}`, wetWeight);
+}: {
+  length: unknown;
+  width: unknown;
+  height: unknown;
+  wetWeight: unknown;
+}) =>
+  calculateCubeDensity(
+    `${stringValue(length)}*${stringValue(width)}*${stringValue(height)}`,
+    wetWeight,
+  );
 
 export const calculateBlockStrengths = (
   row: Pick<TestRow, "length" | "width" | "load">,
