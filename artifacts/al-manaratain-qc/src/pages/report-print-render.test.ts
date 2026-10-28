@@ -256,6 +256,62 @@ test("adds Density and Water Absorption to older saved Ready Mix result layouts"
   assert.ok(widths.reduce((total, width) => total + width, 0) <= 100.001);
 });
 
+test("recalculates Ready Mix report density instead of trusting inflated saved density", () => {
+  const record = {
+    ...reportFixture(),
+    details: {
+      testRows: [{
+        age: 28,
+        length: 100,
+        width: 100,
+        height: 100,
+        dryWeight: 2450,
+        wetWeight: 2453,
+        density: 2450000,
+        load: 550,
+      }, {
+        age: 28,
+        length: 100,
+        width: 100,
+        height: 100,
+        wetWeight: 2453,
+        density: 2453000,
+        load: 551,
+      }],
+    },
+  } as QcRecord;
+  const layout = {
+    id: 1,
+    testType: "Ready Mix",
+    name: "Saved Ready Mix layout",
+    config: {
+      title: "Ready Mix",
+      fontFamily: "Arial",
+      fontSize: 13,
+      textColor: "#20252b",
+      accentColor: "#9b1739",
+      paperPadding: 13,
+      sections: [],
+      columns: {
+        readyMixResults: [
+          { key: "density", label: "Density (kg/m³)", width: 100, visible: true, order: 0 },
+        ],
+      },
+      elements: [],
+    },
+  } as NonNullable<ReportDocumentProps["report"]["layout"]>;
+
+  const markup = renderDocument(record, undefined, layout);
+  const tableStart = markup.indexOf('class="report-ready-mix-results"');
+  const tableEnd = markup.indexOf("</section>", tableStart);
+  const table = markup.slice(tableStart, tableEnd);
+
+  assert.match(table, /Density \(kg\/m³\)/);
+  assert.match(table, /<td>2450\.0<\/td>/);
+  assert.match(table, /<td>2453\.0<\/td>/);
+  assert.doesNotMatch(table, /2450000|2453000/);
+});
+
 test("recalculates Paving density from gram weights instead of showing legacy 1000x values", () => {
   const record = {
     ...reportFixture(),

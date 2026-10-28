@@ -1445,16 +1445,21 @@ function calculatedWaterAbsorption(values: ValueMap) {
 }
 
 function calculatedReadyMixDensity(values: ValueMap, details: DetailMap) {
+  const weight = firstPresentValue([
+    values.dryWeight,
+    values.weight,
+    values.wetWeight,
+  ]);
+  const density = numericValue(
+    calculateCubeDensity(readyMixCubeSize(details, [values]), weight),
+  );
+  if (density !== null) return formatNumber(density);
+
   const storedDensity = numericValue(
     values.density ?? values.densityKgM3 ??
       details.density ?? details.densityKgM3,
   );
-  if (storedDensity !== null) return formatNumber(storedDensity);
-
-  const density = numericValue(
-    calculateCubeDensity(readyMixCubeSize(details, [values]), values.dryWeight),
-  );
-  return density === null ? "-" : formatNumber(density);
+  return storedDensity === null ? "-" : formatNumber(storedDensity);
 }
 
 function hasSpecimenMeasurements(rows: unknown[]) {
