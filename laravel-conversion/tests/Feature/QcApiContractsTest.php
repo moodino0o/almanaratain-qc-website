@@ -6,6 +6,7 @@ use App\Models\Complaint;
 use App\Models\QcRecord;
 use App\Models\QcStrengthStandard;
 use App\Models\EmployeeActivityEvent;
+use App\Models\EmployeeActivitySession;
 use App\Models\EmployeeAccess;
 use App\Models\EmployeeDirectoryEntry;
 use App\Models\User;
@@ -15,6 +16,45 @@ use Tests\TestCase;
 class QcApiContractsTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_employee_activity_endpoint_returns_admin_audit_history_grouped_by_riyadh_day(): void
+    {
+        $this->asAdministrator('employee:321');
+        $startedAt = now()->subHour();
+        $fingerprint = str_repeat('a', 64);
+
+        EmployeeActivitySession::query()->create([
+            'session_fingerprint' => $fingerprint,
+            'employee_id' => '321',
+            'employee_name' => 'QC Technician',
+            'started_at' => $startedAt,
+            'last_seen_at' => $startedAt->copy()->addMinutes(20),
+            'expires_at' => $startedAt->copy()->addDays(7),
+        ]);
+        EmployeeActivityEvent::query()->create([
+            'employee_id' => '321',
+            'employee_name' => 'QC Technician',
+            'session_fingerprint' => $fingerprint,
+            'occurred_at' => $startedAt->copy()->addMinutes(5),
+            'action' => 'created',
+            'entity_type' => 'QC record',
+            'entity_id' => '55',
+            'summary' => 'Created QC record #55',
+            'details' => ['testType' => 'Blocks'],
+        ]);
+
+        $date = $startedAt->copy()->timezone('Asia/Riyadh')->format('Y-m-d');
+        $response = $this->getJson('/api/employee-activity?from='.$date.'&to='.$date)
+            ->assertOk()
+            ->assertJsonStructure(['records' => [[
+                'employeeId', 'employeeName', 'date', 'loginCount',
+                'sessions' => [['startedAt', 'lastSeenAt', 'expiresAt', 'endedAt', 'endReason']],
+                'loginAttempts', 'changes' => [['id', 'occurredAt', 'action', 'entityType', 'entityId', 'summary', 'details']],
+            ]]]);
+        self::assertSame('321', $response->json('records.0.employeeId'));
+        self::assertSame(1, $response->json('records.0.loginCount'));
+        self::assertSame('Created QC record #55', $response->json('records.0.changes.0.summary'));
+    }
 
     public function test_dashboard_complaint_totals_are_read_from_the_complaints_table(): void
     {
