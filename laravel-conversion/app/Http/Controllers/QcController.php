@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Complaint;
 use App\Models\QcRecord;
 use App\Models\QcReportLayout;
 use App\Models\QcShapeFactor;
@@ -44,8 +45,9 @@ class QcController extends Controller
             'passedRecordsThisMonth' => $monthly->where('status', 'Passed')->count(),
             'reviewRecordsThisMonth' => $monthly->where('status', 'Review')->count(),
             'failedRecordsThisMonth' => $monthly->where('status', 'Failed')->count(),
-            // Complaint records are migrated in the separate complaints conversion.
-            'totalComplaints' => 0, 'solvedComplaints' => 0, 'openComplaints' => 0,
+            'totalComplaints' => Complaint::query()->count(),
+            'solvedComplaints' => Complaint::query()->where('status', 'complete')->count(),
+            'openComplaints' => Complaint::query()->where('status', 'open')->count(),
             'byType' => $byType,
             'recentRecords' => $this->serializeRecords($base->latest('created_at')->limit(6)->get()),
         ]);
