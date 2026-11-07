@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Complaint;
 use App\Models\QcRecord;
 use App\Models\QcStrengthStandard;
 use App\Models\EmployeeActivityEvent;
@@ -14,6 +15,38 @@ use Tests\TestCase;
 class QcApiContractsTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_dashboard_complaint_totals_are_read_from_the_complaints_table(): void
+    {
+        $this->asAdministrator();
+
+        Complaint::query()->create([
+            'complaint_no' => 'CMP-2026-DASH001',
+            'customer_name' => 'Dashboard open',
+            'delivery_date' => '2026-10-01',
+            'complaint_type' => 'Crack',
+            'material_type' => 'Block',
+            'details' => 'Open complaint',
+            'status' => 'open',
+            'picture_paths' => [],
+        ]);
+        Complaint::query()->create([
+            'complaint_no' => 'CMP-2026-DASH002',
+            'customer_name' => 'Dashboard complete',
+            'delivery_date' => '2026-10-02',
+            'complaint_type' => 'Damage',
+            'material_type' => 'Paving Block',
+            'details' => 'Completed complaint',
+            'status' => 'complete',
+            'picture_paths' => [],
+        ]);
+
+        $this->getJson('/api/qc/dashboard')
+            ->assertOk()
+            ->assertJsonPath('totalComplaints', 2)
+            ->assertJsonPath('solvedComplaints', 1)
+            ->assertJsonPath('openComplaints', 1);
+    }
 
     public function test_reference_and_lookup_responses_keep_the_source_shapes(): void
     {
