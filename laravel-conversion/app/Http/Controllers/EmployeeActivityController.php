@@ -1,12 +1,12 @@
 <?php
 
-namespace App\\Http\\Controllers;
+namespace App\Http\Controllers;
 
-use App\\Models\\EmployeeActivityEvent;
-use App\\Models\\EmployeeActivitySession;
-use Carbon\\CarbonImmutable;
-use Illuminate\\Http\\JsonResponse;
-use Illuminate\\Http\\Request;
+use App\Models\EmployeeActivityEvent;
+use App\Models\EmployeeActivitySession;
+use Carbon\CarbonImmutable;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class EmployeeActivityController extends Controller
 {
