@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\EmployeeActivityController;
 use App\Http\Controllers\ArchiveController;
 use App\Http\Controllers\ComplaintController;
 use App\Http\Controllers\EmployeesController;
@@ -13,6 +14,9 @@ use App\Http\Controllers\StorageController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/healthz', HealthController::class);
+
+Route::get('/employee-activity', [EmployeeActivityController::class, 'index'])
+    ->middleware(['employee.session', 'employee.auth', 'qc.role:administrator']);
 
 Route::post('/employee-login', [AuthController::class, 'login']);
 Route::get('/auth/user', [AuthController::class, 'user'])->middleware('employee.session');
