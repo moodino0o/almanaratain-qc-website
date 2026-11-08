@@ -21,3 +21,17 @@ mtime_ms = 1791373080782
 storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:c71f58a2-45bd-4643-9a2b-a7a365ead18b/3fee7ec1-2ba7-4cd6-b334-a813d882da06/ce67b75b-9551-48a9-8845-71813c5303e3"
 storage_version_token = "1791373082483952"
 content_type = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+
+[[outputs]]
+id = "8zjewXEjZ7aQlvcn_uwuL"
+uri = "file://generated-artifacts/full-database-backup.sql"
+type = "unspecified"
+title = "Full PostgreSQL database backup"
+description = "Restorable SQL dump of the database connected to the current QC app workspace. Includes schema and table data; ownership and privilege statements are omitted."
+logical_id = "d07e4e5b-c9d4-4b9a-b876-2ddabc10434b"
+content_hash = "sha256:63fd35d9c4dd0f1bffd76772bb80bbce7364a4037e9558a83b100b518aa67a1d"
+size = 263193
+mtime_ms = 1794170860763
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:c71f58a2-45bd-4643-9a2b-a7a365ead18b/d07e4e5b-c9d4-4b9a-b876-2ddabc10434b/8ee0adce-5725-4fa3-8bf3-75f4a93eb0fa"
+storage_version_token = "1794170886682406"
+content_type = "application/octet-stream"
