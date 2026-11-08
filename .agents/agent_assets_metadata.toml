@@ -35,3 +35,17 @@ mtime_ms = 1794170860763
 storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:c71f58a2-45bd-4643-9a2b-a7a365ead18b/d07e4e5b-c9d4-4b9a-b876-2ddabc10434b/8ee0adce-5725-4fa3-8bf3-75f4a93eb0fa"
 storage_version_token = "1794170886682406"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "qdG5OcbP0gWnsc6mhypkh"
+uri = "file://generated-artifacts/production-database-backup.sql"
+type = "unspecified"
+title = "Deployed site — production SQL backup"
+description = "Production database export for al-manaratain-qc-system.replit.app: 18 tables and 3,421 rows, including 559 QC records. Restored successfully in an isolated PostgreSQL database. Batched logical export; external uploaded files and ownership/grants are not included."
+logical_id = "22db7c7c-ce24-4ec7-a21b-5cca947b29f0"
+content_hash = "sha256:8efe85d074ee70e8874e91e92c93d3a10931b35a1f28e5af5a4d2f7f36958bb3"
+size = 4505238
+mtime_ms = 1794173095983
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:c71f58a2-45bd-4643-9a2b-a7a365ead18b/22db7c7c-ce24-4ec7-a21b-5cca947b29f0/eee2864a-0341-4cf2-af29-69a7495677f9"
+storage_version_token = "1794173104964783"
+content_type = "application/octet-stream"
