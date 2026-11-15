@@ -32,6 +32,7 @@ import {
   isDammamBlockLocation,
   isDammamSandwichBlock,
   calculateCubeDensity,
+  calculatePavingDensity,
   integerIdentifierValue,
   cubeWeightInGrams,
   calculateBlockStrengths,
@@ -1420,7 +1421,7 @@ export default function RecordForm() {
               correctionFactor: details.correctionFactor,
               correctedStrength:
                 calculatePavingStrength(row).correctedStrength || row.correctedStrength,
-              density: calculateBlockDensity(row),
+              density: calculatePavingDensity(row),
               waterAbsorption: calculateWaterAbsorption(
                 row.dryWeight,
                 row.wetWeight,
@@ -3221,7 +3222,7 @@ export default function RecordForm() {
                                  {testType === TestType.Paving_Blocks && (
                                    <>
                                      <td className="px-2 py-2">
-                                        {calculateBlockDensity(row) ||
+                                        {calculatePavingDensity(row) ||
                                           "Enter wet weight and dimensions"}
                                      </td>
                                      <td className="px-2 py-2">

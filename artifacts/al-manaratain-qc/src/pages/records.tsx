@@ -721,7 +721,7 @@ export default function Records() {
                     )}
                     {isMasonrySection && (
                       <>
-                        <TableCell className="masonry-strength-value masonry-average-strength px-1 py-1 text-right tabular-nums text-[10px]">
+                        <TableCell className="masonry-strength-value px-1 py-1 text-right tabular-nums text-[12px]">
                           {masonryStrengthSummaries.get(record.id)?.averageStrength.toFixed(2) ?? "—"}
                         </TableCell>
                         <TableCell className="masonry-strength-value px-1 py-1 text-right tabular-nums text-[12px]">

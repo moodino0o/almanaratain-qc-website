@@ -30,3 +30,4 @@
 - [Kerbstone read evaluation](kerbstone-read-evaluation.md) — recompute Kerbstone results for read responses so list, detail, and report views cannot display stale saved summaries.
 - [Precast specimen cube size](precast-row-cube-size.md) — new Precast rows own their cube size; use the saved shared size only to hydrate legacy rows.
 - [Primary-surface text contrast](primary-surface-contrast.md) — every text element on solid burgundy primary surfaces needs the high-contrast foreground, including nested helper text.
+- [Database backup safety](database-backup-safety.md) — verify the production source, preserve exact bigint values, validate restoration, and disclose batched-export limits.

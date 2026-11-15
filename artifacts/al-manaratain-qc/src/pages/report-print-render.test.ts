@@ -203,6 +203,158 @@ function renderDocument(
   return renderToStaticMarkup(createElement(ReportDocument, props));
 }
 
+test("adds Density and Water Absorption to older saved Ready Mix result layouts", () => {
+  const record = {
+    ...reportFixture(),
+    details: {
+      length: 150,
+      width: 150,
+      height: 150,
+      testRows: [{
+        age: 28,
+        dryWeight: 7800,
+        wetWeight: 7850,
+        load: 550,
+      }],
+    },
+  } as QcRecord;
+  const layout = {
+    id: 1,
+    testType: "Ready Mix",
+    name: "Older Ready Mix layout",
+    config: {
+      title: "Ready Mix",
+      fontFamily: "Arial",
+      fontSize: 13,
+      textColor: "#20252b",
+      accentColor: "#9b1739",
+      paperPadding: 13,
+      sections: [],
+      columns: {
+        readyMixResults: [
+          { key: "testingDate", label: "Testing Date", width: 20, visible: true, order: 0 },
+          { key: "age", label: "Cube Age", width: 20, visible: true, order: 1 },
+          { key: "weight", label: "Cube Weight (g)", width: 20, visible: true, order: 2 },
+          { key: "load", label: "Load (kN)", width: 20, visible: true, order: 3 },
+          { key: "strength", label: "Strength (N/mm²)", width: 20, visible: true, order: 4 },
+        ],
+      },
+      elements: [],
+    },
+  } as NonNullable<ReportDocumentProps["report"]["layout"]>;
+  const markup = renderDocument(record, undefined, layout);
+  const tableStart = markup.indexOf('class="report-ready-mix-results"');
+  const tableEnd = markup.indexOf("</section>", tableStart);
+  const table = markup.slice(tableStart, tableEnd);
+
+  assert.match(table, /Density \(kg\/m³\)/);
+  assert.match(table, /<td>2311\.1<\/td>/);
+  assert.match(table, /Water Absorption \(%\)/);
+  assert.match(table, /<td>0\.6<\/td>/);
+  const widths = [...table.matchAll(/width:([\d.]+)%/g)]
+    .map((match) => Number(match[1]));
+  assert.ok(widths.reduce((total, width) => total + width, 0) <= 100.001);
+});
+
+test("recalculates Ready Mix report density instead of trusting inflated saved density", () => {
+  const record = {
+    ...reportFixture(),
+    details: {
+      testRows: [{
+        age: 28,
+        length: 100,
+        width: 100,
+        height: 100,
+        dryWeight: 2450,
+        wetWeight: 2453,
+        density: 2450000,
+        load: 550,
+      }, {
+        age: 28,
+        length: 100,
+        width: 100,
+        height: 100,
+        wetWeight: 2453,
+        density: 2453000,
+        load: 551,
+      }],
+    },
+  } as QcRecord;
+  const layout = {
+    id: 1,
+    testType: "Ready Mix",
+    name: "Saved Ready Mix layout",
+    config: {
+      title: "Ready Mix",
+      fontFamily: "Arial",
+      fontSize: 13,
+      textColor: "#20252b",
+      accentColor: "#9b1739",
+      paperPadding: 13,
+      sections: [],
+      columns: {
+        readyMixResults: [
+          { key: "density", label: "Density (kg/m³)", width: 100, visible: true, order: 0 },
+        ],
+      },
+      elements: [],
+    },
+  } as NonNullable<ReportDocumentProps["report"]["layout"]>;
+
+  const markup = renderDocument(record, undefined, layout);
+  const tableStart = markup.indexOf('class="report-ready-mix-results"');
+  const tableEnd = markup.indexOf("</section>", tableStart);
+  const table = markup.slice(tableStart, tableEnd);
+
+  assert.match(table, /Density \(kg\/m³\)/);
+  assert.match(table, /<td>2450\.0<\/td>/);
+  assert.match(table, /<td>2453\.0<\/td>/);
+  assert.doesNotMatch(table, /2450000|2453000/);
+});
+
+test("recalculates Paving density from gram weights instead of showing legacy 1000x values", () => {
+  const record = {
+    ...reportFixture(),
+    testType: "Paving Blocks",
+    details: {
+      testRows: [{
+        rowNo: 1,
+        length: 100,
+        width: 100,
+        height: 100,
+        dryWeight: 2430,
+        wetWeight: 2450,
+        load: 484.1,
+        density: 2450000,
+      }],
+    },
+  } as QcRecord;
+  const object = templateObject({
+    id: "paving-density",
+    tableKey: "pavingResults",
+    name: "Paving density",
+  });
+  const design = {
+    layout: {
+      title: "Paving",
+      columns: {
+        pavingResults: [
+          { key: "density", label: "Density (kg/m³)", width: 100, visible: true, order: 0 },
+        ],
+      },
+    },
+    objects: [object],
+  } as ReportTemplateDesign;
+
+  const tableMarkup = renderTable(design, object, record);
+  const reportMarkup = renderDocument(record);
+
+  assert.match(tableMarkup, /<td[^>]*>2450\.0<\/td>/);
+  assert.match(reportMarkup, /<td>2450\.0<\/td>/);
+  assert.doesNotMatch(tableMarkup, /2450000/);
+  assert.doesNotMatch(reportMarkup, /2450000/);
+});
+
 test("prints Water reports with dates, limits, exact SO3 choice, chloride, and derived conductivity", () => {
   const record = {
     ...reportFixture(),

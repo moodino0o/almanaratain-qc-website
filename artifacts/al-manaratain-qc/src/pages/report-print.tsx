@@ -42,6 +42,7 @@ import {
   evaluateKerbWaterAbsorption,
   calculateChlorideContent,
   calculateCubeDensity,
+  calculatePavingDensity,
   calculateDammamBlockResults,
   cubeWeightInGrams,
   calculateRetainedPercentage,
@@ -838,6 +839,11 @@ function reportTemplateTableRows(record: QcRecord, tableKey: string): ValueMap[]
                 cubeSize:
                   row.cubeSize ?? details.cubeSize ?? "100*100*100",
               }
+            : tableKey === "readyMixResults" && record.testType === "Ready Mix"
+              ? {
+                  ...row,
+                  density: calculatedReadyMixDensity(row, details),
+                }
             : row;
         });
     }
@@ -922,6 +928,7 @@ function reportTemplateTableCell(
   columnKey: string,
   rowIndex: number,
   isBlockCompression: boolean,
+  isPavingBlocks = false,
 ): string {
   if (columnKey === "no" && !Object.hasOwn(row, "no") &&
     !Object.hasOwn(row, "rowNo") && !Object.hasOwn(row, "rowNumber")) {
@@ -943,6 +950,15 @@ function reportTemplateTableCell(
   if (isBlockCompression && ["length", "width", "height"].includes(columnKey)) {
     return formatWholeNumber(value, "");
   }
+  if (isPavingBlocks && columnKey === "density") {
+    const density = numericValue(calculatePavingDensity({
+      length: row.length,
+      width: row.width,
+      height: row.height,
+      wetWeight: row.wetWeight,
+    }));
+    if (density !== null) return formatNumber(density);
+  }
   return value === undefined || value === null ? "" : textValue(value, "");
 }
 
@@ -955,6 +971,13 @@ function reportTemplateCellField(
   isBlockCompression: boolean,
 ): string {
   if (
+    row &&
+    record.testType === "Paving Blocks" &&
+    reportColumnKey(key) === "density"
+  ) {
+    return reportTemplateTableCell(row, "density", rowIndex, isBlockCompression, true);
+  }
+  if (
     record.testType === "Blocks" &&
     isDammamLocation(record.location) &&
     reportColumnKey(key) === "numberofholes"
@@ -962,7 +985,13 @@ function reportTemplateCellField(
     return "";
   }
   if (row && key.startsWith("details.")) {
-    return reportTemplateTableCell(row, key.slice("details.".length), rowIndex, isBlockCompression);
+    return reportTemplateTableCell(
+      row,
+      key.slice("details.".length),
+      rowIndex,
+      isBlockCompression,
+      record.testType === "Paving Blocks",
+    );
   }
   if (Object.hasOwn(fieldValues, key)) return fieldValues[key];
   return resolveReportTemplateDynamicField(record, key, fieldValues);
@@ -1340,7 +1369,13 @@ export function ReportTemplateDataTable({
               padding: "2px 3px",
               verticalAlign: "top",
               overflowWrap: "anywhere",
-            }}>{reportTemplateTableCell(row, column.key, rowIndex, blockCompression)}</td>
+            }}>{reportTemplateTableCell(
+              row,
+              column.key,
+              rowIndex,
+              blockCompression,
+              record.testType === "Paving Blocks",
+            )}</td>
           ))}</tr>
         )) : (
           <tr><td colSpan={columns.length} style={{ border: `1px solid ${borderColor}`, padding: 4 }}>No saved row data.</td></tr>
@@ -1396,7 +1431,7 @@ function calculatedDensity(values: ValueMap) {
   ) {
     return "-";
   }
-  return formatNumber((dryWeight * 1_000_000_000) / (length * width * height));
+  return formatNumber((dryWeight * 1_000_000) / (length * width * height));
 }
 
 function calculatedWaterAbsorption(values: ValueMap) {
@@ -1407,6 +1442,24 @@ function calculatedWaterAbsorption(values: ValueMap) {
   }
   const storedAbsorption = numericValue(values.waterAbsorption ?? values.absorption);
   return storedAbsorption === null ? "-" : formatNumber(storedAbsorption);
+}
+
+function calculatedReadyMixDensity(values: ValueMap, details: DetailMap) {
+  const weight = firstPresentValue([
+    values.dryWeight,
+    values.weight,
+    values.wetWeight,
+  ]);
+  const density = numericValue(
+    calculateCubeDensity(readyMixCubeSize(details, [values]), weight),
+  );
+  if (density !== null) return formatNumber(density);
+
+  const storedDensity = numericValue(
+    values.density ?? values.densityKgM3 ??
+      details.density ?? details.densityKgM3,
+  );
+  return storedDensity === null ? "-" : formatNumber(storedDensity);
 }
 
 function hasSpecimenMeasurements(rows: unknown[]) {
@@ -1979,16 +2032,15 @@ function SpecimenRowsTable({
             const height = numericValue(values.height);
             const dryWeight = numericValue(values.dryWeight);
             const wetWeight = numericValue(values.wetWeight);
-            const density = numericValue(values.density) ??
-              (wetWeight !== null &&
-              length !== null &&
-              width !== null &&
-              height !== null &&
-              length > 0 &&
-              width > 0 &&
-              height > 0
-                ? (wetWeight * 1_000_000_000) / (length * width * height)
-                : null);
+            const calculatedPavingDensity = numericValue(
+              calculatePavingDensity({
+                length: values.length,
+                width: values.width,
+                height: values.height,
+                wetWeight: values.wetWeight,
+              }),
+            );
+            const density = calculatedPavingDensity ?? numericValue(values.density);
             const absorption = numericValue(values.waterAbsorption) ??
               (dryWeight !== null &&
               wetWeight !== null &&
@@ -2535,9 +2587,10 @@ function ReadyMixReport({
     { key: "testingDate", label: "Testing Date", visible: true, order: 0, width: 18 },
     { key: "age", label: "Cube Age", visible: true, order: 1, width: 12 },
     { key: "weight", label: "Cube Weight (g)", visible: true, order: 2, width: 16 },
-    { key: "load", label: "Load (kN)", visible: true, order: 3, width: 16 },
-    { key: "strength", label: "Strength (N/mm²)", visible: true, order: 4, width: 19 },
-    { key: "absorption", label: "Water Absorption (%)", visible: true, order: 5, width: 19 },
+    { key: "density", label: "Density (kg/m³)", visible: true, order: 3, width: 12 },
+    { key: "load", label: "Load (kN)", visible: true, order: 4, width: 16 },
+    { key: "strength", label: "Strength (N/mm²)", visible: true, order: 5, width: 19 },
+    { key: "absorption", label: "Water Absorption (%)", visible: true, order: 6, width: 19 },
   ];
   const savedResultColumns = layout?.config.columns.readyMixResults;
   const resultColumns = (savedResultColumns === undefined
@@ -2547,7 +2600,30 @@ function ReadyMixReport({
         .map((saved) => ({
           ...resultColumnDefaults.find((fallback) => fallback.key === saved.key)!,
           ...saved,
-        })))
+        })));
+  if (savedResultColumns !== undefined) {
+    for (const key of ["density", "absorption"]) {
+      if (resultColumns.some((column) => column.key === key)) continue;
+      const requiredColumn = resultColumnDefaults.find(
+        (column) => column.key === key,
+      )!;
+      resultColumns.push({
+        ...requiredColumn,
+        visible: true,
+        order: Math.max(-1, ...resultColumns.map((column) => column.order)) + 1,
+      });
+    }
+  }
+  const visibleColumnWidth = resultColumns.reduce(
+    (total, column) => total + (column.visible ? column.width : 0),
+    0,
+  );
+  const adjustedResultColumns = visibleColumnWidth > 100
+    ? resultColumns.map((column) => column.visible
+      ? { ...column, width: column.width * 100 / visibleColumnWidth }
+      : column)
+    : resultColumns;
+  const visibleResultColumns = adjustedResultColumns
     .filter((column) => column.visible)
     .sort((left, right) => left.order - right.order);
   const customerName = detailRawValue(details, ["customerName", "customer"], "-");
@@ -2619,7 +2695,7 @@ function ReadyMixReport({
       <section className="report-ready-mix-results">
         <table className="report-table report-results-table">
           <thead>
-            <tr>{resultColumns.map((column) => <th key={column.key} style={{ width: `${column.width}%` }}>{column.label}</th>)}</tr>
+            <tr>{visibleResultColumns.map((column) => <th key={column.key} style={{ width: `${column.width}%` }}>{column.label}</th>)}</tr>
           </thead>
           <tbody>
             {orderedTestRows.map((row, index) => {
@@ -2628,6 +2704,7 @@ function ReadyMixReport({
                 : {};
               const weight = firstPresentValue([values.dryWeight, values.wetWeight]);
               const strength = cubeRowStrength(row);
+              const density = calculatedReadyMixDensity(values, details);
               const displayValues: ValueMap = {
                 ...values,
                 testAge: firstPresentValue([
@@ -2641,17 +2718,20 @@ function ReadyMixReport({
                 weight,
                 load: firstPresentValue([values.load]),
                 calculatedStrength: strength,
+                density,
                 dryWeight: values.dryWeight,
                 wetWeight: values.wetWeight,
               };
               return (
-                <tr key={index}>{resultColumns.map((column) => {
+                <tr key={index}>{visibleResultColumns.map((column) => {
                   const value = column.key === "testingDate"
                     ? readyMixTestingDate(row, record.sampleDate)
                     : column.key === "age"
                       ? textValue(displayValues.testAge)
                     : column.key === "weight"
                       ? readyMixWeightInGrams(displayValues.weight)
+                      : column.key === "density"
+                        ? textValue(displayValues.density)
                       : column.key === "strength"
                         ? strength === null ? "-" : formatNumber(strength)
                         : column.key === "absorption"

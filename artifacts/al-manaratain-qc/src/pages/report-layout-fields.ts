@@ -18,7 +18,8 @@ export const REPORT_LAYOUT_FIELD_GROUPS: Record<string, Record<string, ReportLay
     ]),
     readyMixResults: fields([
       ["testingDate", "Testing Date", 18], ["age", "Cube Age", 12], ["weight", "Cube Weight (g)", 16],
-      ["load", "Load (kN)", 16], ["strength", "Strength (N/mm²)", 19], ["absorption", "Water Absorption (%)", 19],
+      ["density", "Density (kg/m³)", 12], ["load", "Load (kN)", 16],
+      ["strength", "Strength (N/mm²)", 19], ["absorption", "Water Absorption (%)", 19],
     ]),
   },
   Blocks: {

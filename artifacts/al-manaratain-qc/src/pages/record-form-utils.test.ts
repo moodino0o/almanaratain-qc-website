@@ -9,6 +9,7 @@ import {
   blockSizeMatches,
   blockTypeMatches,
   calculateBlockDensity,
+  calculatePavingDensity,
   calculateCubeDensity,
   cubeWeightInGrams,
   integerIdentifierValue,
@@ -425,6 +426,18 @@ test("calculates Block density from wet weight and specimen dimensions", () => {
       wetWeight: "3.730",
     }),
     "466.25",
+  );
+});
+
+test("calculates Paving density from gram weights and specimen dimensions", () => {
+  assert.equal(
+    calculatePavingDensity({
+      length: "100",
+      width: "100",
+      height: "100",
+      wetWeight: "2450",
+    }),
+    "2450.00",
   );
 });
 
